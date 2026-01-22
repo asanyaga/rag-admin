@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.routers import auth, users
 
 app = FastAPI(
     title="RAG Admin API",
@@ -28,6 +29,6 @@ async def health() -> dict[str, str]:
     return {"status": "healthy"}
 
 
-# API router will be added here when implementing features
-# api_router = APIRouter(prefix="/api/v1")
-# app.include_router(api_router)
+# Include routers
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
