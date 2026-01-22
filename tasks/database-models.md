@@ -2,11 +2,11 @@
 
 ## Objective
 
-Implement the database models and create the initial migration for the authentication feature. This builds on the project scaffold from TASK-01.
+Implement the database models and create the initial migration for the authentication feature. This builds on the project scaffold.
 
 ## Prerequisites
 
-- Project scaffold complete (TASK-01)
+- Project scaffold complete
 - PostgreSQL running and accessible
 - `backend/.env` configured with DATABASE_URL
 

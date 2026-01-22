@@ -9,6 +9,7 @@ from alembic import context
 
 from app.config import settings
 from app.database import Base
+from app.models import User, RefreshToken, LoginAttempt
 
 config = context.config
 
