@@ -7,18 +7,18 @@ export interface User {
 }
 
 export interface AuthResponse {
-  accessToken: string
-  tokenType: string
-  expiresIn: number
+  access_token: string
+  token_type: string
+  expires_in: number
   user: User
 }
 
-export interface SignInRequest {
+export interface SignInData {
   email: string
   password: string
 }
 
-export interface SignUpRequest {
+export interface SignUpData {
   email: string
   password: string
   passwordConfirm: string
