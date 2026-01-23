@@ -29,6 +29,6 @@ export async function refreshToken(): Promise<{ access_token: string }> {
 }
 
 export async function getCurrentUser(): Promise<User> {
-  const response = await apiClient.get<User>('/auth/me')
+  const response = await apiClient.get<User>('/users/me')
   return response.data
 }

@@ -10,4 +10,7 @@ class AccountLockedError(Exception):
 
 class ConflictError(Exception):
     """Raised when a resource already exists (e.g., duplicate email)"""
-    pass
+    def __init__(self, message: str, code: str | None = None):
+        self.message = message
+        self.code = code
+        super().__init__(message)

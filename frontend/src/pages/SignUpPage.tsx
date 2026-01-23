@@ -19,10 +19,11 @@ import { Input } from '@/components/ui/input'
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { GoogleIcon } from '@/components/icons/GoogleIcon'
 
 export default function SignUpPage() {
   const navigate = useNavigate()
-  const { signUp, isAuthenticated } = useAuth()
+  const { signUp, isAuthenticated, initiateGoogleSignIn } = useAuth()
 
   const [formData, setFormData] = useState({
     email: '',
@@ -252,9 +253,10 @@ export default function SignUpPage() {
                     type="button"
                     variant="outline"
                     className="w-full"
-                    disabled
-                    title="Coming soon"
+                    onClick={initiateGoogleSignIn}
+                    disabled={isSubmitting}
                   >
+                    <GoogleIcon className="mr-2 h-4 w-4" />
                     Sign up with Google
                   </Button>
                   <FieldDescription className="text-center">

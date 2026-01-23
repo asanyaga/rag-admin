@@ -19,10 +19,11 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { AxiosError } from 'axios'
+import { GoogleIcon } from '@/components/icons/GoogleIcon'
 
 export default function SignInPage() {
   const navigate = useNavigate()
-  const { signIn, isAuthenticated } = useAuth()
+  const { signIn, isAuthenticated, initiateGoogleSignIn } = useAuth()
 
   const [formData, setFormData] = useState({
     email: '',
@@ -140,9 +141,10 @@ export default function SignInPage() {
                     type="button"
                     variant="outline"
                     className="w-full"
-                    disabled
-                    title="Coming soon"
+                    onClick={initiateGoogleSignIn}
+                    disabled={isSubmitting}
                   >
+                    <GoogleIcon className="mr-2 h-4 w-4" />
                     Sign in with Google
                   </Button>
                   <FieldDescription className="text-center">
