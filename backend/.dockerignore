@@ -37,8 +37,7 @@ htmlcov/
 .gitignore
 
 # Documentation
-*.md
-!README.md
+# *.md - Removed to allow README.md in build context (required by pyproject.toml)
 docs/
 
 # OS
