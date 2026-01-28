@@ -1,5 +1,5 @@
 # Replace 'yourdomain.com' with your actual domain
-yourdomain.com {
+ragadmin.adilitech.com {
     # Enable automatic HTTPS with Let's Encrypt
     # Caddy will automatically obtain and renew SSL certificates
 

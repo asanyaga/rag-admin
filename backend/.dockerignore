@@ -38,6 +38,7 @@ htmlcov/
 
 # Documentation
 *.md
+!README.md
 docs/
 
 # OS

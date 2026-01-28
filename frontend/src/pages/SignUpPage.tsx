@@ -23,7 +23,7 @@ import { AxiosError } from 'axios'
 
 export default function SignUpPage() {
   const navigate = useNavigate()
-  const { signUp, isAuthenticated, initiateGoogleSignIn } = useAuth()
+  const { signUp, isAuthenticated } = useAuth()
 
   const [formData, setFormData] = useState({
     email: '',
