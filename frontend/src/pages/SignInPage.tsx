@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { AxiosError } from 'axios'
-import { GoogleIcon } from '@/components/icons/GoogleIcon'
+// import { GoogleIcon } from '@/components/icons/GoogleIcon' // Disabled for initial deployment
 
 export default function SignInPage() {
   const navigate = useNavigate()
@@ -137,6 +137,7 @@ export default function SignInPage() {
                   >
                     {isSubmitting ? 'Signing in...' : 'Sign in'}
                   </Button>
+                  {/* Google OAuth disabled for initial deployment
                   <Button
                     type="button"
                     variant="outline"
@@ -147,6 +148,7 @@ export default function SignInPage() {
                     <GoogleIcon className="mr-2 h-4 w-4" />
                     Sign in with Google
                   </Button>
+                  */}
                   <FieldDescription className="text-center">
                     Don&apos;t have an account?{' '}
                     <Link to="/signup" className="underline underline-offset-4">

@@ -9,6 +9,11 @@ venv/
 env/
 ENV/
 .env
+.env.*
+.env.prod
+.env.production
+.env.local
+.env.development
 *.egg
 *.egg-info/
 dist/
@@ -72,3 +77,13 @@ Desktop.ini
 # Logs
 *.log
 logs/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Backups
+backups/
+*.sql
+*.sql.gz
+*.dump

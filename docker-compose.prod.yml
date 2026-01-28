@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with ParadeDB (includes pgvector and pg_search extensions)
+  postgres:
+    image: paradedb/paradedb:latest-pg17
+    container_name: rag-admin-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ragadmin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ragadmin
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Persistent data storage
+      - postgres_data:/var/lib/postgresql/data
+      # Database initialization script
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ragadmin -d ragadmin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rag-admin-backend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Caddy Reverse Proxy (automatic HTTPS) + Static File Server
+  caddy:
+    image: caddy:2-alpine
+    container_name: rag-admin-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      # Caddy configuration
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Frontend static files (built locally, copied to VPS)
+      - ./frontend/dist:/srv:ro
+      # Persistent storage for certificates
+      - caddy_data:/data
+      - caddy_config:/config
+      # Logs
+      - caddy_logs:/var/log/caddy
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  # PostgreSQL data persistence
+  postgres_data:
+    driver: local
+
+  # Caddy data (SSL certificates, etc.)
+  caddy_data:
+    driver: local
+
+  # Caddy configuration
+  caddy_config:
+    driver: local
+
+  # Caddy logs
+  caddy_logs:
+    driver: local

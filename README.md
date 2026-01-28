@@ -270,7 +270,52 @@ docker compose up -d
 ## Current Phase
 
 ✅ **Project Scaffold** (Complete)
-🔄 **Authentication Implementation** (Next)
+✅ **Authentication Implementation** (Complete)
+✅ **Docker Deployment** (Complete)
+🔄 **CI/CD Pipeline** (Next)
+
+## Deployment
+
+### Production Deployment
+
+For deploying to a VPS with Docker:
+
+- 📖 **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete step-by-step deployment guide
+- 📋 **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - Deployment checklist
+- 🐳 **[DOCKER.md](DOCKER.md)** - Docker architecture and configuration
+- 🔄 **[GITHUB-DEPLOY.md](GITHUB-DEPLOY.md)** - GitHub Actions CI/CD setup
+
+Quick start:
+```bash
+# 1. Build frontend
+cd frontend && npm run build
+
+# 2. Transfer to VPS
+scp -r dist user@vps:~/rag-admin/frontend/
+
+# 3. Deploy
+ssh user@vps
+cd ~/rag-admin
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Automated Deployment (CI/CD)
+
+Set up GitHub Actions for automated testing and deployment:
+
+- See **[GITHUB-DEPLOY.md](GITHUB-DEPLOY.md)** for complete CI/CD setup
+- Automated testing on every push
+- Automated deployment to production on merge to main
+- Daily health checks and backups
+
+### Architecture
+
+- **3 containers**: PostgreSQL (ParadeDB), FastAPI Backend, Caddy (reverse proxy + static files)
+- **Automatic HTTPS**: Let's Encrypt via Caddy
+- **Database**: PostgreSQL with pgvector and pg_search extensions
+- **Backups**: Automated daily backups with 7-day retention
+
+See [ARCHITECTURE_CHANGES.md](ARCHITECTURE_CHANGES.md) for deployment architecture details.
 
 ## Troubleshooting
 

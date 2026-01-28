@@ -1,0 +1,41 @@
+# GitHub Actions Workflows
+
+This directory contains CI/CD workflow files for automated testing and deployment.
+
+## Workflow Files to Create
+
+Based on `GITHUB-DEPLOY.md`, create these workflow files:
+
+1. **ci.yml** - Run tests on every push/PR
+2. **deploy-production.yml** - Automated deployment to production
+3. **deploy-manual.yml** - Manual deployment with approval
+4. **health-check.yml** - Daily health checks
+5. **backup.yml** - Automated database backups
+
+## Getting Started
+
+1. Read `GITHUB-DEPLOY.md` for complete setup instructions
+2. Configure GitHub Secrets (see GITHUB-DEPLOY.md Step 3)
+3. Copy workflow examples from GITHUB-DEPLOY.md to this directory
+4. Test workflows before enabling automatic deployment
+
+## Directory Structure
+
+```
+.github/
+└── workflows/
+    ├── ci.yml
+    ├── deploy-production.yml
+    ├── deploy-manual.yml
+    ├── health-check.yml
+    └── backup.yml
+```
+
+## Important Notes
+
+- Always test workflows on a staging environment first
+- Never commit secrets to workflow files
+- Use GitHub Secrets for all sensitive data
+- Set up environment protection for production deployments
+
+For detailed instructions, see: `GITHUB-DEPLOY.md`

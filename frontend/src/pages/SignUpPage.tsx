@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
-import { GoogleIcon } from '@/components/icons/GoogleIcon'
+// import { GoogleIcon } from '@/components/icons/GoogleIcon' // Disabled for initial deployment
 
 export default function SignUpPage() {
   const navigate = useNavigate()
@@ -249,6 +249,7 @@ export default function SignUpPage() {
                   >
                     {isSubmitting ? 'Creating account...' : 'Sign up'}
                   </Button>
+                  {/* Google OAuth disabled for initial deployment
                   <Button
                     type="button"
                     variant="outline"
@@ -259,6 +260,7 @@ export default function SignUpPage() {
                     <GoogleIcon className="mr-2 h-4 w-4" />
                     Sign up with Google
                   </Button>
+                  */}
                   <FieldDescription className="text-center">
                     Already have an account?{' '}
                     <Link to="/signin" className="underline underline-offset-4">
