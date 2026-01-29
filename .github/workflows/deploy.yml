@@ -1,0 +1,122 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: 'Skip Docker build (just restart containers)'
+        required: false
+        default: 'false'
+        type: boolean
+      first_time_deploy:
+        description: 'First-time deployment (skip .env.prod check)'
+        required: false
+        default: 'false'
+        type: boolean
+
+# Ensure only one deployment runs at a time
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  # Run tests before deploying
+  test-backend:
+    name: Backend Tests
+    uses: ./.github/workflows/ci-backend.yml
+
+  test-frontend:
+    name: Frontend Tests
+    uses: ./.github/workflows/ci-frontend.yml
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    environment: production
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+
+            cd ~/rag-admin
+
+            echo "==> Checking deployment prerequisites..."
+            if [ ! -f ".env.prod" ]; then
+              if [ "${{ inputs.first_time_deploy }}" = "true" ]; then
+                echo "WARNING: .env.prod not found (first-time deploy mode)"
+                echo "You must create this file before containers will work."
+                echo "See DEPLOYMENT.md for setup instructions."
+              else
+                echo "ERROR: .env.prod not found!"
+                echo "This file contains secrets and must exist on the server."
+                echo "For first-time deploys, trigger workflow manually with 'first_time_deploy' checked."
+                exit 1
+              fi
+            fi
+
+            echo "==> Backing up server-specific files..."
+            cp caddy/Caddyfile caddy/Caddyfile.bak 2>/dev/null || echo "No existing Caddyfile to backup (first deploy)"
+
+            echo "==> Pulling latest changes..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "==> Restoring server-specific files..."
+            if [ -f caddy/Caddyfile.bak ]; then
+              mv caddy/Caddyfile.bak caddy/Caddyfile
+            fi
+
+            echo "==> Building frontend..."
+            cd frontend
+            npm ci
+            npm run build
+            cd ..
+
+            echo "==> Rebuilding and restarting containers..."
+            if [ "${{ inputs.skip_build }}" = "true" ]; then
+              docker compose -f docker-compose.prod.yml up -d
+            else
+              docker compose -f docker-compose.prod.yml build --no-cache backend
+              docker compose -f docker-compose.prod.yml up -d
+            fi
+
+            echo "==> Waiting for services to be healthy..."
+            sleep 10
+
+            echo "==> Checking container status..."
+            docker compose -f docker-compose.prod.yml ps
+
+            echo "==> Verifying backend health..."
+            for i in {1..30}; do
+              if docker compose -f docker-compose.prod.yml exec -T backend wget -q --spider http://localhost:8000/health; then
+                echo "Backend is healthy!"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "Backend health check failed!"
+                docker compose -f docker-compose.prod.yml logs --tail=50 backend
+                exit 1
+              fi
+              echo "Waiting for backend... ($i/30)"
+              sleep 2
+            done
+
+            echo "==> Cleaning up old Docker images..."
+            docker image prune -f
+
+            echo "==> Deployment complete!"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Deployment to production failed!"
