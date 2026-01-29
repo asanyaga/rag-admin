@@ -29,7 +29,7 @@ const requirements: Requirement[] = [
   },
   {
     label: 'At least one special character',
-    test: (pwd) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd),
+    test: (pwd) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd),
   },
 ]
 

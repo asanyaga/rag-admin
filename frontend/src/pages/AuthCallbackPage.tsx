@@ -31,6 +31,25 @@ export default function AuthCallbackPage() {
   const [errorMessage, setErrorMessage] = useState<string>('')
 
   useEffect(() => {
+    const handleSuccess = async () => {
+      try {
+        await completeOAuthSignIn()
+        navigate('/', { replace: true })
+      } catch (error) {
+        setStatus('error')
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Failed to complete sign in. Please try again.'
+        )
+      }
+    }
+
+    const handleError = (code: string | null, message: string | null) => {
+      setStatus('error')
+      setErrorMessage(getErrorMessage(code, message))
+    }
+
     const handleCallback = async () => {
       const params = new URLSearchParams(window.location.search)
 
@@ -45,26 +64,7 @@ export default function AuthCallbackPage() {
     }
 
     handleCallback()
-  }, [])
-
-  async function handleSuccess() {
-    try {
-      await completeOAuthSignIn()
-      navigate('/', { replace: true })
-    } catch (error) {
-      setStatus('error')
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Failed to complete sign in. Please try again.'
-      )
-    }
-  }
-
-  function handleError(code: string | null, message: string | null) {
-    setStatus('error')
-    setErrorMessage(getErrorMessage(code, message))
-  }
+  }, [completeOAuthSignIn, navigate])
 
   if (status === 'loading') {
     return (
