@@ -1,5 +1,7 @@
 # GitHub CI/CD Deployment Guide
 
+> **Status: Implemented** - GitHub Actions workflows are now configured in `.github/workflows/`. See [Quick Start](GITHUB-DEPLOY-QUICKSTART.md) for setup instructions.
+
 This guide explains how to migrate from manual deployment to automated deployment using GitHub Actions.
 
 ## Table of Contents

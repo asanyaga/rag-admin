@@ -43,6 +43,26 @@ ragadmin.adilitech.com {
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
             header_up X-Forwarded-Proto {scheme}
+
+            # ─────────────────────────────────────────────────────────────
+            # Trace Context Propagation (W3C standard)
+            # ─────────────────────────────────────────────────────────────
+            # These headers enable distributed tracing across services.
+            # When present in the incoming request, they're forwarded to
+            # the backend so all services share the same trace context.
+            #
+            # traceparent: Contains trace_id + span_id + flags
+            #   Format: 00-{trace_id}-{span_id}-{flags}
+            #   Example: 00-abc123...-def456...-01
+            #
+            # tracestate: Vendor-specific trace data (optional)
+            #   Format: vendor1=value1,vendor2=value2
+            #
+            # This enables end-to-end tracing: Browser → Caddy → Backend
+            # All spans will share the same trace_id in SigNoz.
+            # ─────────────────────────────────────────────────────────────
+            header_up traceparent {header.traceparent}
+            header_up tracestate {header.tracestate}
         }
     }
 

@@ -2,6 +2,17 @@
 
 This is a condensed version of [GITHUB-DEPLOY.md](GITHUB-DEPLOY.md) for quick reference.
 
+## Workflows Implemented
+
+The following GitHub Actions workflows are ready to use:
+
+| Workflow | File | Trigger |
+|----------|------|---------|
+| Backend CI | `.github/workflows/ci-backend.yml` | Push/PR to main (backend changes) |
+| Frontend CI | `.github/workflows/ci-frontend.yml` | Push/PR to main (frontend changes) |
+| Deploy | `.github/workflows/deploy.yml` | Push to main (after CI passes) |
+| Backup | `.github/workflows/backup.yml` | Daily at 2am UTC / Manual |
+
 ## Prerequisites
 
 - [ ] Code in GitHub repository
@@ -30,87 +41,63 @@ echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
 
 Go to: `GitHub Repo` → `Settings` → `Secrets and variables` → `Actions`
 
-Add these secrets:
+**Required secrets:**
 
-| Secret Name | Value |
-|-------------|-------|
-| `VPS_HOST` | your-vps-ip or domain |
-| `VPS_USERNAME` | ragadmin |
-| `VPS_SSH_KEY` | Contents of `~/.ssh/github_actions_deploy` (private key) |
-| `DEPLOY_PATH` | /home/ragadmin/rag-admin |
+| Secret Name | Value | Description |
+|-------------|-------|-------------|
+| `SSH_HOST` | your-vps-ip or domain | VPS address |
+| `SSH_USER` | ragadmin | SSH username |
+| `SSH_PRIVATE_KEY` | Contents of `~/.ssh/github_actions_deploy` | Full private key |
+| `SSH_PORT` | 22 | SSH port (optional, defaults to 22) |
 
-### 4. Create Workflow File
+### 4. Create GitHub Environment
 
-Create `.github/workflows/deploy.yml`:
+Go to: `GitHub Repo` → `Settings` → `Environments` → `New environment`
 
-```yaml
-name: Deploy to Production
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build frontend
-        working-directory: ./frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
-
-      - name: Deploy
-        env:
-          HOST: ${{ secrets.VPS_HOST }}
-          USER: ${{ secrets.VPS_USERNAME }}
-          PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
-          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
-
-          # Deploy frontend
-          scp -r frontend/dist/* $USER@$HOST:$PATH/frontend/dist/
-
-          # Deploy backend
-          ssh $USER@$HOST "cd $PATH && git pull && docker compose -f docker-compose.prod.yml build backend && docker compose -f docker-compose.prod.yml up -d --no-deps backend && docker compose -f docker-compose.prod.yml restart caddy"
-```
+1. Create environment named `production`
+2. (Optional) Add required reviewers for deployment approval
+3. (Optional) Add wait timer for delayed deployments
 
 ### 5. Test Deployment
 
 ```bash
 git add .
-git commit -m "Add CI/CD workflow"
+git commit -m "Add CI/CD workflows"
 git push origin main
 
 # Watch deployment at: GitHub → Actions
 ```
 
-## What This Does
+## What Each Workflow Does
 
-1. ✅ Runs on every push to `main`
-2. ✅ Builds frontend automatically
-3. ✅ Deploys to VPS via SSH
-4. ✅ Restarts services
-5. ✅ Takes 3-5 minutes
+### Backend CI (`ci-backend.yml`)
+- Runs on backend file changes
+- Sets up Python 3.12 + uv
+- Spins up PostgreSQL service container
+- Runs pytest with coverage
 
-## Next Steps
+### Frontend CI (`ci-frontend.yml`)
+- Runs on frontend file changes
+- Sets up Node.js 20
+- Installs dependencies with `npm ci`
+- Runs ESLint
+- Builds with TypeScript + Vite
+- Uploads build artifacts
 
-- Add tests: See [GITHUB-DEPLOY.md § CI Workflow](GITHUB-DEPLOY.md#workflow-1-ci---test-and-build)
-- Add health checks: See [GITHUB-DEPLOY.md § Health Checks](GITHUB-DEPLOY.md#workflow-4-scheduled-health-checks)
-- Add manual approval: See [GITHUB-DEPLOY.md § Manual Deployment](GITHUB-DEPLOY.md#workflow-3-manual-deployment-with-approval)
-- Add notifications: See [GITHUB-DEPLOY.md § Advanced Topics](GITHUB-DEPLOY.md#notifications)
+### Deploy (`deploy.yml`)
+- Triggers after push to main
+- Waits for CI workflows to pass
+- SSH into VPS
+- Pulls latest code
+- Builds frontend
+- Rebuilds Docker containers
+- Verifies health checks
+
+### Backup (`backup.yml`)
+- Runs daily at 2am UTC
+- Can be triggered manually
+- Runs existing `backup.sh` script
+- Manages backup retention
 
 ## Troubleshooting
 
@@ -136,11 +123,11 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs backend
 ```
 
-## Full Documentation
+### CI Fails on Backend Tests
 
-For complete setup with tests, health checks, backups, and advanced features:
-
-👉 **[GITHUB-DEPLOY.md](GITHUB-DEPLOY.md)**
+- Check if PostgreSQL service is healthy
+- Verify environment variables are set
+- Check test database connection string
 
 ## Security Checklist
 
@@ -150,3 +137,10 @@ For complete setup with tests, health checks, backups, and advanced features:
 - [ ] `.env.prod` never in GitHub
 - [ ] Secrets never echoed in logs
 - [ ] Branch protection enabled on main
+- [ ] Production environment has required reviewers (recommended)
+
+## Full Documentation
+
+For complete setup with advanced features:
+
+👉 **[GITHUB-DEPLOY.md](GITHUB-DEPLOY.md)**

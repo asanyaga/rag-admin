@@ -110,6 +110,13 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui
 - Reference doc: `docs/planning/shadcn-login-form-block.md`
 - Screenshot: `docs/planning/shadcn-simplelogin-block.png`
 
-## Current Phase
+## Current Focus
 
 Project scaffold → Authentication implementation
+
+## Working with Me
+
+- **Learning preference:** Explain *why* (reasoning, patterns, trade-offs) not basic concepts
+- **Session tracking:** Use `/tasks` for work items + `docs/session-log.md` for context
+- **Before implementing:** Read relevant PRD in `docs/planning/`, plan first
+- **End of session:** Ask for "Session wrap-up" to capture learning and update docs

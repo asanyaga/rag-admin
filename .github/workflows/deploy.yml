@@ -112,17 +112,17 @@ jobs:
 
             echo "==> Rebuilding and restarting containers..."
             if [ "${{ inputs.skip_build }}" = "true" ]; then
-              docker compose -f docker-compose.prod.yml up -d
+              docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
             else
-              docker compose -f docker-compose.prod.yml build --no-cache backend
-              docker compose -f docker-compose.prod.yml up -d
+              docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml build --no-cache backend
+              docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
             fi
 
             echo "==> Waiting for services to start..."
             sleep 10
 
             echo "==> Checking container status..."
-            docker compose -f docker-compose.prod.yml ps
+            docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml ps
 
             echo "==> Verifying backend health..."
             for i in {1..30}; do
@@ -133,7 +133,7 @@ jobs:
               fi
               if [ $i -eq 30 ]; then
                 echo "Backend health check failed! Status: $STATUS"
-                docker compose -f docker-compose.prod.yml logs --tail=50 backend
+                docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml logs --tail=50 backend
                 exit 1
               fi
               echo "Waiting for backend... ($i/30) Status: $STATUS"

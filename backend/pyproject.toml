@@ -21,6 +21,20 @@ dependencies = [
     "email-validator>=2.3.0",
     "bcrypt>=5.0.0",
     "itsdangerous>=2.2.0",
+    # -------------------------------------------------------------------------
+    # OpenTelemetry - Observability instrumentation
+    # -------------------------------------------------------------------------
+    # Core OTel packages
+    "opentelemetry-api>=1.20.0",          # API interfaces (what you code against)
+    "opentelemetry-sdk>=1.20.0",          # SDK implementation (does the actual work)
+    # Auto-instrumentation packages (zero-code tracing)
+    "opentelemetry-instrumentation-fastapi>=0.41b0",    # Traces HTTP requests
+    "opentelemetry-instrumentation-sqlalchemy>=0.41b0", # Traces DB queries
+    "opentelemetry-instrumentation-httpx>=0.41b0",      # Traces outgoing HTTP
+    # Exporter to send data to OTel Collector
+    "opentelemetry-exporter-otlp>=1.20.0",
+    # Structured JSON logging with trace correlation
+    "python-json-logger>=2.0.7",
 ]
 
 [project.optional-dependencies]

@@ -1,0 +1,74 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Run daily at 2:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: 'Number of days to keep backups'
+        required: false
+        default: '7'
+
+jobs:
+  backup:
+    name: Backup Database
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Run backup script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+
+            cd ~/rag-admin
+
+            echo "==> Starting database backup..."
+
+            # Run the backup script
+            if [ -f "./backup.sh" ]; then
+              chmod +x ./backup.sh
+              ./backup.sh
+            else
+              echo "Creating backup manually..."
+
+              BACKUP_DIR="$HOME/backups"
+              DATE=$(date +%Y%m%d_%H%M%S)
+              BACKUP_FILE="$BACKUP_DIR/ragadmin_$DATE.sql.gz"
+              RETENTION_DAYS="${{ inputs.retention_days || 7 }}"
+
+              mkdir -p "$BACKUP_DIR"
+
+              # Create backup
+              docker compose -f docker-compose.prod.yml exec -T postgres \
+                pg_dump -U ragadmin ragadmin | gzip > "$BACKUP_FILE"
+
+              # Verify backup
+              if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
+                echo "Backup created: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
+              else
+                echo "Backup failed!"
+                exit 1
+              fi
+
+              # Clean old backups
+              find "$BACKUP_DIR" -name "ragadmin_*.sql.gz" -mtime +$RETENTION_DAYS -delete
+
+              # List backups
+              echo "Available backups:"
+              ls -lh "$BACKUP_DIR"/ragadmin_*.sql.gz 2>/dev/null || echo "No backups found"
+            fi
+
+            echo "==> Backup complete!"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Database backup failed! Check the production server."

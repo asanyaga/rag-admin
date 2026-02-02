@@ -1,4 +1,4 @@
-# Claude Code Workflow Guide (Revised)
+# Claude Code Workflow Guide
 
 Based on Anthropic's official best practices and community learnings.
 
@@ -14,92 +14,176 @@ Based on Anthropic's official best practices and community learnings.
 
 5. **Course correct early** — Escape to interrupt, double-Escape to go back and try differently.
 
+---
+
+## Session Types
+
+| Type | When | Key Prompt |
+|------|------|------------|
+| **Explore** | Understanding code, learning | "Explain X. I'm learning [tech]. Don't code yet." |
+| **Plan** | Before non-trivial work | `/plan` or "Plan how to [goal]. Think hard. Wait for approval." |
+| **Implement** | After plan approval | "Implement your plan. Explain key design decisions." |
+| **Fix/Debug** | Something broken | "Help me debug [issue]. Explain the root cause before fixing." |
+
+### Learning Mode Prefix
+
+You know Python/React—add this to understand *why* things are done:
+
+```
+Explain your reasoning and any design decisions as you work.
+```
+
+This gets you: why this pattern over alternatives, trade-offs considered, how it fits the architecture.
+
+---
+
 ## Session Pattern
 
 ```
 /clear                              ← Start fresh
 "Read [files]. Don't code yet."     ← Explore
-"Think hard. Make a plan."          ← Plan  
+"Think hard. Make a plan."          ← Plan
 [Review plan, ask questions]        ← Verify
 "Implement your plan."              ← Code
 "Run tests. Fix any failures."      ← Validate
-"Commit with descriptive message."  ← Save
+/commit                             ← Save
 /clear                              ← Reset for next task
 ```
 
-## Prompting Examples
+---
 
-### Starting a Feature
+## Dual Tracking
 
-```
-Read docs/planning/03-API-SPEC.md and the existing code in backend/app/routers/.
-Don't write any code yet.
+Track work two ways:
 
-Think hard about how to implement the signup endpoint.
-Make a plan and wait for my approval before coding.
-```
+1. **Tasks** (`/tasks`) — Work items that persist across sessions
+2. **Session Log** (`docs/session-log.md`) — Learning, context, summaries
 
-### After Plan Approval
+### Session Log Entry Format
 
-```
-Implement your plan.
-Write tests first, then code to make them pass.
-Run the tests after each change.
-```
-
-### Course Correction
-
-```
-Stop. That's not quite right.
-The password validation should happen in the service layer, not the router.
-Update your approach.
+```markdown
+## YYYY-MM-DD: [Brief Title]
+**Goal:** What you wanted to accomplish
+**Outcome:** What actually happened
+**Learned:** Key concepts or patterns
+**Tasks:** #1, #3 (completed task IDs)
+**Next:** What to do next session
 ```
 
-### Committing
+---
+
+## Post-Session Checklist
+
+Before ending a substantive session:
 
 ```
-Commit these changes. Write a clear commit message describing what was implemented.
+Session wrap-up:
+
+1. **Summary**: What did we accomplish?
+2. **Learning Points**: What concepts or patterns did we use?
+3. **Task Update**: Mark completed tasks, note what's next
+4. **Doc Review**: Do any of these need updates?
+   - claude.md
+   - docs/planning/[relevant files]
+   - workflow-guide.md
+5. **Session Log Entry**: Format for docs/session-log.md
 ```
+
+### Pre-Commit Review
+
+```
+Before we commit, review the changes and:
+1. Explain what this code does (for my learning)
+2. Check for any issues or improvements
+3. Suggest a clear commit message
+```
+
+### Document Review (after features)
+
+```
+Review these docs for accuracy after today's changes:
+- claude.md
+- docs/planning/[relevant-prd].md
+- workflow-guide.md
+Suggest specific updates if needed.
+```
+
+---
+
+## Prompting by Task
+
+### Understanding a Pattern
+```
+Explain why [pattern/approach] is used in this codebase.
+Show me examples and explain the trade-offs.
+```
+
+### New Feature
+```
+/plan
+I want to add [feature].
+Read the relevant PRD in docs/planning/ and explain your approach.
+```
+Then: "Implement. Explain key design decisions."
+
+### Fixing a Bug
+```
+I have an issue: [describe problem]
+Error: [paste error]
+
+Find the root cause and explain why it's happening before fixing.
+```
+
+### Updating Existing Code
+```
+I need to modify [feature/file].
+Read the current code, explain the current design, then plan changes.
+```
+
+### Code Review
+```
+Review this code: [file or paste]
+Focus on: patterns, potential issues, and why improvements would help.
+```
+
+### Unfamiliar Tech
+```
+I know Python/React but not [TypeScript generics / async patterns / etc].
+Explain how this code works and why it's written this way.
+```
+
+---
 
 ## Key Commands
 
 | Command | Purpose |
 |---------|---------|
 | `/clear` | Reset context between tasks |
-| `/init` | Generate CLAUDE.md for new project |
+| `/plan` | Enter plan mode for non-trivial features |
+| `/commit` | Smart commit with message |
+| `/tasks` | View/manage task list |
+| `/review-pr` | PR review |
+| `/frontend-design` | UI component generation (uses shadcn) |
 | `#` | Add instruction to CLAUDE.md mid-session |
 | Escape | Interrupt current operation |
 | Escape×2 | Go back in history, try different approach |
-| `/permissions` | Manage tool allowlist |
 
-## Task Files
+---
 
-For explicit, well-scoped work units, use task files in `tasks/`:
+## Quick Reference
 
-```
-tasks/
-├── TASK-01-PROJECT-SCAFFOLD.md
-├── TASK-02-DATABASE-MODELS.md
-├── TASK-03-AUTH-ENDPOINTS.md
-└── TASK-TEMPLATE.md
-```
+| What You Want | How |
+|--------------|-----|
+| New feature | `/plan` → describe goal → implement after approval |
+| Fix a bug | "Debug [issue]. Explain root cause before fixing." |
+| Understand code | "Explain why [file/pattern] is designed this way." |
+| End session | "Session wrap-up" (triggers checklist) |
+| Commit | `/commit` |
+| UI component | `/frontend-design` or search shadcn registry |
+| Track work | `/tasks` |
+| Fresh start | `/clear` |
 
-Start a session with:
-
-```
-Read CLAUDE.md and tasks/TASK-01-PROJECT-SCAFFOLD.md.
-Think hard about the implementation approach.
-Make a plan and wait for my approval before coding.
-```
-
-Task files provide:
-- Clear objective and scope boundaries
-- Prerequisites and dependencies
-- Reference to relevant docs
-- Verification checklist
-- Explicit "do not" list
-
-Use `TASK-TEMPLATE.md` to create new tasks.
+---
 
 ## When Things Go Wrong
 
@@ -120,10 +204,13 @@ Then re-orient with specific file references.
 - Press Escape twice to go back in history
 - Edit your prompt and try again
 
+---
+
 ## File References
 
 - **Specs:** `docs/planning/` — Always read before implementing
-- **Examples:** Point Claude to existing code that demonstrates patterns you want followed
+- **Session guide:** `docs/planning/CLAUDE-SESSION-GUIDE.md` — Resuming work
+- **Session log:** `docs/session-log.md` — Learning and context tracking
 
 ## What NOT to Put in CLAUDE.md
 
