@@ -68,6 +68,11 @@ Track work two ways:
 **Learned:** Key concepts or patterns
 **Tasks:** #1, #3 (completed task IDs)
 **Next:** What to do next session
+**Total duration (API):** Total duration (API)
+**Total duration (wall):** Total duration (wall)
+**Total code changes:**    Total code changes
+**Usage by model:**
+        **model-name:**  input tokens, output token, cache read, cache write ($cost)
 ```
 
 ---
@@ -85,7 +90,7 @@ Session wrap-up:
 4. **Doc Review**: Do any of these need updates?
    - claude.md
    - docs/planning/[relevant files]
-   - workflow-guide.md
+   - docs/workflow/README.md
 5. **Session Log Entry**: Format for docs/session-log.md
 ```
 
@@ -104,7 +109,7 @@ Before we commit, review the changes and:
 Review these docs for accuracy after today's changes:
 - claude.md
 - docs/planning/[relevant-prd].md
-- workflow-guide.md
+- docs/workflow/README.md
 Suggest specific updates if needed.
 ```
 

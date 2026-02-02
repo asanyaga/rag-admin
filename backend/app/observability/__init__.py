@@ -186,6 +186,10 @@ def setup_observability(app: "FastAPI") -> None:
     # The order here doesn't matter since they're independent.
 
     # Instrument FastAPI for HTTP request tracing
+    # NOTE: We call instrument_app() here, but middleware is only added if
+    # instrumentation hasn't been applied yet. For proper tracing, FastAPI
+    # should ideally be instrumented before first request, but calling it
+    # in startup event still works for most cases.
     instrument_fastapi(app)
 
     # Instrument httpx for outgoing HTTP request tracing

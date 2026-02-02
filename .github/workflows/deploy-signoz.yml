@@ -1,0 +1,60 @@
+name: Deploy SigNoz
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_host:
+        description: 'Target server hostname or IP'
+        required: true
+        default: 'your-server.com'
+      target_path:
+        description: 'Path to SigNoz installation'
+        required: true
+        default: '~/signoz/deploy/docker'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy SigNoz to Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ inputs.target_host }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ inputs.target_path }}
+
+            # Pull latest SigNoz if using git
+            if [ -d .git ]; then
+              git pull
+            fi
+
+            # Deploy SigNoz stack
+            docker compose down
+            docker compose up -d
+
+            # Wait for services to be healthy
+            echo "Waiting for SigNoz services to be healthy..."
+            timeout 120 bash -c 'until docker compose ps | grep signoz | grep -q "healthy"; do sleep 5; done' || {
+              echo "Warning: Timeout waiting for health checks"
+              docker compose ps
+            }
+
+            # Verify collector is accessible
+            sleep 10
+            if curl -sf http://localhost:4317 > /dev/null 2>&1; then
+              echo "✓ SigNoz OTel Collector is accessible"
+            else
+              echo "✗ Warning: Collector not responding"
+            fi
+
+            # Verify UI is accessible
+            if curl -sf http://localhost:8080/api/v1/health > /dev/null 2>&1; then
+              echo "✓ SigNoz UI is accessible"
+            else
+              echo "✗ Warning: UI not responding"
+            fi
+
+            echo "SigNoz deployment complete"
+            docker compose ps

@@ -208,9 +208,9 @@ Or better yet, use a CDN (CloudFront, Cloudflare) for frontend distribution.
 ### Updated
 - `docker-compose.prod.yml` - Removed frontend service, mounted dist to Caddy
 - `caddy/Caddyfile` - Changed from proxy to file_server
-- `DEPLOYMENT.md` - Updated instructions, added scaling section
-- `DOCKER.md` - Updated architecture docs
-- `DEPLOYMENT_CHECKLIST.md` - Updated deployment steps
+- `docs/deployment/README.md` - Updated instructions, added scaling section
+- `docs/deployment/docker.md` - Updated architecture docs
+- `docs/deployment/checklist.md` - Updated deployment steps
 - `verify-setup.sh` - Added check for frontend/dist
 
 ### Unchanged
@@ -253,4 +253,4 @@ This simplification:
 - Follows standard static site deployment practices
 - Makes the system easier to understand and maintain
 
-The architecture is now optimized for small to medium scale deployments. When you need to scale beyond 10k concurrent users, see the "Scaling for Production" section in `DEPLOYMENT.md` for upgrade paths including CDN integration, horizontal scaling, and managed services.
+The architecture is now optimized for small to medium scale deployments. When you need to scale beyond 10k concurrent users, see the "Scaling for Production" section in the [deployment guide](../deployment/README.md) for upgrade paths including CDN integration, horizontal scaling, and managed services.

@@ -1,6 +1,29 @@
-# RAG Admin - Docker Deployment Guide
+# RAG Admin - Deployment Guide
 
-This guide provides step-by-step instructions for deploying the RAG Admin application to a production VPS using Docker containers.
+Complete guide to deploying the RAG Admin application to production.
+
+## Documentation Index
+
+| Document | Description |
+|----------|-------------|
+| **This file** | Complete deployment guide (start here) |
+| [checklist.md](checklist.md) | Step-by-step deployment checklist |
+| [docker.md](docker.md) | Docker architecture and configuration |
+| [docker-images.md](docker-images.md) | How Docker images work (tutorial) |
+| [ci-cd.md](ci-cd.md) | GitHub Actions CI/CD setup |
+| [ci-cd-quickstart.md](ci-cd-quickstart.md) | Quick 5-step CI/CD setup |
+| [secrets.md](secrets.md) | Secret management and rotation |
+
+## Quick Navigation
+
+**I want to...**
+
+- **Deploy for the first time** → Read this file, follow [checklist.md](checklist.md)
+- **Understand the Docker setup** → Read [docker.md](docker.md)
+- **Set up automated deployment** → Read [ci-cd.md](ci-cd.md) or [ci-cd-quickstart.md](ci-cd-quickstart.md)
+- **Rotate my secrets** → Read [secrets.md](secrets.md)
+
+---
 
 ## Architecture Overview
 
@@ -21,10 +44,34 @@ Internet → Caddy (443) → [Static Files] Frontend (React SPA)
 
 ## Prerequisites
 
-- A VPS with at least 2GB RAM and 20GB storage
+- A VPS with at least 4GB RAM and 20GB storage (2GB for RAG Admin + 2GB for SigNoz)
 - Ubuntu 22.04 or later (recommended)
 - A registered domain name pointed to your VPS IP
 - SSH access to the VPS
+- Docker and Docker Compose installed
+
+### Optional: SigNoz for Observability
+
+For production monitoring, install official SigNoz:
+
+```bash
+# Clone SigNoz repository
+git clone https://github.com/SigNoz/signoz.git ~/signoz
+cd ~/signoz/deploy/docker
+
+# Deploy SigNoz
+docker compose up -d
+
+# Verify it's running
+docker compose ps
+```
+
+SigNoz provides:
+- Distributed tracing
+- Structured logging with trace correlation
+- Application metrics and dashboards
+
+See [Observability Guide](../observability/README.md) for complete setup instructions.
 
 ## Quick Start
 
@@ -109,7 +156,7 @@ scp -r /home/asa/rag-admin user@<VPS_IP>:~/
 
 ### 6. Configure Environment Variables (INITIAL DEPLOYMENT ONLY)
 
-> ⚠️ **CRITICAL**: Secrets should be generated **ONCE** during initial deployment and then **reused forever**.
+> **CRITICAL**: Secrets should be generated **ONCE** during initial deployment and then **reused forever**.
 > Do NOT regenerate secrets on subsequent deployments or all users will be logged out!
 
 Create the production environment file:
@@ -333,7 +380,7 @@ docker compose -f docker-compose.prod.yml restart caddy
 docker compose -f docker-compose.prod.yml ps
 ```
 
-> ⚠️ **IMPORTANT**: Do NOT regenerate secrets in `.env.prod` during updates. Reuse the existing file.
+> **IMPORTANT**: Do NOT regenerate secrets in `.env.prod` during updates. Reuse the existing file.
 > Only modify `.env.prod` if you're changing configuration (e.g., adding OAuth credentials), not secrets.
 
 ### Stop and Remove All Services
@@ -479,7 +526,7 @@ This deployment is optimized for small to medium workloads (< 1000 concurrent us
    backend:
      command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
    ```
-   - Use workers = (2 × CPU cores) + 1
+   - Use workers = (2 x CPU cores) + 1
    - **Benefits**: Better CPU utilization, handle more concurrent requests
    - **Limitations**: Still single container, shared memory
 
@@ -533,52 +580,6 @@ This deployment is optimized for small to medium workloads (< 1000 concurrent us
    - **Benefits**: Optimized vector search, better scaling
    - **When**: > 1 million vector embeddings
 
-### Full Production Architecture
-
-For high-scale production (> 10k concurrent users):
-
-```
-                        ┌─────────────────┐
-                        │   CloudFront    │ (CDN)
-                        │  or Cloudflare  │
-                        └────────┬────────┘
-                                 │
-                    ┌────────────┴────────────┐
-                    │                         │
-            ┌───────▼────────┐       ┌───────▼────────┐
-            │  Static Files  │       │  API Requests  │
-            │   (S3/CDN)     │       │                │
-            └────────────────┘       └───────┬────────┘
-                                              │
-                                     ┌────────▼────────┐
-                                     │  Load Balancer  │
-                                     │  (ALB/NLB)      │
-                                     └────────┬────────┘
-                                              │
-                     ┌────────────────────────┼────────────────────────┐
-                     │                        │                        │
-            ┌────────▼────────┐      ┌───────▼────────┐      ┌───────▼────────┐
-            │   Backend 1     │      │   Backend 2    │      │   Backend 3    │
-            │  (Auto-scaled)  │      │ (Auto-scaled)  │      │ (Auto-scaled)  │
-            └────────┬────────┘      └───────┬────────┘      └───────┬────────┘
-                     │                        │                        │
-                     └────────────────────────┼────────────────────────┘
-                                              │
-                                     ┌────────▼────────┐
-                                     │   PgBouncer     │
-                                     │  (Connection    │
-                                     │   Pooling)      │
-                                     └────────┬────────┘
-                                              │
-                     ┌────────────────────────┼────────────────────────┐
-                     │                        │                        │
-            ┌────────▼────────┐      ┌───────▼────────┐      ┌───────▼────────┐
-            │   PostgreSQL    │      │   PostgreSQL   │      │   PostgreSQL   │
-            │    Primary      │─────>│   Replica 1    │      │   Replica 2    │
-            │  (RDS/Managed)  │      │   (Read-only)  │      │   (Read-only)  │
-            └─────────────────┘      └────────────────┘      └────────────────┘
-```
-
 ### Cost Considerations
 
 **Current Setup (VPS)**: $5-20/month
@@ -598,42 +599,22 @@ For high-scale production (> 10k concurrent users):
 - Monitoring & observability: $20-100/month
 - Suitable for: Enterprise, > 10k concurrent users
 
-### Performance Optimization Checklist
+## Resource Requirements
 
-Before scaling infrastructure, optimize the application:
+Minimum recommended resources:
 
-- [ ] Enable database query caching
-- [ ] Add Redis for session/result caching
-- [ ] Implement database indexes on frequently queried columns
-- [ ] Optimize API endpoints (reduce N+1 queries)
-- [ ] Enable Gzip/Brotli compression (already enabled in Caddy)
-- [ ] Lazy load components in frontend
-- [ ] Use database connection pooling
-- [ ] Implement rate limiting per user/IP
-- [ ] Add query result pagination
-- [ ] Optimize vector search queries
-- [ ] Use async operations for slow tasks
-- [ ] Implement background job processing (Celery, RQ)
+- **CPU**: 2 cores
+- **RAM**: 2GB
+- **Disk**: 20GB SSD
+- **Network**: 100 Mbps
 
-### When to Scale
+Resource usage by service (approximate):
 
-Watch these metrics:
+- **postgres**: 256MB-512MB RAM
+- **backend**: 128MB-256MB RAM
+- **caddy**: 32MB-128MB RAM (serves static files + proxies API)
 
-- **CPU > 80%** for extended periods → Add workers or scale horizontally
-- **Memory > 85%** consistently → Upgrade instance or scale horizontally
-- **Database connections maxed out** → Add connection pooling or read replicas
-- **Slow API response times** (> 1s p95) → Optimize queries or scale backend
-- **High error rates** (> 1%) → Investigate and fix before scaling
-
-### Migration Path
-
-1. **Start**: Current VPS setup (good for < 1k users)
-2. **First upgrade**: Add CDN + managed database (~$50/month, supports 5k users)
-3. **Second upgrade**: Multiple backend workers + connection pooling (supports 10k users)
-4. **Third upgrade**: Horizontal backend scaling + read replicas (supports 50k+ users)
-5. **Enterprise**: Full Kubernetes deployment with auto-scaling
-
-Start simple and scale based on actual usage metrics, not premature optimization.
+**Total**: ~500MB-800MB RAM for all services
 
 ## Support
 
@@ -642,7 +623,3 @@ For issues and questions:
 - Verify service health: `docker compose -f docker-compose.prod.yml ps`
 - Review this troubleshooting guide
 - Check Docker and application documentation
-
-## License
-
-[Your License Here]

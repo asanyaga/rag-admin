@@ -12,8 +12,8 @@ This checklist guides you through deploying RAG Admin to production. Check off e
 
 ### 2. Verify Configuration Files
 - [ ] Run `./verify-setup.sh` to check all files are present
-- [ ] Review `DEPLOYMENT.md` for full deployment guide
-- [ ] Review `DOCKER.md` for Docker architecture details
+- [ ] Review [README.md](README.md) for full deployment guide
+- [ ] Review [docker.md](docker.md) for Docker architecture details
 
 ### 3. Update Configuration
 - [ ] Edit `caddy/Caddyfile` - replace `yourdomain.com` with your actual domain
@@ -190,7 +190,7 @@ If something goes wrong:
 1. **Check service status**: `docker compose -f docker-compose.prod.yml ps`
 2. **Check logs**: `docker compose -f docker-compose.prod.yml logs [service-name]`
 3. **Restart service**: `docker compose -f docker-compose.prod.yml restart [service-name]`
-4. **Review troubleshooting guide**: See `DEPLOYMENT.md` troubleshooting section
+4. **Review troubleshooting guide**: See [README.md](README.md) troubleshooting section
 
 ## Success Criteria
 
@@ -236,7 +236,7 @@ After successful deployment:
 ---
 
 **Need Help?**
-- Review `DEPLOYMENT.md` for detailed instructions
-- Check `DOCKER.md` for Docker architecture details
+- Review [README.md](README.md) for detailed instructions
+- Check [docker.md](docker.md) for Docker architecture details
 - Review service logs for error messages
 - Verify all configuration files are correct

@@ -1,0 +1,324 @@
+# ============================================================================
+# DEPRECATED: This custom observability stack is no longer used.
+# ============================================================================
+# We now use the official SigNoz standalone deployment.
+#
+# Official SigNoz location: ~/signoz/deploy/docker
+# Deploy with: cd ~/signoz/deploy/docker && docker compose up -d
+#
+# This file is kept for reference only. To remove it and clean up volumes:
+#   docker volume rm rag-admin-clickhouse-data rag-admin-signoz-data
+#
+# Migration date: 2026-02-02
+# Replaced by: Official SigNoz standalone deployment
+# ============================================================================
+#
+# OLD DOCUMENTATION (for reference):
+# ---------------------------------
+# This file defines the SigNoz observability stack which provides:
+# - Distributed tracing (see the full journey of each request)
+# - Structured logging with trace correlation
+# - Application metrics
+#
+# Usage:
+#   Development: docker compose -f docker-compose.yml -f docker-compose.observability.yml up
+#   Production:  docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up
+#
+# Access SigNoz UI at: http://localhost:8080
+
+x-clickhouse-defaults: &clickhouse-defaults
+  CLICKHOUSE_HOST: clickhouse
+  CLICKHOUSE_PORT: "9000"
+  CLICKHOUSE_HTTP_PORT: "8123"
+  CLICKHOUSE_CLUSTER: cluster
+  CLICKHOUSE_DATABASE: signoz_metrics
+  CLICKHOUSE_USER: default
+  CLICKHOUSE_PASSWORD: ""
+  CLICKHOUSE_SECURE: "false"
+  CLICKHOUSE_SKIP_VERIFY: "false"
+
+services:
+  # ===========================================================================
+  # Zookeeper - Coordination Service
+  # ===========================================================================
+  # Zookeeper provides distributed coordination for ClickHouse.
+  # Required for ClickHouse cluster configuration and distributed queries.
+  #
+  zookeeper:
+    image: signoz/zookeeper:3.7.1
+    container_name: rag-admin-zookeeper
+    user: "1000:1000"
+    volumes:
+      - zookeeper_data:/data
+      - zookeeper_datalog:/datalog
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 2181 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # ===========================================================================
+  # ClickHouse - Time-Series Database
+  # ===========================================================================
+  # ClickHouse is a columnar database optimized for analytical queries.
+  # It stores all observability data: traces, logs, and metrics.
+  #
+  # Why ClickHouse?
+  # - Extremely fast for time-range queries (e.g., "show me errors in the last hour")
+  # - Efficient compression for time-series data (saves disk space)
+  # - SQL-like query language (familiar to most developers)
+  #
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.5.6
+    container_name: rag-admin-clickhouse
+    # ClickHouse requires high file descriptor limits for performance
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # ===========================================================================
+  # Init ClickHouse - Download Required Binaries
+  # ===========================================================================
+  # Downloads histogram quantile binary required by SigNoz.
+  # This must complete before the schema migrator runs.
+  #
+  init-clickhouse:
+    image: clickhouse/clickhouse-server:25.5.6
+    container_name: rag-admin-init-clickhouse
+    user: root
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -e
+        echo "Downloading histogram quantile binary..."
+        ARCH=$(uname -m)
+        case $$ARCH in
+          x86_64) BINARY_URL="https://github.com/SigNoz/signoz/releases/download/v0.45.0/histogramQuantile-linux-amd64" ;;
+          aarch64) BINARY_URL="https://github.com/SigNoz/signoz/releases/download/v0.45.0/histogramQuantile-linux-arm64" ;;
+          *) echo "Unsupported architecture: $$ARCH"; exit 1 ;;
+        esac
+        mkdir -p /var/lib/clickhouse/user_scripts
+        if [ ! -f /var/lib/clickhouse/user_scripts/histogramQuantile ]; then
+          wget -q "$$BINARY_URL" -O /var/lib/clickhouse/user_scripts/histogramQuantile
+          chmod +x /var/lib/clickhouse/user_scripts/histogramQuantile
+          echo "Binary downloaded successfully"
+        else
+          echo "Binary already exists"
+        fi
+    networks:
+      - app-network
+
+  # ===========================================================================
+  # Schema Migrator (Sync) - Initialize Database Schema
+  # ===========================================================================
+  # Creates the ClickHouse database schema for traces, metrics, and logs.
+  # Must complete before the OTel collector can write data.
+  #
+  schema-migrator-sync:
+    image: signoz/signoz-schema-migrator:v0.110.1
+    container_name: rag-admin-schema-migrator-sync
+    environment:
+      <<: *clickhouse-defaults
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      init-clickhouse:
+        condition: service_completed_successfully
+    command:
+      - sync
+    restart: "no"
+    networks:
+      - app-network
+
+  # ===========================================================================
+  # Schema Migrator (Async) - Initialize Async Tables
+  # ===========================================================================
+  # Creates async/materialized views and additional schema components.
+  # Runs in parallel with sync migrator.
+  #
+  schema-migrator-async:
+    image: signoz/signoz-schema-migrator:v0.110.1
+    container_name: rag-admin-schema-migrator-async
+    environment:
+      <<: *clickhouse-defaults
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      init-clickhouse:
+        condition: service_completed_successfully
+    command:
+      - async
+    restart: "no"
+    networks:
+      - app-network
+
+  # ===========================================================================
+  # SigNoz OTel Collector
+  # ===========================================================================
+  # The OpenTelemetry Collector acts as a telemetry pipeline:
+  # 1. RECEIVES data from your application via OTLP (OpenTelemetry Protocol)
+  # 2. PROCESSES it (batching, filtering, adding attributes)
+  # 3. EXPORTS it to ClickHouse for storage
+  #
+  # Why use a Collector instead of sending directly to ClickHouse?
+  # - Decouples your app from the storage backend (can switch backends easily)
+  # - Handles batching and retries (your app doesn't wait for slow storage)
+  # - Can filter/transform data before storage (reduce noise, add context)
+  #
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:v0.129.13
+    container_name: rag-admin-otel-collector
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    # Use the collector's built-in configuration
+    command:
+      - --config=/etc/otel-collector-config.yaml
+      - --manager-config=/etc/manager-config.yaml
+      - --copy-path=/var/tmp/collector-config.yaml
+      - --feature-gates=-pkg.translator.prometheus.NormalizeName
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=host.name=rag-admin-otel-collector,os.type=linux
+      - LOW_CARDINAL_EXCEPTION_GROUPING=false
+      # ClickHouse connection settings
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_HTTP_PORT=8123
+      - CLICKHOUSE_CLUSTER=cluster
+      - CLICKHOUSE_DATABASE=signoz_metrics
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_SECURE=false
+      - CLICKHOUSE_SKIP_VERIFY=false
+    ports:
+      # Port 4317: OTLP gRPC receiver
+      # This is where your FastAPI app sends traces, logs, and metrics
+      - "4317:4317"
+      # Port 4318: OTLP HTTP receiver (alternative to gRPC)
+      - "4318:4318"
+      # Port 8888: Prometheus metrics about the collector itself
+      - "8888:8888"
+    depends_on:
+      schema-migrator-sync:
+        condition: service_completed_successfully
+      schema-migrator-async:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # ===========================================================================
+  # SigNoz Query Service
+  # ===========================================================================
+  # The Query Service provides:
+  # - Web UI for exploring traces, logs, and metrics
+  # - API for querying observability data
+  # - Dashboard and alerting management
+  #
+  # This is what you interact with when debugging production issues.
+  #
+  signoz-query-service:
+    image: signoz/signoz:v0.110.1
+    container_name: rag-admin-signoz
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+        reservations:
+          memory: 512M
+    volumes:
+      - signoz_data:/var/lib/signoz
+    environment:
+      <<: *clickhouse-defaults
+      # SQLite path for local state (dashboards, alerts, etc.)
+      SIGNOZ_SQLSTORE_SQLITE_PATH: /var/lib/signoz/signoz.db
+      # Use Go's built-in DNS resolver for container networking
+      GODEBUG: netdns=go
+    ports:
+      # Port 8080: SigNoz Web UI
+      # Open http://localhost:8080 in your browser to access dashboards
+      - "8080:8080"
+    depends_on:
+      schema-migrator-sync:
+        condition: service_completed_successfully
+      signoz-otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+# ===========================================================================
+# Volumes - Persistent Storage
+# ===========================================================================
+# Docker volumes persist data outside the container filesystem.
+# This means your observability data survives container restarts/updates.
+#
+volumes:
+  zookeeper_data:
+    name: rag-admin-zookeeper-data
+  zookeeper_datalog:
+    name: rag-admin-zookeeper-datalog
+  clickhouse_data:
+    name: rag-admin-clickhouse-data
+  clickhouse_logs:
+    name: rag-admin-clickhouse-logs
+  signoz_data:
+    name: rag-admin-signoz-data
+
+# ===========================================================================
+# Networks
+# ===========================================================================
+# The observability stack connects to the app-network so the backend can
+# send telemetry to the collector. When using docker compose with multiple
+# files, networks are merged automatically.
+#
+networks:
+  app-network:
+    driver: bridge

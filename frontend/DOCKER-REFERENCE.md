@@ -90,7 +90,7 @@ To switch back to a containerized frontend with Nginx:
    docker compose -f docker-compose.prod.yml up -d
    ```
 
-See [ARCHITECTURE_CHANGES.md](../ARCHITECTURE_CHANGES.md) for details on why we simplified.
+See [Architecture Changes](../docs/architecture/README.md) for details on why we simplified.
 
 ## Summary
 

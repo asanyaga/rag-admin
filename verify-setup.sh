@@ -82,8 +82,8 @@ echo ""
 
 echo "Checking documentation..."
 echo "-------------------------"
-check_file "DEPLOYMENT.md" "optional"
-check_file "DOCKER.md" "optional"
+check_file "docs/deployment/README.md" "optional"
+check_file "docs/deployment/docker.md" "optional"
 echo ""
 
 echo "Checking directory structure..."

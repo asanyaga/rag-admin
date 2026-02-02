@@ -1,0 +1,106 @@
+# Local Development Docker Compose
+# --------------------------------
+# Mirrors production setup for local development on WSL/Windows 11.
+#
+# Usage:
+#   docker compose -f docker-compose.local.yml up --build
+#
+# Prerequisites:
+#   1. Copy .env.local.example to .env.local
+#   2. Build frontend: cd frontend && npm install && npm run build
+#   3. (Optional) Install SigNoz for observability:
+#      git clone https://github.com/SigNoz/signoz.git ~/signoz
+#      cd ~/signoz/deploy/docker && docker compose up -d
+#
+# Access points:
+#   - Application: http://localhost or http://localhost:3000
+#   - API directly: http://localhost:8000
+#   - Database: localhost:5432 (for pgAdmin, DBeaver)
+#   - SigNoz UI: http://localhost:8080 (if installed)
+#
+# Note: Observability is optional. Backend connects to signoz-net network
+# if available, otherwise runs without telemetry.
+
+services:
+  # PostgreSQL with ParadeDB (includes pgvector and pg_search extensions)
+  postgres:
+    image: paradedb/paradedb:latest-pg17
+    container_name: rag-admin-postgres-local
+    env_file:
+      - .env.local
+    environment:
+      POSTGRES_USER: ragadmin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ragadmin_local}
+      POSTGRES_DB: ragadmin
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      # Expose for local debugging with pgAdmin, DBeaver, etc.
+      - "5432:5432"
+    volumes:
+      # Separate volume to avoid conflicts with production
+      - postgres_data_local:/var/lib/postgresql/data
+      # Database initialization script
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ragadmin -d ragadmin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rag-admin-backend-local
+    env_file:
+      - .env.local
+    ports:
+      # Expose for direct API access during development
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+      - signoz-net  # Connect to SigNoz network for observability
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # Caddy Reverse Proxy (HTTP only for local) + Static File Server
+  caddy:
+    image: caddy:2-alpine
+    container_name: rag-admin-caddy-local
+    ports:
+      - "80:80"
+      - "3000:80"  # Fallback port if 80 is in use
+    volumes:
+      # Local Caddyfile (HTTP only)
+      - ./caddy/Caddyfile.local:/etc/caddy/Caddyfile:ro
+      # Frontend static files
+      - ./frontend/dist:/srv:ro
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+networks:
+  app-network:
+    driver: bridge
+
+  # External network managed by official SigNoz deployment
+  signoz-net:
+    external: true
+    name: signoz-net
+
+volumes:
+  # Separate volume name to avoid conflicts with production
+  postgres_data_local:
+    driver: local

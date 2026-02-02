@@ -1,6 +1,6 @@
 # GitHub CI/CD Quick Start
 
-This is a condensed version of [GITHUB-DEPLOY.md](GITHUB-DEPLOY.md) for quick reference.
+This is a condensed version of [ci-cd.md](ci-cd.md) for quick reference.
 
 ## Workflows Implemented
 
@@ -143,4 +143,4 @@ docker compose -f docker-compose.prod.yml logs backend
 
 For complete setup with advanced features:
 
-👉 **[GITHUB-DEPLOY.md](GITHUB-DEPLOY.md)**
+👉 **[ci-cd.md](ci-cd.md)**

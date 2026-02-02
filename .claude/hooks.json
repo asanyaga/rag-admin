@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "You are generating a session summary for docs/session-log.md.\n\nThe session transcript is available at: {{transcript_path}}\n\n**Your task:**\n1. Read the transcript file to extract:\n   - Usage statistics (total tokens by model, cache hits, costs)\n   - API duration and wall clock duration\n   - Code changes made (files modified, lines added/removed if available)\n   - Tasks worked on (task IDs mentioned)\n   - Key accomplishments and learnings\n\n2. Generate a session summary following this EXACT format:\n\n```markdown\n## YYYY-MM-DD: [Brief descriptive title]\n\n**Goal:** [What was intended to be accomplished]\n**Outcome:** [What actually happened - be specific, use checkmarks for completed items]\n**Learned:** [Key concepts, patterns, or design decisions discovered]\n**Tasks:** [Task IDs worked on, e.g., #1, #3]\n**Next:** [What should be done in the next session]\n**Total duration (API):** [Total API time from transcript]\n**Total duration (wall):** [Total wall clock time]\n**Total code changes:** [Files modified and approximate line changes]\n**Usage by model:**\n        **model-name:** X input tokens, Y output tokens, Z cache read, W cache write ($cost)\n```\n\n3. Append the formatted entry to docs/session-log.md under the \"## Sessions\" section (after line 27)\n\n**Important guidelines:**\n- Be concise but specific in Goal/Outcome/Learned\n- Extract actual numbers from the transcript for usage stats\n- Calculate costs using standard Claude API pricing if not in transcript\n- If information is unavailable, use \"N/A\" rather than guessing\n- Use checkmarks (✅/❌) in Outcome for clear status indicators\n- Format must match the template exactly\n\n**Session context:**\n- Working directory: {{cwd}}\n- Session ID: {{session_id}}\n- Exit reason: {{reason}}\n\nGenerate and append the summary now."
+          }
+        ]
+      }
+    ]
+  }
+}

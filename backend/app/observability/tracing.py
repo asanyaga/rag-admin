@@ -197,15 +197,21 @@ def setup_tracing(
     # The endpoint should be your OTel Collector's gRPC port (4317).
     # The collector then forwards to ClickHouse/SigNoz.
     #
-    # insecure=True means no TLS. In production with external collectors,
-    # you'd want to enable TLS for security.
+    # Determine if we should use TLS based on endpoint protocol.
+    # - http:// = insecure (Docker network, localhost)
+    # - https:// = secure (internet, different machine)
+
+    use_tls = otlp_endpoint.startswith("https://")
 
     otlp_exporter = OTLPSpanExporter(
         endpoint=otlp_endpoint,
-        insecure=True,  # Set to False and configure TLS for production
+        insecure=not use_tls,  # Use TLS if endpoint is https://
     )
 
-    logger.debug(f"Created OTLP exporter pointing to: {otlp_endpoint}")
+    logger.debug(
+        f"Created OTLP exporter pointing to: {otlp_endpoint} "
+        f"(TLS: {'enabled' if use_tls else 'disabled'})"
+    )
 
     # ---------------------------------------------------------------------
     # Step 4: Create a BatchSpanProcessor
@@ -287,8 +293,34 @@ def instrument_fastapi(app) -> None:
         logger.debug("Tracing not initialized, skipping FastAPI instrumentation")
         return
 
-    FastAPIInstrumentor.instrument_app(app)
-    logger.info("FastAPI auto-instrumentation enabled")
+    try:
+        # Instrument the specific FastAPI app instance by adding middleware
+        # This must happen during app startup, before any requests are processed
+
+        # First, check if middleware is already present
+        middleware_names = [str(m) for m in app.user_middleware]
+        if any('OpenTelemetry' in name for name in middleware_names):
+            logger.debug("OpenTelemetry middleware already present")
+            return
+
+        # Add OpenTelemetry middleware directly with explicit tracer provider
+        from opentelemetry.instrumentation.fastapi import OpenTelemetryMiddleware
+
+        # Get the global tracer provider
+        tracer_provider = trace.get_tracer_provider()
+
+        # Add the middleware with explicit tracer provider
+        app.add_middleware(
+            OpenTelemetryMiddleware,
+            tracer_provider=tracer_provider
+        )
+
+        logger.info(f"FastAPI auto-instrumentation enabled (middleware added with explicit tracer provider)")
+        logger.debug(f"Tracer provider: {type(tracer_provider)}")
+        logger.debug(f"Middleware count: {len(app.user_middleware)}")
+
+    except Exception as e:
+        logger.error(f"Failed to instrument FastAPI: {e}", exc_info=True)
 
 
 def instrument_sqlalchemy(engine) -> None:

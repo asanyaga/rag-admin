@@ -61,10 +61,109 @@ rag-admin/
 
 ## Networking
 
-All services communicate via the `app-network` bridge network:
-- Service discovery via Docker DNS (e.g., `postgres`, `backend`)
-- Only Caddy exposes ports to the host
-- Internal services (postgres, backend) are isolated from direct external access
+### Multi-Network Architecture
+
+RAG Admin uses two Docker networks for separation of concerns:
+
+#### 1. app-network (Internal Application Network)
+- **Purpose**: Application components communicate with each other
+- **Services**: PostgreSQL, Backend, Caddy
+- **Type**: Bridge network (managed by RAG Admin)
+- **Isolation**: Internal services isolated from direct external access
+
+```yaml
+networks:
+  app-network:
+    driver: bridge
+```
+
+#### 2. signoz-net (External Observability Network)
+- **Purpose**: Backend sends telemetry to SigNoz observability stack
+- **Services**: SigNoz OTel Collector, ClickHouse, Query Service, Zookeeper
+- **Type**: External network (managed by official SigNoz deployment)
+- **Connection**: Backend container connects to both networks
+
+```yaml
+networks:
+  signoz-net:
+    external: true
+    name: signoz-net
+```
+
+### Backend Multi-Network Configuration
+
+The backend container is unique—it connects to **both networks**:
+
+```yaml
+backend:
+  networks:
+    - app-network    # To communicate with PostgreSQL
+    - signoz-net     # To send telemetry to SigNoz
+```
+
+This design allows:
+- **Independent deployment**: Deploy SigNoz and RAG Admin separately
+- **Easy migration**: Move SigNoz to different machine by changing only `OTEL_EXPORTER_ENDPOINT`
+- **Clear separation**: Observability infrastructure is independent from application
+- **Optional observability**: RAG Admin works with or without SigNoz
+
+### Network Communication Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        app-network                          │
+│                                                             │
+│  ┌──────────┐      ┌──────────┐      ┌──────────┐        │
+│  │ Caddy    │──────│ Backend  │──────│ Postgres │        │
+│  └──────────┘      └──────────┘      └──────────┘        │
+│       │                   │                                │
+└───────│───────────────────│────────────────────────────────┘
+        │                   │
+        │                   │ Telemetry (OTLP/gRPC)
+    Internet            ┌───┴───────────────────────────────┐
+        │               │       signoz-net                  │
+        ↓               │                                   │
+     Users              │  ┌────────────────────────────┐  │
+                        │  │ SigNoz OTel Collector      │  │
+                        │  │ (port 4317)                │  │
+                        │  └────────────────────────────┘  │
+                        │                                   │
+                        │  ┌────────────────────────────┐  │
+                        │  │ ClickHouse                  │  │
+                        │  │ (telemetry storage)         │  │
+                        │  └────────────────────────────┘  │
+                        │                                   │
+                        │  ┌────────────────────────────┐  │
+                        │  │ SigNoz Query Service        │  │
+                        │  │ (UI on port 8080)           │  │
+                        │  └────────────────────────────┘  │
+                        └───────────────────────────────────┘
+```
+
+### Service Discovery
+
+Services use Docker DNS for discovery:
+
+**Within app-network:**
+- `postgres` → Resolves to PostgreSQL container
+- `backend` → Resolves to Backend container
+
+**Within signoz-net:**
+- `signoz-otel-collector` → Resolves to OTel Collector container
+- `signoz-clickhouse` → Resolves to ClickHouse container
+
+### Port Exposure
+
+Only Caddy exposes ports to the host:
+- **80** (HTTP) → Redirects to HTTPS
+- **443** (HTTPS) → Application + API
+- **443/udp** (HTTP/3) → Faster connections
+
+All other services are internal:
+- PostgreSQL: 5432 (internal only)
+- Backend: 8000 (internal only)
+- SigNoz Collector: 4317 (internal only)
+- SigNoz UI: 8080 (access via SSH tunnel)
 
 ## Frontend Build Process
 
@@ -85,11 +184,11 @@ The frontend is **not containerized** in production. Instead:
 3. **Caddy serves** the static files directly from `frontend/dist`
 
 This approach:
-- ✅ Reduces container count (3 instead of 4)
-- ✅ Lower resource usage
-- ✅ Simpler deployment
-- ✅ Faster startup time
-- ✅ Standard practice for static sites
+- Reduces container count (3 instead of 4)
+- Lower resource usage
+- Simpler deployment
+- Faster startup time
+- Standard practice for static sites
 
 ## Volumes
 
@@ -306,11 +405,11 @@ Don't use `docker-compose.prod.yml` for development as it:
 You might wonder why we don't run the frontend in a container. Here's the reasoning:
 
 ### Current Approach: Static Files + Caddy
-- ✅ Simple: Fewer moving parts
-- ✅ Efficient: No extra container overhead
-- ✅ Fast: Direct file serving
-- ✅ Standard: How most SPAs are deployed
-- ✅ Resource-friendly: Uses ~32-64MB RAM less
+- Simple: Fewer moving parts
+- Efficient: No extra container overhead
+- Fast: Direct file serving
+- Standard: How most SPAs are deployed
+- Resource-friendly: Uses ~32-64MB RAM less
 
 ### Alternative: Nginx Container
 Would add:
@@ -327,7 +426,139 @@ Consider using a separate frontend container (Nginx) if:
 3. You want A/B testing with multiple frontend versions
 4. You have a complex frontend build pipeline
 
-For most deployments, serving static files from Caddy is the better choice. See `DEPLOYMENT.md` "Scaling for Production" section for when to switch to a containerized frontend.
+For most deployments, serving static files from Caddy is the better choice.
+
+---
+
+## FAQ
+
+### Why are there Nginx files if we use Caddy?
+
+**Short Answer**: Those files are **NOT USED** - they're kept as references only.
+
+You might see:
+- `frontend/Dockerfile.nginx-reference`
+- `frontend/nginx.conf.reference`
+
+We simplified the architecture from 4 containers to 3. The frontend is **NOT containerized**:
+
+1. Build locally: `npm run build` → creates `frontend/dist/`
+2. Transfer to VPS: `scp -r dist user@vps:~/rag-admin/frontend/`
+3. Caddy serves directly from `frontend/dist/`
+
+**No Nginx container!** The Dockerfile and nginx.conf are kept for reference in case you want to switch back.
+
+### Where is Caddy installed?
+
+**Short Answer**: It's **NOT installed** - it runs in a Docker container.
+
+Caddy uses a pre-built Docker image:
+
+```yaml
+# docker-compose.prod.yml
+caddy:
+  image: caddy:2-alpine  # Downloads from Docker Hub
+```
+
+When you run `docker compose up`:
+1. Docker checks: "Do I have `caddy:2-alpine` image?"
+2. If no: Docker **downloads it from Docker Hub**
+3. Docker starts container from image
+4. Caddy runs **inside the container**
+
+**No installation on VPS needed!**
+
+### How do the containers communicate?
+
+Containers talk via Docker network:
+
+```yaml
+# docker-compose.prod.yml
+networks:
+  app-network:
+    driver: bridge
+```
+
+Inside the network, containers use service names:
+
+```
+postgres:5432    ← Database listens here
+backend:8000     ← API listens here
+caddy:80         ← Web server (internal)
+```
+
+Docker DNS resolves service names to container IPs automatically.
+
+Only **Caddy** is exposed to the internet:
+
+```yaml
+caddy:
+  ports:
+    - "80:80"      # HTTP
+    - "443:443"    # HTTPS
+```
+
+Everything else is **internal only**.
+
+### What's actually installed on the VPS?
+
+**Only these programs run directly on VPS:**
+
+1. **Docker** - Container runtime
+2. **Docker Compose** - Multi-container orchestration
+3. **Git** - For pulling code
+4. **Basic OS** - Ubuntu/Debian utilities
+
+**NOT Installed on VPS:**
+- Python (runs in backend container)
+- Node.js (used locally for builds)
+- PostgreSQL (runs in postgres container)
+- Caddy (runs in caddy container)
+- Nginx (not used at all)
+
+### What's the difference between `image:` and `build:`?
+
+**`image:`** - Use Pre-built Image:
+```yaml
+caddy:
+  image: caddy:2-alpine  # Download from Docker Hub
+```
+Docker pulls the image and uses it as-is.
+
+**`build:`** - Build Custom Image:
+```yaml
+backend:
+  build:
+    context: ./backend
+    dockerfile: Dockerfile  # Build from instructions
+```
+Docker reads the Dockerfile and builds a custom image.
+
+### How does HTTPS work with Let's Encrypt?
+
+**Caddy handles everything automatically!**
+
+What you do:
+1. Point DNS to VPS
+2. Set domain in Caddyfile
+3. Run `docker compose up`
+
+What Caddy does automatically:
+1. Detects domain in Caddyfile
+2. Contacts Let's Encrypt
+3. Proves domain ownership (ACME challenge)
+4. Downloads certificate
+5. Configures HTTPS
+6. Redirects HTTP → HTTPS
+7. Auto-renews before expiration
+
+**Requirements:**
+- Domain DNS pointing to VPS
+- Port 80 open (for ACME challenge)
+- Port 443 open (for HTTPS)
+- Valid domain in Caddyfile
+
+---
 
 ## Troubleshooting
 
@@ -372,9 +603,6 @@ curl -I http://yourdomain.com
 # Test backend from caddy
 docker compose -f docker-compose.prod.yml exec caddy wget -O- http://backend:8000/health
 
-# Test frontend from caddy
-docker compose -f docker-compose.prod.yml exec caddy wget -O- http://frontend/
-
 # Check network
 docker network inspect rag-admin_app-network
 ```
@@ -385,4 +613,3 @@ docker network inspect rag-admin_app-network
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [Caddy Documentation](https://caddyserver.com/docs/)
 - [ParadeDB Documentation](https://docs.paradedb.com/)
-- [Full Deployment Guide](./DEPLOYMENT.md)

@@ -4,7 +4,7 @@ Web application for creating and managing RAG pipelines. Learning/portfolio proj
 
 ## Stack
 
-- **Backend:** Python 3.12, FastAPI (async), SQLAlchemy 2.0, PostgreSQL, Alembic
+- **Backend:** Python 3.12, FastAPI (async), SQLAlchemy 2.0, Paradedb, Alembic,Otel, Signoz
 - **Frontend:** React 18, TypeScript, Vite
 - **Auth:** JWT + HTTP-only refresh tokens, Google OAuth
 

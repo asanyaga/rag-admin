@@ -130,7 +130,27 @@ The setup script will:
 - Install Node.js dependencies
 - Create `.env` file from template
 
-### 2. Configure Environment
+### 2. (Optional) Install SigNoz for Observability
+
+For local development with full observability (traces, logs, metrics):
+
+```bash
+# Clone SigNoz repository
+git clone https://github.com/SigNoz/signoz.git ~/signoz
+cd ~/signoz/deploy/docker
+
+# Deploy SigNoz
+docker compose up -d
+
+# Verify it's running
+docker compose ps
+```
+
+SigNoz UI: http://localhost:8080
+
+**Note:** This is optional. The application works fine without observability.
+
+### 3. Configure Environment
 
 Edit `backend/.env` with your settings:
 
@@ -144,9 +164,13 @@ JWT_SECRET_KEY=your-secure-random-key-here
 # Google OAuth (optional, for Google sign-in)
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Observability (optional)
+OTEL_ENABLED=True
+OTEL_EXPORTER_ENDPOINT=http://localhost:4317
 ```
 
-### 3. Start PostgreSQL
+### 4. Start PostgreSQL
 
 ```bash
 docker compose up -d
@@ -175,6 +199,7 @@ This will start:
 - **Backend:** http://localhost:8000
 - **Frontend:** http://localhost:5173
 - **API Docs:** http://localhost:8000/docs
+- **SigNoz UI:** http://localhost:8080 (if installed)
 
 ## Development Commands
 
@@ -280,10 +305,10 @@ docker compose up -d
 
 For deploying to a VPS with Docker:
 
-- 📖 **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete step-by-step deployment guide
-- 📋 **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - Deployment checklist
-- 🐳 **[DOCKER.md](DOCKER.md)** - Docker architecture and configuration
-- 🔄 **[GITHUB-DEPLOY.md](GITHUB-DEPLOY.md)** - GitHub Actions CI/CD setup
+- 📖 **[docs/deployment/](docs/deployment/)** - Complete deployment guide
+- 📋 **[docs/deployment/checklist.md](docs/deployment/checklist.md)** - Deployment checklist
+- 🐳 **[docs/deployment/docker.md](docs/deployment/docker.md)** - Docker architecture and configuration
+- 🔄 **[docs/deployment/ci-cd.md](docs/deployment/ci-cd.md)** - GitHub Actions CI/CD setup
 
 Quick start:
 ```bash
@@ -303,7 +328,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 Set up GitHub Actions for automated testing and deployment:
 
-- See **[GITHUB-DEPLOY.md](GITHUB-DEPLOY.md)** for complete CI/CD setup
+- See **[docs/deployment/ci-cd.md](docs/deployment/ci-cd.md)** for complete CI/CD setup
 - Automated testing on every push
 - Automated deployment to production on merge to main
 - Daily health checks and backups
@@ -315,7 +340,7 @@ Set up GitHub Actions for automated testing and deployment:
 - **Database**: PostgreSQL with pgvector and pg_search extensions
 - **Backups**: Automated daily backups with 7-day retention
 
-See [ARCHITECTURE_CHANGES.md](ARCHITECTURE_CHANGES.md) for deployment architecture details.
+See [docs/architecture/](docs/architecture/) for deployment architecture details.
 
 ## Troubleshooting
 

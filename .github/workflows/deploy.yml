@@ -82,7 +82,7 @@ jobs:
               if [ "${{ inputs.first_time_deploy }}" = "true" ]; then
                 echo "WARNING: .env.prod not found (first-time deploy mode)"
                 echo "You must create this file before containers will work."
-                echo "See DEPLOYMENT.md for setup instructions."
+                echo "See docs/deployment/ for setup instructions."
               else
                 echo "ERROR: .env.prod not found!"
                 echo "This file contains secrets and must exist on the server."
@@ -110,19 +110,36 @@ jobs:
             echo "==> Loading environment variables..."
             set -a && source .env.prod && set +a
 
+            echo "==> Checking SigNoz availability..."
+            # Check if SigNoz is reachable (don't fail if not)
+            if docker network inspect signoz-net > /dev/null 2>&1; then
+              echo "✓ signoz-net network exists"
+            else
+              echo "⚠ Warning: signoz-net network not found"
+              echo "  Observability will be degraded"
+              echo "  Deploy SigNoz first: Run 'Deploy SigNoz' workflow"
+            fi
+
+            if docker ps | grep -q signoz-otel-collector; then
+              echo "✓ SigNoz OTel Collector is running"
+            else
+              echo "⚠ Warning: SigNoz collector not running"
+              echo "  Deploy SigNoz with: cd ~/signoz/deploy/docker && docker compose up -d"
+            fi
+
             echo "==> Rebuilding and restarting containers..."
             if [ "${{ inputs.skip_build }}" = "true" ]; then
-              docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
+              docker compose -f docker-compose.prod.yml up -d
             else
-              docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml build --no-cache backend
-              docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
+              docker compose -f docker-compose.prod.yml build --no-cache backend
+              docker compose -f docker-compose.prod.yml up -d
             fi
 
             echo "==> Waiting for services to start..."
             sleep 10
 
             echo "==> Checking container status..."
-            docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml ps
+            docker compose -f docker-compose.prod.yml ps
 
             echo "==> Verifying backend health..."
             for i in {1..30}; do
@@ -133,7 +150,7 @@ jobs:
               fi
               if [ $i -eq 30 ]; then
                 echo "Backend health check failed! Status: $STATUS"
-                docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml logs --tail=50 backend
+                docker compose -f docker-compose.prod.yml logs --tail=50 backend
                 exit 1
               fi
               echo "Waiting for backend... ($i/30) Status: $STATUS"
