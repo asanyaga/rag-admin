@@ -82,7 +82,6 @@ from opentelemetry.sdk.trace import TracerProvider, Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
@@ -252,75 +251,6 @@ def setup_tracing(
     logger.info("Tracing initialized successfully")
 
     return _tracer_provider
-
-
-def instrument_fastapi(app) -> None:
-    """
-    Auto-instrument a FastAPI application.
-
-    This wraps every FastAPI endpoint to automatically create spans.
-    For each HTTP request, you'll see a span with:
-      - http.method: GET, POST, etc.
-      - http.route: /api/v1/users/{id}
-      - http.status_code: 200, 404, 500, etc.
-      - http.url: Full URL path
-
-    HOW IT WORKS:
-    -------------
-    FastAPIInstrumentor adds middleware that:
-    1. Starts a span when a request arrives
-    2. Extracts trace context from headers (traceparent)
-    3. Sets span attributes from the request
-    4. Ends the span when the response is sent
-    5. Records errors if an exception occurs
-
-    The span hierarchy looks like:
-
-        HTTP POST /api/v1/auth/signin
-        └── Your endpoint code runs here
-            └── Database queries (if SQLAlchemy is instrumented)
-            └── External HTTP calls (if httpx is instrumented)
-
-    Args:
-        app: The FastAPI application instance
-
-    Example:
-        >>> from fastapi import FastAPI
-        >>> app = FastAPI()
-        >>> instrument_fastapi(app)
-    """
-    if _tracer_provider is None:
-        logger.debug("Tracing not initialized, skipping FastAPI instrumentation")
-        return
-
-    try:
-        # Instrument the specific FastAPI app instance by adding middleware
-        # This must happen during app startup, before any requests are processed
-
-        # First, check if middleware is already present
-        middleware_names = [str(m) for m in app.user_middleware]
-        if any('OpenTelemetry' in name for name in middleware_names):
-            logger.debug("OpenTelemetry middleware already present")
-            return
-
-        # Add OpenTelemetry middleware directly with explicit tracer provider
-        from opentelemetry.instrumentation.fastapi import OpenTelemetryMiddleware
-
-        # Get the global tracer provider
-        tracer_provider = trace.get_tracer_provider()
-
-        # Add the middleware with explicit tracer provider
-        app.add_middleware(
-            OpenTelemetryMiddleware,
-            tracer_provider=tracer_provider
-        )
-
-        logger.info(f"FastAPI auto-instrumentation enabled (middleware added with explicit tracer provider)")
-        logger.debug(f"Tracer provider: {type(tracer_provider)}")
-        logger.debug(f"Middleware count: {len(app.user_middleware)}")
-
-    except Exception as e:
-        logger.error(f"Failed to instrument FastAPI: {e}", exc_info=True)
 
 
 def instrument_sqlalchemy(engine) -> None:

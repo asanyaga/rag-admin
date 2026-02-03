@@ -8,7 +8,14 @@ from app.schemas import AuthResponse, SignInRequest, SignUpRequest, TokenRespons
 from app.services.auth_service import AuthService
 from app.services.exceptions import AccountLockedError, AuthenticationError, ConflictError
 
+# Import tracing for manual instrumentation (hybrid approach)
+from app.observability import get_tracer
+from opentelemetry.trace import Status, StatusCode
+
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# Get tracer for creating custom spans in this module
+tracer = get_tracer(__name__)
 
 
 def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
@@ -85,43 +92,77 @@ async def sign_in(
     request: Request,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Sign in with email/password."""
-    ip_address, user_agent = get_client_info(request)
+    """
+    Sign in with email/password.
 
-    try:
-        user, access_token, refresh_token = await auth_service.sign_in(
-            request_data,
-            ip_address,
-            user_agent
-        )
+    This endpoint demonstrates hybrid instrumentation:
+    - Auto-instrumentation: FastAPI creates span for HTTP request
+    - Manual instrumentation: Custom spans for business logic below
+    """
+    # Create a custom span for authentication flow
+    # This span will be a child of the auto-generated HTTP span
+    with tracer.start_as_current_span("authenticate_user") as auth_span:
+        # Add context attributes for debugging and filtering
+        auth_span.set_attribute("auth.email", request_data.email)
+        auth_span.set_attribute("auth.method", "email_password")
 
-        # Set refresh token as HTTP-only cookie
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=not settings.DEBUG,
-            samesite="lax",
-            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
-        )
+        ip_address, user_agent = get_client_info(request)
+        auth_span.set_attribute("client.ip", ip_address)
+        if user_agent:
+            auth_span.set_attribute("client.user_agent", user_agent[:100])  # Truncate for cardinality
 
-        return AuthResponse(
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            user=UserResponse.model_validate(user)
-        )
+        try:
+            # The auth service call will create child spans for:
+            # - Database query (via SQLAlchemy auto-instrumentation)
+            # - Password verification (if we instrument that in the future)
+            user, access_token, refresh_token = await auth_service.sign_in(
+                request_data,
+                ip_address,
+                user_agent
+            )
 
-    except AuthenticationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
-        )
-    except AccountLockedError as e:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=str(e)
-        )
+            # Record successful authentication
+            auth_span.set_attribute("auth.success", True)
+            auth_span.set_attribute("user.id", user.id)
+            auth_span.set_status(Status(StatusCode.OK))
+
+            # Set refresh token as HTTP-only cookie
+            response.set_cookie(
+                key="refresh_token",
+                value=refresh_token,
+                httponly=True,
+                secure=not settings.DEBUG,
+                samesite="lax",
+                max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+            )
+
+            return AuthResponse(
+                access_token=access_token,
+                token_type="bearer",
+                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                user=UserResponse.model_validate(user)
+            )
+
+        except AuthenticationError as e:
+            # Record authentication failure with details
+            auth_span.set_attribute("auth.success", False)
+            auth_span.set_attribute("auth.error", "invalid_credentials")
+            auth_span.set_status(Status(StatusCode.ERROR, "Authentication failed"))
+
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(e)
+            )
+        except AccountLockedError as e:
+            # Record account lockout
+            auth_span.set_attribute("auth.success", False)
+            auth_span.set_attribute("auth.error", "account_locked")
+            auth_span.set_status(Status(StatusCode.ERROR, "Account locked"))
+
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=str(e)
+            )
 
 
 @router.post("/refresh", response_model=TokenResponse)
