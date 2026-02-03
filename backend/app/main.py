@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
-from app.routers import auth, oauth, users
+from app.routers import auth, oauth, projects, users
 from app.utils.oauth import setup_oauth
 
 # Import database engine for SQLAlchemy instrumentation
@@ -127,4 +127,5 @@ async def health() -> dict[str, str]:
 # Include routers
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(oauth.router, prefix="/api/v1")
+app.include_router(projects.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")

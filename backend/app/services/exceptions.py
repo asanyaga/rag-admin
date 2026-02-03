@@ -14,3 +14,13 @@ class ConflictError(Exception):
         self.message = message
         self.code = code
         super().__init__(message)
+
+
+class NotFoundError(Exception):
+    """Raised when a resource is not found"""
+    pass
+
+
+class ValidationError(Exception):
+    """Raised when a validation rule is violated (e.g., business logic rules)"""
+    pass

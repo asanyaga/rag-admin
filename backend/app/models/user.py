@@ -65,6 +65,10 @@ class User(Base):
     login_attempts: Mapped[list["LoginAttempt"]] = relationship(
         back_populates="user"
     )
+    projects: Mapped[list["Project"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         CheckConstraint(
