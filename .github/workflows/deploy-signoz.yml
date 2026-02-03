@@ -7,10 +7,10 @@ on:
         description: 'Target server hostname or IP'
         required: true
         default: 'your-server.com'
-      target_path:
-        description: 'Path to SigNoz installation'
+      signoz_base_path:
+        description: 'Base path for SigNoz installation'
         required: true
-        default: '~/signoz/deploy/docker'
+        default: '~/signoz'
 
 jobs:
   deploy:
@@ -23,38 +23,99 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ${{ inputs.target_path }}
+            set -e
 
-            # Pull latest SigNoz if using git
-            if [ -d .git ]; then
-              git pull
+            SIGNOZ_BASE="${{ inputs.signoz_base_path }}"
+            SIGNOZ_DEPLOY="${SIGNOZ_BASE}/deploy/docker"
+
+            echo "=== SigNoz Deployment Started ==="
+
+            # Check if SigNoz is already installed
+            if [ -d "${SIGNOZ_BASE}/.git" ]; then
+              echo "📦 SigNoz installation found - updating..."
+              cd "${SIGNOZ_BASE}"
+
+              # Pull latest changes from main branch
+              git fetch origin
+              git checkout main
+              git pull origin main
+
+              echo "✓ Updated to latest version"
+            else
+              echo "📥 SigNoz not found - performing fresh installation..."
+
+              # Remove directory if it exists but is not a git repo
+              if [ -d "${SIGNOZ_BASE}" ]; then
+                echo "Removing incomplete installation..."
+                rm -rf "${SIGNOZ_BASE}"
+              fi
+
+              # Clone official SigNoz repository
+              git clone -b main https://github.com/SigNoz/signoz.git "${SIGNOZ_BASE}"
+
+              echo "✓ Cloned SigNoz repository"
             fi
 
-            # Deploy SigNoz stack
-            docker compose down
-            docker compose up -d
+            # Navigate to official docker compose directory
+            cd "${SIGNOZ_DEPLOY}"
+
+            echo "📍 Working directory: $(pwd)"
+
+            # Deploy SigNoz stack with official command
+            echo "🚀 Starting SigNoz containers..."
+            docker compose up -d --remove-orphans
 
             # Wait for services to be healthy
-            echo "Waiting for SigNoz services to be healthy..."
-            timeout 120 bash -c 'until docker compose ps | grep signoz | grep -q "healthy"; do sleep 5; done' || {
-              echo "Warning: Timeout waiting for health checks"
+            echo "⏳ Waiting for SigNoz services to be healthy..."
+            timeout 120 bash -c 'until docker compose ps | grep -E "(otel-collector|query-service|frontend)" | grep -q "Up"; do sleep 5; echo "  Still waiting..."; done' || {
+              echo "⚠️  Timeout waiting for services to start"
               docker compose ps
+              exit 1
             }
 
-            # Verify collector is accessible
-            sleep 10
-            if curl -sf http://localhost:4317 > /dev/null 2>&1; then
-              echo "✓ SigNoz OTel Collector is accessible"
+            # Additional wait for services to fully initialize
+            echo "⏳ Waiting for services to initialize..."
+            sleep 15
+
+            # Verify OTel Collector is accessible (port 4317 for gRPC)
+            echo "🔍 Verifying OTel Collector..."
+            if timeout 10 bash -c 'until nc -z localhost 4317; do sleep 1; done' 2>/dev/null; then
+              echo "✓ SigNoz OTel Collector is accessible (gRPC: 4317)"
             else
-              echo "✗ Warning: Collector not responding"
+              echo "⚠️  Warning: Collector gRPC port not responding"
+            fi
+
+            # Verify HTTP collector endpoint (port 4318)
+            if timeout 10 bash -c 'until nc -z localhost 4318; do sleep 1; done' 2>/dev/null; then
+              echo "✓ SigNoz OTel Collector HTTP endpoint accessible (4318)"
+            else
+              echo "⚠️  Warning: Collector HTTP port not responding"
             fi
 
             # Verify UI is accessible
+            echo "🔍 Verifying SigNoz UI..."
             if curl -sf http://localhost:8080/api/v1/health > /dev/null 2>&1; then
-              echo "✓ SigNoz UI is accessible"
+              echo "✓ SigNoz UI is accessible (http://localhost:8080)"
             else
-              echo "✗ Warning: UI not responding"
+              echo "⚠️  Warning: UI health endpoint not responding"
+              echo "   Checking if UI port is open..."
+              if timeout 5 bash -c 'until nc -z localhost 8080; do sleep 1; done' 2>/dev/null; then
+                echo "   Port 8080 is open - UI may still be initializing"
+              fi
             fi
 
-            echo "SigNoz deployment complete"
+            # Display final status
+            echo ""
+            echo "=== SigNoz Deployment Complete ==="
+            echo ""
+            echo "📊 Container Status:"
             docker compose ps
+
+            echo ""
+            echo "🌐 Access Points:"
+            echo "   UI:              http://${{ inputs.target_host }}:8080"
+            echo "   OTel gRPC:       ${{ inputs.target_host }}:4317"
+            echo "   OTel HTTP:       ${{ inputs.target_host }}:4318"
+            echo ""
+            echo "📂 Installation Directory: ${SIGNOZ_BASE}"
+            echo "📂 Docker Compose Path:    ${SIGNOZ_DEPLOY}"
