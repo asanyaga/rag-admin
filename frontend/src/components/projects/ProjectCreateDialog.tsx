@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AxiosError } from 'axios'
 import { Project, ProjectCreate } from '@/types/project'
 import {
   Dialog,
@@ -67,7 +68,21 @@ export function ProjectCreateDialog({
       onOpenChange(false)
       toast.success('Project created successfully')
     } catch (error) {
-      if (error instanceof Error) {
+      // Handle Axios errors with proper error message extraction
+      if (error instanceof AxiosError && error.response) {
+        const status = error.response.status
+        const detail = error.response.data?.detail
+
+        if (status === 409) {
+          // Conflict error - duplicate project name
+          toast.error(
+            detail || `A project with the name "${formData.name}" already exists. Please choose a different name.`
+          )
+        } else {
+          // Other API errors
+          toast.error(detail || error.message || 'Failed to create project')
+        }
+      } else if (error instanceof Error) {
         toast.error(error.message || 'Failed to create project')
       } else {
         toast.error('Failed to create project')

@@ -170,6 +170,44 @@ Track learning, context, and summaries for each work session. Complements `/task
 **Usage by model:**
     **claude-opus-4-5:** 56 input, 16 output, 120.5k cache read, 3.2k cache write ($0.29)
 
+### 2026-02-03: SigNoz Workflow Update to Official Installation
+
+**Goal:** Update the GitHub workflow for deploying SigNoz to use the official installation method from SigNoz documentation
+
+**Outcome:**
+- ✅ **Workflow Completely Rewritten**: Updated `.github/workflows/deploy-signoz.yml` to follow official SigNoz Docker Compose installation
+  - Handles both fresh installation and updates intelligently
+  - Clones official SigNoz repo (`git clone -b main https://github.com/SigNoz/signoz.git`) if not present
+  - Pulls latest changes from `main` branch for existing installations
+  - Uses official directory structure (`~/signoz/deploy/docker`)
+  - Replaced `docker compose down && up` with `docker compose up -d --remove-orphans` per official docs
+- ✅ **Enhanced Health Checks**: Improved verification logic
+  - Checks both OTel Collector gRPC (4317) and HTTP (4318) endpoints
+  - Verifies UI accessibility (port 8080)
+  - Better error handling and status reporting
+  - Uses `nc` for port checks instead of curl for gRPC
+- ✅ **Configuration Updates**: Changed input parameter from `target_path` to `signoz_base_path` for clarity
+
+**Learned:**
+1. **Official SigNoz Installation Pattern**: The canonical installation is `git clone -b main https://github.com/SigNoz/signoz.git && cd signoz/deploy/ && cd docker && docker compose up -d --remove-orphans`
+2. **Git Detection Pattern**: Check for `.git` directory to distinguish between fresh installs and updates
+3. **Docker Compose Best Practice**: Using `--remove-orphans` is preferred over `down && up` to avoid full teardown and handle orphaned containers
+4. **SigNoz Ports**: Official installation exposes 8080 (UI), 4317 (gRPC), and 4318 (HTTP) for OTLP ingestion
+
+**Tasks:** N/A (single straightforward workflow update)
+
+**Next:**
+1. Test the updated workflow on actual deployment server
+2. Verify that both fresh installation and update paths work correctly
+3. Consider adding notification on deployment success/failure
+
+**Total cost:** $0.45
+**Total duration (API):** ~10s (estimated from API call count)
+**Total duration (wall):** 52m 15s
+**Total code changes:** 1 file modified (`.github/workflows/deploy-signoz.yml`), ~62 lines changed
+**Usage by model:**
+    **claude-sonnet-4-5:** 621 input, 58 output, 281.2k cache read, 96.6k cache write ($0.45)
+
 ### 2026-02-03: FastAPI OpenTelemetry Instrumentation Fix
 
 **Goal:** Review current observability implementation and fix FastAPI auto-instrumentation that wasn't creating spans
