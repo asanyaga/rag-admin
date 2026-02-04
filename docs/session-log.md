@@ -536,3 +536,67 @@ Track learning, context, and summaries for each work session. Complements `/task
 **Total code changes:** 3 files modified (backend/app/main.py, backend/app/middleware/__init__.py, backend/app/middleware/tracing.py), +83 lines added, -1 line removed
 **Usage by model:**
     **claude-sonnet-4-5:** 566 input, 3,616 output, 2,685,690 cache read, 249,126 cache write ($1.80)
+
+## 2026-02-04: Documents Feature Specification and Implementation Planning
+
+**Goal:** Review the Documents feature spec and create a detailed implementation plan with suggested improvements, focusing on simplicity, system design best practices, time to MVP, and learning over production resilience
+
+**Outcome:**
+- ✅ **Comprehensive Spec Review**: Analyzed `docs/planning/documents-feature-spec.md` covering PDF upload/management feature
+  - Feature enables users to upload, manage, and view PDF documents within projects
+  - Documents serve as foundational data source for RAG indexes (chunking/embedding comes later)
+  - Original spec included full PDF viewer, ClamAV scanning, file-based text storage
+- ✅ **Implementation Plan Created**: Generated detailed implementation plan at `docs/planning/documents-feature-implementation-plan.md`
+  - 19-hour implementation estimate (down from 27 hours via MVP simplifications)
+  - 7 phases: DB schema → Models/Schemas → Services → Storage → API → Frontend → Testing
+  - Comprehensive task breakdown with time estimates per task
+  - Risk analysis and mitigation strategies
+  - Testing strategy across all layers
+- ✅ **Major Spec Improvements Suggested**: Identified 8 hours of time savings through pragmatic simplifications
+  - **Viewer Simplification**: Text-only display + download instead of dual-panel react-pdf viewer (saves 4-5 hours)
+  - **Skip ClamAV**: Removed antivirus scanning for MVP (saves 2-3 hours, complex Docker integration)
+  - **Text Storage in DB**: Store extracted text in TEXT column instead of separate files (saves 1 hour, simpler architecture)
+  - **Skip Team ID**: Removed team_id future-proofing from Projects table (YAGNI for MVP learning focus)
+- ✅ **Schema Enhancements**: Improved database design for flexibility and extensibility
+  - Hybrid approach: Universal fields as columns (file_size, mime_type, status), source-specific in JSONB
+  - Added `source_type` enum (LOCAL_UPLOAD, URL, GITHUB, etc.) and `source_identifier` for multi-source support
+  - Changed `extracted_text` from file path to TEXT column for simpler storage
+  - Removed separate `page_texts` table, using `[Page N]` markers in extracted_text instead
+  - Added `processing_metadata` JSONB for async job tracking
+  - Removed `quarantined` status (no ClamAV scanning)
+- ✅ **Architecture Decisions**: Applied Ports & Adapters pattern with clear separation of concerns
+  - Storage layer abstraction (`BaseStorageBackend`, `LocalStorageBackend`, future S3Backend)
+  - Repository layer for data access (SQLAlchemy models, CRUD operations)
+  - Service layer for business logic (validation, orchestration, async text extraction)
+  - Router layer for API endpoints (FastAPI, Pydantic validation)
+  - Clear dependency injection pattern for testability
+
+**Learned:**
+1. **MVP Simplification Strategy**: Cutting non-essential features early (ClamAV, fancy UI) saves significant development time while preserving core learning objectives
+2. **Hybrid Schema Design**: Universal document fields as columns + source-specific metadata in JSONB provides flexibility without over-engineering
+3. **Text Storage Trade-offs**: Storing extracted text in database TEXT columns is simpler than file-based storage for MVP, easier to query/backup, acceptable for documents <50MB
+4. **Async Text Extraction Pattern**: PyPDF2 extraction runs synchronously but can be made async via FastAPI background tasks for better UX
+5. **Multi-Source Architecture**: Designing schema with `source_type` + `source_identifier` from the start enables future URL/GitHub/Drive support without migration
+6. **Status Enum Design**: `UPLOADING → PROCESSING → READY → FAILED → DELETED` provides clear document lifecycle with error handling
+7. **Ports & Adapters Benefits**: Abstract storage backend allows easy swap from local filesystem to S3 without changing business logic
+8. **Learning vs Production**: For MVP learning project, prioritize architectural patterns and speed over production features like virus scanning and complex viewers
+
+**Tasks:** N/A (planning session, no implementation)
+
+**Next:**
+1. Implement database migration for documents table (Phase 1)
+2. Create SQLAlchemy Document model and Pydantic schemas (Phase 2)
+3. Implement LocalStorageBackend with file operations (Phase 4)
+4. Build DocumentService with PDF text extraction (Phase 3)
+5. Create 6 REST API endpoints (POST, GET list, GET detail, DELETE, PATCH metadata) (Phase 5)
+6. Build frontend React components (upload dialog, list view, detail viewer) (Phase 6)
+7. Write comprehensive tests (repository, service, router, integration) (Phase 7)
+
+**Total cost:** $4.13
+**Total duration (API):** ~10s (cache-heavy single planning session)
+**Total duration (wall):** 65m 51s
+**Total code changes:** 2 files modified:
+- `docs/planning/documents-feature-spec.md` (updated with MVP simplifications and change log)
+- `docs/planning/documents-feature-implementation-plan.md` (created, comprehensive implementation guide)
+**Usage by model:**
+    **claude-sonnet-4-5:** 412 input, 49,973 output, 3,503,673 cache read, 619,775 cache write ($4.13)
