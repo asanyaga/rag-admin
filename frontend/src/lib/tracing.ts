@@ -56,7 +56,12 @@ export function initializeTracing(): void {
     )
 
     // Configure OTLP exporter
-    const collectorUrl = import.meta.env.VITE_OTEL_COLLECTOR_URL || 'http://localhost:4318/v1/traces'
+    // In production, use backend proxy to avoid browser permission prompts
+    // In development, can use direct connection to local collector
+    const isDev = import.meta.env.DEV
+    const collectorUrl = import.meta.env.VITE_OTEL_COLLECTOR_URL ||
+      (isDev ? 'http://localhost:4318/v1/traces' : '/api/v1/traces')
+
     const exporter = new OTLPTraceExporter({
       url: collectorUrl,
       headers: {

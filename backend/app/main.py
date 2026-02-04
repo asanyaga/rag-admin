@@ -1,9 +1,10 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
-from app.routers import auth, oauth, projects, users
+from app.routers import auth, oauth, otel_proxy, projects, users
 from app.utils.oauth import setup_oauth
 
 # Import database engine for SQLAlchemy instrumentation
@@ -39,6 +40,37 @@ setup_tracing(
 instrument_httpx()
 
 # ============================================================================
+# Application Lifespan Management
+# ============================================================================
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan manager.
+
+    Handles startup and shutdown logic for the application.
+    """
+    # Startup
+    # Instrument SQLAlchemy for database query tracing
+    # This instruments the sync engine that underlies our AsyncEngine.
+    # Creates child spans for every database query showing SQL, duration, etc.
+    from app.observability.tracing import instrument_sqlalchemy
+
+    instrument_sqlalchemy(engine.sync_engine)
+
+    # Initialize OAuth client
+    setup_oauth(settings)
+
+    yield
+
+    # Shutdown
+    # Clean up resources
+    await otel_proxy.close_http_client(app)
+    shutdown_tracing()
+
+
+# ============================================================================
 # Create FastAPI Application
 # ============================================================================
 
@@ -46,6 +78,7 @@ app = FastAPI(
     title="RAG Admin API",
     version="0.1.0",
     debug=settings.DEBUG,
+    lifespan=lifespan,
 )
 
 # ============================================================================
@@ -70,31 +103,6 @@ if settings.OTEL_ENABLED:
     app.add_middleware(TracingResponseMiddleware)
 
 
-@app.on_event("startup")
-async def startup_event():
-    """
-    Initialize application components that require the event loop.
-
-    Note: Tracing is already initialized at module level.
-    This event only handles components that need async context or engine access.
-    """
-    # Instrument SQLAlchemy for database query tracing
-    # This instruments the sync engine that underlies our AsyncEngine.
-    # Creates child spans for every database query showing SQL, duration, etc.
-    from app.observability.tracing import instrument_sqlalchemy
-    instrument_sqlalchemy(engine.sync_engine)
-
-    # Initialize OAuth client
-    setup_oauth(settings)
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """
-    Clean up on application shutdown.
-    Ensures all pending traces are exported before exit.
-    """
-    shutdown_tracing()
 
 # ============================================================================
 # Add Additional Middleware
@@ -136,5 +144,6 @@ async def health() -> dict[str, str]:
 # Include routers
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(oauth.router, prefix="/api/v1")
+app.include_router(otel_proxy.router)  # No prefix, router defines its own
 app.include_router(projects.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")

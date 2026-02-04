@@ -67,5 +67,24 @@ class Settings(BaseSettings):
     #           Easier to read in terminal, but harder to parse programmatically
     LOG_FORMAT: str = "json"
 
+    # -------------------------------------------------------------------------
+    # Frontend Telemetry Proxy Configuration
+    # -------------------------------------------------------------------------
+    # These settings control the proxy that forwards frontend telemetry to the
+    # local OTel collector, preventing browser permission prompts.
+
+    # URL of the OTel collector (HTTP endpoint for OTLP)
+    # This is used by the backend proxy to forward frontend telemetry.
+    # Note: Frontend signals use HTTP (port 4318), backend signals use gRPC (port 4317)
+    OTEL_COLLECTOR_URL: str = "http://localhost:4318"
+
+    # Connection timeout for OTel collector (seconds)
+    # How long to wait when establishing connection to the collector
+    OTEL_CONNECT_TIMEOUT: float = 2.0
+
+    # Request timeout for OTel collector (seconds)
+    # How long to wait for collector to respond after connection is established
+    OTEL_REQUEST_TIMEOUT: float = 3.0
+
 
 settings = Settings()
