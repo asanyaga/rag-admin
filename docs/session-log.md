@@ -300,3 +300,191 @@ Track learning, context, and summaries for each work session. Complements `/task
 **Total code changes:** 1 file written (PRD document, 591 lines)
 **Usage by model:**
     **claude-sonnet-3-5:** 212 input, 37 output, 541.8k cache read, 312.4k cache write ($1.34)
+
+### 2026-02-03: User-Friendly Error Messages for Duplicate Project Names
+
+**Goal:** Improve error handling in the Project Create dialog to display user-friendly error messages instead of "Request failed with status code 409" when trying to create a project with a duplicate name
+
+**Outcome:**
+- ✅ **Enhanced Error Handling**: Updated `ProjectCreateDialog.tsx` with comprehensive Axios error handling
+  - Added specific handling for 409 Conflict status (duplicate project names)
+  - Displays "A project with this name already exists" instead of generic error
+  - Extracts and displays backend error messages when available via `error.response?.data?.detail`
+  - Provides fallback messages for network errors and unexpected failures
+  - Maintained existing client-side validation (empty name, length limits)
+
+**Learned:**
+1. **Axios Error Handling Pattern**: Use type guard `error instanceof AxiosError` to safely access `error.response` properties in TypeScript
+2. **HTTP 409 Conflict**: Standard status code for duplicate resource creation attempts, ideal for database uniqueness constraint violations
+3. **Progressive Error Messages**: Check for backend detail message first, then fall back to status-specific messages, then generic fallback
+4. **User Experience**: Specific, actionable error messages ("A project with this name already exists") are much better than technical HTTP codes
+
+**Tasks:** N/A (single straightforward bug fix)
+
+**Next:** Monitor for other areas in the UI that might benefit from similar error handling improvements
+
+**Total cost:** $0.41
+**Total duration (API):** ~15s (estimated from cache-heavy usage)
+**Total duration (wall):** ~13m
+**Total code changes:** 1 file modified (`frontend/src/components/projects/ProjectCreateDialog.tsx`), +17 lines
+**Usage by model:**
+    **claude-sonnet-4-5:** 224 input, 62 output, 643.0k cache read, 56.3k cache write ($0.41)
+
+### 2026-02-03: Health Check Endpoint Trace Exclusion Investigation
+
+**Goal:** Investigate source of excessive /health endpoint requests (every 10ms) flooding SigNoz traces and exclude health checks from OpenTelemetry instrumentation
+
+**Outcome:**
+- ✅ **Root Cause Identified**: Health endpoint was being traced by OpenTelemetry, creating massive trace volume in SigNoz
+  - Screenshot analysis revealed hundreds of `GET /health` and `GET /health http send` spans
+  - Discovered backend auto-instrumentation was capturing all HTTP requests including health checks
+  - Health checks occurring every few milliseconds (visible in trace timestamps)
+- ✅ **Fix Applied**: Updated OpenTelemetry middleware configuration in `backend/app/main.py:64`
+  - Changed `excluded_urls=""` to `excluded_urls="/health"`
+  - This prevents health check endpoints from creating trace spans
+  - Reduced trace noise and SigNoz storage overhead
+
+**Learned:**
+1. **OpenTelemetry Middleware Exclusion Pattern**: The `excluded_urls` parameter accepts comma-separated path patterns to filter out unwanted traces
+2. **Health Check Best Practice**: Health/liveness/readiness endpoints should NOT be traced in production - they're high-frequency, low-value for observability
+3. **Trace Volume Management**: Even simple endpoints can create massive trace volumes when polled frequently (100 req/s = 360k spans/hour)
+4. **SigNoz Trace Analysis**: The UI clearly shows trace patterns - repetitive identical spans indicate monitoring/health check activity
+
+**Tasks:** N/A (single focused investigation and fix)
+
+**Next:**
+1. Verify trace volume reduction in SigNoz after deploying the fix
+2. Consider excluding other monitoring endpoints if present (e.g., `/metrics`, `/readiness`, `/liveness`)
+3. Review if health check polling interval should be adjusted (10ms is unusually aggressive)
+
+**Total cost:** $0.89
+**Total duration (API):** ~5s (cache-heavy with sub-agent)
+**Total duration (wall):** 18m 11s
+**Total code changes:** 1 file modified (`backend/app/main.py`), 1 line changed
+**Usage by model:**
+    **claude-sonnet-4-5:** 302 input, 80 output, 1,018,562 cache read, 75,404 cache write ($0.59)
+    **claude-haiku-4-5:** 2,460 input, 163 output, 1,152,564 cache read, 147,745 cache write ($0.30)
+
+### 2026-02-04: Frontend Tracing Implementation Planning
+
+**Goal:** Review observability documentation and backend implementation, then plan, implement, and verify frontend tracing with end-to-end trace correlation
+
+**Outcome:**
+- ✅ **Documentation Review Completed**: Read `FINAL_SOLUTION.md` and `IMPLEMENTATION_NOTES.md` to understand current backend tracing setup
+  - Backend using OpenTelemetry with W3C Trace Context propagation
+  - FastAPI middleware successfully creating spans for HTTP requests
+  - Traces flowing to SigNoz via OTLP gRPC exporter
+  - Health checks excluded from tracing (recent fix)
+- ⚠️ **Planning Phase Started**: Began exploration of frontend architecture and tracing requirements
+  - Session ended during plan mode exploration phase (prompt_input_exit)
+  - No implementation work completed yet
+
+**Learned:**
+1. **Backend Observability Status**: Backend tracing is fully operational with proper middleware ordering and network connectivity
+2. **End-to-End Tracing Requirements**: Frontend needs to:
+   - Generate trace context (traceparent headers) for outgoing API requests
+   - Propagate trace IDs to backend to correlate client-side and server-side spans
+   - Potentially send browser spans to SigNoz or log correlation data
+3. **Documentation Value**: The comprehensive observability docs (`FINAL_SOLUTION.md`, `IMPLEMENTATION_NOTES.md`) provided clear context for the working backend implementation
+
+**Tasks:** N/A (session ended during planning phase before implementation)
+
+**Next:**
+1. Complete exploration of frontend codebase architecture (React/TypeScript, Axios client)
+2. Review CORS configuration to ensure trace headers are exposed
+3. Design frontend tracing implementation approach:
+   - Option A: Full OpenTelemetry browser SDK (generates spans, exports to collector)
+   - Option B: Simple trace context propagation (inject traceparent headers only)
+   - Option C: Hybrid approach (propagate context + log correlation IDs)
+4. Create implementation plan with specific file changes
+5. Implement and verify end-to-end trace correlation
+
+**Total cost:** $0.40
+**Total duration (API):** ~5s (mostly cache reads)
+**Total duration (wall):** 19m 42s
+**Total code changes:** 2 files modified (1 line in `backend/app/main.py` from previous session, session-log.md updated)
+**Usage by model:**
+    **claude-sonnet-4-5:** 6,546 input, 55 output, 944,873 cache read, 320,757 cache write ($0.40)
+
+## 2026-02-04: Frontend Tracing Implementation with End-to-End Trace Correlation
+
+**Goal:** Implement frontend OpenTelemetry tracing with end-to-end trace correlation as detailed in the plan file, enabling complete observability from browser to backend to database
+
+**Outcome:**
+- ✅ **Backend Trace Propagation**: Enhanced FastAPI backend to expose trace context headers for frontend correlation
+  - Created `backend/app/middleware/tracing.py` with `TracingResponseMiddleware` to extract and expose trace context
+  - Middleware adds `traceparent`, `tracestate`, and `Server-Timing` headers to all responses
+  - Updated CORS middleware in `backend/app/main.py` to expose trace headers (`traceparent`, `tracestate`, `server-timing`)
+  - Registered middleware in FastAPI app with proper ordering
+- ✅ **Frontend Tracing Infrastructure**: Implemented full OpenTelemetry Web SDK integration
+  - Installed 8 OpenTelemetry packages (`@opentelemetry/api`, SDK, exporters, instrumentations)
+  - Created `frontend/src/lib/tracing.ts` with comprehensive tracing configuration (204 lines)
+  - Automatic instrumentation for document load, user interactions (clicks/submits), and XMLHttpRequest/fetch
+  - W3C Trace Context propagation configured for localhost origins
+  - Batch span processor with optimized settings (2s delay, 50 batch size)
+  - OTLP HTTP exporter to SigNoz collector (http://localhost:4318/v1/traces)
+  - Graceful degradation with try/catch to prevent app breakage if tracing fails
+- ✅ **Trace Context Extraction**: Enhanced Axios client with response header parsing
+  - Created `extractTraceFromHeaders()` utility function in `tracing.ts`
+  - Updated `frontend/src/api/client.ts` with response interceptor to log trace IDs
+  - Supports both `traceparent` header and `Server-Timing` header fallback
+  - Parses W3C Trace Context format (version-traceId-spanId-flags)
+- ✅ **Manual Instrumentation Utilities**: Created helper functions for custom spans
+  - Created `frontend/src/lib/instrumentation.ts` with `withSpan()` and `withAsyncSpan()` utilities
+  - Type-safe wrappers for synchronous and async functions
+  - Automatic error recording and span lifecycle management
+- ✅ **Application Integration**: Added tracing to React app entry point
+  - Updated `frontend/src/main.tsx` to call `initializeTracing()` before React render
+  - Instrumented `useProjects` hook with manual spans for API operations (list, get, create, update, delete)
+  - Created `frontend/src/components/NavigationTracker.tsx` for route change tracking
+  - Integrated NavigationTracker in `RootLayout.tsx`
+- ✅ **Environment Configuration**: Created `.env` template files
+  - Added `frontend/.env.local` with tracing configuration (collector URL, sampling rate, enabled flag)
+  - Updated `frontend/.gitignore` to exclude environment files
+- ✅ **Services Restarted**: Restarted backend and caddy services to apply middleware changes
+
+**Learned:**
+1. **End-to-End Trace Propagation Pattern**: Complete tracing requires three layers:
+   - Backend middleware to extract trace context from incoming requests
+   - Backend middleware to inject trace headers into responses
+   - Frontend Axios interceptor to read trace headers for correlation
+2. **W3C Trace Context Format**: Standard format is `version-traceId-spanId-flags` (e.g., `00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01`)
+3. **CORS Header Exposure**: Backend must explicitly expose custom headers via `expose_headers` in CORS middleware for frontend access
+4. **OpenTelemetry Web SDK Architecture**: Requires TracerProvider → SpanProcessor → Exporter chain, plus ZoneContextManager for async context propagation
+5. **Automatic vs Manual Instrumentation**: Auto-instrumentation handles HTTP/DOM/navigation, manual spans needed for business logic (React hooks, data transformations)
+6. **OTLP HTTP vs gRPC**: Frontend uses HTTP exporter (port 4318) instead of gRPC (port 4317) due to browser limitations
+7. **Middleware Ordering in FastAPI**: Tracing middleware must be registered after CORS middleware to ensure headers are exposed correctly
+8. **Graceful Degradation**: Tracing initialization wrapped in try/catch to prevent breaking the app if collector is unreachable
+
+**Tasks:** Completed 11 implementation tasks:
+1. ✅ Update CORS middleware to expose trace headers
+2. ✅ Create TracingResponseMiddleware
+3. ✅ Register TracingResponseMiddleware in FastAPI app
+4. ✅ Install OpenTelemetry NPM packages
+5. ✅ Create frontend tracing configuration
+6. ✅ Initialize tracing in main.tsx
+7. ✅ Create environment configuration files
+8. ✅ Update Axios client with trace extraction
+9. ✅ Create manual instrumentation utilities
+10. ✅ Instrument useProjects hook
+11. ✅ Add route navigation tracking
+
+**Next:**
+1. Verify end-to-end tracing in SigNoz:
+   - Check that frontend spans appear in SigNoz UI
+   - Verify trace context propagates from browser → backend → database
+   - Confirm traces are linked by shared trace ID
+2. Test trace correlation by triggering API errors and verifying trace ID appears in logs
+3. Add manual instrumentation to other React hooks (useAuth, useDocuments, etc.)
+4. Consider adding error boundary with trace context logging
+5. Monitor batch export behavior and tune `scheduledDelayMillis` if needed
+6. Add user/session attributes to spans for better filtering in SigNoz
+
+**Total cost:** $6.31
+**Total duration (API):** ~30s (estimated from token distribution)
+**Total duration (wall):** 59m 23s
+**Total code changes:** 11 files modified/created (~750 lines added):
+- Backend: 3 files (middleware/__init__.py, middleware/tracing.py, main.py)
+- Frontend: 8 files (package.json, package-lock.json, .gitignore, main.tsx, api/client.ts, lib/tracing.ts, lib/instrumentation.ts, components/NavigationTracker.tsx, layout/RootLayout.tsx)
+**Usage by model:**
+    **claude-sonnet-4-5:** 1,792 input, 17,066 output, 11,072,839 cache read, 727,208 cache write ($6.31)
