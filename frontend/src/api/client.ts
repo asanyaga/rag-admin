@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import { extractTraceFromHeaders } from '@/lib/tracing'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
@@ -51,10 +52,31 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 }
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Extract trace context from response headers for debugging
+    const traceContext = extractTraceFromHeaders(response.headers)
+    if (traceContext.traceId) {
+      // Attach trace metadata to response config for access in application code
+      // Using type assertion since metadata is not in the standard config type
+      ;(response.config as any).traceId = traceContext.traceId
+      ;(response.config as any).spanId = traceContext.spanId
+    }
+    return response
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean
+    }
+
+    // Extract trace context from error response for debugging
+    if (error.response?.headers) {
+      const traceContext = extractTraceFromHeaders(error.response.headers)
+      if (traceContext.traceId) {
+        console.error('[API Error] Trace ID:', traceContext.traceId, 'Span ID:', traceContext.spanId)
+        // Attach to error object for access in error handlers
+        ;(error as any).traceId = traceContext.traceId
+        ;(error as any).spanId = traceContext.spanId
+      }
     }
 
     // If 401 and not already retrying
