@@ -61,9 +61,13 @@ if settings.OTEL_ENABLED:
 
     app.add_middleware(
         OpenTelemetryMiddleware,
-        excluded_urls="",  # Trace all URLs
+        excluded_urls=".*/health$",  # Proper regex: match URLs ending with /health
         tracer_provider=trace.get_tracer_provider()
     )
+
+    # Add custom tracing middleware for response headers
+    from app.middleware.tracing import TracingResponseMiddleware
+    app.add_middleware(TracingResponseMiddleware)
 
 
 @app.on_event("startup")
@@ -111,6 +115,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[
+        "Server-Timing",   # For browser DevTools
+        "traceparent",     # W3C Trace Context
+        "tracestate",      # W3C Trace Context state
+    ],
 )
 
 
