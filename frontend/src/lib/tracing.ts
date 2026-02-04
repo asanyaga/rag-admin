@@ -168,18 +168,33 @@ export function getTracer(name = 'rag-admin-frontend'): Tracer {
  * )
  * ```
  */
-export function extractTraceFromHeaders(headers: Record<string, string> | Headers): {
-  traceId: string | null
-  spanId: string | null
-  traceFlags: string | null
+export function extractTraceFromHeaders(headers: unknown): {
+  traceId: string | undefined
+  spanId: string | undefined
+  traceFlags: string | undefined
 } {
   try {
+    // Handle both Axios headers (object-like) and fetch Headers (class with get method)
+    let traceparent: string | null | undefined
+    let serverTiming: string | null | undefined
+
+    if (headers && typeof headers === 'object') {
+      // Check if it's a Headers object with a get method
+      if ('get' in headers && typeof headers.get === 'function') {
+        traceparent = headers.get('traceparent')
+        serverTiming = headers.get('server-timing')
+      } else {
+        // Treat as plain object (Axios headers)
+        const headersObj = headers as Record<string, unknown>
+        traceparent = headersObj.traceparent as string | undefined
+        serverTiming = headersObj['server-timing'] as string | undefined
+      }
+    }
+
     // Try to get traceparent header (W3C Trace Context format)
     // Format: version-traceId-spanId-flags
     // Example: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
-    const traceparent = headers.traceparent || headers.get?.('traceparent')
-
-    if (traceparent) {
+    if (traceparent && typeof traceparent === 'string') {
       const parts = traceparent.split('-')
       if (parts.length === 4) {
         return {
@@ -192,9 +207,7 @@ export function extractTraceFromHeaders(headers: Record<string, string> | Header
 
     // Fallback: try Server-Timing header
     // Format: traceparent;desc="00-traceId-spanId-flags"
-    const serverTiming = headers['server-timing'] || headers.get?.('server-timing')
-
-    if (serverTiming) {
+    if (serverTiming && typeof serverTiming === 'string') {
       const match = serverTiming.match(/traceparent;desc="(.+?)"/)
       if (match && match[1]) {
         const parts = match[1].split('-')
@@ -211,11 +224,11 @@ export function extractTraceFromHeaders(headers: Record<string, string> | Header
     console.warn('[Tracing] Failed to extract trace from headers:', error)
   }
 
-  // Return null values if extraction failed
+  // Return undefined values if extraction failed
   return {
-    traceId: null,
-    spanId: null,
-    traceFlags: null,
+    traceId: undefined,
+    spanId: undefined,
+    traceFlags: undefined,
   }
 }
 
