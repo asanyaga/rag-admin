@@ -51,15 +51,26 @@ const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue = []
 }
 
+// Extended types for trace context
+interface TracedConfig extends InternalAxiosRequestConfig {
+  traceId?: string
+  spanId?: string
+}
+
+interface TracedError extends AxiosError {
+  traceId?: string
+  spanId?: string
+}
+
 apiClient.interceptors.response.use(
   (response) => {
     // Extract trace context from response headers for debugging
     const traceContext = extractTraceFromHeaders(response.headers)
     if (traceContext.traceId) {
       // Attach trace metadata to response config for access in application code
-      // Using type assertion since metadata is not in the standard config type
-      ;(response.config as any).traceId = traceContext.traceId
-      ;(response.config as any).spanId = traceContext.spanId
+      const config = response.config as TracedConfig
+      config.traceId = traceContext.traceId
+      config.spanId = traceContext.spanId
     }
     return response
   },
@@ -74,8 +85,9 @@ apiClient.interceptors.response.use(
       if (traceContext.traceId) {
         console.error('[API Error] Trace ID:', traceContext.traceId, 'Span ID:', traceContext.spanId)
         // Attach to error object for access in error handlers
-        ;(error as any).traceId = traceContext.traceId
-        ;(error as any).spanId = traceContext.spanId
+        const tracedError = error as TracedError
+        tracedError.traceId = traceContext.traceId
+        tracedError.spanId = traceContext.spanId
       }
     }
 

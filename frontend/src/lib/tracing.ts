@@ -168,7 +168,7 @@ export function getTracer(name = 'rag-admin-frontend'): Tracer {
  * )
  * ```
  */
-export function extractTraceFromHeaders(headers: any): {
+export function extractTraceFromHeaders(headers: Record<string, string> | Headers): {
   traceId: string | null
   spanId: string | null
   traceFlags: string | null

@@ -26,7 +26,17 @@ cd backend && alembic upgrade head
 
 # Frontend
 cd frontend && npm run dev
+cd frontend && npm run lint  # Run ESLint checks
 ```
+
+## Quality Checks
+
+**After making frontend code changes:**
+1. Run `cd frontend && npm run lint` to verify no TypeScript/ESLint errors
+2. Common issues to watch for:
+   - Avoid `any` types - use proper interfaces or unions like `Record<string, unknown>`
+   - Remove unnecessary semicolons (especially in statement expressions)
+   - Ensure all functions have explicit return types
 
 ## Patterns
 
