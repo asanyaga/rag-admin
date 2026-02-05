@@ -40,6 +40,9 @@ COPY --chown=appuser:appuser . .
 # Make entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
 
+# Create data directory with proper ownership
+RUN mkdir -p /app/data/documents && chown -R appuser:appuser /app/data
+
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
