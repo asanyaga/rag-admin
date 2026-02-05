@@ -812,3 +812,48 @@ Track learning, context, and summaries for each work session. Complements `/task
 **Total code changes:** 4 files modified (~150 lines changed)
 **Usage by model:**
     **claude-sonnet-4-5:** 233 input, 3,033 output, 1,165,830 cache read, 219,382 cache write ($1.22)
+
+## 2026-02-05: Document Download Endpoint Implementation and Bug Fixes
+
+**Goal:** Fix 404 error on document download endpoint and implement missing file download functionality
+
+**Outcome:**
+- ✅ **Download Endpoint Created**: Implemented missing `/api/v1/documents/{document_id}/file` endpoint in backend
+  - Created new `download_document_file` route handler in `backend/app/routers/documents.py`
+  - Endpoint returns PDF file with proper Content-Disposition headers for browser download
+  - Uses FileResponse with correct MIME type (application/pdf)
+  - Includes proper error handling for missing files and unauthorized access
+- ✅ **LocalStorageBackend Enhanced**: Added file path retrieval method
+  - Implemented `get_file_path()` method in `backend/app/adapters/storage/local.py`
+  - Method returns full filesystem path for stored documents
+  - Enables FileResponse to serve files directly from disk
+- ✅ **DocumentService Updated**: Added download support method
+  - Created `get_document_for_download()` method in `backend/app/services/document_service.py`
+  - Validates document exists, ownership, and file status (READY)
+  - Returns document metadata and file path for download
+- ✅ **Bug Fixes**: Resolved several issues discovered during implementation
+  - Fixed temporal dead zone errors in `useDocuments` hook (moved variable declarations)
+  - Fixed incorrect download URL construction in frontend (was using `/file` suffix incorrectly)
+  - Updated router registration to include new download endpoint
+
+**Learned:**
+1. **FastAPI FileResponse Pattern**: For serving files, use `FileResponse` with `filename` parameter to set Content-Disposition header automatically
+2. **Storage Backend Abstraction**: Adding `get_file_path()` method to storage interface maintains clean separation - service layer doesn't know about filesystem details
+3. **Download URL Convention**: RESTful pattern for file downloads is typically `GET /resource/{id}/file` or `GET /resource/{id}/download`
+4. **Temporal Dead Zone in React Hooks**: Variable declarations must appear before usage in function scope to avoid TDZ errors (found in `useDocuments` hook)
+5. **404 Debugging Pattern**: Check router registration → endpoint implementation → service method → storage layer systematically
+
+**Tasks:** N/A (single bug fix with missing feature implementation)
+
+**Next:**
+1. Test document download functionality in browser
+2. Verify Content-Disposition headers work correctly (triggers download vs in-browser view)
+3. Add download analytics/tracking if needed
+4. Consider adding support for partial downloads (Range headers) for large files
+
+**Total cost:** $2.21
+**Total duration (API):** ~5s (cache-heavy session)
+**Total duration (wall):** 38m 1s
+**Total code changes:** 3 files modified (~85 lines added)
+**Usage by model:**
+    **claude-sonnet-4-5:** 660 input, 6,858 output, 2,877,397 cache read, 332,024 cache write ($2.21)

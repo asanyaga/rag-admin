@@ -61,6 +61,9 @@ services:
     ports:
       # Expose for direct API access during development
       - "8000:8000"
+    volumes:
+      # Persistent document storage
+      - document_storage_local:/app/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,4 +106,8 @@ networks:
 volumes:
   # Separate volume name to avoid conflicts with production
   postgres_data_local:
+    driver: local
+
+  # Document storage (uploaded files)
+  document_storage_local:
     driver: local

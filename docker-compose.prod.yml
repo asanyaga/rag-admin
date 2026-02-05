@@ -34,6 +34,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env.prod
+    volumes:
+      # Persistent document storage
+      - document_storage:/app/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,6 +86,10 @@ networks:
 volumes:
   # PostgreSQL data persistence
   postgres_data:
+    driver: local
+
+  # Document storage (uploaded files)
+  document_storage:
     driver: local
 
   # Caddy data (SSL certificates, etc.)

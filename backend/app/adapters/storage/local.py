@@ -18,7 +18,9 @@ class LocalStorageService:
         Args:
             base_path: Base directory for file storage
         """
-        self.base_path = Path(base_path)
+        # Convert to absolute path to ensure consistent path resolution
+        # regardless of current working directory
+        self.base_path = Path(base_path).resolve()
         self.base_path.mkdir(parents=True, exist_ok=True)
 
     async def save(self, content: bytes, relative_path: str) -> str:
@@ -61,9 +63,18 @@ class LocalStorageService:
         """
         file_path = Path(path)
 
-        # If path is not absolute, assume it's relative to base_path
+        # Handle different path formats:
+        # 1. Absolute paths (new format): use as-is
+        # 2. Relative paths without base_path prefix: prepend base_path
+        # 3. Relative paths with base_path prefix (legacy): resolve from cwd
         if not file_path.is_absolute():
-            file_path = self.base_path / file_path
+            # Try prepending base_path first (for paths like "projects/xxx/file.pdf")
+            candidate = self.base_path / file_path
+            if candidate.exists():
+                file_path = candidate
+            else:
+                # Fall back to resolving from current directory (for legacy paths)
+                file_path = file_path.resolve()
 
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
@@ -86,9 +97,13 @@ class LocalStorageService:
         """
         file_path = Path(path)
 
-        # If path is not absolute, assume it's relative to base_path
+        # Handle different path formats (same logic as get method)
         if not file_path.is_absolute():
-            file_path = self.base_path / file_path
+            candidate = self.base_path / file_path
+            if candidate.exists():
+                file_path = candidate
+            else:
+                file_path = file_path.resolve()
 
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
@@ -109,8 +124,12 @@ class LocalStorageService:
         """
         file_path = Path(path)
 
-        # If path is not absolute, assume it's relative to base_path
+        # Handle different path formats (same logic as get method)
         if not file_path.is_absolute():
-            file_path = self.base_path / file_path
+            candidate = self.base_path / file_path
+            if candidate.exists():
+                file_path = candidate
+            else:
+                file_path = file_path.resolve()
 
         return file_path.exists() and file_path.is_file()
