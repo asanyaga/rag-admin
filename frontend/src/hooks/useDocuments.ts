@@ -35,38 +35,20 @@ export function useDocuments(
   const pollingIntervals = useRef<Map<string, NodeJS.Timeout>>(new Map())
   const pollingStartTimes = useRef<Map<string, number>>(new Map())
 
-  const fetchDocuments = useCallback(async () => {
-    if (!projectId) {
-      setDocuments([])
-      return
-    }
+  // Use refs to avoid circular dependencies between callbacks
+  const stopPollingRef = useRef<(documentId: string) => void>()
+  const startPollingRef = useRef<(documentId: string) => void>()
 
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await documentsApi.listDocuments({
-        projectId,
-        status: statusFilter,
-      })
-      setDocuments(data)
-
-      // Start polling for processing documents
-      data.forEach((doc) => {
-        if (doc.status === 'processing' && !pollingIntervals.current.has(doc.id)) {
-          startPolling(doc.id)
-        } else if (doc.status !== 'processing' && pollingIntervals.current.has(doc.id)) {
-          stopPolling(doc.id)
-        }
-      })
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to fetch documents'
-      setError(errorMessage)
-      console.error('Error fetching documents:', err)
-    } finally {
-      setIsLoading(false)
+  const stopPolling = useCallback((documentId: string) => {
+    const interval = pollingIntervals.current.get(documentId)
+    if (interval) {
+      clearInterval(interval)
+      pollingIntervals.current.delete(documentId)
+      pollingStartTimes.current.delete(documentId)
     }
-  }, [projectId, statusFilter, startPolling, stopPolling])
+  }, [])
+
+  stopPollingRef.current = stopPolling
 
   const startPolling = useCallback((documentId: string) => {
     // Don't start if already polling
@@ -92,7 +74,7 @@ export function useDocuments(
                 : doc
             )
           )
-          stopPolling(documentId)
+          stopPollingRef.current?.(documentId)
           return
         }
 
@@ -114,26 +96,52 @@ export function useDocuments(
 
         // Stop polling if no longer processing
         if (updated.status !== 'processing') {
-          stopPolling(documentId)
+          stopPollingRef.current?.(documentId)
         }
       } catch (err) {
         console.error(`Error polling document ${documentId}:`, err)
         // Stop polling on error (document might have been deleted)
-        stopPolling(documentId)
+        stopPollingRef.current?.(documentId)
       }
     }, POLLING_INTERVAL)
 
     pollingIntervals.current.set(documentId, interval)
-  }, [stopPolling])
-
-  const stopPolling = useCallback((documentId: string) => {
-    const interval = pollingIntervals.current.get(documentId)
-    if (interval) {
-      clearInterval(interval)
-      pollingIntervals.current.delete(documentId)
-      pollingStartTimes.current.delete(documentId)
-    }
   }, [])
+
+  startPollingRef.current = startPolling
+
+  const fetchDocuments = useCallback(async () => {
+    if (!projectId) {
+      setDocuments([])
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await documentsApi.listDocuments({
+        projectId,
+        status: statusFilter,
+      })
+      setDocuments(data)
+
+      // Start polling for processing documents
+      data.forEach((doc) => {
+        if (doc.status === 'processing' && !pollingIntervals.current.has(doc.id)) {
+          startPollingRef.current?.(doc.id)
+        } else if (doc.status !== 'processing' && pollingIntervals.current.has(doc.id)) {
+          stopPollingRef.current?.(doc.id)
+        }
+      })
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch documents'
+      setError(errorMessage)
+      console.error('Error fetching documents:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [projectId, statusFilter])
 
   const uploadDocument = useCallback(
     async (data: DocumentUpload): Promise<Document> => {
@@ -165,7 +173,7 @@ export function useDocuments(
 
           // Start polling if processing
           if (newDocument.status === 'processing') {
-            startPolling(newDocument.id)
+            startPollingRef.current?.(newDocument.id)
           }
 
           return newDocument
@@ -177,7 +185,7 @@ export function useDocuments(
         }
       })
     },
-    [startPolling]
+    []
   )
 
   const updateDocument = useCallback(
@@ -222,7 +230,7 @@ export function useDocuments(
           span.setAttribute('document.id', id)
 
           // Stop polling if active
-          stopPolling(id)
+          stopPollingRef.current?.(id)
 
           await documentsApi.deleteDocument(id)
 
@@ -236,7 +244,7 @@ export function useDocuments(
         }
       })
     },
-    [stopPolling]
+    []
   )
 
   const downloadDocument = useCallback(
