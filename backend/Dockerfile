@@ -16,9 +16,13 @@ RUN uv sync --frozen --no-dev
 # Stage 2: Runtime stage
 FROM python:3.12-slim
 
-# Install PostgreSQL client for health checks and pg_isready
+# Install system dependencies
+# - postgresql-client: for health checks and pg_isready
+# - libmagic1: required by python-magic for MIME type detection
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends postgresql-client && \
+    apt-get install -y --no-install-recommends \
+        postgresql-client \
+        libmagic1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

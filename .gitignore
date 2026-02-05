@@ -87,3 +87,6 @@ backups/
 *.sql
 *.sql.gz
 *.dump
+
+# Backend data storage
+backend/data/

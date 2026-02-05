@@ -24,6 +24,10 @@ cd backend && uvicorn app.main:app --reload
 cd backend && pytest
 cd backend && alembic upgrade head
 
+# Package Management
+uv add <package-name>        # Add Python package (backend uses uv, not pip)
+cd frontend && npm install   # Add Node package
+
 # Frontend
 cd frontend && npm run dev
 cd frontend && npm run lint  # Run ESLint checks

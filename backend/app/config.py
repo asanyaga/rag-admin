@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     # Application
     DEBUG: bool = True
 
+    # Document Storage
+    # For development: uses ./data/documents (relative to where app runs)
+    # For production: override with absolute path or mounted volume
+    DOCUMENT_STORAGE_PATH: str = "./data/documents"
+    MAX_UPLOAD_SIZE_MB: int = 25
+    ALLOWED_MIME_TYPES: list[str] = ["application/pdf"]
+
     # -------------------------------------------------------------------------
     # Observability Configuration (OpenTelemetry)
     # -------------------------------------------------------------------------

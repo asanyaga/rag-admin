@@ -88,6 +88,7 @@ class Project(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="projects")
+    documents: Mapped[list["Document"]] = relationship(back_populates="project", cascade="all, delete-orphan")
 
     __table_args__ = (
         sa.UniqueConstraint('user_id', 'name', name='uq_projects_user_name'),

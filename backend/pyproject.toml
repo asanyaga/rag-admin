@@ -25,16 +25,23 @@ dependencies = [
     # OpenTelemetry - Observability instrumentation
     # -------------------------------------------------------------------------
     # Core OTel packages
-    "opentelemetry-api>=1.20.0",          # API interfaces (what you code against)
-    "opentelemetry-sdk>=1.20.0",          # SDK implementation (does the actual work)
+    "opentelemetry-api>=1.20.0", # API interfaces (what you code against)
+    "opentelemetry-sdk>=1.20.0", # SDK implementation (does the actual work)
     # Auto-instrumentation packages (zero-code tracing)
-    "opentelemetry-instrumentation-fastapi>=0.41b0",    # Traces HTTP requests
+    "opentelemetry-instrumentation-fastapi>=0.41b0", # Traces HTTP requests
     "opentelemetry-instrumentation-sqlalchemy>=0.41b0", # Traces DB queries
-    "opentelemetry-instrumentation-httpx>=0.41b0",      # Traces outgoing HTTP
+    "opentelemetry-instrumentation-httpx>=0.41b0", # Traces outgoing HTTP
     # Exporter to send data to OTel Collector
     "opentelemetry-exporter-otlp>=1.20.0",
     # Structured JSON logging with trace correlation
     "python-json-logger>=2.0.7",
+    # -------------------------------------------------------------------------
+    # Document Processing
+    # -------------------------------------------------------------------------
+    "llama-index>=0.10.0", # Core LlamaIndex for document parsing
+    "llama-index-readers-file>=0.1.0", # File readers for various formats
+    "aiofiles>=23.2.0", # Async file operations
+    "python-magic>=0.4.27", # MIME type detection from content
 ]
 
 [project.optional-dependencies]
