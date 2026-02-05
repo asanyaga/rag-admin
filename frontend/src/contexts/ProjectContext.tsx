@@ -108,7 +108,7 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
     }
 
     initProject()
-  }, [isAuthenticated, user?.id, fetchProjects, fetchDefaultProject])
+  }, [isAuthenticated, user, fetchProjects, fetchDefaultProject])
 
   // Clear projects when user signs out
   useEffect(() => {
