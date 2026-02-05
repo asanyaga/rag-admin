@@ -13,6 +13,11 @@ export async function getProjects(includeArchived = false): Promise<Project[]> {
   return response.data
 }
 
+export async function getDefaultProject(): Promise<Project> {
+  const response = await apiClient.get<Project>('/projects/default')
+  return response.data
+}
+
 export async function getProject(id: string): Promise<Project> {
   const response = await apiClient.get<Project>(`/projects/${id}`)
   return response.data

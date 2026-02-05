@@ -72,6 +72,12 @@ class Project(Base):
         default=False,
         server_default='false'
     )
+    is_default: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default='false'
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -96,4 +102,5 @@ class Project(Base):
         sa.Index('ix_projects_is_archived', 'is_archived'),
         sa.Index('ix_projects_created_at', 'created_at'),
         sa.Index('ix_projects_user_active', 'user_id', 'is_archived'),
+        sa.Index('ix_projects_user_default', 'user_id', 'is_default'),
     )

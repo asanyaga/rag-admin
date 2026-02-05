@@ -2,7 +2,8 @@ from datetime import datetime, timedelta
 
 from app.config import settings
 from app.models import AuthProvider, RefreshToken, User
-from app.repositories import RefreshTokenRepository, UserRepository
+from app.repositories import ProjectRepository, RefreshTokenRepository, UserRepository
+from app.schemas.project import ProjectCreate
 from app.services.exceptions import ConflictError
 from app.utils.jwt import create_access_token, create_refresh_token, hash_refresh_token
 
@@ -11,10 +12,12 @@ class OAuthService:
     def __init__(
         self,
         user_repo: UserRepository,
-        token_repo: RefreshTokenRepository
+        token_repo: RefreshTokenRepository,
+        project_repo: ProjectRepository
     ):
         self.user_repo = user_repo
         self.token_repo = token_repo
+        self.project_repo = project_repo
 
     async def get_or_create_google_user(
         self,
@@ -68,6 +71,17 @@ class OAuthService:
             google_id=google_id
         )
         user = await self.user_repo.create(user)
+
+        # Create default project for new user
+        default_project = await self.project_repo.create(
+            user_id=user.id,
+            data=ProjectCreate(
+                name="My Documents",
+                description="Your personal document collection",
+                tags=[]
+            )
+        )
+        await self.project_repo.set_as_default(user.id, default_project.id)
 
         # 4. Generate tokens
         access_token = create_access_token(user.id, user.email)

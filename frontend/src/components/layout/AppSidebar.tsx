@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { ChevronUp, LogOut, User } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { navigationItems } from '@/config/navigation'
+import { ProjectSwitcher } from '@/components/ProjectSwitcher'
 import {
   Sidebar,
   SidebarContent,
@@ -50,6 +51,9 @@ export function AppSidebar() {
       <SidebarHeader>
         <div className="flex h-14 items-center px-4">
           <h1 className="text-lg font-semibold">RAG Admin</h1>
+        </div>
+        <div className="px-2 py-2">
+          <ProjectSwitcher />
         </div>
       </SidebarHeader>
 

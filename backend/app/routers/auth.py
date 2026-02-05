@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.repositories import LoginAttemptRepository, RefreshTokenRepository, UserRepository
+from app.repositories import LoginAttemptRepository, ProjectRepository, RefreshTokenRepository, UserRepository
 from app.schemas import AuthResponse, SignInRequest, SignUpRequest, TokenResponse, UserResponse
 from app.services.auth_service import AuthService
 from app.services.exceptions import AccountLockedError, AuthenticationError, ConflictError
@@ -23,7 +23,8 @@ def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
     user_repo = UserRepository(db)
     token_repo = RefreshTokenRepository(db)
     attempt_repo = LoginAttemptRepository(db)
-    return AuthService(user_repo, token_repo, attempt_repo)
+    project_repo = ProjectRepository(db)
+    return AuthService(user_repo, token_repo, attempt_repo, project_repo)
 
 
 def get_client_info(request: Request) -> tuple[str, str | None]:

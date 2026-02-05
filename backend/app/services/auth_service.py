@@ -3,8 +3,9 @@ from uuid import UUID
 
 from app.config import settings
 from app.models import AuthProvider, LoginAttempt, RefreshToken, User
-from app.repositories import LoginAttemptRepository, RefreshTokenRepository, UserRepository
+from app.repositories import LoginAttemptRepository, ProjectRepository, RefreshTokenRepository, UserRepository
 from app.schemas import SignInRequest, SignUpRequest
+from app.schemas.project import ProjectCreate
 from app.services.exceptions import AccountLockedError, AuthenticationError, ConflictError
 from app.utils.jwt import create_access_token, create_refresh_token, hash_refresh_token
 from app.utils.password import hash_password, validate_password_strength, verify_password
@@ -15,11 +16,13 @@ class AuthService:
         self,
         user_repo: UserRepository,
         token_repo: RefreshTokenRepository,
-        attempt_repo: LoginAttemptRepository
+        attempt_repo: LoginAttemptRepository,
+        project_repo: ProjectRepository
     ):
         self.user_repo = user_repo
         self.token_repo = token_repo
         self.attempt_repo = attempt_repo
+        self.project_repo = project_repo
 
     async def sign_up(
         self,
@@ -54,6 +57,17 @@ class AuthService:
             auth_provider=AuthProvider.email
         )
         user = await self.user_repo.create(user)
+
+        # Create default project
+        default_project = await self.project_repo.create(
+            user_id=user.id,
+            data=ProjectCreate(
+                name="My Documents",
+                description="Your personal document collection",
+                tags=[]
+            )
+        )
+        await self.project_repo.set_as_default(user.id, default_project.id)
 
         # Generate tokens
         access_token = create_access_token(user.id, user.email)

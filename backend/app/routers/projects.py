@@ -49,6 +49,21 @@ async def list_projects(
     return await project_service.list_projects(current_user.id, include_archived)
 
 
+@router.get("/default", response_model=ProjectResponse)
+async def get_default_project(
+    current_user: User = Depends(get_current_active_user),
+    project_service: ProjectService = Depends(get_project_service)
+):
+    """Get the user's default project."""
+    try:
+        return await project_service.get_default_project(current_user.id)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: UUID,

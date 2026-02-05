@@ -101,3 +101,33 @@ class ProjectRepository:
         )
         await self.session.commit()
         return result.rowcount > 0
+
+    async def get_default_project(self, user_id: UUID) -> Project | None:
+        """Get user's default project."""
+        result = await self.session.execute(
+            select(Project).where(
+                Project.user_id == user_id,
+                Project.is_default == True
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def set_as_default(self, user_id: UUID, project_id: UUID) -> None:
+        """Set a project as the user's default."""
+        # Clear existing default
+        await self.session.execute(
+            update(Project)
+            .where(Project.user_id == user_id)
+            .values(is_default=False)
+        )
+
+        # Set new default
+        await self.session.execute(
+            update(Project)
+            .where(
+                Project.user_id == user_id,
+                Project.id == project_id
+            )
+            .values(is_default=True)
+        )
+        await self.session.commit()

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.repositories import RefreshTokenRepository, UserRepository
+from app.repositories import ProjectRepository, RefreshTokenRepository, UserRepository
 from app.services.exceptions import ConflictError
 from app.services.oauth_service import OAuthService
 from app.utils.oauth import oauth
@@ -18,7 +18,8 @@ def get_oauth_service(db: AsyncSession = Depends(get_db)) -> OAuthService:
     """Dependency to create OAuthService with repositories."""
     user_repo = UserRepository(db)
     token_repo = RefreshTokenRepository(db)
-    return OAuthService(user_repo, token_repo)
+    project_repo = ProjectRepository(db)
+    return OAuthService(user_repo, token_repo, project_repo)
 
 
 @router.get("/google/authorize")

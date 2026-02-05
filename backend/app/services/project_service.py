@@ -44,6 +44,18 @@ class ProjectService:
         projects = await self.project_repo.list_all(user_id, include_archived)
         return [ProjectResponse.model_validate(p) for p in projects]
 
+    async def get_default_project(self, user_id: UUID) -> ProjectResponse:
+        """
+        Get the user's default project.
+
+        Raises:
+        - NotFoundError: No default project found
+        """
+        project = await self.project_repo.get_default_project(user_id)
+        if not project:
+            raise NotFoundError("No default project found")
+        return ProjectResponse.model_validate(project)
+
     async def update_project(
         self,
         project_id: UUID,

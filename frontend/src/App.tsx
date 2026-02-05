@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ProjectProvider } from './contexts/ProjectContext'
 import { PrivateRoute } from './components/PrivateRoute'
 import { RootLayout } from './components/layout/RootLayout'
 import { AppLayout } from './components/layout/AppLayout'
@@ -76,7 +77,9 @@ const router = createBrowserRouter([
 function App() {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <ProjectProvider>
+        <RouterProvider router={router} />
+      </ProjectProvider>
     </AuthProvider>
   )
 }

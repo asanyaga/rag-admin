@@ -47,7 +47,7 @@ User creates account
   ↓
 System auto-creates "My Documents" project
   ↓
-User sees Documents/Index in main navigation
+User sees Documents,Index in main navigation
   ↓
 Documents operates on current project (default initially)
   ↓

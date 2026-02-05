@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 interface DocumentUploadZoneProps {
@@ -106,16 +105,8 @@ export function DocumentUploadZone({
   }
 
   return (
-    <Card className="p-6">
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-medium">Upload Document</h3>
-          <p className="text-sm text-muted-foreground">
-            Upload a PDF document to extract and index its content
-          </p>
-        </div>
-
-        {/* Drag and Drop Zone */}
+    <div className="space-y-4">
+      {/* Drag and Drop Zone */}
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -241,7 +232,6 @@ export function DocumentUploadZone({
             {isUploading ? 'Uploading...' : 'Upload Document'}
           </Button>
         )}
-      </div>
-    </Card>
+    </div>
   )
 }
