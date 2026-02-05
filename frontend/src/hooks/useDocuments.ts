@@ -66,7 +66,7 @@ export function useDocuments(
     } finally {
       setIsLoading(false)
     }
-  }, [projectId, statusFilter])
+  }, [projectId, statusFilter, startPolling, stopPolling])
 
   const startPolling = useCallback((documentId: string) => {
     // Don't start if already polling
@@ -124,7 +124,7 @@ export function useDocuments(
     }, POLLING_INTERVAL)
 
     pollingIntervals.current.set(documentId, interval)
-  }, [])
+  }, [stopPolling])
 
   const stopPolling = useCallback((documentId: string) => {
     const interval = pollingIntervals.current.get(documentId)
@@ -276,10 +276,12 @@ export function useDocuments(
 
   // Cleanup polling intervals on unmount
   useEffect(() => {
+    const intervals = pollingIntervals.current
+    const startTimes = pollingStartTimes.current
     return () => {
-      pollingIntervals.current.forEach((interval) => clearInterval(interval))
-      pollingIntervals.current.clear()
-      pollingStartTimes.current.clear()
+      intervals.forEach((interval) => clearInterval(interval))
+      intervals.clear()
+      startTimes.clear()
     }
   }, [])
 

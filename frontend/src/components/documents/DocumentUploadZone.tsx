@@ -13,7 +13,6 @@ interface DocumentUploadZoneProps {
 }
 
 export function DocumentUploadZone({
-  projectId: _projectId,
   onUpload,
   disabled = false,
 }: DocumentUploadZoneProps) {
@@ -39,7 +38,7 @@ export function DocumentUploadZone({
     return null
   }
 
-  const handleFile = (file: File) => {
+  const handleFile = useCallback((file: File) => {
     const validationError = validateFile(file)
     if (validationError) {
       setError(validationError)
@@ -54,7 +53,7 @@ export function DocumentUploadZone({
       const filename = file.name.replace(/\.pdf$/i, '')
       setTitle(filename)
     }
-  }
+  }, [title])
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -74,7 +73,7 @@ export function DocumentUploadZone({
     if (droppedFile) {
       handleFile(droppedFile)
     }
-  }, [])
+  }, [handleFile])
 
   const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
