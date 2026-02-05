@@ -144,7 +144,7 @@ async def test_create_project_invalid_data(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_list_projects_empty(client: AsyncClient):
-    """Test listing projects when none exist."""
+    """Test listing projects includes default project."""
     token = await create_user_and_login(client)
 
     response = await client.get(
@@ -153,7 +153,9 @@ async def test_list_projects_empty(client: AsyncClient):
     )
 
     assert response.status_code == 200
-    assert response.json() == []
+    data = response.json()
+    assert len(data) == 1  # Default "My Documents" project
+    assert data[0]["name"] == "My Documents"
 
 
 @pytest.mark.asyncio
@@ -180,8 +182,8 @@ async def test_list_projects(client: AsyncClient):
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 2
-    assert {p["name"] for p in data} == {"Project 1", "Project 2"}
+    assert len(data) == 3  # Project 1 + Project 2 + default "My Documents" project
+    assert {p["name"] for p in data} == {"Project 1", "Project 2", "My Documents"}
 
 
 @pytest.mark.asyncio
@@ -216,7 +218,7 @@ async def test_list_projects_exclude_archived(client: AsyncClient):
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
+    assert len(data) == 2  # Active + default "My Documents" project
     assert data[0]["name"] == "Active"
 
 
@@ -252,7 +254,7 @@ async def test_list_projects_include_archived(client: AsyncClient):
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 2
+    assert len(data) == 3  # Active + Archived + default "My Documents" project
 
 
 @pytest.mark.asyncio
@@ -275,23 +277,27 @@ async def test_list_projects_user_scoping(client: AsyncClient):
         json={"name": "User 2 Project"}
     )
 
-    # User 1 should only see their project
+    # User 1 should only see their projects
     response1 = await client.get(
         "/api/v1/projects",
         headers={"Authorization": f"Bearer {token1}"}
     )
     data1 = response1.json()
-    assert len(data1) == 1
-    assert data1[0]["name"] == "User 1 Project"
+    assert len(data1) == 2  # User 1 Project + default "My Documents" project
+    project_names = [p["name"] for p in data1]
+    assert "User 1 Project" in project_names
+    assert "My Documents" in project_names
 
-    # User 2 should only see their project
+    # User 2 should only see their projects
     response2 = await client.get(
         "/api/v1/projects",
         headers={"Authorization": f"Bearer {token2}"}
     )
     data2 = response2.json()
-    assert len(data2) == 1
-    assert data2[0]["name"] == "User 2 Project"
+    assert len(data2) == 2  # User 2 Project + default "My Documents" project
+    project_names = [p["name"] for p in data2]
+    assert "User 2 Project" in project_names
+    assert "My Documents" in project_names
 
 
 @pytest.mark.asyncio

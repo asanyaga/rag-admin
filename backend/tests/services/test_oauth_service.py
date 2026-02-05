@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AuthProvider, User
-from app.repositories import RefreshTokenRepository, UserRepository
+from app.repositories import ProjectRepository, RefreshTokenRepository, UserRepository
 from app.services.exceptions import ConflictError
 from app.services.oauth_service import OAuthService
 
@@ -11,7 +11,8 @@ from app.services.oauth_service import OAuthService
 def oauth_service(test_db: AsyncSession) -> OAuthService:
     user_repo = UserRepository(test_db)
     token_repo = RefreshTokenRepository(test_db)
-    return OAuthService(user_repo, token_repo)
+    project_repo = ProjectRepository(test_db)
+    return OAuthService(user_repo, token_repo, project_repo)
 
 
 @pytest.mark.asyncio

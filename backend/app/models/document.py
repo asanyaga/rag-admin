@@ -3,8 +3,8 @@ from uuid import UUID, uuid4
 import enum
 
 import sqlalchemy as sa
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, JSON
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -59,17 +59,17 @@ class Document(Base):
         nullable=True
     )
 
-    # Source-specific details (JSONB)
+    # Source-specific details (JSON)
     source_metadata: Mapped[dict] = mapped_column(
-        JSONB,
+        JSON,
         nullable=False,
         default=dict,
         server_default='{}'
     )
 
-    # Processing metadata (JSONB)
+    # Processing metadata (JSON)
     processing_metadata: Mapped[dict | None] = mapped_column(
-        JSONB,
+        JSON,
         nullable=True,
         default=dict,
         server_default='{}'
@@ -117,6 +117,4 @@ class Document(Base):
         sa.Index('ix_documents_source_type', 'source_type'),
         sa.Index('ix_documents_status', 'status'),
         sa.Index('ix_documents_created_at', 'created_at'),
-        sa.Index('ix_documents_source_metadata', 'source_metadata', postgresql_using='gin'),
-        sa.Index('ix_documents_processing_metadata', 'processing_metadata', postgresql_using='gin'),
     )

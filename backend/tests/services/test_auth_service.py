@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AuthProvider, LoginAttempt, User
-from app.repositories import LoginAttemptRepository, RefreshTokenRepository, UserRepository
+from app.repositories import LoginAttemptRepository, ProjectRepository, RefreshTokenRepository, UserRepository
 from app.schemas import SignInRequest, SignUpRequest
 from app.services.auth_service import AuthService
 from app.services.exceptions import AccountLockedError, AuthenticationError, ConflictError
@@ -16,7 +16,8 @@ def auth_service(test_db: AsyncSession) -> AuthService:
     user_repo = UserRepository(test_db)
     token_repo = RefreshTokenRepository(test_db)
     attempt_repo = LoginAttemptRepository(test_db)
-    return AuthService(user_repo, token_repo, attempt_repo)
+    project_repo = ProjectRepository(test_db)
+    return AuthService(user_repo, token_repo, attempt_repo, project_repo)
 
 
 @pytest.mark.asyncio
