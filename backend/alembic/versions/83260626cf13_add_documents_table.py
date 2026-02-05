@@ -38,8 +38,8 @@ def upgrade() -> None:
         sa.Column('title', sa.String(length=255), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('extracted_text', sa.Text(), nullable=True),
-        sa.Column('source_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default='{}'),
-        sa.Column('processing_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True, server_default='{}'),
+        sa.Column('source_metadata', sa.JSON(), nullable=False, server_default='{}'),
+        sa.Column('processing_metadata', sa.JSON(), nullable=True, server_default='{}'),
         sa.Column('status', postgresql.ENUM('processing', 'ready', 'failed', name='document_status', create_type=False), nullable=False, server_default='processing'),
         sa.Column('status_message', sa.Text(), nullable=True),
         sa.Column('created_by', sa.UUID(), nullable=False),
@@ -56,14 +56,10 @@ def upgrade() -> None:
     op.create_index('ix_documents_source_type', 'documents', ['source_type'], unique=False)
     op.create_index('ix_documents_status', 'documents', ['status'], unique=False)
     op.create_index('ix_documents_created_at', 'documents', ['created_at'], unique=False)
-    op.create_index('ix_documents_source_metadata', 'documents', ['source_metadata'], unique=False, postgresql_using='gin')
-    op.create_index('ix_documents_processing_metadata', 'documents', ['processing_metadata'], unique=False, postgresql_using='gin')
 
 
 def downgrade() -> None:
     # Drop indexes
-    op.drop_index('ix_documents_processing_metadata', table_name='documents')
-    op.drop_index('ix_documents_source_metadata', table_name='documents')
     op.drop_index('ix_documents_created_at', table_name='documents')
     op.drop_index('ix_documents_status', table_name='documents')
     op.drop_index('ix_documents_source_type', table_name='documents')
