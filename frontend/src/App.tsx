@@ -12,6 +12,8 @@ import ProjectsPage from './pages/ProjectsPage'
 import ProjectDocumentsPage from './pages/ProjectDocumentsPage'
 import DocumentsPage from './pages/DocumentsPage'
 import IndexPage from './pages/IndexPage'
+import CreateIndexPage from './pages/CreateIndexPage'
+import IndexDetailPage from './pages/IndexDetailPage'
 import SettingsPage from './pages/SettingsPage'
 
 const router = createBrowserRouter([
@@ -61,7 +63,17 @@ const router = createBrowserRouter([
           {
             path: 'index',
             element: <IndexPage />,
-            handle: { breadcrumb: 'Index' },
+            handle: { breadcrumb: 'Indexes' },
+          },
+          {
+            path: 'index/create',
+            element: <CreateIndexPage />,
+            handle: { breadcrumb: 'Create Index' },
+          },
+          {
+            path: 'index/:indexId',
+            element: <IndexDetailPage />,
+            handle: { breadcrumb: 'Index Details' },
           },
           {
             path: 'settings',

@@ -110,6 +110,14 @@ class Document(Base):
     # Relationships
     project: Mapped["Project"] = relationship(back_populates="documents")
     user: Mapped["User"] = relationship()
+    index_documents: Mapped[list["IndexDocument"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan"
+    )
+    chunks: Mapped[list["Chunk"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         sa.UniqueConstraint('project_id', 'source_type', 'source_identifier', name='uq_documents_project_source'),

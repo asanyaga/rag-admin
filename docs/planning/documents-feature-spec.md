@@ -101,7 +101,6 @@ See `docs/planning/documents-feature-implementation-plan.md` for detailed implem
 - `page_count` + `file_size`: Agent can estimate processing cost
 - `document_type`: Agent can filter by content category
 - `checksum`: Prevents duplicate processing
-
 ---
 
 ### 3. File Size Policy

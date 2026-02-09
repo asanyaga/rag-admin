@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # Application
     DEBUG: bool = True
 
+    # Encryption
+    # Used for encrypting sensitive data like provider API keys
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    ENCRYPTION_KEY: str = "change-this-to-a-secure-fernet-key-base64"
+
     # Document Storage
     # For development: uses ./data/documents (relative to where app runs)
     # For production: override with absolute path or mounted volume

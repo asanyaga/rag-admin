@@ -14,7 +14,7 @@ REASON=$(echo "$INPUT" | jq -r '.reason')
 # Skip if transcript doesn't exist or is empty
 if [ ! -f "$TRANSCRIPT_PATH" ] || [ ! -s "$TRANSCRIPT_PATH" ]; then
   echo "No transcript found, skipping summary generation"
-  exit 0
+claude-code-transcripts/claude-archive/asa-rag-admin/2ab66cdb-f486-4b5d-9246-d8a9b90d4233  exit 0
 fi
 
 # Skip for very short sessions (less than 10 lines in transcript)

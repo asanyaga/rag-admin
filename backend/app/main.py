@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
-from app.routers import auth, oauth, otel_proxy, projects, users, documents
+from app.routers import auth, oauth, otel_proxy, projects, users, documents, indexes, provider_keys
 from app.utils.oauth import setup_oauth
 
 # Import database engine for SQLAlchemy instrumentation
@@ -148,3 +148,6 @@ app.include_router(otel_proxy.router)  # No prefix, router defines its own
 app.include_router(projects.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(documents.router, prefix="/api/v1")
+app.include_router(indexes.router, prefix="/api/v1")
+app.include_router(provider_keys.router, prefix="/api/v1")
+app.include_router(provider_keys.project_router, prefix="/api/v1")

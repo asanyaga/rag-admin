@@ -42,6 +42,14 @@ dependencies = [
     "llama-index-readers-file>=0.1.0", # File readers for various formats
     "aiofiles>=23.2.0", # Async file operations
     "python-magic>=0.4.27", # MIME type detection from content
+    # -------------------------------------------------------------------------
+    # Index Feature - Chunking & Embedding
+    # -------------------------------------------------------------------------
+    "pgvector>=0.3.0", # PostgreSQL vector similarity search
+    "tiktoken>=0.5.0", # OpenAI tokenizer for accurate token counting
+    "langchain-text-splitters>=0.0.1", # Text chunking utilities
+    "openai>=1.0.0", # OpenAI embedding API
+    "cryptography>=41.0.0", # Fernet encryption for API key storage
 ]
 
 [project.optional-dependencies]

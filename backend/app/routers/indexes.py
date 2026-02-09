@@ -1,0 +1,619 @@
+"""Indexes API router for index CRUD, processing, and chunk inspection."""
+from uuid import UUID
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+)
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.dependencies.auth import get_current_active_user
+from app.models import User
+from app.repositories.index_repository import IndexRepository
+from app.repositories.chunk_repository import ChunkRepository
+from app.repositories.project_repository import ProjectRepository
+from app.repositories.document_repository import DocumentRepository
+from app.repositories.provider_key_repository import ProviderKeyRepository
+from app.schemas.index import (
+    IndexCreate,
+    IndexUpdate,
+    IndexResponse,
+    IndexListResponse,
+    IndexProcessingStatusResponse,
+    AddDocumentsRequest,
+    ChunkPreviewRequest,
+    ChunkPreviewResponse,
+)
+from app.schemas.chunk import (
+    ChunkResponse,
+    ChunkListResponse,
+    ChunkSearchRequest,
+)
+from app.schemas.query import QueryRequest, QueryResponse
+from app.services.index_service import IndexService
+from app.services.chunk_service import ChunkService
+from app.services.query_service import QueryService
+from app.services.chunking_service import get_chunking_service
+from app.services.index_processing_service import (
+    IndexProcessingService,
+    process_index_background,
+)
+from app.services.exceptions import ConflictError, NotFoundError, ValidationError
+
+router = APIRouter(prefix="/projects/{project_id}/indexes", tags=["indexes"])
+
+
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+
+def get_index_service(db: AsyncSession = Depends(get_db)) -> IndexService:
+    """Dependency to create IndexService."""
+    index_repo = IndexRepository(db)
+    chunk_repo = ChunkRepository(db)
+    return IndexService(index_repo, chunk_repo)
+
+
+def get_chunk_service(db: AsyncSession = Depends(get_db)) -> ChunkService:
+    """Dependency to create ChunkService."""
+    index_repo = IndexRepository(db)
+    chunk_repo = ChunkRepository(db)
+    return ChunkService(chunk_repo, index_repo)
+
+
+def get_project_repo(db: AsyncSession = Depends(get_db)) -> ProjectRepository:
+    """Dependency for project verification."""
+    return ProjectRepository(db)
+
+
+def get_document_repo(db: AsyncSession = Depends(get_db)) -> DocumentRepository:
+    """Dependency for document verification."""
+    return DocumentRepository(db)
+
+
+def get_query_service(db: AsyncSession = Depends(get_db)) -> QueryService:
+    """Dependency to create QueryService."""
+    return QueryService(
+        index_repo=IndexRepository(db),
+        chunk_repo=ChunkRepository(db),
+        provider_key_repo=ProviderKeyRepository(db),
+    )
+
+
+async def verify_project_access(
+    project_id: UUID,
+    current_user: User,
+    project_repo: ProjectRepository
+) -> None:
+    """Verify user has access to the project."""
+    project = await project_repo.get_by_id(project_id, current_user.id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Index CRUD
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "",
+    response_model=IndexResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create index",
+    description="Create a new index with the specified configuration.",
+)
+async def create_index(
+    project_id: UUID,
+    data: IndexCreate,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new index."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        index = await service.create_index(project_id, current_user.id, data)
+
+        # If auto_process is True, start processing in background
+        if data.auto_process:
+            index_repo = IndexRepository(db)
+            chunk_repo = ChunkRepository(db)
+            provider_key_repo = ProviderKeyRepository(db)
+
+            processing_service = IndexProcessingService(
+                session=db,
+                index_repo=index_repo,
+                chunk_repo=chunk_repo,
+                provider_key_repo=provider_key_repo
+            )
+
+            # Validate and update status to processing
+            await processing_service.start_processing(
+                index.id, project_id, current_user.id
+            )
+
+            # Add background task
+            background_tasks.add_task(
+                process_index_background,
+                session=db,
+                index_id=index.id,
+                project_id=project_id,
+                user_id=current_user.id,
+            )
+
+            # Refresh to get updated status
+            index = await service.get_index(index.id, project_id)
+
+        return index
+
+    except ConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.get(
+    "",
+    response_model=list[IndexListResponse],
+    summary="List indexes",
+    description="List all indexes for a project.",
+)
+async def list_indexes(
+    project_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """List all indexes for a project."""
+    await verify_project_access(project_id, current_user, project_repo)
+    return await service.list_indexes(project_id)
+
+
+@router.get(
+    "/{index_id}",
+    response_model=IndexResponse,
+    summary="Get index",
+    description="Get details of a specific index.",
+)
+async def get_index(
+    project_id: UUID,
+    index_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Get a specific index."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        return await service.get_index(index_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.patch(
+    "/{index_id}",
+    response_model=IndexResponse,
+    summary="Update index",
+    description="Update an index's name and/or description. Only works for indexes in 'created' status.",
+)
+async def update_index(
+    project_id: UUID,
+    index_id: UUID,
+    data: IndexUpdate,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Update an index."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        return await service.update_index(index_id, project_id, data)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except ConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+
+
+@router.delete(
+    "/{index_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete index",
+    description="Delete an index and all its chunks.",
+)
+async def delete_index(
+    project_id: UUID,
+    index_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Delete an index."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        await service.delete_index(index_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+# ---------------------------------------------------------------------------
+# Index Processing
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/{index_id}/process",
+    response_model=IndexResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Start processing",
+    description="Start processing an index (chunking and embedding documents).",
+)
+async def start_processing(
+    project_id: UUID,
+    index_id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Start processing an index."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        index_repo = IndexRepository(db)
+        chunk_repo = ChunkRepository(db)
+        provider_key_repo = ProviderKeyRepository(db)
+
+        processing_service = IndexProcessingService(
+            session=db,
+            index_repo=index_repo,
+            chunk_repo=chunk_repo,
+            provider_key_repo=provider_key_repo
+        )
+
+        # Validate and update status
+        await processing_service.start_processing(index_id, project_id, current_user.id)
+
+        # Add background task
+        background_tasks.add_task(
+            process_index_background,
+            session=db,
+            index_id=index_id,
+            project_id=project_id,
+            user_id=current_user.id,
+        )
+
+        return await service.get_index(index_id, project_id)
+
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post(
+    "/{index_id}/retry",
+    response_model=IndexResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Retry processing",
+    description="Retry processing a failed index.",
+)
+async def retry_processing(
+    project_id: UUID,
+    index_id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retry processing a failed index."""
+    # Same as start_processing - it handles 'failed' status
+    return await start_processing(
+        project_id=project_id,
+        index_id=index_id,
+        background_tasks=background_tasks,
+        current_user=current_user,
+        service=service,
+        project_repo=project_repo,
+        db=db,
+    )
+
+
+@router.get(
+    "/{index_id}/status",
+    response_model=IndexProcessingStatusResponse,
+    summary="Get processing status",
+    description="Get detailed processing status for an index.",
+)
+async def get_processing_status(
+    project_id: UUID,
+    index_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Get detailed processing status."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        return await service.get_processing_status(index_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+# ---------------------------------------------------------------------------
+# Index Documents
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/{index_id}/documents",
+    response_model=IndexResponse,
+    summary="Add documents",
+    description="Add documents to an existing index.",
+)
+async def add_documents(
+    project_id: UUID,
+    index_id: UUID,
+    data: AddDocumentsRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Add documents to an index."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        return await service.add_documents(index_id, project_id, data.document_ids)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.delete(
+    "/{index_id}/documents/{document_id}",
+    response_model=IndexResponse,
+    summary="Remove document",
+    description="Remove a document from an index.",
+)
+async def remove_document(
+    project_id: UUID,
+    index_id: UUID,
+    document_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Remove a document from an index."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        return await service.remove_document(index_id, project_id, document_id)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+# ---------------------------------------------------------------------------
+# Query / Playground
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/{index_id}/query",
+    response_model=QueryResponse,
+    summary="Query index",
+    description="Search an index using semantic, keyword, or hybrid search.",
+)
+async def query_index(
+    project_id: UUID,
+    index_id: UUID,
+    data: QueryRequest,
+    current_user: User = Depends(get_current_active_user),
+    query_service: QueryService = Depends(get_query_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Query an index with semantic, keyword, or hybrid search."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        return await query_service.query_index(
+            index_id, project_id, current_user.id, data
+        )
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Chunk Preview (Pre-Processing)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/preview-chunks",
+    response_model=ChunkPreviewResponse,
+    summary="Preview chunks",
+    description="Preview how a document would be chunked without processing.",
+)
+async def preview_chunks(
+    project_id: UUID,
+    data: ChunkPreviewRequest,
+    current_user: User = Depends(get_current_active_user),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+    document_repo: DocumentRepository = Depends(get_document_repo),
+):
+    """Preview chunks for a document."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    # Get document
+    document = await document_repo.get_by_id(data.document_id, current_user.id)
+    if not document or document.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document {data.document_id} not found"
+        )
+
+    if not document.extracted_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document has no extracted text"
+        )
+
+    # Generate preview
+    chunking_service = get_chunking_service()
+    return chunking_service.preview_chunks(
+        text=document.extracted_text,
+        config=data.config,
+        max_chunks=data.max_chunks
+    )
+
+
+# ---------------------------------------------------------------------------
+# Chunk Inspection
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/{index_id}/chunks",
+    response_model=ChunkListResponse,
+    summary="List chunks",
+    description="List chunks in an index with pagination.",
+)
+async def list_chunks(
+    project_id: UUID,
+    index_id: UUID,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, alias="pageSize", description="Items per page"),
+    search: str | None = Query(None, description="Search query for chunk content"),
+    current_user: User = Depends(get_current_active_user),
+    service: ChunkService = Depends(get_chunk_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """List chunks in an index."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        if search:
+            return await service.search_chunks(
+                index_id, project_id, search, page, page_size
+            )
+        return await service.list_chunks(index_id, project_id, page, page_size)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.get(
+    "/{index_id}/chunks/{chunk_id}",
+    response_model=ChunkResponse,
+    summary="Get chunk",
+    description="Get details of a specific chunk.",
+)
+async def get_chunk(
+    project_id: UUID,
+    index_id: UUID,
+    chunk_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ChunkService = Depends(get_chunk_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Get a specific chunk."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        return await service.get_chunk(chunk_id, index_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.get(
+    "/{index_id}/stats",
+    summary="Get index statistics",
+    description="Get computed statistics for an index.",
+)
+async def get_index_stats(
+    project_id: UUID,
+    index_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Get index statistics."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    try:
+        index = await service.get_index(index_id, project_id)
+        return index.stats
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
