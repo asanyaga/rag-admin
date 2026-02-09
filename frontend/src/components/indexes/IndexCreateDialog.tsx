@@ -31,7 +31,7 @@ import { toast } from 'sonner'
 interface IndexCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: IndexCreate) => Promise<any>
+  onSubmit: (data: IndexCreate) => Promise<void>
   onPreviewChunks: (
     documentId: string,
     config: Partial<IndexConfig>
@@ -138,7 +138,7 @@ export function IndexCreateDialog({
     }
   }
 
-  const updateConfig = (key: keyof IndexConfig, value: any) => {
+  const updateConfig = (key: keyof IndexConfig, value: IndexConfig[keyof IndexConfig]) => {
     setConfig((prev) => ({ ...prev, [key]: value }))
     setPreview(null) // Clear preview when config changes
   }

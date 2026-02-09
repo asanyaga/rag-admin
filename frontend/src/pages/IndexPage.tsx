@@ -43,7 +43,7 @@ export default function IndexPage() {
     navigate(`/index/${index.id}`)
   }
 
-  const handleEdit = (_index: IndexListItem) => {
+  const handleEdit = () => {
     // For now, edit opens the create dialog pre-filled
     // This would need a separate edit dialog in a real implementation
     toast.info('Edit functionality coming soon')
