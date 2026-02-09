@@ -259,5 +259,6 @@ class QueryService:
                 chunk_index=chunk.chunk_index,
                 token_count=chunk.token_count,
                 char_count=chunk.char_count,
+                chunk_metadata=chunk.chunk_metadata or {},
             ),
         )

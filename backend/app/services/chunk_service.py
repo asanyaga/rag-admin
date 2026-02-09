@@ -50,6 +50,7 @@ class ChunkService:
             token_count=chunk.token_count,
             char_count=chunk.char_count,
             document_title=chunk.document.title if chunk.document else None,
+            metadata=chunk.chunk_metadata or {},
         )
 
     async def get_chunk(

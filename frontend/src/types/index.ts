@@ -152,6 +152,7 @@ export interface ChunkListItem {
   tokenCount: number
   charCount: number
   documentTitle: string | null
+  metadata: Record<string, unknown>
 }
 
 export interface ChunkListResponse {
@@ -193,10 +194,12 @@ export interface QueryRequest {
 export interface RetrievalResultMetadata {
   documentId: string
   documentName: string
-  page: number
+  page: number | null
+  pageNumbers: number[] | null
   chunkIndex: number
   tokenCount: number
   charCount: number
+  chunkMetadata: Record<string, unknown>
 }
 
 export interface RetrievalResult {

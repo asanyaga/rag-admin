@@ -27,6 +27,7 @@ class RetrievalResultMetadata(BaseModel):
     chunk_index: int = Field(alias="chunkIndex")
     token_count: int = Field(alias="tokenCount")
     char_count: int = Field(alias="charCount")
+    chunk_metadata: dict = Field(default_factory=dict, alias="chunkMetadata")
 
     model_config = {"populate_by_name": True}
 

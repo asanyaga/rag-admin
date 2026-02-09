@@ -117,10 +117,41 @@ export function ResultCard({
             <FileText className="h-3 w-3" />
             {result.metadata.documentName}
           </span>
-          <span>Page {result.metadata.page}</span>
+          {result.metadata.pageNumbers && result.metadata.pageNumbers.length > 0 ? (
+            <span>
+              {result.metadata.pageNumbers.length === 1
+                ? `Page ${result.metadata.pageNumbers[0]}`
+                : `Pages ${result.metadata.pageNumbers.join(', ')}`}
+            </span>
+          ) : result.metadata.page != null ? (
+            <span>Page {result.metadata.page}</span>
+          ) : null}
           <span>Chunk #{result.metadata.chunkIndex}</span>
           <span>{result.metadata.tokenCount} tokens</span>
         </div>
+
+        {/* Chunk metadata */}
+        {result.metadata.chunkMetadata && Object.keys(result.metadata.chunkMetadata).length > 0 && isExpanded && (
+          <div className="mt-3 pt-3 border-t border-zinc-100">
+            <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-1.5">
+              Metadata
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              {Object.entries(result.metadata.chunkMetadata).map(([key, value]) => (
+                <span key={key} className="text-zinc-400">
+                  <span className="font-medium text-zinc-500">{key}:</span>{' '}
+                  <span className="font-mono">
+                    {Array.isArray(value)
+                      ? value.join(', ')
+                      : typeof value === 'object' && value !== null
+                        ? JSON.stringify(value)
+                        : String(value ?? '—')}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -640,6 +640,32 @@ export default function IndexDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Chunk Metadata */}
+              {selectedChunk.metadata && Object.keys(selectedChunk.metadata).length > 0 && (
+                <div className="mb-4">
+                  <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-1.5">
+                    Metadata
+                  </div>
+                  <div className="bg-zinc-50 rounded-md border border-zinc-100 divide-y divide-zinc-100">
+                    {Object.entries(selectedChunk.metadata).map(([key, value]) => (
+                      <div key={key} className="px-3 py-2 flex items-start gap-2">
+                        <span className="text-xs font-medium text-zinc-500 shrink-0">
+                          {key}
+                        </span>
+                        <span className="text-xs text-zinc-600 font-mono break-all ml-auto text-right">
+                          {Array.isArray(value)
+                            ? value.join(', ')
+                            : typeof value === 'object' && value !== null
+                              ? JSON.stringify(value)
+                              : String(value ?? '—')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-1.5">
                 Content Preview
               </div>

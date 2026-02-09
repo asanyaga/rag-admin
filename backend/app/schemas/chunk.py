@@ -36,6 +36,7 @@ class ChunkListItem(BaseModel):
     token_count: int = Field(..., alias="tokenCount")
     char_count: int = Field(..., alias="charCount")
     document_title: str | None = Field(None, alias="documentTitle")
+    chunk_metadata: dict = Field(default_factory=dict, alias="metadata")
 
     model_config = ConfigDict(
         from_attributes=True,
