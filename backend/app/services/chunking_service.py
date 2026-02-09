@@ -70,13 +70,22 @@ class ChunkingService:
                 is_separator_regex=False,
             )
 
+    def _get_page_numbers(self, start_char: int, end_char: int, page_boundaries: list[dict]) -> list[int]:
+        """Determine which pages a chunk spans based on character positions."""
+        pages = []
+        for pb in page_boundaries:
+            # Chunk overlaps page if: chunk_start < page_end AND chunk_end > page_start
+            if start_char < pb["end_char"] and end_char > pb["start_char"]:
+                pages.append(pb["page"])
+        return pages
+
     def chunk_text(
         self,
         text: str,
         config: IndexConfig,
         source_document_id: str | None = None,
         source_filename: str | None = None,
-        page_numbers: list[int] | None = None
+        page_boundaries: list[dict] | None = None
     ) -> list[ChunkResult]:
         """Split text into chunks based on configuration.
 
@@ -85,7 +94,7 @@ class ChunkingService:
             config: Index configuration with chunking parameters
             source_document_id: Optional document ID for metadata
             source_filename: Optional filename for metadata
-            page_numbers: Optional list of page numbers (for PDFs)
+            page_boundaries: Optional list of page boundary dicts with page/start_char/end_char
 
         Returns:
             List of ChunkResult objects
@@ -126,8 +135,8 @@ class ChunkingService:
                 metadata["source_document_id"] = source_document_id
             if source_filename:
                 metadata["source_filename"] = source_filename
-            if page_numbers:
-                metadata["page_numbers"] = page_numbers
+            if page_boundaries:
+                metadata["page_numbers"] = self._get_page_numbers(start_char, end_char, page_boundaries)
 
             results.append(ChunkResult(
                 content=chunk_content,

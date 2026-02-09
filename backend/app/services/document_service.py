@@ -384,6 +384,9 @@ async def process_document_extraction(
         # Update source_metadata with page_count
         document.source_metadata["page_count"] = extraction_result.page_count
 
+        # Store page boundaries in processing metadata for chunking
+        extraction_result.metadata["page_boundaries"] = extraction_result.page_boundaries
+
         # Update document with extraction results
         await document_repo.update_extraction(
             document_id=document_id,

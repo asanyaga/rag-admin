@@ -23,6 +23,7 @@ class RetrievalResultMetadata(BaseModel):
     document_id: str = Field(alias="documentId")
     document_name: str = Field(alias="documentName")
     page: int | None = None
+    page_numbers: list[int] | None = Field(None, alias="pageNumbers")
     chunk_index: int = Field(alias="chunkIndex")
     token_count: int = Field(alias="tokenCount")
     char_count: int = Field(alias="charCount")

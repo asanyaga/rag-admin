@@ -161,7 +161,7 @@ class IndexProcessingService:
                         config=config,
                         source_document_id=str(doc_id),
                         source_filename=document.source_metadata.get("filename"),
-                        page_numbers=document.processing_metadata.get("page_numbers") if document.processing_metadata else None
+                        page_boundaries=document.processing_metadata.get("page_boundaries") if document.processing_metadata else None
                     )
 
                     if not chunks:

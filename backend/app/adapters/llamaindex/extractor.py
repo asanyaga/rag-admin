@@ -66,10 +66,16 @@ class LlamaIndexExtractor:
             if not documents:
                 raise Exception("No content extracted from document")
 
-            # Add page markers and combine text
+            # Add page markers and combine text, tracking character offsets
             pages_with_markers = []
+            page_boundaries = []
+            current_offset = 0
             for i, doc in enumerate(documents, 1):
-                pages_with_markers.append(f"[Page {i}]\n{doc.text}")
+                page_text = f"[Page {i}]\n{doc.text}"
+                pages_with_markers.append(page_text)
+                end_offset = current_offset + len(page_text)
+                page_boundaries.append({"page": i, "start_char": current_offset, "end_char": end_offset})
+                current_offset = end_offset + 2  # +2 for "\n\n" separator
 
             combined_text = "\n\n".join(pages_with_markers)
             page_count = len(documents)
@@ -89,7 +95,8 @@ class LlamaIndexExtractor:
             return ExtractionResult(
                 text=combined_text,
                 page_count=page_count,
-                metadata=metadata
+                metadata=metadata,
+                page_boundaries=page_boundaries,
             )
 
         except Exception as e:

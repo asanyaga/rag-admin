@@ -1,0 +1,67 @@
+/**
+ * Eval Runs API client functions
+ */
+import apiClient from './client'
+import type {
+  EvalRun,
+  CreateEvalRunRequest,
+  EvalRunResult,
+  RunComparison,
+} from '@/types/eval-run'
+
+export async function listEvalRuns(projectId: string): Promise<EvalRun[]> {
+  const response = await apiClient.get<EvalRun[]>(
+    `/projects/${projectId}/eval-runs`
+  )
+  return response.data
+}
+
+export async function getEvalRun(
+  projectId: string,
+  runId: string
+): Promise<EvalRun> {
+  const response = await apiClient.get<EvalRun>(
+    `/projects/${projectId}/eval-runs/${runId}`
+  )
+  return response.data
+}
+
+export async function createEvalRun(
+  projectId: string,
+  data: CreateEvalRunRequest
+): Promise<EvalRun> {
+  const response = await apiClient.post<EvalRun>(
+    `/projects/${projectId}/eval-runs`,
+    data
+  )
+  return response.data
+}
+
+export async function deleteEvalRun(
+  projectId: string,
+  runId: string
+): Promise<void> {
+  await apiClient.delete(`/projects/${projectId}/eval-runs/${runId}`)
+}
+
+export async function getEvalRunResults(
+  projectId: string,
+  runId: string
+): Promise<EvalRunResult[]> {
+  const response = await apiClient.get<EvalRunResult[]>(
+    `/projects/${projectId}/eval-runs/${runId}/results`
+  )
+  return response.data
+}
+
+export async function compareRuns(
+  projectId: string,
+  runId1: string,
+  runId2: string
+): Promise<RunComparison> {
+  const response = await apiClient.get<RunComparison>(
+    `/projects/${projectId}/eval-runs/compare`,
+    { params: { runIds: `${runId1},${runId2}` } }
+  )
+  return response.data
+}

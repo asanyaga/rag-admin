@@ -243,7 +243,8 @@ class QueryService:
         else:
             doc_name = "Unknown"
 
-        page = (chunk.chunk_metadata or {}).get("page")
+        page_numbers = (chunk.chunk_metadata or {}).get("page_numbers")
+        page = page_numbers[0] if page_numbers else None
 
         return RetrievalResult(
             chunk_id=str(chunk.id),
@@ -254,6 +255,7 @@ class QueryService:
                 document_id=str(chunk.document_id),
                 document_name=doc_name,
                 page=page,
+                page_numbers=page_numbers,
                 chunk_index=chunk.chunk_index,
                 token_count=chunk.token_count,
                 char_count=chunk.char_count,

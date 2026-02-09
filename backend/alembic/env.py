@@ -11,7 +11,9 @@ from app.config import settings
 from app.database import Base
 from app.models import (
     User, RefreshToken, LoginAttempt, Project, Document,
-    Index, IndexDocument, Chunk, ProviderKey
+    Index, IndexDocument, Chunk, ProviderKey,
+    GoldenSet, GoldenSetQuery, GoldenSetSource,
+    EvalRun, EvalRunResult,
 )
 
 config = context.config

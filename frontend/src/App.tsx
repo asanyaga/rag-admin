@@ -15,6 +15,11 @@ import IndexPage from './pages/IndexPage'
 import CreateIndexPage from './pages/CreateIndexPage'
 import IndexDetailPage from './pages/IndexDetailPage'
 import SettingsPage from './pages/SettingsPage'
+import EvaluationPage from './pages/EvaluationPage'
+import GoldenSetEditorPage from './pages/GoldenSetEditorPage'
+import NewEvalRunPage from './pages/NewEvalRunPage'
+import EvalRunDetailPage from './pages/EvalRunDetailPage'
+import RunComparisonPage from './pages/RunComparisonPage'
 
 const router = createBrowserRouter([
   {
@@ -74,6 +79,31 @@ const router = createBrowserRouter([
             path: 'index/:indexId',
             element: <IndexDetailPage />,
             handle: { breadcrumb: 'Index Details' },
+          },
+          {
+            path: 'evaluation',
+            element: <EvaluationPage />,
+            handle: { breadcrumb: 'Evaluation' },
+          },
+          {
+            path: 'evaluation/golden-sets/:goldenSetId',
+            element: <GoldenSetEditorPage />,
+            handle: { breadcrumb: 'Golden Set Editor' },
+          },
+          {
+            path: 'evaluation/runs/new',
+            element: <NewEvalRunPage />,
+            handle: { breadcrumb: 'New Eval Run' },
+          },
+          {
+            path: 'evaluation/runs/:runId',
+            element: <EvalRunDetailPage />,
+            handle: { breadcrumb: 'Eval Run Detail' },
+          },
+          {
+            path: 'evaluation/compare',
+            element: <RunComparisonPage />,
+            handle: { breadcrumb: 'Run Comparison' },
           },
           {
             path: 'settings',

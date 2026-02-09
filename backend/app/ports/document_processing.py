@@ -1,5 +1,5 @@
 """Document processing port interface."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 
@@ -9,6 +9,7 @@ class ExtractionResult:
     text: str
     page_count: int
     metadata: dict
+    page_boundaries: list[dict] = field(default_factory=list)  # [{"page": 1, "start_char": 0, "end_char": 1234}, ...]
 
 
 class DocumentExtractor(Protocol):
