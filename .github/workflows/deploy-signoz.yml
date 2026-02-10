@@ -10,7 +10,7 @@ on:
       signoz_base_path:
         description: 'Base path for SigNoz installation'
         required: true
-        default: '~/signoz'
+        default: '$HOME/signoz'
 
 jobs:
   deploy:
