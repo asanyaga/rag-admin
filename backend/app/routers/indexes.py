@@ -8,6 +8,7 @@ from fastapi import (
     Query,
     status,
 )
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -34,6 +35,7 @@ from app.schemas.chunk import (
     ChunkSearchRequest,
 )
 from app.schemas.query import QueryRequest, QueryResponse
+from app.schemas.playground import PlaygroundAnswerRequest
 from app.services.index_service import IndexService
 from app.services.chunk_service import ChunkService
 from app.services.query_service import QueryService
@@ -42,7 +44,9 @@ from app.services.index_processing_service import (
     IndexProcessingService,
     process_index_background,
 )
+from app.services.answer_service import AnswerService
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
+from app.utils.encryption import decrypt
 
 router = APIRouter(prefix="/projects/{project_id}/indexes", tags=["indexes"])
 
@@ -82,6 +86,21 @@ def get_query_service(db: AsyncSession = Depends(get_db)) -> QueryService:
         chunk_repo=ChunkRepository(db),
         provider_key_repo=ProviderKeyRepository(db),
     )
+
+
+def get_answer_service(db: AsyncSession = Depends(get_db)) -> AnswerService:
+    """Dependency to create AnswerService."""
+    query_service = QueryService(
+        index_repo=IndexRepository(db),
+        chunk_repo=ChunkRepository(db),
+        provider_key_repo=ProviderKeyRepository(db),
+    )
+    return AnswerService(query_service=query_service)
+
+
+def get_provider_key_repo(db: AsyncSession = Depends(get_db)) -> ProviderKeyRepository:
+    """Dependency for provider key lookups."""
+    return ProviderKeyRepository(db)
 
 
 async def verify_project_access(
@@ -487,6 +506,61 @@ async def query_index(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+# ---------------------------------------------------------------------------
+# Answer Playground (SSE streaming)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/{index_id}/playground/answer",
+    summary="Answer playground (SSE)",
+    description="Stream a RAG answer: retrieve chunks, build prompt, stream LLM response.",
+)
+async def playground_answer(
+    project_id: UUID,
+    index_id: UUID,
+    data: PlaygroundAnswerRequest,
+    current_user: User = Depends(get_current_active_user),
+    answer_service: AnswerService = Depends(get_answer_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+    provider_key_repo: ProviderKeyRepository = Depends(get_provider_key_repo),
+):
+    """Stream an answer for the playground via Server-Sent Events."""
+    await verify_project_access(project_id, current_user, project_repo)
+
+    # Resolve the LLM provider API key (reuses embedding key storage)
+    llm_provider = data.llm_config.provider
+    key_record = await provider_key_repo.get_for_provider(
+        user_id=current_user.id,
+        provider=llm_provider,
+        project_id=project_id,
+    )
+    if not key_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"No API key configured for provider '{llm_provider}'. "
+                "Add one in Settings → API Keys."
+            ),
+        )
+
+    api_key = decrypt(key_record.api_key_encrypted)
+
+    return StreamingResponse(
+        answer_service.stream_answer(
+            index_id=index_id,
+            project_id=project_id,
+            user_id=current_user.id,
+            request=data,
+            api_key=api_key,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
