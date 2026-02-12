@@ -12,7 +12,7 @@ interface IndexStatusBadgeProps {
 
 const statusConfig: Record<
   IndexStatus,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'blue'; icon: React.ReactNode }
 > = {
   created: {
     label: 'Draft',
@@ -21,12 +21,12 @@ const statusConfig: Record<
   },
   processing: {
     label: 'Processing',
-    variant: 'secondary',
+    variant: 'blue',
     icon: <Loader2 className="h-3 w-3 animate-spin" />,
   },
   ready: {
     label: 'Ready',
-    variant: 'default',
+    variant: 'success',
     icon: <CheckCircle className="h-3 w-3" />,
   },
   failed: {

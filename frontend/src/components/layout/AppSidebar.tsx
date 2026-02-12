@@ -2,6 +2,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { ChevronUp, LogOut, User } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { navigationItems } from '@/config/navigation'
+import { cn } from '@/lib/utils'
 import { ProjectSwitcher } from '@/components/ProjectSwitcher'
 import {
   Sidebar,
@@ -69,7 +70,10 @@ export function AppSidebar() {
                     : location.pathname.startsWith(item.href)
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive}>
+                    <SidebarMenuButton asChild isActive={isActive} className={cn(
+                      isActive && `border-l-[3px] ${item.activeColor}`,
+                      !isActive && 'border-l-[3px] border-l-transparent'
+                    )}>
                       <NavLink to={item.href}>
                         <item.icon />
                         <span>{item.label}</span>

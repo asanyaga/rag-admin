@@ -7,7 +7,7 @@ import { AppLayout } from './components/layout/AppLayout'
 import SignInPage from './pages/SignInPage'
 import SignUpPage from './pages/SignUpPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
-import HomePage from './pages/HomePage'
+import DashboardPage from './pages/DashboardPage'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectDocumentsPage from './pages/ProjectDocumentsPage'
 import DocumentsPage from './pages/DocumentsPage'
@@ -47,8 +47,8 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <HomePage />,
-            handle: { breadcrumb: 'Home' },
+            element: <DashboardPage />,
+            handle: { breadcrumb: 'Dashboard' },
           },
           {
             path: 'projects',

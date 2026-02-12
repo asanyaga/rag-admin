@@ -56,7 +56,12 @@ export function IndexCard({
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
         <div className="space-y-1 flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-lg truncate">{index.name}</CardTitle>
+            <CardTitle
+              className="text-lg truncate cursor-pointer hover:text-primary transition-colors"
+              onClick={() => onView(index)}
+            >
+              {index.name}
+            </CardTitle>
             <IndexStatusBadge status={index.status} />
           </div>
           <CardDescription className="text-sm">

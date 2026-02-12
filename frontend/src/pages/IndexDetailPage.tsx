@@ -233,23 +233,23 @@ export default function IndexDetailPage() {
   return (
     <div className="-m-6 min-h-[calc(100vh-4rem)]">
       {/* ══════ Breadcrumb ══════ */}
-      <div className="border-b border-zinc-200 px-6 py-3 flex items-center gap-2 sticky top-0 z-30 bg-white">
+      <div className="border-b px-6 py-3 flex items-center gap-2 sticky top-0 z-30 bg-background">
         <button
           onClick={() => navigate('/index')}
-          className="p-1 rounded-md hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors"
+          className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="text-sm text-zinc-400">Indexes</span>
-        <span className="text-zinc-300">/</span>
-        <span className="text-sm font-medium text-zinc-700">{index.name}</span>
+        <span className="text-sm text-muted-foreground">Indexes</span>
+        <span className="text-muted-foreground/40">/</span>
+        <span className="text-sm font-medium text-foreground">{index.name}</span>
         <div className="ml-auto">
           <IndexStatusBadge status={index.status} />
         </div>
       </div>
 
       {/* ══════ Index Header ══════ */}
-      <div className="mx-6 mt-5 p-5 rounded-lg border border-zinc-200">
+      <div className="mx-6 mt-5 p-5 rounded-lg border">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
             {/* Editable Name */}
@@ -279,7 +279,7 @@ export default function IndexDetailPage() {
                 {canEdit && (
                   <button
                     onClick={() => setEditingName(true)}
-                    className="p-1 rounded-md text-zinc-300 hover:text-zinc-500 opacity-0 group-hover:opacity-100 transition-all"
+                    className="p-1 rounded-md text-muted-foreground/40 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-all"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
@@ -295,19 +295,19 @@ export default function IndexDetailPage() {
                 onBlur={handleSaveDesc}
                 autoFocus
                 rows={2}
-                className="mt-1.5 text-sm text-zinc-500 bg-zinc-50 border border-zinc-300 rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent w-full resize-vertical leading-relaxed"
+                className="mt-1.5 text-sm text-muted-foreground bg-muted/50 border rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-ring focus:border-transparent w-full resize-vertical leading-relaxed"
               />
             ) : (
               <p
                 onClick={() => canEdit && setEditingDesc(true)}
                 className={cn(
-                  'mt-1.5 text-sm text-zinc-500 max-w-xl leading-relaxed',
-                  canEdit && 'cursor-pointer hover:text-zinc-600 transition-colors'
+                  'mt-1.5 text-sm text-muted-foreground max-w-xl leading-relaxed',
+                  canEdit && 'cursor-pointer hover:text-foreground transition-colors'
                 )}
               >
                 {index.description || (
                   canEdit ? (
-                    <span className="italic text-zinc-400">Add a description...</span>
+                    <span className="italic text-muted-foreground">Add a description...</span>
                   ) : null
                 )}
               </p>
@@ -320,8 +320,8 @@ export default function IndexDetailPage() {
             className={cn(
               'flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors',
               showConfig
-                ? 'bg-zinc-100 border-zinc-300 text-zinc-700'
-                : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50'
+                ? 'bg-muted border text-foreground'
+                : 'border text-muted-foreground hover:bg-muted/50'
             )}
           >
             <Settings className="h-4 w-4" /> Settings
@@ -346,10 +346,10 @@ export default function IndexDetailPage() {
             },
           ].map((s) => (
             <div key={s.label} className="flex items-baseline gap-1.5">
-              <span className="text-sm font-semibold font-mono text-zinc-800">
+              <span className="text-sm font-semibold font-mono text-foreground">
                 {s.value}
               </span>
-              <span className="text-xs text-zinc-400 uppercase tracking-wide">
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">
                 {s.label}
               </span>
             </div>
@@ -358,20 +358,20 @@ export default function IndexDetailPage() {
 
         {/* Error message if failed */}
         {index.status === 'failed' && index.errorMessage && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400">
             {index.errorMessage}
           </div>
         )}
 
         {/* Config Drawer */}
         {showConfig && (
-          <div className="mt-4 pt-4 border-t border-zinc-200 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+          <div className="mt-4 pt-4 border-t grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
             {configItems.map((item) => (
               <div key={item.label}>
-                <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-1">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
                   {item.label}
                 </div>
-                <div className="text-sm font-mono text-zinc-700">{item.value}</div>
+                <div className="text-sm font-mono text-foreground">{item.value}</div>
               </div>
             ))}
           </div>
@@ -379,7 +379,7 @@ export default function IndexDetailPage() {
       </div>
 
       {/* ══════ Tabs ══════ */}
-      <div className="mx-6 mt-5 flex gap-1 border-b border-zinc-200">
+      <div className="mx-6 mt-5 flex gap-1 border-b">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -387,8 +387,8 @@ export default function IndexDetailPage() {
             className={cn(
               'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === tab.id
-                ? 'border-zinc-900 text-zinc-900'
-                : 'border-transparent text-zinc-400 hover:text-zinc-600'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             )}
           >
             <tab.icon className="h-4 w-4" />
@@ -402,22 +402,22 @@ export default function IndexDetailPage() {
         <div className="flex mx-6 mt-4 mb-6 gap-4">
           <div className="flex-1 flex flex-col min-w-0">
             {/* Documents Section */}
-            <div className="rounded-t-lg border border-zinc-200 border-b-0">
-              <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-200">
-                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+            <div className="rounded-t-lg border border-b-0">
+              <div className="px-4 py-3 flex items-center justify-between border-b">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Documents ({index.documentCount})
                 </h3>
                 {canEdit && (
                   <button
                     onClick={() => setAddDocsDialogOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-200 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
                   >
                     <Upload className="h-3.5 w-3.5" /> Add Document
                   </button>
                 )}
               </div>
               {index.documentCount === 0 ? (
-                <div className="px-4 py-8 text-center text-sm text-zinc-400">
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No documents in this index
                 </div>
               ) : (
@@ -433,26 +433,26 @@ export default function IndexDetailPage() {
                         }
                         className={cn(
                           'px-4 py-3 flex items-center gap-3 cursor-pointer transition-colors',
-                          expandedDoc === doc.id ? 'bg-zinc-50' : 'hover:bg-zinc-50'
+                          expandedDoc === doc.id ? 'bg-primary/5' : 'hover:bg-primary/5'
                         )}
                       >
                         <span
                           className={cn(
-                            'transition-transform text-zinc-400',
+                            'transition-transform text-muted-foreground',
                             expandedDoc === doc.id ? 'rotate-0' : '-rotate-90'
                           )}
                         >
                           <ChevronDown className="h-4 w-4" />
                         </span>
-                        <FileText className="h-4 w-4 text-zinc-400" />
+                        <FileText className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium flex-1">{doc.title}</span>
-                        <span className="text-xs text-zinc-400">{doc.sourceType}</span>
-                        <span className="text-xs text-zinc-400">
+                        <span className="text-xs text-muted-foreground">{doc.sourceType}</span>
+                        <span className="text-xs text-muted-foreground">
                           {new Date(doc.createdAt).toLocaleDateString()}
                         </span>
                         {canEdit && (
                           <button
-                            className="p-1 rounded text-zinc-300 hover:text-red-500 transition-colors"
+                            className="p-1 rounded text-muted-foreground/40 hover:text-red-500 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation()
                               setDocToRemove(doc.id)
@@ -464,10 +464,15 @@ export default function IndexDetailPage() {
                         )}
                       </div>
                       {expandedDoc === doc.id && (
-                        <div className="px-4 py-2 pl-14 text-xs text-zinc-400 flex gap-5 bg-zinc-50 border-t border-zinc-100">
+                        <div className="px-4 py-2 pl-14 text-xs text-muted-foreground flex gap-5 bg-muted/50 border-t">
                           <span>
                             Status:{' '}
-                            <span className="text-emerald-600 font-medium">
+                            <span className={`font-medium ${
+                              doc.status === 'ready' ? 'text-green-700 dark:text-green-400' :
+                              doc.status === 'processing' ? 'text-blue-700 dark:text-blue-400' :
+                              doc.status === 'failed' ? 'text-red-700 dark:text-red-400' :
+                              'text-muted-foreground'
+                            }`}>
                               {doc.status}
                             </span>
                           </span>
@@ -479,19 +484,19 @@ export default function IndexDetailPage() {
             </div>
 
             {/* Chunks Section */}
-            <div className="rounded-b-lg border border-zinc-200 flex-1 flex flex-col overflow-hidden">
-              <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-200">
-                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+            <div className="rounded-b-lg border flex-1 flex flex-col overflow-hidden">
+              <div className="px-4 py-3 flex items-center justify-between border-b">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Chunks ({index.chunkCount})
                 </h3>
-                <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-md px-2.5 py-1.5">
-                  <Search className="h-3.5 w-3.5 text-zinc-400" />
+                <div className="flex items-center gap-1.5 bg-muted/50 border rounded-md px-2.5 py-1.5">
+                  <Search className="h-3.5 w-3.5 text-muted-foreground" />
                   <input
                     placeholder="Search chunks..."
                     value={chunkSearch}
                     onChange={(e) => setChunkSearch(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleChunkSearch()}
-                    className="bg-transparent border-none outline-none text-sm text-zinc-700 placeholder:text-zinc-400 w-44"
+                    className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-44"
                   />
                 </div>
               </div>
@@ -501,20 +506,20 @@ export default function IndexDetailPage() {
                   <div className="overflow-auto flex-1" style={{ maxHeight: 420 }}>
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-zinc-50">
-                          <TableHead className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider w-12">
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-12">
                             #
                           </TableHead>
-                          <TableHead className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+                          <TableHead className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                             Content Preview
                           </TableHead>
-                          <TableHead className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider w-16">
+                          <TableHead className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-16">
                             Tokens
                           </TableHead>
-                          <TableHead className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider w-16">
+                          <TableHead className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-16">
                             Chars
                           </TableHead>
-                          <TableHead className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider w-24">
+                          <TableHead className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-24">
                             Source
                           </TableHead>
                         </TableRow>
@@ -531,23 +536,23 @@ export default function IndexDetailPage() {
                             className={cn(
                               'cursor-pointer transition-colors',
                               selectedChunk?.id === chunk.id
-                                ? 'bg-zinc-100'
-                                : 'hover:bg-zinc-50'
+                                ? 'bg-primary/10'
+                                : 'hover:bg-primary/5'
                             )}
                           >
-                            <TableCell className="text-zinc-400 font-mono text-xs">
+                            <TableCell className="text-muted-foreground font-mono text-xs">
                               {chunk.chunkIndex}
                             </TableCell>
-                            <TableCell className="text-zinc-600 max-w-md truncate text-sm">
+                            <TableCell className="max-w-md truncate text-sm">
                               {chunk.contentPreview}
                             </TableCell>
-                            <TableCell className="text-zinc-400 font-mono text-xs">
+                            <TableCell className="text-muted-foreground font-mono text-xs">
                               {chunk.tokenCount}
                             </TableCell>
-                            <TableCell className="text-zinc-400 font-mono text-xs">
+                            <TableCell className="text-muted-foreground font-mono text-xs">
                               {chunk.charCount}
                             </TableCell>
-                            <TableCell className="text-zinc-400 text-xs">
+                            <TableCell className="text-muted-foreground text-xs">
                               {chunk.documentTitle || 'Unknown'}
                             </TableCell>
                           </TableRow>
@@ -558,8 +563,8 @@ export default function IndexDetailPage() {
 
                   {/* Pagination */}
                   {chunks.totalPages > 1 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-200">
-                      <p className="text-xs text-zinc-400">
+                    <div className="flex items-center justify-between px-4 py-3 border-t">
+                      <p className="text-xs text-muted-foreground">
                         {(chunkPage - 1) * chunks.pageSize + 1}–
                         {Math.min(chunkPage * chunks.pageSize, chunks.total)} of{' '}
                         {chunks.total}
@@ -589,8 +594,8 @@ export default function IndexDetailPage() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <Layers className="h-10 w-10 text-zinc-300 mb-3" />
-                  <p className="text-sm text-zinc-400">
+                  <Layers className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                  <p className="text-sm text-muted-foreground">
                     {index.status === 'ready'
                       ? 'No chunks found'
                       : 'Process the index to generate chunks'}
@@ -602,40 +607,40 @@ export default function IndexDetailPage() {
 
           {/* Chunk Detail Sidebar */}
           {selectedChunk && (
-            <div className="w-80 rounded-lg border border-zinc-200 p-5 self-start sticky top-20 flex-shrink-0">
+            <div className="w-80 rounded-lg border p-5 self-start sticky top-20 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold">
                   Chunk #{selectedChunk.chunkIndex}
                 </h3>
                 <button
                   onClick={() => setSelectedChunk(null)}
-                  className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div>
-                  <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-0.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                     Tokens
                   </div>
-                  <div className="text-sm font-mono text-zinc-700">
+                  <div className="text-sm font-mono text-foreground">
                     {selectedChunk.tokenCount}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-0.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                     Chars
                   </div>
-                  <div className="text-sm font-mono text-zinc-700">
+                  <div className="text-sm font-mono text-foreground">
                     {selectedChunk.charCount}
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-0.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                     Source
                   </div>
-                  <div className="text-sm font-mono text-zinc-700">
+                  <div className="text-sm font-mono text-foreground">
                     {selectedChunk.documentTitle || 'Unknown'}
                   </div>
                 </div>
@@ -644,16 +649,16 @@ export default function IndexDetailPage() {
               {/* Chunk Metadata */}
               {selectedChunk.metadata && Object.keys(selectedChunk.metadata).length > 0 && (
                 <div className="mb-4">
-                  <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-1.5">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
                     Metadata
                   </div>
-                  <div className="bg-zinc-50 rounded-md border border-zinc-100 divide-y divide-zinc-100">
+                  <div className="bg-muted/50 rounded-md border divide-y divide-border">
                     {Object.entries(selectedChunk.metadata).map(([key, value]) => (
                       <div key={key} className="px-3 py-2 flex items-start gap-2">
-                        <span className="text-xs font-medium text-zinc-500 shrink-0">
+                        <span className="text-xs font-medium text-muted-foreground shrink-0">
                           {key}
                         </span>
-                        <span className="text-xs text-zinc-600 font-mono break-all ml-auto text-right">
+                        <span className="text-xs text-foreground font-mono break-all ml-auto text-right">
                           {Array.isArray(value)
                             ? value.join(', ')
                             : typeof value === 'object' && value !== null
@@ -666,10 +671,10 @@ export default function IndexDetailPage() {
                 </div>
               )}
 
-              <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-1.5">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
                 Content
               </div>
-              <div className="bg-zinc-50 rounded-md p-3 text-sm text-zinc-600 leading-relaxed border border-zinc-100 max-h-96 overflow-auto whitespace-pre-wrap break-words">
+              <div className="bg-muted/50 rounded-md p-3 text-sm leading-relaxed border max-h-96 overflow-auto whitespace-pre-wrap break-words">
                 {selectedChunk.content}
               </div>
             </div>

@@ -78,7 +78,7 @@ export function DocumentsTable({
             {documents.map((document) => (
               <tr
                 key={document.id}
-                className="hover:bg-muted/30 transition-colors"
+                className="hover:bg-primary/5 transition-colors"
               >
                 <td className="py-3 px-4">
                   <div>
