@@ -45,6 +45,7 @@ class ChunkService:
         return ChunkListItem(
             id=chunk.id,
             document_id=chunk.document_id,
+            content=chunk.content,
             content_preview=content_preview,
             chunk_index=chunk.chunk_index,
             token_count=chunk.token_count,

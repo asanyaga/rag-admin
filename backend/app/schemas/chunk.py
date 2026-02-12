@@ -31,6 +31,7 @@ class ChunkListItem(BaseModel):
     """Simplified chunk for list views."""
     id: UUID
     document_id: UUID = Field(..., alias="documentId")
+    content: str
     content_preview: str = Field(..., alias="contentPreview")  # First ~200 chars
     chunk_index: int = Field(..., alias="chunkIndex")
     token_count: int = Field(..., alias="tokenCount")

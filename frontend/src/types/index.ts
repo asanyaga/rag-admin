@@ -147,6 +147,7 @@ export interface Chunk {
 export interface ChunkListItem {
   id: string
   documentId: string
+  content: string
   contentPreview: string
   chunkIndex: number
   tokenCount: number

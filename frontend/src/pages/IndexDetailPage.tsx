@@ -667,10 +667,10 @@ export default function IndexDetailPage() {
               )}
 
               <div className="text-[10px] text-zinc-400 uppercase tracking-wider mb-1.5">
-                Content Preview
+                Content
               </div>
-              <div className="bg-zinc-50 rounded-md p-3 text-sm text-zinc-600 leading-relaxed border border-zinc-100 max-h-64 overflow-auto">
-                {selectedChunk.contentPreview}
+              <div className="bg-zinc-50 rounded-md p-3 text-sm text-zinc-600 leading-relaxed border border-zinc-100 max-h-96 overflow-auto whitespace-pre-wrap break-words">
+                {selectedChunk.content}
               </div>
             </div>
           )}
