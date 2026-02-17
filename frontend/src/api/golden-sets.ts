@@ -12,6 +12,8 @@ import type {
   GoldenSetQuery,
   SourceCreate,
   GoldenSetSource,
+  GenerateRequest,
+  BulkReviewRequest,
 } from '@/types/golden-set'
 
 export async function listGoldenSets(projectId: string): Promise<GoldenSet[]> {
@@ -118,4 +120,28 @@ export async function deleteSource(
   await apiClient.delete(
     `/projects/${projectId}/golden-sets/${goldenSetId}/queries/${queryId}/sources/${sourceId}`
   )
+}
+
+export async function generateGoldenSet(
+  projectId: string,
+  goldenSetId: string,
+  data: GenerateRequest
+): Promise<GoldenSetDetail> {
+  const response = await apiClient.post<GoldenSetDetail>(
+    `/projects/${projectId}/golden-sets/${goldenSetId}/generate`,
+    data
+  )
+  return response.data
+}
+
+export async function bulkReviewQueries(
+  projectId: string,
+  goldenSetId: string,
+  data: BulkReviewRequest
+): Promise<{ updated: number }> {
+  const response = await apiClient.post<{ updated: number }>(
+    `/projects/${projectId}/golden-sets/${goldenSetId}/queries/bulk-review`,
+    data
+  )
+  return response.data
 }

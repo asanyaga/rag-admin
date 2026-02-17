@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
   GoldenSet,
   GoldenSetDetail,
@@ -8,6 +8,9 @@ import type {
   QueryUpdate,
   SourceCreate,
   GoldenSetQuery,
+  GenerateRequest,
+  BulkReviewRequest,
+  GenerationProgress,
 } from '@/types/golden-set'
 import * as api from '@/api/golden-sets'
 
@@ -99,6 +102,8 @@ interface UseGoldenSetDetailReturn {
   selectedQuery: GoldenSetQuery | null
   isLoading: boolean
   error: string | null
+  isGenerating: boolean
+  generationProgress: GenerationProgress | null
   setSelectedQueryId: (id: string | null) => void
   fetchGoldenSet: () => Promise<void>
   addQuery: (data: QueryCreate) => Promise<void>
@@ -106,6 +111,8 @@ interface UseGoldenSetDetailReturn {
   deleteQuery: (queryId: string) => Promise<void>
   addSource: (queryId: string, data: SourceCreate) => Promise<void>
   deleteSource: (queryId: string, sourceId: string) => Promise<void>
+  triggerGeneration: (data: GenerateRequest) => Promise<void>
+  bulkReview: (data: BulkReviewRequest) => Promise<void>
 }
 
 export function useGoldenSetDetail(
@@ -116,9 +123,16 @@ export function useGoldenSetDetail(
   const [selectedQueryId, setSelectedQueryId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const selectedQuery =
     goldenSet?.queries.find((q) => q.id === selectedQueryId) ?? null
+
+  const isGenerating =
+    goldenSet?.generationStatus === 'pending' ||
+    goldenSet?.generationStatus === 'generating'
+
+  const generationProgress = goldenSet?.generationProgress ?? null
 
   const fetchGoldenSet = useCallback(async () => {
     if (!projectId || !goldenSetId) return
@@ -137,6 +151,27 @@ export function useGoldenSetDetail(
       setIsLoading(false)
     }
   }, [projectId, goldenSetId, selectedQueryId])
+
+  // Poll while generating
+  useEffect(() => {
+    if (isGenerating && projectId && goldenSetId) {
+      pollRef.current = setInterval(async () => {
+        try {
+          const data = await api.getGoldenSet(projectId, goldenSetId)
+          setGoldenSet(data)
+        } catch {
+          // Ignore poll errors
+        }
+      }, 2500)
+    }
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+  }, [isGenerating, projectId, goldenSetId])
 
   const addQuery = useCallback(
     async (data: QueryCreate) => {
@@ -218,6 +253,26 @@ export function useGoldenSetDetail(
     [projectId, goldenSetId]
   )
 
+  const triggerGeneration = useCallback(
+    async (data: GenerateRequest) => {
+      if (!projectId || !goldenSetId) return
+      const result = await api.generateGoldenSet(projectId, goldenSetId, data)
+      setGoldenSet(result)
+    },
+    [projectId, goldenSetId]
+  )
+
+  const bulkReview = useCallback(
+    async (data: BulkReviewRequest) => {
+      if (!projectId || !goldenSetId) return
+      await api.bulkReviewQueries(projectId, goldenSetId, data)
+      // Refresh to get updated statuses
+      const updated = await api.getGoldenSet(projectId, goldenSetId)
+      setGoldenSet(updated)
+    },
+    [projectId, goldenSetId]
+  )
+
   useEffect(() => {
     if (projectId && goldenSetId) {
       fetchGoldenSet()
@@ -230,6 +285,8 @@ export function useGoldenSetDetail(
     selectedQuery,
     isLoading,
     error,
+    isGenerating,
+    generationProgress,
     setSelectedQueryId,
     fetchGoldenSet,
     addQuery,
@@ -237,5 +294,7 @@ export function useGoldenSetDetail(
     deleteQuery,
     addSource,
     deleteSource,
+    triggerGeneration,
+    bulkReview,
   }
 }

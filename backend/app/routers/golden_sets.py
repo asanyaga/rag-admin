@@ -1,6 +1,6 @@
 """Golden Sets API router."""
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -9,6 +9,7 @@ from app.models import User
 from app.repositories.golden_set_repository import GoldenSetRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.project_repository import ProjectRepository
+from app.repositories.provider_key_repository import ProviderKeyRepository
 from app.schemas.golden_set import (
     GoldenSetCreate,
     GoldenSetUpdate,
@@ -19,8 +20,11 @@ from app.schemas.golden_set import (
     QueryResponse,
     SourceCreate,
     SourceResponse,
+    GenerateGoldenSetRequest,
+    BulkReviewRequest,
 )
 from app.services.golden_set_service import GoldenSetService
+from app.services.golden_set_generation_service import GoldenSetGenerationService
 from app.services.exceptions import NotFoundError, ValidationError
 
 router = APIRouter(
@@ -40,6 +44,14 @@ def get_golden_set_service(db: AsyncSession = Depends(get_db)) -> GoldenSetServi
     )
 
 
+def get_generation_service(db: AsyncSession = Depends(get_db)) -> GoldenSetGenerationService:
+    return GoldenSetGenerationService(
+        golden_set_repo=GoldenSetRepository(db),
+        document_repo=DocumentRepository(db),
+        provider_key_repo=ProviderKeyRepository(db),
+    )
+
+
 def get_project_repo(db: AsyncSession = Depends(get_db)) -> ProjectRepository:
     return ProjectRepository(db)
 
@@ -55,6 +67,25 @@ async def verify_project_access(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project {project_id} not found",
         )
+
+
+# ---------------------------------------------------------------------------
+# Background task helper
+# ---------------------------------------------------------------------------
+
+async def execute_generation_background(
+    db: AsyncSession,
+    gs_id: UUID,
+    project_id: UUID,
+    user_id: UUID,
+) -> None:
+    """Background task to execute golden set generation."""
+    service = GoldenSetGenerationService(
+        golden_set_repo=GoldenSetRepository(db),
+        document_repo=DocumentRepository(db),
+        provider_key_repo=ProviderKeyRepository(db),
+    )
+    await service.execute_generation(gs_id, project_id, user_id)
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +144,8 @@ async def update_golden_set(
         return await service.update(gs_id, project_id, data)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/{gs_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -126,6 +159,73 @@ async def delete_golden_set(
     await verify_project_access(project_id, current_user, project_repo)
     try:
         await service.delete(gs_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Generation
+# ---------------------------------------------------------------------------
+
+@router.post("/{gs_id}/generate", response_model=GoldenSetDetailResponse)
+async def generate_golden_set(
+    project_id: UUID,
+    gs_id: UUID,
+    data: GenerateGoldenSetRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    service: GoldenSetService = Depends(get_golden_set_service),
+    gen_service: GoldenSetGenerationService = Depends(get_generation_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+    db: AsyncSession = Depends(get_db),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        await gen_service.trigger_generation(
+            gs_id=gs_id,
+            project_id=project_id,
+            user_id=current_user.id,
+            document_ids=data.document_ids,
+            llm_provider=data.llm_provider,
+            llm_model=data.llm_model,
+            queries_per_document=data.queries_per_document,
+            question_types=data.question_types,
+            temperature=data.temperature,
+        )
+
+        # Execute in background
+        background_tasks.add_task(
+            execute_generation_background,
+            db=db,
+            gs_id=gs_id,
+            project_id=project_id,
+            user_id=current_user.id,
+        )
+
+        return await service.get(gs_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Bulk Review
+# ---------------------------------------------------------------------------
+
+@router.post("/{gs_id}/queries/bulk-review")
+async def bulk_review_queries(
+    project_id: UUID,
+    gs_id: UUID,
+    data: BulkReviewRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: GoldenSetService = Depends(get_golden_set_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        count = await service.bulk_review(gs_id, project_id, data)
+        return {"updated": count}
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

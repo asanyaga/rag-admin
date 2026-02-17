@@ -11,6 +11,7 @@ class LLMConfig:
     model: str  # e.g. "gpt-4o"
     temperature: float = 0.0
     max_tokens: int = 1024
+    json_mode: bool = False
 
 
 @dataclass

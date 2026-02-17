@@ -30,10 +30,14 @@ export function GoldenSetsTab({
   const navigate = useNavigate()
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const handleCreate = async (data: GoldenSetCreate) => {
+  const handleCreate = async (data: GoldenSetCreate, method: 'manual' | 'auto-generate') => {
     const gs = await onCreate(data)
     setDialogOpen(false)
-    navigate(`/evaluation/golden-sets/${gs.id}`)
+    if (method === 'auto-generate') {
+      navigate(`/evaluation/golden-sets/${gs.id}/generate`)
+    } else {
+      navigate(`/evaluation/golden-sets/${gs.id}`)
+    }
   }
 
   if (isLoading) {
@@ -92,7 +96,7 @@ export function GoldenSetsTab({
                   {gs.queryCount}
                 </TableCell>
                 <TableCell>
-                  <EvalStatusBadge status={gs.status} />
+                  <EvalStatusBadge status={gs.generationStatus ?? gs.status} />
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <Button

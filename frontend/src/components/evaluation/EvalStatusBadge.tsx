@@ -7,6 +7,7 @@ const STATUS_MAP: Record<string, StatusVariant> = {
   completed: 'success',
   pending: 'warning',
   running: 'blue',
+  generating: 'blue',
   failed: 'destructive',
   ready: 'success',
 }

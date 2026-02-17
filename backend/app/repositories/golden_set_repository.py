@@ -1,10 +1,11 @@
 """Repository for golden set data access."""
 from uuid import UUID
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import GoldenSet, GoldenSetQuery, GoldenSetSource
+from app.models.golden_set import GenerationStatus, SourceMethod, ReviewStatus
 
 
 class GoldenSetRepository:
@@ -99,6 +100,39 @@ class GoldenSetRepository:
         return result.rowcount > 0
 
     # ------------------------------------------------------------------
+    # Generation helpers
+    # ------------------------------------------------------------------
+
+    async def set_generation_config(
+        self, gs_id: UUID, project_id: UUID, config: dict
+    ) -> GoldenSet | None:
+        gs = await self.get_by_id(gs_id, project_id)
+        if not gs:
+            return None
+        gs.generation_config = config
+        await self.session.commit()
+        await self.session.refresh(gs)
+        return gs
+
+    async def update_generation_status(
+        self,
+        gs_id: UUID,
+        status: GenerationStatus,
+        progress: dict | None = None,
+    ) -> None:
+        """Update generation status and progress (for background tasks — no project scoping)."""
+        result = await self.session.execute(
+            select(GoldenSet).where(GoldenSet.id == gs_id)
+        )
+        gs = result.scalar_one_or_none()
+        if not gs:
+            return
+        gs.generation_status = status
+        if progress is not None:
+            gs.generation_progress = progress
+        await self.session.commit()
+
+    # ------------------------------------------------------------------
     # Query CRUD
     # ------------------------------------------------------------------
 
@@ -106,6 +140,29 @@ class GoldenSetRepository:
         query = GoldenSetQuery(
             golden_set_id=golden_set_id,
             query_text=query_text,
+        )
+        self.session.add(query)
+        await self.session.commit()
+        await self.session.refresh(query)
+        return query
+
+    async def add_query_with_metadata(
+        self,
+        golden_set_id: UUID,
+        query_text: str,
+        source_method: SourceMethod = SourceMethod.manual,
+        review_status: ReviewStatus = ReviewStatus.accepted,
+        reasoning: str | None = None,
+        question_type: str | None = None,
+    ) -> GoldenSetQuery:
+        """Add a query with full metadata (used by auto-generation)."""
+        query = GoldenSetQuery(
+            golden_set_id=golden_set_id,
+            query_text=query_text,
+            source_method=source_method,
+            review_status=review_status,
+            reasoning=reasoning,
+            question_type=question_type,
         )
         self.session.add(query)
         await self.session.commit()
@@ -123,14 +180,22 @@ class GoldenSetRepository:
         )
         return result.scalar_one_or_none()
 
-    async def update_query(self, query_id: UUID, query_text: str) -> GoldenSetQuery | None:
+    async def update_query(
+        self,
+        query_id: UUID,
+        query_text: str | None = None,
+        review_status: str | None = None,
+    ) -> GoldenSetQuery | None:
         result = await self.session.execute(
             select(GoldenSetQuery).where(GoldenSetQuery.id == query_id)
         )
         query = result.scalar_one_or_none()
         if not query:
             return None
-        query.query_text = query_text
+        if query_text is not None:
+            query.query_text = query_text
+        if review_status is not None:
+            query.review_status = review_status
         await self.session.commit()
         await self.session.refresh(query)
         return query
@@ -141,6 +206,18 @@ class GoldenSetRepository:
         )
         await self.session.commit()
         return result.rowcount > 0
+
+    async def bulk_update_review_status(
+        self, query_ids: list[UUID], review_status: str
+    ) -> int:
+        """Bulk update review_status for multiple queries. Returns count updated."""
+        result = await self.session.execute(
+            update(GoldenSetQuery)
+            .where(GoldenSetQuery.id.in_(query_ids))
+            .values(review_status=review_status)
+        )
+        await self.session.commit()
+        return result.rowcount
 
     # ------------------------------------------------------------------
     # Source CRUD
@@ -188,5 +265,17 @@ class GoldenSetRepository:
             .select_from(GoldenSetSource)
             .join(GoldenSetQuery, GoldenSetSource.query_id == GoldenSetQuery.id)
             .where(GoldenSetQuery.golden_set_id == golden_set_id)
+        )
+        return result.scalar() or 0
+
+    async def count_pending_queries(self, golden_set_id: UUID) -> int:
+        """Count queries with review_status='pending'."""
+        result = await self.session.execute(
+            select(func.count())
+            .select_from(GoldenSetQuery)
+            .where(
+                GoldenSetQuery.golden_set_id == golden_set_id,
+                GoldenSetQuery.review_status == ReviewStatus.pending,
+            )
         )
         return result.scalar() or 0

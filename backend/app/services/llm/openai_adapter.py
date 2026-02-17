@@ -42,12 +42,15 @@ class OpenAIAdapter:
     ) -> CompletionResult:
         """Non-streaming completion with usage metadata."""
         start = time.monotonic()
-        response = await self.client.chat.completions.create(
+        kwargs: dict = dict(
             model=config.model,
             messages=messages,
             temperature=config.temperature,
             max_tokens=config.max_tokens,
         )
+        if config.json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        response = await self.client.chat.completions.create(**kwargs)
         latency = (time.monotonic() - start) * 1000
 
         return CompletionResult(

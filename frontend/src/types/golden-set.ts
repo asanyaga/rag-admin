@@ -3,6 +3,10 @@
  */
 
 export type GoldenSetStatus = 'draft' | 'completed'
+export type GenerationStatus = 'pending' | 'generating' | 'completed' | 'failed'
+export type SourceMethod = 'manual' | 'auto_generated'
+export type ReviewStatus = 'pending' | 'accepted' | 'rejected' | 'edited'
+export type QuestionType = 'factual' | 'comparison' | 'summarization'
 
 // Source locator — discriminated union
 export interface PageLocator {
@@ -24,9 +28,19 @@ export interface GoldenSetSource {
 export interface GoldenSetQuery {
   id: string
   queryText: string
+  sourceMethod: SourceMethod
+  reviewStatus: ReviewStatus
+  reasoning: string | null
+  questionType: string | null
   sources: GoldenSetSource[]
   createdAt: string
   updatedAt: string
+}
+
+export interface GenerationProgress {
+  totalWindows: number
+  completedWindows: number
+  errorMessage: string | null
 }
 
 export interface GoldenSet {
@@ -36,6 +50,9 @@ export interface GoldenSet {
   status: GoldenSetStatus
   queryCount: number
   documentCount: number
+  generationStatus: GenerationStatus | null
+  generationProgress: GenerationProgress | null
+  generationConfig: Record<string, unknown> | null
   createdBy: string
   createdAt: string
   updatedAt: string
@@ -62,10 +79,25 @@ export interface QueryCreate {
 }
 
 export interface QueryUpdate {
-  queryText: string
+  queryText?: string
+  reviewStatus?: ReviewStatus
 }
 
 export interface SourceCreate {
   documentId: string
   locator: SourceLocator
+}
+
+export interface GenerateRequest {
+  documentIds: string[]
+  llmProvider: string
+  llmModel: string
+  queriesPerDocument: number
+  questionTypes: QuestionType[]
+  temperature: number
+}
+
+export interface BulkReviewRequest {
+  action: 'accept' | 'reject'
+  queryIds: string[]
 }

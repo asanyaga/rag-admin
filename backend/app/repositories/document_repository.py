@@ -51,6 +51,13 @@ class DocumentRepository:
         await self.session.refresh(document)
         return document
 
+    async def get_by_id_unscoped(self, document_id: UUID) -> Document | None:
+        """Get a document by ID without user scoping (for background tasks)."""
+        result = await self.session.execute(
+            select(Document).where(Document.id == document_id)
+        )
+        return result.scalar_one_or_none()
+
     async def get_by_id(self, document_id: UUID, user_id: UUID) -> Document | None:
         """Get a document by ID, scoped to user via project ownership.
 

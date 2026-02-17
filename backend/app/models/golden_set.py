@@ -17,6 +17,28 @@ class GoldenSetStatus(str, enum.Enum):
     completed = "completed"
 
 
+class GenerationStatus(str, enum.Enum):
+    """Status of auto-generation process."""
+    pending = "pending"
+    generating = "generating"
+    completed = "completed"
+    failed = "failed"
+
+
+class SourceMethod(str, enum.Enum):
+    """How a query was created."""
+    manual = "manual"
+    auto_generated = "auto_generated"
+
+
+class ReviewStatus(str, enum.Enum):
+    """Review status for a query entry."""
+    pending = "pending"
+    accepted = "accepted"
+    rejected = "rejected"
+    edited = "edited"
+
+
 class GoldenSet(Base):
     """A collection of queries with expected retrieval sources for evaluation."""
     __tablename__ = "golden_sets"
@@ -40,6 +62,12 @@ class GoldenSet(Base):
         default=GoldenSetStatus.draft,
         server_default='draft'
     )
+    generation_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    generation_status: Mapped[GenerationStatus | None] = mapped_column(
+        Enum(GenerationStatus, name='generation_status_enum', create_type=False),
+        nullable=True,
+    )
+    generation_progress: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id"),
@@ -89,6 +117,22 @@ class GoldenSetQuery(Base):
         nullable=False
     )
     query_text: Mapped[str] = mapped_column(Text, nullable=False)
+    source_method: Mapped[SourceMethod] = mapped_column(
+        Enum(SourceMethod, name='source_method_enum', create_type=False),
+        nullable=False,
+        default=SourceMethod.manual,
+        server_default='manual'
+    )
+    review_status: Mapped[ReviewStatus] = mapped_column(
+        Enum(ReviewStatus, name='review_status_enum', create_type=False),
+        nullable=False,
+        default=ReviewStatus.accepted,
+        server_default='accepted'
+    )
+    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    question_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    reference_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    answer_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

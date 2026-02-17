@@ -7,7 +7,10 @@ from app.models.index import Index, IndexStatus
 from app.models.index_document import IndexDocument, IndexDocumentStatus
 from app.models.chunk import Chunk, VectorType
 from app.models.provider_key import ProviderKey
-from app.models.golden_set import GoldenSet, GoldenSetStatus, GoldenSetQuery, GoldenSetSource
+from app.models.golden_set import (
+    GoldenSet, GoldenSetStatus, GenerationStatus, SourceMethod, ReviewStatus,
+    GoldenSetQuery, GoldenSetSource,
+)
 from app.models.eval_run import EvalRun, EvalRunStatus, EvalRunResult
 
 __all__ = [
@@ -27,6 +30,9 @@ __all__ = [
     "ProviderKey",
     "GoldenSet",
     "GoldenSetStatus",
+    "GenerationStatus",
+    "SourceMethod",
+    "ReviewStatus",
     "GoldenSetQuery",
     "GoldenSetSource",
     "EvalRun",
