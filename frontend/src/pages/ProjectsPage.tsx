@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useProjects } from '@/hooks/useProjects'
+import { useProject } from '@/contexts/ProjectContext'
 import { Project } from '@/types/project'
 import { Button } from '@/components/ui/button'
 import { ProjectCard } from '@/components/projects/ProjectCard'
@@ -19,6 +21,8 @@ import { Plus, Archive } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function ProjectsPage() {
+  const navigate = useNavigate()
+  const { setCurrentProject } = useProject()
   const {
     projects,
     isLoading,
@@ -36,6 +40,11 @@ export default function ProjectsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+
+  const handleClick = (project: Project) => {
+    setCurrentProject(project)
+    navigate('/')
+  }
 
   const handleEdit = (project: Project) => {
     setSelectedProject(project)
@@ -139,6 +148,7 @@ export default function ProjectsPage() {
             <ProjectCard
               key={project.id}
               project={project}
+              onClick={handleClick}
               onEdit={handleEdit}
               onArchive={handleArchive}
               onUnarchive={handleUnarchive}

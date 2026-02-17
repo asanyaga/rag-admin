@@ -266,6 +266,14 @@ class IndexRepository:
 
     # Count methods
 
+    async def get_document_ids(self, index_id: UUID) -> list[UUID]:
+        """Get all document IDs associated with an index."""
+        result = await self.session.execute(
+            select(IndexDocument.document_id)
+            .where(IndexDocument.index_id == index_id)
+        )
+        return list(result.scalars().all())
+
     async def count_documents(self, index_id: UUID) -> int:
         """Count documents in an index."""
         result = await self.session.execute(

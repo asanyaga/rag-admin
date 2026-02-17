@@ -62,15 +62,24 @@ class IndexProcessingService:
             raise NotFoundError(f"Index {index_id} not found")
 
         # Validate status
-        if index.status not in [IndexStatus.created, IndexStatus.failed]:
+        if index.status not in [IndexStatus.created, IndexStatus.failed, IndexStatus.ready]:
             raise ValidationError(
                 f"Cannot process index with status '{index.status.value}'. "
-                "Only indexes in 'created' or 'failed' status can be processed."
+                "Only indexes in 'created', 'failed', or 'ready' status can be processed."
             )
 
         # Validate has documents
         if not index.index_documents:
             raise ValidationError("Index has no documents to process")
+
+        # For ready indexes, ensure there are pending documents to process
+        if index.status == IndexStatus.ready:
+            has_pending = any(
+                doc.processing_status == IndexDocumentStatus.pending
+                for doc in index.index_documents
+            )
+            if not has_pending:
+                raise ValidationError("No new documents to process")
 
         # Validate API key exists for the embedding provider
         config = IndexConfig.model_validate(index.config)

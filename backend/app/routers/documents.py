@@ -4,10 +4,10 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
-    File,
     Form,
     HTTPException,
     Query,
+    UploadFile,
     status,
 )
 from fastapi.responses import Response
@@ -60,7 +60,7 @@ async def upload_document(
     project_id: UUID = Form(..., description="Project ID to associate document with"),
     title: str = Form(..., description="Document title"),
     description: str | None = Form(None, description="Optional document description"),
-    file: bytes = File(..., description="Document file (PDF)"),
+    file: UploadFile = ...,
     current_user: User = Depends(get_current_active_user),
     document_service: DocumentService = Depends(get_document_service),
     db: AsyncSession = Depends(get_db),
@@ -70,11 +70,13 @@ async def upload_document(
     """Upload a document and initiate background processing."""
     try:
         # Initiate upload (synchronous: validate, save, create record)
+        file_content = await file.read()
+        filename = file.filename or "upload.pdf"
         document = await document_service.initiate_upload(
             user_id=current_user.id,
             project_id=project_id,
-            file_content=file,
-            filename="upload.pdf",  # File object doesn't preserve name, use generic
+            file_content=file_content,
+            filename=filename,
             title=title,
             description=description,
         )

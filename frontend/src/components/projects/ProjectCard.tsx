@@ -19,6 +19,7 @@ import { formatDistanceToNow } from 'date-fns'
 
 interface ProjectCardProps {
   project: Project
+  onClick?: (project: Project) => void
   onEdit: (project: Project) => void
   onArchive: (project: Project) => void
   onUnarchive: (project: Project) => void
@@ -27,13 +28,19 @@ interface ProjectCardProps {
 
 export function ProjectCard({
   project,
+  onClick,
   onEdit,
   onArchive,
   onUnarchive,
   onDelete,
 }: ProjectCardProps) {
+  const isClickable = !project.isArchived && !!onClick
+
   return (
-    <Card className={project.isArchived ? 'opacity-60' : ''}>
+    <Card
+      className={`${project.isArchived ? 'opacity-60' : ''} ${isClickable ? 'cursor-pointer transition-colors hover:border-primary/50' : ''}`}
+      onClick={isClickable ? () => onClick(project) : undefined}
+    >
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
         <div className="space-y-1 flex-1">
           <div className="flex items-center gap-2">
@@ -50,7 +57,12 @@ export function ProjectCard({
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={(e) => e.stopPropagation()}
+            >
               <MoreVertical className="h-4 w-4" />
               <span className="sr-only">Open menu</span>
             </Button>

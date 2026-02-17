@@ -235,11 +235,12 @@ class QueryService:
         """Convert a Chunk ORM object to a RetrievalResult schema."""
         doc = chunk.document
         if doc:
-            doc_name = (
-                doc.source_metadata.get("filename")
-                or doc.title
-                or "Unknown"
-            )
+            stored_filename = doc.source_metadata.get("filename")
+            # Skip generic "upload.pdf" from legacy uploads
+            if stored_filename and stored_filename != "upload.pdf":
+                doc_name = stored_filename
+            else:
+                doc_name = doc.title or "Unknown"
         else:
             doc_name = "Unknown"
 

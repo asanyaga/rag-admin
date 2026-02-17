@@ -60,7 +60,7 @@ export default function IndexDetailPage() {
 
   const { index, chunks, isLoading, error, fetchIndex, fetchChunks } =
     useIndexDetail(projectId, indexId ?? null)
-  const { updateIndex } = useIndexes(projectId)
+  const { updateIndex, processIndex } = useIndexes(projectId)
   const { documents } = useDocuments(projectId)
 
   // Tab state
@@ -90,6 +90,9 @@ export default function IndexDetailPage() {
   const [docToRemove, setDocToRemove] = useState<string | null>(null)
   const [isRemovingDoc, setIsRemovingDoc] = useState(false)
 
+  // Processing state
+  const [isProcessing, setIsProcessing] = useState(false)
+
   // Initialize edit state when index loads
   useEffect(() => {
     if (index) {
@@ -98,8 +101,23 @@ export default function IndexDetailPage() {
     }
   }, [index])
 
+  // Poll when index is processing
+  useEffect(() => {
+    if (index?.status !== 'processing') return
+    const interval = setInterval(() => {
+      fetchIndex()
+      fetchChunks(chunkPage, chunkSearch || undefined)
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [index?.status, fetchIndex, fetchChunks, chunkPage, chunkSearch])
+
   const canEdit = index?.status === 'created'
-  const availableDocuments = documents.filter((d) => d.status === 'ready')
+  const canManageDocs = index?.status === 'created' || index?.status === 'ready'
+  const indexDocumentIds = index?.documentIds ?? []
+  const indexDocuments = documents.filter((d) => indexDocumentIds.includes(d.id))
+  const availableDocuments = documents.filter(
+    (d) => d.status === 'ready' && !indexDocumentIds.includes(d.id)
+  )
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
@@ -172,6 +190,20 @@ export default function IndexDetailPage() {
       toast.error(err instanceof Error ? err.message : 'Failed to remove document')
     } finally {
       setIsRemovingDoc(false)
+    }
+  }
+
+  const handleProcessIndex = async () => {
+    if (!indexId) return
+    setIsProcessing(true)
+    try {
+      await processIndex(indexId)
+      await fetchIndex()
+      toast.success('Processing started')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to start processing')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -356,6 +388,14 @@ export default function IndexDetailPage() {
           ))}
         </div>
 
+        {/* Processing banner */}
+        {index.status === 'processing' && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700 dark:bg-blue-950/30 dark:border-blue-900 dark:text-blue-400 flex items-center gap-2">
+            <div className="h-3 w-3 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+            Processing documents... This page will update automatically.
+          </div>
+        )}
+
         {/* Error message if failed */}
         {index.status === 'failed' && index.errorMessage && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400">
@@ -407,25 +447,33 @@ export default function IndexDetailPage() {
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Documents ({index.documentCount})
                 </h3>
-                {canEdit && (
-                  <button
-                    onClick={() => setAddDocsDialogOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
-                  >
-                    <Upload className="h-3.5 w-3.5" /> Add Document
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {index.status === 'ready' && index.documentCount > 0 && index.chunkCount > 0 && (
+                    <button
+                      onClick={handleProcessIndex}
+                      disabled={isProcessing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                      {isProcessing ? 'Starting...' : 'Index New Documents'}
+                    </button>
+                  )}
+                  {canManageDocs && (
+                    <button
+                      onClick={() => setAddDocsDialogOpen(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
+                    >
+                      <Upload className="h-3.5 w-3.5" /> Add Document
+                    </button>
+                  )}
+                </div>
               </div>
-              {index.documentCount === 0 ? (
+              {indexDocuments.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No documents in this index
                 </div>
               ) : (
-                // Show available documents that match index context
-                documents
-                  .filter((d) => d.status === 'ready')
-                  .slice(0, index.documentCount)
-                  .map((doc) => (
+                indexDocuments.map((doc) => (
                     <div key={doc.id}>
                       <div
                         onClick={() =>
@@ -450,7 +498,7 @@ export default function IndexDetailPage() {
                         <span className="text-xs text-muted-foreground">
                           {new Date(doc.createdAt).toLocaleDateString()}
                         </span>
-                        {canEdit && (
+                        {canManageDocs && (
                           <button
                             className="p-1 rounded text-muted-foreground/40 hover:text-red-500 transition-colors"
                             onClick={(e) => {

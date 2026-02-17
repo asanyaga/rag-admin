@@ -176,6 +176,7 @@ class IndexResponse(BaseModel):
     # Computed fields for convenience
     document_count: int = Field(0, alias="documentCount")
     chunk_count: int = Field(0, alias="chunkCount")
+    document_ids: list[UUID] = Field(default_factory=list, alias="documentIds")
 
     model_config = ConfigDict(
         from_attributes=True,

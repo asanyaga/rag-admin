@@ -34,7 +34,11 @@ class ChunkService:
             metadata=chunk.metadata,
             created_at=chunk.created_at,
             document_title=chunk.document.title if chunk.document else None,
-            document_filename=chunk.document.source_metadata.get("filename") if chunk.document else None,
+            document_filename=(
+                chunk.document.source_metadata.get("filename")
+                if chunk.document and chunk.document.source_metadata.get("filename") != "upload.pdf"
+                else None
+            ),
         )
 
     def _to_list_item(self, chunk) -> ChunkListItem:

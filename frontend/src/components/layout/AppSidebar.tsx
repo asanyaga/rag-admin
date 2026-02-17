@@ -52,7 +52,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex h-14 items-center px-4">
-          <h1 className="text-lg font-semibold">RAG Admin</h1>
+          <h1 className="text-lg font-semibold text-primary">RAG Admin</h1>
         </div>
         <div className="px-2 py-2">
           <ProjectSwitcher />

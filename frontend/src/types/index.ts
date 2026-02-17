@@ -48,6 +48,7 @@ export interface Index {
   updatedAt: string
   documentCount: number
   chunkCount: number
+  documentIds: string[]
 }
 
 // Simplified index for list views

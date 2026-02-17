@@ -122,9 +122,10 @@ class IndexService:
 
         response = self._to_response(index)
 
-        # Add counts
+        # Add counts and document IDs
         response.document_count = await self.index_repo.count_documents(index_id)
         response.chunk_count = await self.index_repo.count_chunks(index_id)
+        response.document_ids = await self.index_repo.get_document_ids(index_id)
 
         return response
 
