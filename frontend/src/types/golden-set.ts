@@ -32,6 +32,7 @@ export interface GoldenSetQuery {
   reviewStatus: ReviewStatus
   reasoning: string | null
   questionType: string | null
+  referenceAnswer: string | null
   sources: GoldenSetSource[]
   createdAt: string
   updatedAt: string
@@ -81,6 +82,7 @@ export interface QueryCreate {
 export interface QueryUpdate {
   queryText?: string
   reviewStatus?: ReviewStatus
+  referenceAnswer?: string | null
 }
 
 export interface SourceCreate {

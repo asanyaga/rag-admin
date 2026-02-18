@@ -16,15 +16,27 @@ from app.schemas.eval_run import (
     EvalRunCreate,
     EvalRunResponse,
     EvalRunResultResponse,
+    EvalRunProgress,
     RunComparisonResponse,
 )
+from app.schemas.llm_models import LlmModelsResponse, get_available_chat_models
 from app.services.eval_service import EvalService
+from app.services.judge_service import JudgeService
 from app.services.query_service import QueryService
+from app.services.llm.openai_adapter import OpenAIAdapter
+from app.services.llm.anthropic_adapter import AnthropicAdapter
 from app.services.exceptions import NotFoundError, ValidationError
+from app.utils.encryption import decrypt
 
 router = APIRouter(
     prefix="/projects/{project_id}/eval-runs",
     tags=["eval_runs"],
+)
+
+# Settings router for LLM models endpoint
+settings_router = APIRouter(
+    prefix="/settings",
+    tags=["settings"],
 )
 
 
@@ -61,6 +73,27 @@ async def verify_project_access(
 
 
 # ---------------------------------------------------------------------------
+# LLM adapter resolution helpers
+# ---------------------------------------------------------------------------
+
+async def _resolve_adapter(provider: str, user_id: UUID, project_id: UUID, db: AsyncSession):
+    """Resolve an LLM adapter for a given provider."""
+    provider_key_repo = ProviderKeyRepository(db)
+    key = await provider_key_repo.get_for_provider(user_id, provider, project_id)
+    if not key:
+        raise ValidationError(f"No API key configured for provider '{provider}'")
+
+    api_key = decrypt(key.api_key_encrypted)
+
+    if provider == "openai":
+        return OpenAIAdapter(api_key)
+    elif provider == "anthropic":
+        return AnthropicAdapter(api_key)
+    else:
+        raise ValidationError(f"Unsupported LLM provider: {provider}")
+
+
+# ---------------------------------------------------------------------------
 # Background task helper
 # ---------------------------------------------------------------------------
 
@@ -69,6 +102,9 @@ async def execute_eval_run_background(
     run_id: UUID,
     project_id: UUID,
     user_id: UUID,
+    mode: str = "retrieval_only",
+    generation_provider: str | None = None,
+    judge_provider: str | None = None,
 ) -> None:
     """Background task to execute an eval run."""
     eval_run_repo = EvalRunRepository(db)
@@ -78,7 +114,26 @@ async def execute_eval_run_background(
         chunk_repo=ChunkRepository(db),
         provider_key_repo=ProviderKeyRepository(db),
     )
-    service = EvalService(eval_run_repo, golden_set_repo, query_service)
+
+    generation_adapter = None
+    judge_adapter = None
+
+    if mode == "retrieval_and_answer":
+        if generation_provider:
+            generation_adapter = await _resolve_adapter(
+                generation_provider, user_id, project_id, db
+            )
+        if judge_provider:
+            judge_adapter = await _resolve_adapter(
+                judge_provider, user_id, project_id, db
+            )
+
+    service = EvalService(
+        eval_run_repo, golden_set_repo, query_service,
+        judge_service=JudgeService(),
+        generation_adapter=generation_adapter,
+        judge_adapter=judge_adapter,
+    )
     await service.execute_eval_run(run_id, project_id, user_id)
 
 
@@ -146,6 +201,9 @@ async def create_eval_run(
             run_id=run.id,
             project_id=project_id,
             user_id=current_user.id,
+            mode=data.mode,
+            generation_provider=data.generation_model.provider if data.generation_model else None,
+            judge_provider=data.judge_model.provider if data.judge_model else None,
         )
 
         return run
@@ -170,6 +228,21 @@ async def get_eval_run(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+@router.get("/{run_id}/progress", response_model=EvalRunProgress)
+async def get_eval_run_progress(
+    project_id: UUID,
+    run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: EvalService = Depends(get_eval_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.get_progress(run_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
 @router.delete("/{run_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_eval_run(
     project_id: UUID,
@@ -189,12 +262,32 @@ async def delete_eval_run(
 async def get_eval_run_results(
     project_id: UUID,
     run_id: UUID,
+    filter: str | None = Query(None, description="Filter: all, low_faithfulness, low_relevance, retrieval_miss"),
     current_user: User = Depends(get_current_active_user),
     service: EvalService = Depends(get_eval_service),
     project_repo: ProjectRepository = Depends(get_project_repo),
 ):
     await verify_project_access(project_id, current_user, project_repo)
     try:
-        return await service.get_results(run_id, project_id)
+        filter_type = filter if filter and filter != "all" else None
+        return await service.get_results(run_id, project_id, filter_type=filter_type)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Settings — LLM models
+# ---------------------------------------------------------------------------
+
+@settings_router.get("/llm-models", response_model=LlmModelsResponse)
+async def list_llm_models(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return available chat models filtered by configured provider keys."""
+    provider_key_repo = ProviderKeyRepository(db)
+    keys = await provider_key_repo.list_for_user(current_user.id)
+    configured_providers = {k.provider for k in keys}
+
+    models = get_available_chat_models(configured_providers)
+    return LlmModelsResponse(models=models)

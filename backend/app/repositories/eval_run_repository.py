@@ -23,6 +23,12 @@ class EvalRunRepository:
         name: str,
         config: dict,
         user_id: UUID,
+        mode: str = "retrieval_only",
+        generation_model_provider: str | None = None,
+        generation_model_id: str | None = None,
+        judge_model_provider: str | None = None,
+        judge_model_id: str | None = None,
+        system_prompt: str | None = None,
     ) -> EvalRun:
         run = EvalRun(
             project_id=project_id,
@@ -31,6 +37,12 @@ class EvalRunRepository:
             name=name,
             config=config,
             created_by=user_id,
+            mode=mode,
+            generation_model_provider=generation_model_provider,
+            generation_model_id=generation_model_id,
+            judge_model_provider=judge_model_provider,
+            judge_model_id=judge_model_id,
+            system_prompt=system_prompt,
         )
         self.session.add(run)
         await self.session.commit()
@@ -104,6 +116,22 @@ class EvalRunRepository:
         await self.session.refresh(run)
         return run
 
+    async def update_progress(
+        self,
+        run_id: UUID,
+        items_completed: int,
+        failed_item_count: int = 0,
+    ) -> None:
+        """Update progress counters for a running eval run."""
+        result = await self.session.execute(
+            select(EvalRun).where(EvalRun.id == run_id)
+        )
+        run = result.scalar_one_or_none()
+        if run:
+            run.items_completed = items_completed
+            run.failed_item_count = failed_item_count
+            await self.session.commit()
+
     # ------------------------------------------------------------------
     # Results
     # ------------------------------------------------------------------
@@ -116,6 +144,12 @@ class EvalRunRepository:
         recall: float,
         f1: float,
         retrieved_chunks: list[dict],
+        generated_answer: str | None = None,
+        faithfulness_score: float | None = None,
+        relevance_score: float | None = None,
+        claim_breakdown: list[dict] | None = None,
+        judge_error: str | None = None,
+        generation_error: str | None = None,
     ) -> EvalRunResult:
         result = EvalRunResult(
             eval_run_id=eval_run_id,
@@ -124,18 +158,43 @@ class EvalRunRepository:
             recall=recall,
             f1=f1,
             retrieved_chunks=retrieved_chunks,
+            generated_answer=generated_answer,
+            faithfulness_score=faithfulness_score,
+            relevance_score=relevance_score,
+            claim_breakdown=claim_breakdown,
+            judge_error=judge_error,
+            generation_error=generation_error,
         )
         self.session.add(result)
         await self.session.commit()
         await self.session.refresh(result)
         return result
 
-    async def get_results(self, eval_run_id: UUID) -> list[EvalRunResult]:
-        result = await self.session.execute(
+    async def get_results(
+        self,
+        eval_run_id: UUID,
+        filter_type: str | None = None,
+    ) -> list[EvalRunResult]:
+        query = (
             select(EvalRunResult)
             .options(selectinload(EvalRunResult.query))
             .where(EvalRunResult.eval_run_id == eval_run_id)
         )
+
+        if filter_type == "low_faithfulness":
+            query = query.where(
+                EvalRunResult.faithfulness_score.isnot(None),
+                EvalRunResult.faithfulness_score < 0.5,
+            )
+        elif filter_type == "low_relevance":
+            query = query.where(
+                EvalRunResult.relevance_score.isnot(None),
+                EvalRunResult.relevance_score < 0.5,
+            )
+        elif filter_type == "retrieval_miss":
+            query = query.where(EvalRunResult.recall < 0.5)
+
+        result = await self.session.execute(query)
         return list(result.scalars().all())
 
     async def get_for_comparison(

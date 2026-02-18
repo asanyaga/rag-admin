@@ -273,6 +273,9 @@ export default function GoldenSetEditorPage() {
                 onUpdateText={(qId, text) =>
                   updateQuery(qId, { queryText: text })
                 }
+                onUpdateReferenceAnswer={(qId, answer) =>
+                  updateQuery(qId, { referenceAnswer: answer })
+                }
                 onDelete={deleteQuery}
                 onAddSource={addSource}
                 onDeleteSource={deleteSource}

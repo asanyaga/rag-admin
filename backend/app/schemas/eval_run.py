@@ -2,7 +2,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -18,6 +18,14 @@ class EvalRunConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class ModelConfig(BaseModel):
+    """Provider + model ID pair for generation/judge models."""
+    provider: str
+    model_id: str = Field(..., alias="modelId")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 # ---------------------------------------------------------------------------
 # Create
 # ---------------------------------------------------------------------------
@@ -28,8 +36,21 @@ class EvalRunCreate(BaseModel):
     index_id: UUID = Field(..., alias="indexId")
     name: str | None = Field(None, max_length=255)
     config: EvalRunConfig
+    mode: str = Field("retrieval_only")
+    generation_model: ModelConfig | None = Field(None, alias="generationModel")
+    judge_model: ModelConfig | None = Field(None, alias="judgeModel")
+    system_prompt: str | None = Field(None, alias="systemPrompt")
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def validate_answer_mode_fields(self):
+        if self.mode == "retrieval_and_answer":
+            if not self.generation_model:
+                raise ValueError("generationModel is required for retrieval_and_answer mode")
+            if not self.judge_model:
+                raise ValueError("judgeModel is required for retrieval_and_answer mode")
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -64,8 +85,27 @@ class EvalRunResponse(BaseModel):
     error_message: str | None = Field(None, alias="errorMessage")
     created_by: UUID = Field(..., alias="createdBy")
     created_at: datetime = Field(..., alias="createdAt")
+    mode: str = Field("retrieval_only")
+    generation_model: ModelConfig | None = Field(None, alias="generationModel")
+    judge_model: ModelConfig | None = Field(None, alias="judgeModel")
+    items_completed: int = Field(0, alias="itemsCompleted")
+    failed_item_count: int = Field(0, alias="failedItemCount")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+# ---------------------------------------------------------------------------
+# Progress
+# ---------------------------------------------------------------------------
+
+class EvalRunProgress(BaseModel):
+    """Progress of a running eval run."""
+    status: str
+    items_total: int = Field(..., alias="itemsTotal")
+    items_completed: int = Field(..., alias="itemsCompleted")
+    failed_item_count: int = Field(0, alias="failedItemCount")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +135,15 @@ class ExpectedSourceInfo(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class ClaimItem(BaseModel):
+    """A single claim from the judge's faithfulness evaluation."""
+    text: str
+    label: str  # "supported" | "unsupported" | "unclear"
+    source: str | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class EvalRunResultResponse(BaseModel):
     """Per-query result within an evaluation run."""
     id: UUID
@@ -105,6 +154,12 @@ class EvalRunResultResponse(BaseModel):
     f1: float
     retrieved_chunks: list[RetrievedChunkInfo] = Field(default_factory=list, alias="retrievedChunks")
     expected_sources: list[ExpectedSourceInfo] = Field(default_factory=list, alias="expectedSources")
+    generated_answer: str | None = Field(None, alias="generatedAnswer")
+    faithfulness_score: float | None = Field(None, alias="faithfulnessScore")
+    relevance_score: float | None = Field(None, alias="relevanceScore")
+    claim_breakdown: list[ClaimItem] | None = Field(None, alias="claimBreakdown")
+    judge_error: str | None = Field(None, alias="judgeError")
+    generation_error: str | None = Field(None, alias="generationError")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 

@@ -3,6 +3,7 @@ import { Trash2, Plus, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import { Label } from '@/components/ui/label'
 import { SourcesList } from './SourcesList'
 import { AddSourceDialog } from './AddSourceDialog'
 import type { GoldenSetQuery, SourceCreate } from '@/types/golden-set'
@@ -11,6 +12,7 @@ interface QueryEditorProps {
   query: GoldenSetQuery
   projectId: string
   onUpdateText: (queryId: string, text: string) => Promise<void>
+  onUpdateReferenceAnswer: (queryId: string, answer: string | null) => Promise<void>
   onDelete: (queryId: string) => Promise<void>
   onAddSource: (queryId: string, data: SourceCreate) => Promise<void>
   onDeleteSource: (queryId: string, sourceId: string) => Promise<void>
@@ -20,11 +22,13 @@ export function QueryEditor({
   query,
   projectId,
   onUpdateText,
+  onUpdateReferenceAnswer,
   onDelete,
   onAddSource,
   onDeleteSource,
 }: QueryEditorProps) {
   const [editingText, setEditingText] = useState<string | null>(null)
+  const [editingAnswer, setEditingAnswer] = useState<string | null>(null)
   const [sourceDialogOpen, setSourceDialogOpen] = useState(false)
 
   const handleSaveText = async () => {
@@ -36,6 +40,21 @@ export function QueryEditor({
 
   const handleCancelEdit = () => {
     setEditingText(null)
+  }
+
+  const handleSaveAnswer = async () => {
+    if (editingAnswer !== null) {
+      const trimmed = editingAnswer.trim()
+      const newVal = trimmed || null
+      if (newVal !== (query.referenceAnswer ?? null)) {
+        await onUpdateReferenceAnswer(query.id, newVal)
+      }
+    }
+    setEditingAnswer(null)
+  }
+
+  const handleCancelAnswer = () => {
+    setEditingAnswer(null)
   }
 
   return (
@@ -76,6 +95,44 @@ export function QueryEditor({
         >
           <Trash2 className="h-4 w-4" />
         </Button>
+      </div>
+
+      <Separator />
+
+      {/* Reference Answer */}
+      <div>
+        <Label className="text-sm font-medium">Reference Answer</Label>
+        <p className="text-xs text-muted-foreground mb-1.5">
+          Optional ideal answer used for answer evaluation judging.
+        </p>
+        {editingAnswer !== null ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editingAnswer}
+              onChange={(e) => setEditingAnswer(e.target.value)}
+              rows={3}
+              placeholder="Enter the expected ideal answer..."
+              autoFocus
+            />
+            <div className="flex gap-1">
+              <Button size="sm" variant="ghost" onClick={handleSaveAnswer}>
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleCancelAnswer}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p
+            className="text-sm cursor-pointer hover:bg-accent rounded p-2 -m-2 min-h-[2rem]"
+            onClick={() => setEditingAnswer(query.referenceAnswer ?? '')}
+          >
+            {query.referenceAnswer || (
+              <span className="text-muted-foreground italic">Click to add reference answer...</span>
+            )}
+          </p>
+        )}
       </div>
 
       <Separator />

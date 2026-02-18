@@ -20,6 +20,7 @@ import GoldenSetEditorPage from './pages/GoldenSetEditorPage'
 import GoldenSetGeneratePage from './pages/GoldenSetGeneratePage'
 import NewEvalRunPage from './pages/NewEvalRunPage'
 import EvalRunDetailPage from './pages/EvalRunDetailPage'
+import EvalResultDetailPage from './pages/EvalResultDetailPage'
 import RunComparisonPage from './pages/RunComparisonPage'
 
 const router = createBrowserRouter([
@@ -105,6 +106,11 @@ const router = createBrowserRouter([
             path: 'evaluation/runs/:runId',
             element: <EvalRunDetailPage />,
             handle: { breadcrumb: 'Eval Run Detail' },
+          },
+          {
+            path: 'evaluation/runs/:runId/results/:resultId',
+            element: <EvalResultDetailPage />,
+            handle: { breadcrumb: 'Result Detail' },
           },
           {
             path: 'evaluation/compare',

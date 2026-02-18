@@ -1,24 +1,30 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Play } from 'lucide-react'
+import { ArrowLeft, Play, Search, MessageSquare, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useProject } from '@/contexts/ProjectContext'
 import { useGoldenSets } from '@/hooks/useGoldenSets'
-import { useEvalRuns } from '@/hooks/useEvalRuns'
+import { useEvalRuns, useLlmModels } from '@/hooks/useEvalRuns'
 import { useIndexes } from '@/hooks/useIndexes'
-import type { EvalRunConfig } from '@/types/eval-run'
+import type { EvalRunConfig, EvalMode } from '@/types/eval-run'
+
+const DEFAULT_SYSTEM_PROMPT =
+  'Answer the user\'s question using ONLY the provided context.\nCite sources using [1], [2], etc. corresponding to the chunk numbers.\nIf the context doesn\'t contain enough information, say so.'
 
 export default function NewEvalRunPage() {
   const navigate = useNavigate()
@@ -28,6 +34,7 @@ export default function NewEvalRunPage() {
   const { goldenSets } = useGoldenSets(projectId)
   const { indexes } = useIndexes(projectId)
   const { createRun } = useEvalRuns(projectId)
+  const { models, isLoading: modelsLoading } = useLlmModels()
 
   const [goldenSetId, setGoldenSetId] = useState('')
   const [indexId, setIndexId] = useState('')
@@ -35,12 +42,43 @@ export default function NewEvalRunPage() {
   const [searchType, setSearchType] = useState<EvalRunConfig['searchType']>('semantic')
   const [topK, setTopK] = useState(5)
   const [similarityThreshold, setSimilarityThreshold] = useState(0)
+  const [mode, setMode] = useState<EvalMode | null>(null)
+  const [generationModel, setGenerationModel] = useState('')
+  const [judgeModel, setJudgeModel] = useState('')
+  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const readyIndexes = indexes.filter((i) => i.status === 'ready')
 
+  // Group models by provider for select
+  const modelsByProvider = useMemo(() => {
+    const grouped: Record<string, typeof models> = {}
+    for (const m of models) {
+      if (!grouped[m.provider]) grouped[m.provider] = []
+      grouped[m.provider].push(m)
+    }
+    return grouped
+  }, [models])
+
+  const parseModelValue = (val: string) => {
+    const [provider, ...rest] = val.split(':')
+    return { provider, modelId: rest.join(':') }
+  }
+
+  const selectedGoldenSet = goldenSets.find((gs) => gs.id === goldenSetId)
+  const queryCount = selectedGoldenSet?.queryCount ?? 0
+
+  const sameModelWarning =
+    generationModel && judgeModel && generationModel === judgeModel
+
+  const canSubmit =
+    goldenSetId &&
+    indexId &&
+    mode !== null &&
+    (mode === 'retrieval_only' || (generationModel && judgeModel))
+
   const handleSubmit = async () => {
-    if (!goldenSetId || !indexId) return
+    if (!canSubmit || !mode) return
     setIsSubmitting(true)
     try {
       const run = await createRun({
@@ -48,6 +86,19 @@ export default function NewEvalRunPage() {
         indexId,
         name: name.trim() || undefined,
         config: { searchType, topK, similarityThreshold },
+        mode,
+        generationModel:
+          mode === 'retrieval_and_answer' && generationModel
+            ? parseModelValue(generationModel)
+            : undefined,
+        judgeModel:
+          mode === 'retrieval_and_answer' && judgeModel
+            ? parseModelValue(judgeModel)
+            : undefined,
+        systemPrompt:
+          mode === 'retrieval_and_answer'
+            ? systemPrompt || undefined
+            : undefined,
       })
       navigate(`/evaluation/runs/${run.id}`)
     } catch {
@@ -66,6 +117,43 @@ export default function NewEvalRunPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl font-bold">New Evaluation Run</h1>
+      </div>
+
+      {/* Mode Selector */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Evaluation Mode</Label>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => setMode('retrieval_only')}
+            className={`flex flex-col items-center gap-2 p-5 rounded-lg border-2 text-center transition-colors ${
+              mode === 'retrieval_only'
+                ? 'border-primary bg-primary/5'
+                : 'border-muted hover:border-muted-foreground/30'
+            }`}
+          >
+            <Search className="h-6 w-6 text-muted-foreground" />
+            <span className="text-sm font-medium">Retrieval Only</span>
+            <span className="text-xs text-muted-foreground">
+              Fast &middot; No LLM cost
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('retrieval_and_answer')}
+            className={`flex flex-col items-center gap-2 p-5 rounded-lg border-2 text-center transition-colors ${
+              mode === 'retrieval_and_answer'
+                ? 'border-primary bg-primary/5'
+                : 'border-muted hover:border-muted-foreground/30'
+            }`}
+          >
+            <MessageSquare className="h-6 w-6 text-muted-foreground" />
+            <span className="text-sm font-medium">Retrieval + Answer</span>
+            <span className="text-xs text-muted-foreground">
+              Slower &middot; LLM cost
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
@@ -172,10 +260,101 @@ export default function NewEvalRunPage() {
         </Card>
       </div>
 
+      {/* Answer Config — only for retrieval_and_answer mode */}
+      {mode === 'retrieval_and_answer' && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Answer Evaluation Config</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {models.length === 0 && !modelsLoading && (
+              <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>
+                  No LLM providers configured.{' '}
+                  <a href="/settings" className="underline font-medium">
+                    Add API keys
+                  </a>{' '}
+                  for OpenAI or Anthropic.
+                </span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs">Generation Model</Label>
+                <Select value={generationModel} onValueChange={setGenerationModel}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
+                      <SelectGroup key={provider}>
+                        <SelectLabel className="capitalize">{provider}</SelectLabel>
+                        {providerModels.map((m) => (
+                          <SelectItem key={m.id} value={`${m.provider}:${m.id}`}>
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs">Judge Model</Label>
+                <Select value={judgeModel} onValueChange={setJudgeModel}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
+                      <SelectGroup key={provider}>
+                        <SelectLabel className="capitalize">{provider}</SelectLabel>
+                        {providerModels.map((m) => (
+                          <SelectItem key={m.id} value={`${m.provider}:${m.id}`}>
+                            {m.label}
+                            {m.tier === 'strong' ? ' (Recommended)' : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {sameModelWarning && (
+              <div className="flex items-center gap-2 text-xs text-amber-600">
+                <AlertTriangle className="h-3 w-3" />
+                Using the same model for generation and judging may reduce evaluation quality
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="text-xs">System Prompt</Label>
+              <Textarea
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                rows={4}
+                className="text-xs font-mono"
+              />
+            </div>
+
+            {queryCount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Estimated: {queryCount} &times; 2 = {queryCount * 2} LLM calls
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex gap-3">
         <Button
           onClick={handleSubmit}
-          disabled={!goldenSetId || !indexId || isSubmitting}
+          disabled={!canSubmit || isSubmitting}
         >
           <Play className="mr-2 h-4 w-4" />
           {isSubmitting ? 'Starting...' : 'Run Evaluation'}

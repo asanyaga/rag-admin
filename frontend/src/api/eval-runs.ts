@@ -6,7 +6,9 @@ import type {
   EvalRun,
   CreateEvalRunRequest,
   EvalRunResult,
+  EvalRunProgress,
   RunComparison,
+  LlmModelOption,
 } from '@/types/eval-run'
 
 export async function listEvalRuns(projectId: string): Promise<EvalRun[]> {
@@ -46,12 +48,32 @@ export async function deleteEvalRun(
 
 export async function getEvalRunResults(
   projectId: string,
-  runId: string
+  runId: string,
+  filter?: string
 ): Promise<EvalRunResult[]> {
+  const params = filter && filter !== 'all' ? { filter } : undefined
   const response = await apiClient.get<EvalRunResult[]>(
-    `/projects/${projectId}/eval-runs/${runId}/results`
+    `/projects/${projectId}/eval-runs/${runId}/results`,
+    { params }
   )
   return response.data
+}
+
+export async function getEvalRunProgress(
+  projectId: string,
+  runId: string
+): Promise<EvalRunProgress> {
+  const response = await apiClient.get<EvalRunProgress>(
+    `/projects/${projectId}/eval-runs/${runId}/progress`
+  )
+  return response.data
+}
+
+export async function fetchLlmModels(): Promise<LlmModelOption[]> {
+  const response = await apiClient.get<{ models: LlmModelOption[] }>(
+    '/settings/llm-models'
+  )
+  return response.data.models
 }
 
 export async function compareRuns(

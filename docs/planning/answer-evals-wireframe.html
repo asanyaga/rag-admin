@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Admin — Answer Evals Wireframe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f8f6;
+    --surface: #ffffff;
+    --border: #e4e4e0;
+    --border-strong: #c8c8c2;
+    --text: #1a1a18;
+    --text-muted: #6b6b65;
+    --text-faint: #a8a8a2;
+    --accent: #1a1a18;
+    --accent-fg: #ffffff;
+    --blue: #2563eb;
+    --blue-light: #eff4ff;
+    --blue-border: #bfcfff;
+    --green: #16a34a;
+    --green-light: #f0fdf4;
+    --green-border: #bbf7d0;
+    --amber: #d97706;
+    --amber-light: #fffbeb;
+    --amber-border: #fde68a;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --red-border: #fecaca;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --purple-border: #ddd6fe;
+    --sidebar-w: 220px;
+    --header-h: 52px;
+  }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* SCREEN NAV */
+  .screen-nav {
+    background: var(--text);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 16px;
+    height: 40px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    flex-shrink: 0;
+    border-bottom: 2px solid #333;
+  }
+  .screen-nav span { color: #888; margin-right: 12px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .screen-btn {
+    padding: 6px 14px;
+    background: transparent;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    border-right: 1px solid #333;
+    height: 40px;
+    transition: all 0.1s;
+  }
+  .screen-btn:hover { background: #222; color: white; }
+  .screen-btn.active { background: #2563eb; color: white; }
+
+  /* APP SHELL */
+  .app { display: flex; flex: 1; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .sidebar-logo {
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.02em;
+    gap: 8px;
+  }
+  .logo-dot { width: 8px; height: 8px; background: var(--blue); border-radius: 50%; }
+  .sidebar-section { padding: 16px 0 8px; }
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    padding: 0 16px 6px;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 13px;
+    transition: all 0.1s;
+    border-left: 2px solid transparent;
+  }
+  .sidebar-item:hover { background: var(--bg); color: var(--text); }
+  .sidebar-item.active { color: var(--text); background: var(--bg); border-left-color: var(--blue); font-weight: 500; }
+  .sidebar-icon { font-size: 14px; }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* TOPBAR */
+  .topbar {
+    height: var(--header-h);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 12px;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; flex: 1; }
+  .topbar-breadcrumb { color: var(--text-muted); font-size: 13px; display: flex; align-items: center; gap: 6px; flex: 1; }
+  .topbar-breadcrumb .sep { color: var(--text-faint); }
+  .topbar-breadcrumb .current { color: var(--text); font-weight: 500; }
+
+  /* CONTENT */
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* SCREEN PANELS */
+  .screen { display: none; width: 100%; }
+  .screen.active { display: flex; flex-direction: column; gap: 20px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .card-header {
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-title { font-weight: 600; font-size: 13px; }
+  .card-desc { color: var(--text-muted); font-size: 12px; margin-top: 1px; }
+  .card-body { padding: 20px; }
+
+  /* FORM ELEMENTS */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 12px; font-weight: 500; }
+  .field-hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .select, .input {
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    width: 100%;
+  }
+  .select:focus, .input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue-light); }
+
+  /* MODE SELECTOR */
+  .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mode-card {
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .mode-card:hover { border-color: var(--border-strong); }
+  .mode-card.selected { border-color: var(--blue); background: var(--blue-light); }
+  .mode-card-label { font-weight: 600; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .mode-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .mode-card.selected .mode-card-desc { color: #3b5fc0; }
+  .mode-radio {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--border-strong);
+    flex-shrink: 0;
+  }
+  .mode-card.selected .mode-radio { border-color: var(--blue); background: var(--blue); box-shadow: inset 0 0 0 2px white; }
+  .mode-badge {
+    position: absolute; top: 12px; right: 12px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+    padding: 2px 7px; border-radius: 10px;
+    background: var(--amber-light); color: var(--amber); border: 1px solid var(--amber-border);
+  }
+  .mode-badge.cheap { background: var(--green-light); color: var(--green); border-color: var(--green-border); }
+
+  /* CONDITIONAL SECTION */
+  .conditional-section {
+    border: 1px solid var(--blue-border);
+    border-radius: 8px;
+    background: var(--blue-light);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .conditional-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--blue); margin-bottom: 2px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 7px 14px; border-radius: 6px; font-size: 13px;
+    font-family: inherit; cursor: pointer; font-weight: 500;
+    border: 1px solid transparent; transition: all 0.1s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-primary:hover { background: #333; }
+  .btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+  .btn-secondary:hover { background: var(--bg); }
+  .btn-ghost { background: transparent; color: var(--text-muted); border-color: transparent; }
+  .btn-ghost:hover { background: var(--bg); color: var(--text); }
+
+  /* FOOTER ROW */
+  .footer-row { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted);
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+  .tr-clickable { cursor: pointer; }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px;
+    white-space: nowrap;
+  }
+  .badge-blue { background: var(--blue-light); color: var(--blue); border: 1px solid var(--blue-border); }
+  .badge-green { background: var(--green-light); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-amber { background: var(--amber-light); color: var(--amber); border: 1px solid var(--amber-border); }
+  .badge-red { background: var(--red-light); color: var(--red); border: 1px solid var(--red-border); }
+  .badge-purple { background: var(--purple-light); color: var(--purple); border: 1px solid var(--purple-border); }
+  .badge-neutral { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* SCORE PILL */
+  .score-pill {
+    display: inline-flex; align-items: center;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500;
+    padding: 2px 8px; border-radius: 4px;
+    min-width: 44px; justify-content: center;
+  }
+  .score-high { background: var(--green-light); color: var(--green); }
+  .score-mid { background: var(--amber-light); color: var(--amber); }
+  .score-low { background: var(--red-light); color: var(--red); }
+  .score-na { background: var(--bg); color: var(--text-faint); font-size: 11px; }
+
+  /* METRIC GROUP HEADER */
+  .metric-group-th {
+    text-align: center; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 6px 14px; border-bottom: 1px solid var(--border);
+  }
+  .metric-group-retrieval { color: var(--blue); background: #f7f9ff; border-right: 2px solid var(--blue-border); }
+  .metric-group-answer { color: var(--purple); background: #faf8ff; }
+  .col-group-retrieval { border-right: 1px solid var(--blue-border); }
+  .col-group-answer-last { border-right: 2px solid var(--purple-border); }
+
+  /* DETAIL LAYOUT */
+  .detail-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+
+  /* STAT ROW */
+  .stat-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .stat-box {
+    flex: 1; min-width: 100px;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px;
+    background: var(--surface);
+  }
+  .stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; letter-spacing: -0.02em; }
+  .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .stat-divider { width: 1px; background: var(--border); }
+
+  /* SECTION DIVIDER */
+  .section-divider {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-faint);
+    padding: 4px 0;
+  }
+  .section-divider::before, .section-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* CLAIM BREAKDOWN */
+  .claim-list { display: flex; flex-direction: column; gap: 8px; }
+  .claim-item {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; background: var(--surface);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .claim-status { flex-shrink: 0; margin-top: 1px; }
+  .claim-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 3px; }
+  .claim-supported .claim-dot { background: var(--green); }
+  .claim-unsupported .claim-dot { background: var(--red); }
+  .claim-unclear .claim-dot { background: var(--amber); }
+  .claim-text { font-size: 12px; line-height: 1.55; flex: 1; }
+  .claim-label { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 4px; }
+  .claim-supported .claim-label { color: var(--green); }
+  .claim-unsupported .claim-label { color: var(--red); }
+  .claim-unclear .claim-label { color: var(--amber); }
+  .claim-source { font-size: 11px; color: var(--text-muted); margin-top: 3px; font-style: italic; }
+
+  /* CHUNK PANEL */
+  .chunk-list { display: flex; flex-direction: column; gap: 8px; }
+  .chunk-item {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; background: var(--bg); font-size: 12px; line-height: 1.55;
+  }
+  .chunk-meta { font-size: 10px; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .chunk-rank { font-family: 'IBM Plex Mono', monospace; font-weight: 500; background: var(--border); border-radius: 3px; padding: 0 4px; }
+  .chunk-text { color: var(--text-muted); }
+
+  /* ANSWER BOX */
+  .answer-box {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 14px; font-size: 13px; line-height: 1.65;
+    background: var(--surface);
+  }
+
+  /* SCORE SUMMARY BAR */
+  .score-bar-wrap { display: flex; flex-direction: column; gap: 10px; }
+  .score-bar-row { display: flex; align-items: center; gap: 10px; }
+  .score-bar-label { font-size: 12px; font-weight: 500; width: 110px; flex-shrink: 0; }
+  .score-bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 10px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 10px; transition: width 0.4s; }
+  .score-bar-fill.green { background: var(--green); }
+  .score-bar-fill.amber { background: var(--amber); }
+  .score-bar-fill.red { background: var(--red); }
+  .score-bar-val { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; width: 32px; text-align: right; flex-shrink: 0; }
+
+  /* TABS */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); gap: 0; background: var(--surface); }
+  .tab {
+    padding: 10px 18px; font-size: 13px; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    color: var(--text-muted); font-weight: 500; transition: all 0.1s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--blue); }
+
+  /* ANNOTATION */
+  .annotation {
+    border-left: 3px solid var(--amber);
+    background: var(--amber-light);
+    padding: 8px 12px; border-radius: 0 6px 6px 0;
+    font-size: 12px; color: #92400e; line-height: 1.5;
+  }
+  .annotation strong { font-weight: 600; }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+  .empty-icon { font-size: 32px; margin-bottom: 10px; }
+  .empty-title { font-weight: 600; margin-bottom: 4px; }
+  .empty-desc { font-size: 12px; }
+
+  /* TAGS */
+  .tag { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+  .tag-new { background: #dcfce7; color: #15803d; }
+
+  /* MONO */
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* FLEX UTILS */
+  .flex { display: flex; }
+  .flex-col { flex-direction: column; }
+  .items-center { align-items: center; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .justify-between { justify-content: space-between; }
+  .text-muted { color: var(--text-muted); }
+  .text-faint { color: var(--text-faint); }
+  .text-sm { font-size: 12px; }
+  .font-mono { font-family: 'IBM Plex Mono', monospace; }
+  .mt-1 { margin-top: 4px; }
+  .mt-2 { margin-top: 8px; }
+  .mb-1 { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<!-- SCREEN NAV -->
+<div class="screen-nav">
+  <span>Screens</span>
+  <button class="screen-btn active" onclick="showScreen('create')">1. Create Eval Run</button>
+  <button class="screen-btn" onclick="showScreen('list')">2. Runs List</button>
+  <button class="screen-btn" onclick="showScreen('results')">3. Run Results</button>
+  <button class="screen-btn" onclick="showScreen('item')">4. Item Detail</button>
+</div>
+
+<!-- APP SHELL -->
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo"><div class="logo-dot"></div> RAG Admin</div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Project</div>
+      <div class="sidebar-item">📁 <span>Documents</span></div>
+      <div class="sidebar-item">⚡ <span>Indexes</span></div>
+      <div class="sidebar-item">🔍 <span>Playground</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Evaluation</div>
+      <div class="sidebar-item">🧪 <span>Golden Sets</span></div>
+      <div class="sidebar-item active">📊 <span>Eval Runs</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Settings</div>
+      <div class="sidebar-item">🔑 <span>API Keys</span></div>
+      <div class="sidebar-item">⚙️ <span>Project Settings</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ============================================================ -->
+    <!-- SCREEN 1: CREATE EVAL RUN -->
+    <!-- ============================================================ -->
+    <div id="screen-create" class="main" style="display:flex;flex-direction:column;">
+      <div class="topbar">
+        <div class="topbar-breadcrumb">
+          <span>Eval Runs</span><span class="sep">/</span><span class="current">New Eval Run</span>
+        </div>
+        <button class="btn btn-ghost">Cancel</button>
+      </div>
+      <div class="content">
+        <div class="screen active">
+
+          <!-- Basics -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Run Configuration</div>
+                <div class="card-desc">Select an index and golden set to evaluate against</div>
+              </div>
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+              <div class="form-grid">
+                <div class="field">
+                  <div class="field-label">Index</div>
+                  <select class="select">
+                    <option>support-docs-v3 (hybrid, 512 tokens)</option>
+                    <option>support-docs-v2 (vector, 256 tokens)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <div class="field-label">Golden Set</div>
+                  <select class="select">
+                    <option>Support Q&A — 42 questions</option>
+                    <option>Onboarding — 18 questions</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <div class="field-label">Run Name <span style="color:var(--text-faint);font-weight:400">(optional)</span></div>
+                <input class="input" type="text" placeholder="e.g. hybrid-512-baseline">
+              </div>
+            </div>
+          </div>
+
+          <!-- Retrieval Config -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Retrieval Configuration</div>
+                <div class="card-desc">Query-time settings — these are not baked into the index</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="form-grid-3">
+                <div class="field">
+                  <div class="field-label">Search Mode</div>
+                  <select class="select"><option>Hybrid (BM25 + Vector)</option><option>Vector only</option><option>BM25 only</option></select>
+                </div>
+                <div class="field">
+                  <div class="field-label">Top-K</div>
+                  <input class="input" type="number" value="5">
+                </div>
+                <div class="field">
+                  <div class="field-label">RRF Weight (BM25)</div>
+                  <input class="input" type="number" value="0.5" step="0.1">
+                  <div class="field-hint">Balance between keyword and semantic</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- EVAL MODE — THE NEW PART -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Eval Mode <span class="tag tag-new">New</span></div>
+                <div class="card-desc">Choose whether to evaluate retrieval only, or the full retrieval → answer pipeline</div>
+              </div>
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+
+              <div class="mode-grid">
+                <!-- RETRIEVAL ONLY -->
+                <div class="mode-card" id="mode-retrieval" onclick="selectMode('retrieval')">
+                  <div class="mode-badge cheap">Fast · Cheap</div>
+                  <div class="mode-card-label">
+                    <div class="mode-radio" id="radio-retrieval"></div>
+                    Retrieval Only
+                  </div>
+                  <div class="mode-card-desc">Fetch chunks and score against relevant pages. No LLM generation. Use this for fast iteration on chunking and indexing.</div>
+                </div>
+                <!-- RETRIEVAL + ANSWER -->
+                <div class="mode-card selected" id="mode-answer" onclick="selectMode('answer')">
+                  <div class="mode-badge">Slower · LLM Cost</div>
+                  <div class="mode-card-label">
+                    <div class="mode-radio" id="radio-answer"></div>
+                    Retrieval + Answer
+                  </div>
+                  <div class="mode-card-desc">Generate answers from retrieved chunks, then run an LLM judge to score faithfulness and relevance. Use this to validate the full pipeline.</div>
+                </div>
+              </div>
+
+              <!-- CONDITIONAL: Answer config (shown when Retrieval + Answer selected) -->
+              <div class="conditional-section" id="answer-config">
+                <div class="conditional-label">Answer + Judge Configuration</div>
+                <div class="form-grid">
+                  <div class="field">
+                    <div class="field-label">Generation Model</div>
+                    <select class="select">
+                      <option>gpt-4o-mini (OpenAI)</option>
+                      <option>gpt-4o (OpenAI)</option>
+                      <option>claude-3-haiku (Anthropic)</option>
+                      <option>claude-3-sonnet (Anthropic)</option>
+                    </select>
+                    <div class="field-hint">Model that generates answers from retrieved chunks</div>
+                  </div>
+                  <div class="field">
+                    <div class="field-label">Judge Model</div>
+                    <select class="select">
+                      <option>gpt-4o (OpenAI) — recommended</option>
+                      <option>claude-3-opus (Anthropic)</option>
+                      <option>claude-3-sonnet (Anthropic)</option>
+                    </select>
+                    <div class="field-hint">Stronger model that evaluates faithfulness & relevance</div>
+                  </div>
+                </div>
+                <div class="annotation">
+                  <strong>Metrics that will be computed:</strong> Faithfulness (claim-level grounding) and Answer Relevance for every item. If an item has a reference answer in the golden set, Correctness will also be computed.
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="footer-row">
+            <button class="btn btn-secondary">Cancel</button>
+            <button class="btn btn-primary">▶ Start Eval Run</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SCREEN 2: RUNS LIST -->
+    <!-- ============================================================ -->
+    <div id="screen-list" class="main" style="display:none;flex-direction:column;">
+      <div class="topbar">
+        <div class="topbar-title">Eval Runs</div>
+        <button class="btn btn-primary" onclick="showScreen('create')">+ New Run</button>
+      </div>
+      <div class="content">
+        <div class="screen active">
+          <div class="card">
+            <div class="card-header" style="justify-content:space-between;">
+              <div>
+                <div class="card-title">All Runs</div>
+                <div class="card-desc">Click a run to see per-question results</div>
+              </div>
+              <div class="flex gap-2">
+                <select class="select" style="width:auto;font-size:12px;">
+                  <option>All modes</option>
+                  <option>Retrieval Only</option>
+                  <option>Retrieval + Answer</option>
+                </select>
+                <select class="select" style="width:auto;font-size:12px;">
+                  <option>All indexes</option>
+                  <option>support-docs-v3</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name / Index</th>
+                    <th>Mode</th>
+                    <th>Golden Set</th>
+                    <th>MRR@5</th>
+                    <th>Recall@5</th>
+                    <th>Faithfulness <span class="tag tag-new">New</span></th>
+                    <th>Relevance <span class="tag tag-new">New</span></th>
+                    <th>Items</th>
+                    <th>Run at</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="tr-clickable" onclick="showScreen('results')">
+                    <td>
+                      <div style="font-weight:500;">hybrid-512-baseline</div>
+                      <div class="text-muted text-sm">support-docs-v3</div>
+                    </td>
+                    <td><span class="badge badge-purple">Ret + Answer</span></td>
+                    <td>Support Q&A</td>
+                    <td><span class="score-pill score-high">0.81</span></td>
+                    <td><span class="score-pill score-high">0.88</span></td>
+                    <td><span class="score-pill score-high">0.84</span></td>
+                    <td><span class="score-pill score-mid">0.71</span></td>
+                    <td class="text-muted">42</td>
+                    <td class="text-muted mono" style="font-size:11px;">Today 14:32</td>
+                    <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">View →</button></td>
+                  </tr>
+                  <tr class="tr-clickable">
+                    <td>
+                      <div style="font-weight:500;">vector-256-test</div>
+                      <div class="text-muted text-sm">support-docs-v2</div>
+                    </td>
+                    <td><span class="badge badge-blue">Retrieval Only</span></td>
+                    <td>Support Q&A</td>
+                    <td><span class="score-pill score-mid">0.68</span></td>
+                    <td><span class="score-pill score-mid">0.74</span></td>
+                    <td><span class="score-pill score-na">—</span></td>
+                    <td><span class="score-pill score-na">—</span></td>
+                    <td class="text-muted">42</td>
+                    <td class="text-muted mono" style="font-size:11px;">Today 13:10</td>
+                    <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">View →</button></td>
+                  </tr>
+                  <tr class="tr-clickable">
+                    <td>
+                      <div style="font-weight:500;">hybrid-256-v1</div>
+                      <div class="text-muted text-sm">support-docs-v2</div>
+                    </td>
+                    <td><span class="badge badge-purple">Ret + Answer</span></td>
+                    <td>Support Q&A</td>
+                    <td><span class="score-pill score-mid">0.72</span></td>
+                    <td><span class="score-pill score-mid">0.79</span></td>
+                    <td><span class="score-pill score-mid">0.69</span></td>
+                    <td><span class="score-pill score-low">0.58</span></td>
+                    <td class="text-muted">42</td>
+                    <td class="text-muted mono" style="font-size:11px;">Yesterday</td>
+                    <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">View →</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SCREEN 3: RUN RESULTS DETAIL -->
+    <!-- ============================================================ -->
+    <div id="screen-results" class="main" style="display:none;flex-direction:column;">
+      <div class="topbar">
+        <div class="topbar-breadcrumb">
+          <span onclick="showScreen('list')" style="cursor:pointer;">Eval Runs</span>
+          <span class="sep">/</span>
+          <span class="current">hybrid-512-baseline</span>
+        </div>
+        <span class="badge badge-purple">Retrieval + Answer</span>
+        <button class="btn btn-secondary" style="font-size:12px;">Export CSV</button>
+      </div>
+      <div class="content">
+        <div class="screen active">
+
+          <!-- Summary stats -->
+          <div class="stat-row">
+            <div class="stat-box">
+              <div class="stat-label">MRR@5</div>
+              <div class="stat-value" style="color:var(--green);">0.81</div>
+              <div class="stat-sub">↑ 0.09 vs prior run</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Recall@5</div>
+              <div class="stat-value" style="color:var(--green);">0.88</div>
+              <div class="stat-sub">36 of 42 items</div>
+            </div>
+            <div class="stat-box" style="border-color:var(--purple-border);background:var(--purple-light);">
+              <div class="stat-label" style="color:var(--purple);">Faithfulness</div>
+              <div class="stat-value" style="color:var(--purple);">0.84</div>
+              <div class="stat-sub">Avg across 42 items</div>
+            </div>
+            <div class="stat-box" style="border-color:var(--purple-border);background:var(--purple-light);">
+              <div class="stat-label" style="color:var(--purple);">Ans. Relevance</div>
+              <div class="stat-value" style="color:var(--amber);">0.71</div>
+              <div class="stat-sub">Avg across 42 items</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Items</div>
+              <div class="stat-value">42</div>
+              <div class="stat-sub">Support Q&A</div>
+            </div>
+          </div>
+
+          <!-- Results table -->
+          <div class="card">
+            <div class="card-header" style="justify-content:space-between;">
+              <div>
+                <div class="card-title">Per-Question Results</div>
+                <div class="card-desc">Click a row to inspect claims, chunks, and generated answer</div>
+              </div>
+              <div class="flex gap-2 items-center">
+                <select class="select" style="width:auto;font-size:12px;">
+                  <option>All items</option>
+                  <option>Low faithfulness (&lt;0.7)</option>
+                  <option>Low relevance (&lt;0.7)</option>
+                  <option>Retrieval miss</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th colspan="3" class="metric-group-th metric-group-retrieval">Retrieval</th>
+                    <th colspan="2" class="metric-group-th metric-group-answer">Answer <span class="tag tag-new">New</span></th>
+                    <th rowspan="2" style="border-bottom:1px solid var(--border);"></th>
+                  </tr>
+                  <tr>
+                    <th style="width:38%">Question</th>
+                    <th>MRR</th>
+                    <th class="col-group-retrieval">Hit?</th>
+                    <th>Faithfulness</th>
+                    <th class="col-group-answer-last">Relevance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="tr-clickable" onclick="showScreen('item')">
+                    <td style="max-width:280px;">
+                      <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;">How do I reset my password if I don't have access to my email?</div>
+                    </td>
+                    <td><span class="score-pill score-high">1.0</span></td>
+                    <td class="col-group-retrieval"><span class="badge badge-green">✓ Hit</span></td>
+                    <td><span class="score-pill score-mid">0.67</span></td>
+                    <td class="col-group-answer-last"><span class="score-pill score-high">0.91</span></td>
+                    <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">Detail →</button></td>
+                  </tr>
+                  <tr class="tr-clickable">
+                    <td style="max-width:280px;">
+                      <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;">What payment methods are accepted for annual plans?</div>
+                    </td>
+                    <td><span class="score-pill score-high">1.0</span></td>
+                    <td class="col-group-retrieval"><span class="badge badge-green">✓ Hit</span></td>
+                    <td><span class="score-pill score-high">1.0</span></td>
+                    <td class="col-group-answer-last"><span class="score-pill score-high">0.88</span></td>
+                    <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">Detail →</button></td>
+                  </tr>
+                  <tr class="tr-clickable">
+                    <td style="max-width:280px;">
+                      <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;">Can I export my data if I cancel my subscription?</div>
+                    </td>
+                    <td><span class="score-pill score-high">0.5</span></td>
+                    <td class="col-group-retrieval"><span class="badge badge-green">✓ Hit</span></td>
+                    <td><span class="score-pill score-high">0.83</span></td>
+                    <td class="col-group-answer-last"><span class="score-pill score-mid">0.70</span></td>
+                    <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">Detail →</button></td>
+                  </tr>
+                  <tr class="tr-clickable">
+                    <td style="max-width:280px;">
+                      <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;">Is there a free trial available for enterprise customers?</div>
+                    </td>
+                    <td><span class="score-pill score-low">0.0</span></td>
+                    <td class="col-group-retrieval"><span class="badge badge-red">✗ Miss</span></td>
+                    <td><span class="score-pill score-low">0.33</span></td>
+                    <td class="col-group-answer-last"><span class="score-pill score-low">0.45</span></td>
+                    <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">Detail →</button></td>
+                  </tr>
+                  <tr class="tr-clickable">
+                    <td style="max-width:280px;">
+                      <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;">How long does account verification take?</div>
+                    </td>
+                    <td><span class="score-pill score-high">1.0</span></td>
+                    <td class="col-group-retrieval"><span class="badge badge-green">✓ Hit</span></td>
+                    <td><span class="score-pill score-high">1.0</span></td>
+                    <td class="col-group-answer-last"><span class="score-pill score-high">0.95</span></td>
+                    <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">Detail →</button></td>
+                  </tr>
+                  <tr>
+                    <td colspan="6" style="text-align:center;color:var(--text-faint);font-size:12px;padding:12px;">+ 37 more items</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SCREEN 4: ITEM DETAIL -->
+    <!-- ============================================================ -->
+    <div id="screen-item" class="main" style="display:none;flex-direction:column;">
+      <div class="topbar">
+        <div class="topbar-breadcrumb">
+          <span onclick="showScreen('list')" style="cursor:pointer;">Eval Runs</span>
+          <span class="sep">/</span>
+          <span onclick="showScreen('results')" style="cursor:pointer;">hybrid-512-baseline</span>
+          <span class="sep">/</span>
+          <span class="current">Item #1</span>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost">← Prev</button>
+          <button class="btn btn-ghost">Next →</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="screen active">
+
+          <!-- Question header -->
+          <div>
+            <div class="text-muted text-sm" style="margin-bottom:4px;">Question</div>
+            <div style="font-size:16px;font-weight:600;letter-spacing:-0.02em;">How do I reset my password if I don't have access to my email?</div>
+          </div>
+
+          <!-- Score summary -->
+          <div class="card">
+            <div class="card-body">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;">
+                <div>
+                  <div class="stat-label">MRR@5</div>
+                  <div style="font-size:20px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--green);margin-top:4px;">1.0</div>
+                </div>
+                <div>
+                  <div class="stat-label">Hit@5</div>
+                  <div style="margin-top:4px;"><span class="badge badge-green">✓ Page found</span></div>
+                </div>
+                <div style="border-left:1px solid var(--purple-border);padding-left:16px;">
+                  <div class="stat-label" style="color:var(--purple);">Faithfulness</div>
+                  <div style="font-size:20px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--amber);margin-top:4px;">0.67</div>
+                  <div class="text-sm text-muted mt-1">2 of 3 claims supported</div>
+                </div>
+                <div>
+                  <div class="stat-label" style="color:var(--purple);">Ans. Relevance</div>
+                  <div style="font-size:20px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--green);margin-top:4px;">0.91</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detail grid -->
+          <div class="detail-grid">
+
+            <!-- LEFT: Answer + Claims -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+
+              <!-- Generated answer -->
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Generated Answer</div>
+                  <div class="text-muted text-sm" style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;">gpt-4o-mini</div>
+                </div>
+                <div class="card-body">
+                  <div class="answer-box">
+                    To reset your password without email access, you can use your <strong>phone number for SMS verification</strong> if you've added one to your account. Navigate to the login page and click "Forgot password," then select "Use phone number instead."
+                    <br><br>
+                    If you don't have a phone number on file, contact <strong>support@example.com</strong> with a government-issued ID for manual verification, which typically takes <strong>3–5 business days</strong>.
+                    <br><br>
+                    In urgent cases, <strong>live chat support is available 24/7</strong> and can often verify your identity faster.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Claim breakdown — THE KEY NEW THING -->
+              <div class="card">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">Faithfulness — Claim Breakdown <span class="tag tag-new">New</span></div>
+                    <div class="card-desc">Each claim in the answer checked against the retrieved chunks by the judge model</div>
+                  </div>
+                  <div style="margin-left:auto;" class="flex gap-2 items-center">
+                    <span class="badge badge-green">2 supported</span>
+                    <span class="badge badge-red">1 unsupported</span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="claim-list">
+
+                    <div class="claim-item claim-supported">
+                      <div class="claim-status"><div class="claim-dot"></div></div>
+                      <div>
+                        <div class="claim-text">You can use your phone number for SMS verification if you've added one to your account, by clicking "Forgot password" → "Use phone number instead."</div>
+                        <div class="claim-label">Supported</div>
+                        <div class="claim-source">Source: Chunk #1 — "Account Recovery" section, p.4</div>
+                      </div>
+                    </div>
+
+                    <div class="claim-item claim-supported">
+                      <div class="claim-status"><div class="claim-dot"></div></div>
+                      <div>
+                        <div class="claim-text">If no phone number is on file, you can contact support@example.com with a government-issued ID; manual verification takes 3–5 business days.</div>
+                        <div class="claim-label">Supported</div>
+                        <div class="claim-source">Source: Chunk #2 — "Identity Verification" section, p.4</div>
+                      </div>
+                    </div>
+
+                    <div class="claim-item claim-unsupported">
+                      <div class="claim-status"><div class="claim-dot"></div></div>
+                      <div>
+                        <div class="claim-text">Live chat support is available 24/7 and can often verify your identity faster.</div>
+                        <div class="claim-label">Unsupported — not found in retrieved chunks</div>
+                        <div class="claim-source">No supporting evidence in chunks #1–5</div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- RIGHT: Retrieved Chunks -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div class="card">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">Retrieved Chunks</div>
+                    <div class="card-desc">Top 5 · Hybrid search</div>
+                  </div>
+                </div>
+                <div class="card-body" style="padding:12px;">
+                  <div class="chunk-list">
+                    <div class="chunk-item">
+                      <div class="chunk-meta">
+                        <span class="chunk-rank">#1</span>
+                        <span>p.4 — Account Recovery</span>
+                        <span style="margin-left:auto;" class="score-pill score-high" style="font-size:10px;">0.94</span>
+                      </div>
+                      <div class="chunk-text">Users may initiate password recovery via SMS if a verified phone number exists on the account. From the login screen, select "Forgot password" and choose "Use phone number instead…"</div>
+                    </div>
+                    <div class="chunk-item">
+                      <div class="chunk-meta">
+                        <span class="chunk-rank">#2</span>
+                        <span>p.4 — Identity Verification</span>
+                        <span style="margin-left:auto;" class="score-pill score-high" style="font-size:10px;">0.88</span>
+                      </div>
+                      <div class="chunk-text">For accounts without a recovery phone, users may submit a verification request to support@example.com with valid government-issued ID. Processing time is 3–5 business days…</div>
+                    </div>
+                    <div class="chunk-item">
+                      <div class="chunk-meta">
+                        <span class="chunk-rank">#3</span>
+                        <span>p.7 — Security Policies</span>
+                        <span style="margin-left:auto;" class="score-pill score-mid" style="font-size:10px;">0.61</span>
+                      </div>
+                      <div class="chunk-text">Account lockouts occur after 5 failed login attempts. Administrators can unlock accounts from the admin panel without requiring email verification…</div>
+                    </div>
+                  </div>
+                  <div style="text-align:center;color:var(--text-faint);font-size:11px;padding-top:10px;">+ 2 more chunks</div>
+                </div>
+              </div>
+
+              <!-- Relevant pages (from golden set) -->
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Expected Relevant Pages</div>
+                  <div class="card-desc">From golden set</div>
+                </div>
+                <div class="card-body" style="display:flex;flex-direction:column;gap:6px;">
+                  <div class="flex items-center gap-2">
+                    <span class="badge badge-green">✓ p.4</span>
+                    <span class="text-sm text-muted">Account Recovery & Verification</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="badge badge-amber">~ p.5</span>
+                    <span class="text-sm text-muted">Support Contact Methods</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function showScreen(name) {
+  document.querySelectorAll('.main > .main, .main').forEach(el => {
+    if (el.id && el.id.startsWith('screen-')) el.style.display = 'none';
+  });
+  const screens = ['create','list','results','item'];
+  screens.forEach(s => {
+    const el = document.getElementById('screen-' + s);
+    if (el) el.style.display = 'none';
+  });
+  const target = document.getElementById('screen-' + name);
+  if (target) target.style.display = 'flex';
+
+  document.querySelectorAll('.screen-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', screens[i] === name);
+  });
+}
+
+function selectMode(mode) {
+  document.getElementById('mode-retrieval').classList.toggle('selected', mode === 'retrieval');
+  document.getElementById('mode-answer').classList.toggle('selected', mode === 'answer');
+  document.getElementById('radio-retrieval').style.background = mode === 'retrieval' ? 'var(--blue)' : '';
+  document.getElementById('radio-retrieval').style.borderColor = mode === 'retrieval' ? 'var(--blue)' : '';
+  document.getElementById('radio-retrieval').style.boxShadow = mode === 'retrieval' ? 'inset 0 0 0 2px white' : '';
+  document.getElementById('radio-answer').style.background = mode === 'answer' ? 'var(--blue)' : '';
+  document.getElementById('radio-answer').style.borderColor = mode === 'answer' ? 'var(--blue)' : '';
+  document.getElementById('radio-answer').style.boxShadow = mode === 'answer' ? 'inset 0 0 0 2px white' : '';
+  document.getElementById('answer-config').style.display = mode === 'answer' ? 'flex' : 'none';
+}
+
+// Init
+showScreen('create');
+</script>
+</body>
+</html>

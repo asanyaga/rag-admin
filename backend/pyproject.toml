@@ -49,6 +49,7 @@ dependencies = [
     "tiktoken>=0.5.0", # OpenAI tokenizer for accurate token counting
     "langchain-text-splitters>=0.0.1", # Text chunking utilities
     "openai>=1.0.0", # OpenAI embedding API
+    "anthropic>=0.39.0", # Anthropic Claude API
     "cryptography>=41.0.0", # Fernet encryption for API key storage
 ]
 

@@ -3,7 +3,9 @@ import type {
   EvalRun,
   CreateEvalRunRequest,
   EvalRunResult,
+  EvalRunProgress,
   RunComparison,
+  LlmModelOption,
 } from '@/types/eval-run'
 import * as api from '@/api/eval-runs'
 
@@ -94,16 +96,17 @@ export function useEvalRuns(projectId: string | null): UseEvalRunsReturn {
 }
 
 // ---------------------------------------------------------------------------
-// useEvalRunDetail — single run + results with polling
+// useEvalRunDetail — single run + results with polling + progress
 // ---------------------------------------------------------------------------
 
 interface UseEvalRunDetailReturn {
   run: EvalRun | null
   results: EvalRunResult[]
+  progress: EvalRunProgress | null
   isLoading: boolean
   error: string | null
   fetchRun: () => Promise<void>
-  fetchResults: () => Promise<void>
+  fetchResults: (filter?: string) => Promise<void>
 }
 
 export function useEvalRunDetail(
@@ -112,6 +115,7 @@ export function useEvalRunDetail(
 ): UseEvalRunDetailReturn {
   const [run, setRun] = useState<EvalRun | null>(null)
   const [results, setResults] = useState<EvalRunResult[]>([])
+  const [progress, setProgress] = useState<EvalRunProgress | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
@@ -130,10 +134,10 @@ export function useEvalRunDetail(
     }
   }, [projectId, runId])
 
-  const fetchResults = useCallback(async () => {
+  const fetchResults = useCallback(async (filter?: string) => {
     if (!projectId || !runId) return
     try {
-      const data = await api.getEvalRunResults(projectId, runId)
+      const data = await api.getEvalRunResults(projectId, runId, filter)
       setResults(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch results')
@@ -147,16 +151,25 @@ export function useEvalRunDetail(
     }
   }, [projectId, runId, fetchRun, fetchResults])
 
-  // Poll while pending/running
+  // Poll while pending/running — also fetch progress
   useEffect(() => {
     if (run && (run.status === 'pending' || run.status === 'running') && projectId && runId) {
       pollingRef.current = setInterval(async () => {
         try {
-          const data = await api.getEvalRun(projectId, runId)
-          setRun(data)
-          if (data.status === 'completed' || data.status === 'failed') {
+          const [runData, progressData] = await Promise.all([
+            api.getEvalRun(projectId, runId),
+            api.getEvalRunProgress(projectId, runId),
+          ])
+          setRun(runData)
+          setProgress(progressData)
+          if (
+            runData.status === 'completed' ||
+            runData.status === 'failed' ||
+            runData.status === 'partial_failure'
+          ) {
             const resultData = await api.getEvalRunResults(projectId, runId)
             setResults(resultData)
+            setProgress(null)
           }
         } catch {
           // ignore polling errors
@@ -168,7 +181,7 @@ export function useEvalRunDetail(
     }
   }, [run, projectId, runId])
 
-  return { run, results, isLoading, error, fetchRun, fetchResults }
+  return { run, results, progress, isLoading, error, fetchRun, fetchResults }
 }
 
 // ---------------------------------------------------------------------------
@@ -215,4 +228,45 @@ export function useRunComparison(
   }, [projectId, runId1, runId2])
 
   return { comparison, isLoading, error }
+}
+
+// ---------------------------------------------------------------------------
+// useLlmModels — fetch available LLM chat models
+// ---------------------------------------------------------------------------
+
+interface UseLlmModelsReturn {
+  models: LlmModelOption[]
+  isLoading: boolean
+  error: string | null
+}
+
+export function useLlmModels(): UseLlmModelsReturn {
+  const [models, setModels] = useState<LlmModelOption[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const load = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const data = await api.fetchLlmModels()
+        if (!cancelled) setModels(data)
+      } catch (err) {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : 'Failed to fetch LLM models')
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return { models, isLoading, error }
 }

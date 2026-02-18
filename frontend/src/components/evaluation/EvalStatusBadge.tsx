@@ -9,6 +9,7 @@ const STATUS_MAP: Record<string, StatusVariant> = {
   running: 'blue',
   generating: 'blue',
   failed: 'destructive',
+  partial_failure: 'warning',
   ready: 'success',
 }
 

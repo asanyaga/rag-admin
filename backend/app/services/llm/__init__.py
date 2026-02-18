@@ -8,6 +8,7 @@ from app.services.llm.types import LLMConfig, TokenUsage, CompletionResult
 from app.services.llm.port import LLMPort
 from app.services.llm.registry import LLMRegistry
 from app.services.llm.openai_adapter import OpenAIAdapter
+from app.services.llm.anthropic_adapter import AnthropicAdapter
 from app.services.llm.prompt import build_rag_prompt
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "LLMPort",
     "LLMRegistry",
     "OpenAIAdapter",
+    "AnthropicAdapter",
     "build_rag_prompt",
 ]

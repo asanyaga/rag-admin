@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 # Supported embedding providers
-SUPPORTED_PROVIDERS = ["openai", "voyage", "local"]
+SUPPORTED_PROVIDERS = ["openai", "voyage", "local", "anthropic"]
 
 
 class ProviderKeyCreate(BaseModel):
@@ -97,6 +97,12 @@ PROVIDER_MODELS = {
             "nomic-embed-text": 768,
             "mxbai-embed-large": 1024,
         }
+    },
+    "anthropic": {
+        "display_name": "Anthropic",
+        "requires_key": True,
+        "models": [],
+        "dimensions": {}
     }
 }
 

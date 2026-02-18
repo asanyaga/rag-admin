@@ -2,7 +2,14 @@
  * Evaluation Run feature types
  */
 
-export type EvalRunStatus = 'pending' | 'running' | 'completed' | 'failed'
+export type EvalRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'partial_failure'
+
+export type EvalMode = 'retrieval_only' | 'retrieval_and_answer'
+
+export interface ModelConfig {
+  provider: string
+  modelId: string
+}
 
 export interface EvalRunConfig {
   searchType: 'semantic' | 'keyword' | 'hybrid'
@@ -15,6 +22,8 @@ export interface EvalRunMetrics {
   avgRecall: number
   avgF1: number
   queriesBelowThreshold: number
+  avgFaithfulness: number | null
+  avgRelevance: number | null
 }
 
 export interface EvalRun {
@@ -30,6 +39,11 @@ export interface EvalRun {
   errorMessage: string | null
   createdBy: string
   createdAt: string
+  mode: EvalMode
+  generationModel: ModelConfig | null
+  judgeModel: ModelConfig | null
+  itemsCompleted: number
+  failedItemCount: number
 }
 
 export interface CreateEvalRunRequest {
@@ -37,6 +51,10 @@ export interface CreateEvalRunRequest {
   indexId: string
   name?: string
   config: EvalRunConfig
+  mode: EvalMode
+  generationModel?: ModelConfig
+  judgeModel?: ModelConfig
+  systemPrompt?: string
 }
 
 // Per-query results
@@ -57,6 +75,12 @@ export interface ExpectedSource {
   locator: { type: string; pages?: number[] }
 }
 
+export interface ClaimItem {
+  text: string
+  label: 'supported' | 'unsupported' | 'unclear'
+  source: string | null
+}
+
 export interface EvalRunResult {
   id: string
   queryId: string
@@ -66,6 +90,28 @@ export interface EvalRunResult {
   f1: number
   retrievedChunks: RetrievedChunk[]
   expectedSources: ExpectedSource[]
+  generatedAnswer: string | null
+  faithfulnessScore: number | null
+  relevanceScore: number | null
+  claimBreakdown: ClaimItem[] | null
+  judgeError: string | null
+  generationError: string | null
+}
+
+// Progress tracking
+export interface EvalRunProgress {
+  status: string
+  itemsTotal: number
+  itemsCompleted: number
+  failedItemCount: number
+}
+
+// LLM model options
+export interface LlmModelOption {
+  id: string
+  label: string
+  provider: string
+  tier: string
 }
 
 // Comparison types

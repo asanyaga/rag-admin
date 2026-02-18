@@ -1,12 +1,20 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { RetrievedChunksList } from './RetrievedChunksList'
-import { ExpectedSourcesList } from './ExpectedSourcesList'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { ScorePill } from './ScorePill'
 import type { EvalRunResult } from '@/types/eval-run'
 
 interface RunResultsListProps {
   results: EvalRunResult[]
+  isAnswerMode?: boolean
+  runId: string
 }
 
 function metricColor(val: number): string {
@@ -15,17 +23,8 @@ function metricColor(val: number): string {
   return 'text-red-600'
 }
 
-export function RunResultsList({ results }: RunResultsListProps) {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
-
-  const toggle = (id: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+export function RunResultsList({ results, isAnswerMode, runId }: RunResultsListProps) {
+  const navigate = useNavigate()
 
   if (results.length === 0) {
     return (
@@ -36,53 +35,63 @@ export function RunResultsList({ results }: RunResultsListProps) {
   }
 
   return (
-    <div className="space-y-1">
-      {results.map((r) => {
-        const expanded = expandedIds.has(r.id)
-        return (
-          <div key={r.id} className="border rounded-lg">
-            <button
-              className="w-full flex items-center gap-4 p-3 text-left hover:bg-accent/50 transition-colors"
-              onClick={() => toggle(r.id)}
-            >
-              {expanded ? (
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Question</TableHead>
+          <TableHead className="text-right w-20">Precision</TableHead>
+          <TableHead className="text-right w-16">Hit?</TableHead>
+          {isAnswerMode && (
+            <>
+              <TableHead className="text-right w-24">Faithfulness</TableHead>
+              <TableHead className="text-right w-24">Relevance</TableHead>
+            </>
+          )}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {results.map((r) => (
+          <TableRow
+            key={r.id}
+            className="cursor-pointer"
+            onClick={() => navigate(`/evaluation/runs/${runId}/results/${r.id}`)}
+          >
+            <TableCell className="max-w-md">
+              <p className="text-sm truncate">{r.queryText}</p>
+              {(r.judgeError || r.generationError) && (
+                <p className="text-xs text-red-500 mt-0.5 truncate">
+                  {r.generationError ? 'Gen error' : 'Judge error'}
+                </p>
               )}
-              <span className="flex-1 text-sm truncate">{r.queryText}</span>
-              <span className={cn('text-xs font-mono w-14 text-right', metricColor(r.precision))}>
-                P {(r.precision * 100).toFixed(0)}%
+            </TableCell>
+            <TableCell className="text-right">
+              <span className={cn('text-sm font-mono', metricColor(r.precision))}>
+                {(r.precision * 100).toFixed(0)}%
               </span>
-              <span className={cn('text-xs font-mono w-14 text-right', metricColor(r.recall))}>
-                R {(r.recall * 100).toFixed(0)}%
+            </TableCell>
+            <TableCell className="text-right">
+              <span
+                className={cn(
+                  'text-sm font-mono font-bold',
+                  r.recall >= 0.5 ? 'text-green-600' : 'text-red-600'
+                )}
+              >
+                {r.recall >= 0.5 ? 'Yes' : 'No'}
               </span>
-              <span className={cn('text-xs font-mono w-14 text-right font-bold', metricColor(r.f1))}>
-                F1 {(r.f1 * 100).toFixed(0)}%
-              </span>
-            </button>
-            {expanded && (
-              <div className="px-3 pb-3 grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-xs font-medium text-muted-foreground mb-2">
-                    Retrieved Chunks
-                  </h4>
-                  <RetrievedChunksList chunks={r.retrievedChunks} />
-                </div>
-                <div>
-                  <h4 className="text-xs font-medium text-muted-foreground mb-2">
-                    Expected Sources
-                  </h4>
-                  <ExpectedSourcesList
-                    sources={r.expectedSources}
-                    retrievedChunks={r.retrievedChunks}
-                  />
-                </div>
-              </div>
+            </TableCell>
+            {isAnswerMode && (
+              <>
+                <TableCell className="text-right">
+                  <ScorePill score={r.faithfulnessScore} />
+                </TableCell>
+                <TableCell className="text-right">
+                  <ScorePill score={r.relevanceScore} />
+                </TableCell>
+              </>
             )}
-          </div>
-        )
-      })}
-    </div>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }

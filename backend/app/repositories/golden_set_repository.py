@@ -7,6 +7,8 @@ from sqlalchemy.orm import selectinload
 from app.models import GoldenSet, GoldenSetQuery, GoldenSetSource
 from app.models.golden_set import GenerationStatus, SourceMethod, ReviewStatus
 
+_UNSET = object()  # sentinel for distinguishing "not provided" from None
+
 
 class GoldenSetRepository:
     def __init__(self, session: AsyncSession):
@@ -185,6 +187,7 @@ class GoldenSetRepository:
         query_id: UUID,
         query_text: str | None = None,
         review_status: str | None = None,
+        reference_answer: str | None = _UNSET,
     ) -> GoldenSetQuery | None:
         result = await self.session.execute(
             select(GoldenSetQuery).where(GoldenSetQuery.id == query_id)
@@ -196,6 +199,8 @@ class GoldenSetRepository:
             query.query_text = query_text
         if review_status is not None:
             query.review_status = review_status
+        if reference_answer is not _UNSET:
+            query.reference_answer = reference_answer
         await self.session.commit()
         await self.session.refresh(query)
         return query

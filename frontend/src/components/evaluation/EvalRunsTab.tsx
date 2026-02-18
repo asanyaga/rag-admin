@@ -11,8 +11,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { EvalStatusBadge } from './EvalStatusBadge'
-import type { EvalRun } from '@/types/eval-run'
+import { ModeBadge } from './ModeBadge'
+import { ScorePill } from './ScorePill'
+import type { EvalRun, EvalMode } from '@/types/eval-run'
 
 interface EvalRunsTabProps {
   runs: EvalRun[]
@@ -23,6 +32,7 @@ interface EvalRunsTabProps {
 export function EvalRunsTab({ runs, isLoading, onDelete }: EvalRunsTabProps) {
   const navigate = useNavigate()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [modeFilter, setModeFilter] = useState<EvalMode | 'all'>('all')
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -46,6 +56,11 @@ export function EvalRunsTab({ runs, isLoading, onDelete }: EvalRunsTabProps) {
   const formatMetric = (val: number | undefined | null) =>
     val != null ? (val * 100).toFixed(1) + '%' : '—'
 
+  const filteredRuns =
+    modeFilter === 'all'
+      ? runs
+      : runs.filter((r) => r.mode === modeFilter)
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -64,6 +79,19 @@ export function EvalRunsTab({ runs, isLoading, onDelete }: EvalRunsTabProps) {
               Compare Selected
             </Button>
           )}
+          <Select
+            value={modeFilter}
+            onValueChange={(v) => setModeFilter(v as EvalMode | 'all')}
+          >
+            <SelectTrigger className="w-[160px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Modes</SelectItem>
+              <SelectItem value="retrieval_only">Retrieval Only</SelectItem>
+              <SelectItem value="retrieval_and_answer">Ret + Answer</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Button size="sm" onClick={() => navigate('/evaluation/runs/new')}>
           <Plus className="mr-2 h-4 w-4" />
@@ -71,7 +99,7 @@ export function EvalRunsTab({ runs, isLoading, onDelete }: EvalRunsTabProps) {
         </Button>
       </div>
 
-      {runs.length === 0 ? (
+      {filteredRuns.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <p>No evaluation runs yet.</p>
           <p className="text-sm mt-1">Create a run to measure retrieval quality.</p>
@@ -82,17 +110,19 @@ export function EvalRunsTab({ runs, isLoading, onDelete }: EvalRunsTabProps) {
             <TableRow>
               <TableHead className="w-10" />
               <TableHead>Name</TableHead>
+              <TableHead>Mode</TableHead>
               <TableHead>Index</TableHead>
-              <TableHead>Config</TableHead>
               <TableHead className="text-right">P@k</TableHead>
               <TableHead className="text-right">R@k</TableHead>
               <TableHead className="text-right">F1</TableHead>
+              <TableHead className="text-right">Faith.</TableHead>
+              <TableHead className="text-right">Rel.</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {runs.map((run) => (
+            {filteredRuns.map((run) => (
               <TableRow
                 key={run.id}
                 className="cursor-pointer"
@@ -112,10 +142,10 @@ export function EvalRunsTab({ runs, isLoading, onDelete }: EvalRunsTabProps) {
                     </p>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm">{run.indexName}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {run.config.searchType} / k={run.config.topK}
+                <TableCell>
+                  <ModeBadge mode={run.mode} />
                 </TableCell>
+                <TableCell className="text-sm">{run.indexName}</TableCell>
                 <TableCell className="text-right font-mono text-sm">
                   {formatMetric(run.metrics?.avgPrecision)}
                 </TableCell>
@@ -125,8 +155,19 @@ export function EvalRunsTab({ runs, isLoading, onDelete }: EvalRunsTabProps) {
                 <TableCell className="text-right font-mono text-sm">
                   {formatMetric(run.metrics?.avgF1)}
                 </TableCell>
+                <TableCell className="text-right">
+                  <ScorePill score={run.metrics?.avgFaithfulness ?? null} />
+                </TableCell>
+                <TableCell className="text-right">
+                  <ScorePill score={run.metrics?.avgRelevance ?? null} />
+                </TableCell>
                 <TableCell>
-                  <EvalStatusBadge status={run.status} />
+                  <div className="flex items-center gap-2">
+                    <EvalStatusBadge status={run.status} />
+                    {(run.status === 'pending' || run.status === 'running') && (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <Button

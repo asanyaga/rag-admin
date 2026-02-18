@@ -118,11 +118,15 @@ class GoldenSetService:
             if existing and existing.source_method.value == "auto_generated" and review_status is None:
                 review_status = "edited"
 
-        query = await self.gs_repo.update_query(
-            query_id,
-            query_text=data.query_text,
-            review_status=review_status,
-        )
+        # Build kwargs — only pass reference_answer if it was explicitly provided
+        update_kwargs: dict = {
+            "query_text": data.query_text,
+            "review_status": review_status,
+        }
+        if "reference_answer" in data.model_fields_set:
+            update_kwargs["reference_answer"] = data.reference_answer
+
+        query = await self.gs_repo.update_query(query_id, **update_kwargs)
         if not query:
             raise NotFoundError(f"Query {query_id} not found")
         # Reload with sources

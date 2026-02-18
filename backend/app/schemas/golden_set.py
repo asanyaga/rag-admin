@@ -60,6 +60,7 @@ class QueryUpdate(BaseModel):
     """Request to update a query."""
     query_text: str | None = Field(None, min_length=1, max_length=5000, alias="queryText")
     review_status: str | None = Field(None, alias="reviewStatus")
+    reference_answer: str | None = Field(None, max_length=10000, alias="referenceAnswer")
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -72,6 +73,7 @@ class QueryResponse(BaseModel):
     review_status: str = Field("accepted", alias="reviewStatus")
     reasoning: str | None = None
     question_type: str | None = Field(None, alias="questionType")
+    reference_answer: str | None = Field(None, alias="referenceAnswer")
     sources: list[SourceResponse] = Field(default_factory=list)
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")

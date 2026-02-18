@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 import enum
 
 import sqlalchemy as sa
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, String, Text, JSON
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text, JSON
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,6 +17,7 @@ class EvalRunStatus(str, enum.Enum):
     running = "running"
     completed = "completed"
     failed = "failed"
+    partial_failure = "partial_failure"
 
 
 class EvalRun(Base):
@@ -59,6 +60,24 @@ class EvalRun(Base):
     )
     metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Answer eval fields
+    mode: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="retrieval_only",
+        server_default="retrieval_only"
+    )
+    generation_model_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    generation_model_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    judge_model_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    judge_model_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    items_completed: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    failed_item_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id"),
@@ -125,6 +144,15 @@ class EvalRunResult(Base):
         default=list,
         server_default='[]'
     )
+
+    # Answer eval fields
+    generated_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    faithfulness_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    relevance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    claim_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    judge_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generation_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

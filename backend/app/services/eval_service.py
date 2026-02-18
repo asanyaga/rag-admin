@@ -1,8 +1,12 @@
 """Service for evaluation run execution and comparison."""
+import asyncio
 import logging
 from uuid import UUID
 
+from sqlalchemy import select as sa_select
+
 from app.models import EvalRunStatus
+from app.models.eval_run import EvalRun as EvalRunModel
 from app.repositories.eval_run_repository import EvalRunRepository
 from app.repositories.golden_set_repository import GoldenSetRepository
 from app.schemas.eval_run import (
@@ -10,15 +14,21 @@ from app.schemas.eval_run import (
     EvalRunConfig,
     EvalRunResponse,
     EvalRunResultResponse,
+    ModelConfig,
     RetrievedChunkInfo,
     ExpectedSourceInfo,
     QueryComparisonItem,
     QueryComparisonMetrics,
     ComparisonSummary,
     RunComparisonResponse,
+    EvalRunProgress,
 )
 from app.schemas.query import QueryRequest
 from app.services.query_service import QueryService
+from app.services.judge_service import JudgeService
+from app.services.answer_generation_service import generate_answer
+from app.services.llm.types import LLMConfig
+from app.services.llm.port import LLMPort
 from app.services.exceptions import NotFoundError, ValidationError
 
 logger = logging.getLogger(__name__)
@@ -30,10 +40,16 @@ class EvalService:
         eval_run_repo: EvalRunRepository,
         golden_set_repo: GoldenSetRepository,
         query_service: QueryService,
+        judge_service: JudgeService | None = None,
+        generation_adapter: LLMPort | None = None,
+        judge_adapter: LLMPort | None = None,
     ):
         self.eval_repo = eval_run_repo
         self.gs_repo = golden_set_repo
         self.query_service = query_service
+        self.judge_service = judge_service or JudgeService()
+        self._generation_adapter = generation_adapter
+        self._judge_adapter = judge_adapter
 
     # ------------------------------------------------------------------
     # CRUD
@@ -55,6 +71,12 @@ class EvalService:
             name=name,
             config=data.config.model_dump(by_alias=True),
             user_id=user_id,
+            mode=data.mode,
+            generation_model_provider=data.generation_model.provider if data.generation_model else None,
+            generation_model_id=data.generation_model.model_id if data.generation_model else None,
+            judge_model_provider=data.judge_model.provider if data.judge_model else None,
+            judge_model_id=data.judge_model.model_id if data.judge_model else None,
+            system_prompt=data.system_prompt,
         )
         # Reload with relationships
         run = await self.eval_repo.get_by_id(run.id, project_id)
@@ -76,13 +98,13 @@ class EvalService:
             raise NotFoundError(f"Eval run {run_id} not found")
 
     async def get_results(
-        self, run_id: UUID, project_id: UUID
+        self, run_id: UUID, project_id: UUID, filter_type: str | None = None
     ) -> list[EvalRunResultResponse]:
         run = await self.eval_repo.get_by_id(run_id, project_id)
         if not run:
             raise NotFoundError(f"Eval run {run_id} not found")
 
-        results = await self.eval_repo.get_results(run_id)
+        results = await self.eval_repo.get_results(run_id, filter_type=filter_type)
 
         # Build expected sources map from golden set
         gs = await self.gs_repo.get_with_queries(run.golden_set_id, project_id)
@@ -113,9 +135,33 @@ class EvalService:
                     RetrievedChunkInfo(**c) for c in (r.retrieved_chunks or [])
                 ],
                 expected_sources=expected_map.get(r.query_id, []),
+                generated_answer=r.generated_answer,
+                faithfulness_score=r.faithfulness_score,
+                relevance_score=r.relevance_score,
+                claim_breakdown=r.claim_breakdown,
+                judge_error=r.judge_error,
+                generation_error=r.generation_error,
             )
             for r in results
         ]
+
+    async def get_progress(
+        self, run_id: UUID, project_id: UUID
+    ) -> EvalRunProgress:
+        run = await self.eval_repo.get_by_id(run_id, project_id)
+        if not run:
+            raise NotFoundError(f"Eval run {run_id} not found")
+
+        # Get total query count from golden set
+        gs = await self.gs_repo.get_with_queries(run.golden_set_id, project_id)
+        items_total = len(gs.queries) if gs and gs.queries else 0
+
+        return EvalRunProgress(
+            status=run.status.value if hasattr(run.status, 'value') else run.status,
+            items_total=items_total,
+            items_completed=run.items_completed,
+            failed_item_count=run.failed_item_count,
+        )
 
     # ------------------------------------------------------------------
     # Execution
@@ -143,94 +189,89 @@ class EvalService:
                 )
                 return
 
+            is_answer_mode = run.mode == "retrieval_and_answer"
+
             precisions = []
             recalls = []
             f1s = []
+            faithfulness_scores = []
+            relevance_scores = []
+            items_completed = 0
+            failed_item_count = 0
 
-            for query in gs.queries:
-                try:
-                    # Build relevance set from golden set sources
-                    relevance_set: set[tuple[str, int]] = set()
-                    for source in (query.sources or []):
-                        locator = source.locator or {}
-                        if locator.get("type") == "page":
-                            for page in locator.get("pages", []):
-                                relevance_set.add((str(source.document_id), page))
+            # Use semaphore for concurrency control in answer mode
+            semaphore = asyncio.Semaphore(3)
 
-                    # Query the index
-                    query_request = QueryRequest(
-                        query=query.query_text,
-                        search_type=config.search_type,
-                        top_k=config.top_k,
-                        similarity_threshold=config.similarity_threshold,
-                    )
-                    response = await self.query_service.query_index(
-                        run.index_id, project_id, user_id, query_request
+            async def process_query(query):
+                nonlocal items_completed, failed_item_count
+                async with semaphore:
+                    return await self._process_single_query(
+                        run=run,
+                        query=query,
+                        config=config,
+                        run_id=run_id,
+                        user_id=user_id,
+                        is_answer_mode=is_answer_mode,
                     )
 
-                    # Evaluate retrieved chunks
-                    retrieved_chunks_info = []
-                    relevant_retrieved = 0
-                    matched_relevant: set[tuple[str, int]] = set()
-                    for result in response.results:
-                        doc_id = result.metadata.document_id
-                        page = result.metadata.page
-                        page_numbers = result.metadata.page_numbers or ([page] if page is not None else [])
-                        is_relevant = any((doc_id, p) in relevance_set for p in page_numbers)
-                        if is_relevant:
-                            relevant_retrieved += 1
-                            for p in page_numbers:
-                                if (doc_id, p) in relevance_set:
-                                    matched_relevant.add((doc_id, p))
-
-                        retrieved_chunks_info.append({
-                            "chunkId": result.chunk_id,
-                            "rank": result.rank,
-                            "score": result.score,
-                            "content": result.content[:500],
-                            "documentId": doc_id,
-                            "documentName": result.metadata.document_name,
-                            "page": page,
-                            "isRelevant": is_relevant,
-                        })
-
-                    # Compute metrics
-                    k = len(response.results) or 1
-                    relevance_size = len(relevance_set) or 1
-                    precision = relevant_retrieved / k
-                    recall = len(matched_relevant) / relevance_size
-                    f1 = (
-                        2 * precision * recall / (precision + recall)
-                        if (precision + recall) > 0
-                        else 0.0
+            # Process queries sequentially for retrieval-only (cheaper),
+            # with concurrency for answer mode (I/O bound on LLM calls)
+            if is_answer_mode:
+                tasks = [process_query(q) for q in gs.queries]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for i, result in enumerate(results):
+                    items_completed += 1
+                    if isinstance(result, Exception):
+                        logger.warning(f"Error processing query {gs.queries[i].id}: {result}")
+                        failed_item_count += 1
+                        precisions.append(0.0)
+                        recalls.append(0.0)
+                        f1s.append(0.0)
+                    else:
+                        precisions.append(result["precision"])
+                        recalls.append(result["recall"])
+                        f1s.append(result["f1"])
+                        if result.get("faithfulness_score") is not None:
+                            faithfulness_scores.append(result["faithfulness_score"])
+                        if result.get("relevance_score") is not None:
+                            relevance_scores.append(result["relevance_score"])
+                        if result.get("had_error"):
+                            failed_item_count += 1
+                    await self.eval_repo.update_progress(
+                        run_id, items_completed, failed_item_count
                     )
+            else:
+                for query in gs.queries:
+                    try:
+                        result = await self._process_single_query(
+                            run=run,
+                            query=query,
+                            config=config,
+                            run_id=run_id,
+                            user_id=user_id,
+                            is_answer_mode=False,
+                        )
+                        precisions.append(result["precision"])
+                        recalls.append(result["recall"])
+                        f1s.append(result["f1"])
+                    except Exception as e:
+                        logger.warning(f"Error evaluating query {query.id}: {e}")
+                        precisions.append(0.0)
+                        recalls.append(0.0)
+                        f1s.append(0.0)
+                        await self.eval_repo.create_result(
+                            eval_run_id=run_id,
+                            query_id=query.id,
+                            precision=0.0,
+                            recall=0.0,
+                            f1=0.0,
+                            retrieved_chunks=[],
+                        )
+                        failed_item_count += 1
 
-                    precisions.append(precision)
-                    recalls.append(recall)
-                    f1s.append(f1)
-
-                    await self.eval_repo.create_result(
-                        eval_run_id=run_id,
-                        query_id=query.id,
-                        precision=round(precision, 4),
-                        recall=round(recall, 4),
-                        f1=round(f1, 4),
-                        retrieved_chunks=retrieved_chunks_info,
-                    )
-
-                except Exception as e:
-                    logger.warning(f"Error evaluating query {query.id}: {e}")
-                    # Store zero metrics for failed queries
-                    precisions.append(0.0)
-                    recalls.append(0.0)
-                    f1s.append(0.0)
-                    await self.eval_repo.create_result(
-                        eval_run_id=run_id,
-                        query_id=query.id,
-                        precision=0.0,
-                        recall=0.0,
-                        f1=0.0,
-                        retrieved_chunks=[],
+                    items_completed += 1
+                    await self.eval_repo.update_progress(
+                        run_id, items_completed, failed_item_count
                     )
 
             # Aggregate metrics
@@ -242,7 +283,29 @@ class EvalService:
                 "queriesBelowThreshold": sum(1 for f in f1s if f < 0.5),
             }
 
-            await self.eval_repo.update_metrics(run_id, metrics)
+            if faithfulness_scores:
+                metrics["avgFaithfulness"] = round(
+                    sum(faithfulness_scores) / len(faithfulness_scores), 4
+                )
+            if relevance_scores:
+                metrics["avgRelevance"] = round(
+                    sum(relevance_scores) / len(relevance_scores), 4
+                )
+
+            if failed_item_count > 0:
+                await self.eval_repo.update_status(
+                    run_id, EvalRunStatus.partial_failure
+                )
+                # Still save metrics
+                result = await self.eval_repo.session.execute(
+                    sa_select(EvalRunModel).where(EvalRunModel.id == run_id)
+                )
+                eval_run = result.scalar_one_or_none()
+                if eval_run:
+                    eval_run.metrics = metrics
+                    await self.eval_repo.session.commit()
+            else:
+                await self.eval_repo.update_metrics(run_id, metrics)
 
         except Exception as e:
             logger.error(f"Eval run {run_id} failed: {e}")
@@ -250,6 +313,149 @@ class EvalService:
                 run_id, EvalRunStatus.failed,
                 error_message=str(e)
             )
+
+    async def _process_single_query(
+        self, run, query, config, run_id, user_id, is_answer_mode
+    ) -> dict:
+        """Process a single query: retrieval + optional generation + judge."""
+        # Build relevance set from golden set sources
+        relevance_set: set[tuple[str, int]] = set()
+        for source in (query.sources or []):
+            locator = source.locator or {}
+            if locator.get("type") == "page":
+                for page in locator.get("pages", []):
+                    relevance_set.add((str(source.document_id), page))
+
+        # Query the index
+        query_request = QueryRequest(
+            query=query.query_text,
+            search_type=config.search_type,
+            top_k=config.top_k,
+            similarity_threshold=config.similarity_threshold,
+        )
+        response = await self.query_service.query_index(
+            run.index_id, run.project_id, run.created_by, query_request
+        )
+
+        # Evaluate retrieved chunks
+        retrieved_chunks_info = []
+        relevant_retrieved = 0
+        matched_relevant: set[tuple[str, int]] = set()
+        for result in response.results:
+            doc_id = result.metadata.document_id
+            page = result.metadata.page
+            page_numbers = result.metadata.page_numbers or ([page] if page is not None else [])
+            is_relevant = any((doc_id, p) in relevance_set for p in page_numbers)
+            if is_relevant:
+                relevant_retrieved += 1
+                for p in page_numbers:
+                    if (doc_id, p) in relevance_set:
+                        matched_relevant.add((doc_id, p))
+
+            retrieved_chunks_info.append({
+                "chunkId": result.chunk_id,
+                "rank": result.rank,
+                "score": result.score,
+                "content": result.content[:500],
+                "documentId": doc_id,
+                "documentName": result.metadata.document_name,
+                "page": page,
+                "isRelevant": is_relevant,
+            })
+
+        # Compute retrieval metrics
+        k = len(response.results) or 1
+        relevance_size = len(relevance_set) or 1
+        precision = relevant_retrieved / k
+        recall = len(matched_relevant) / relevance_size
+        f1 = (
+            2 * precision * recall / (precision + recall)
+            if (precision + recall) > 0
+            else 0.0
+        )
+
+        # Answer eval fields
+        generated_answer = None
+        faithfulness_score = None
+        relevance_score = None
+        claim_breakdown = None
+        judge_error = None
+        generation_error = None
+        had_error = False
+
+        if is_answer_mode and self._generation_adapter and self._judge_adapter:
+            # Generate answer
+            try:
+                gen_config = LLMConfig(
+                    provider=run.generation_model_provider,
+                    model=run.generation_model_id,
+                    temperature=0.0,
+                    max_tokens=1024,
+                )
+                generated_answer = await generate_answer(
+                    question=query.query_text,
+                    chunks=retrieved_chunks_info,
+                    generation_adapter=self._generation_adapter,
+                    generation_config=gen_config,
+                    system_prompt=run.system_prompt,
+                )
+            except Exception as e:
+                logger.warning(f"Generation failed for query {query.id}: {e}")
+                generation_error = str(e)
+                had_error = True
+
+            # Judge answer (only if generation succeeded)
+            if generated_answer and not generation_error:
+                try:
+                    judge_config = LLMConfig(
+                        provider=run.judge_model_provider,
+                        model=run.judge_model_id,
+                    )
+                    judge_result = await self.judge_service.evaluate(
+                        question=query.query_text,
+                        chunks=retrieved_chunks_info,
+                        answer=generated_answer,
+                        judge_adapter=self._judge_adapter,
+                        judge_config=judge_config,
+                    )
+                    if judge_result.error:
+                        judge_error = judge_result.error
+                        had_error = True
+                    else:
+                        faithfulness_score = judge_result.faithfulness_score
+                        relevance_score = judge_result.relevance_score
+                        claim_breakdown = [
+                            {"text": c.text, "label": c.label, "source": c.source}
+                            for c in judge_result.claims
+                        ]
+                except Exception as e:
+                    logger.warning(f"Judge failed for query {query.id}: {e}")
+                    judge_error = str(e)
+                    had_error = True
+
+        await self.eval_repo.create_result(
+            eval_run_id=run_id,
+            query_id=query.id,
+            precision=round(precision, 4),
+            recall=round(recall, 4),
+            f1=round(f1, 4),
+            retrieved_chunks=retrieved_chunks_info,
+            generated_answer=generated_answer,
+            faithfulness_score=faithfulness_score,
+            relevance_score=relevance_score,
+            claim_breakdown=claim_breakdown,
+            judge_error=judge_error,
+            generation_error=generation_error,
+        )
+
+        return {
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+            "faithfulness_score": faithfulness_score,
+            "relevance_score": relevance_score,
+            "had_error": had_error,
+        }
 
     # ------------------------------------------------------------------
     # Comparison
@@ -345,6 +551,21 @@ class EvalService:
     def _to_response(run) -> EvalRunResponse:
         gs_name = run.golden_set.name if run.golden_set else ""
         idx_name = run.index.name if run.index else ""
+
+        gen_model = None
+        if run.generation_model_provider and run.generation_model_id:
+            gen_model = ModelConfig(
+                provider=run.generation_model_provider,
+                model_id=run.generation_model_id,
+            )
+
+        judge_model = None
+        if run.judge_model_provider and run.judge_model_id:
+            judge_model = ModelConfig(
+                provider=run.judge_model_provider,
+                model_id=run.judge_model_id,
+            )
+
         return EvalRunResponse(
             id=run.id,
             name=run.name,
@@ -358,4 +579,9 @@ class EvalService:
             error_message=run.error_message,
             created_by=run.created_by,
             created_at=run.created_at,
+            mode=run.mode,
+            generation_model=gen_model,
+            judge_model=judge_model,
+            items_completed=run.items_completed,
+            failed_item_count=run.failed_item_count,
         )
