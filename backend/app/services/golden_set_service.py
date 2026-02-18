@@ -99,6 +99,8 @@ class GoldenSetService:
         if not gs:
             raise NotFoundError(f"Golden set {gs_id} not found")
         query = await self.gs_repo.add_query(gs_id, data.query_text)
+        # Reload with sources eagerly loaded to avoid async lazy-load error
+        query = await self.gs_repo.get_query(query.id)
         return self._to_query_response(query)
 
     async def update_query(

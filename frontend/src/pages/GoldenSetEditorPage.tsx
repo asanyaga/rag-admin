@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import {
   ArrowLeft,
   Loader2,
@@ -47,9 +48,13 @@ export default function GoldenSetEditorPage() {
 
   const handleAddQuery = async () => {
     if (!newQueryText.trim()) return
-    await addQuery({ queryText: newQueryText.trim() })
-    setNewQueryText('')
-    setAddingQuery(false)
+    try {
+      await addQuery({ queryText: newQueryText.trim() })
+      setNewQueryText('')
+      setAddingQuery(false)
+    } catch {
+      toast.error('Failed to add query. Please try again.')
+    }
   }
 
   // Determine if this golden set has auto-generated content (review mode)

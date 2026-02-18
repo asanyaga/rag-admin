@@ -171,6 +171,7 @@ class EvalService:
                     # Evaluate retrieved chunks
                     retrieved_chunks_info = []
                     relevant_retrieved = 0
+                    matched_relevant: set[tuple[str, int]] = set()
                     for result in response.results:
                         doc_id = result.metadata.document_id
                         page = result.metadata.page
@@ -178,6 +179,9 @@ class EvalService:
                         is_relevant = any((doc_id, p) in relevance_set for p in page_numbers)
                         if is_relevant:
                             relevant_retrieved += 1
+                            for p in page_numbers:
+                                if (doc_id, p) in relevance_set:
+                                    matched_relevant.add((doc_id, p))
 
                         retrieved_chunks_info.append({
                             "chunkId": result.chunk_id,
@@ -194,7 +198,7 @@ class EvalService:
                     k = len(response.results) or 1
                     relevance_size = len(relevance_set) or 1
                     precision = relevant_retrieved / k
-                    recall = relevant_retrieved / relevance_size
+                    recall = len(matched_relevant) / relevance_size
                     f1 = (
                         2 * precision * recall / (precision + recall)
                         if (precision + recall) > 0
