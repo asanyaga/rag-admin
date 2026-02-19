@@ -4,7 +4,7 @@
 
 export type GoldenSetStatus = 'draft' | 'completed'
 export type GenerationStatus = 'pending' | 'generating' | 'completed' | 'failed'
-export type SourceMethod = 'manual' | 'auto_generated'
+export type SourceMethod = 'manual' | 'auto_generated' | 'imported'
 export type ReviewStatus = 'pending' | 'accepted' | 'rejected' | 'edited'
 export type QuestionType = 'factual' | 'comparison' | 'summarization'
 
@@ -102,4 +102,64 @@ export interface GenerateRequest {
 export interface BulkReviewRequest {
   action: 'accept' | 'reject'
   queryIds: string[]
+}
+
+// Import types
+
+export interface ImportParsedSource {
+  documentName: string
+  documentId: string | null
+  pages: number[]
+  resolved: boolean
+}
+
+export interface ImportValidQuery {
+  row: number
+  queryText: string
+  sources: ImportParsedSource[]
+  isDuplicate: boolean
+}
+
+export interface ImportParseError {
+  row: number
+  queryText: string
+  error: string
+}
+
+export interface ImportDuplicate {
+  row: number
+  queryText: string
+  existingQueryId: string | null
+}
+
+export interface ImportParseSummary {
+  totalRows: number
+  validCount: number
+  errorCount: number
+  duplicateCount: number
+}
+
+export interface ImportParseResponse {
+  validQueries: ImportValidQuery[]
+  errors: ImportParseError[]
+  duplicates: ImportDuplicate[]
+  summary: ImportParseSummary
+}
+
+export interface ImportConfirmSource {
+  documentId: string
+  locator: Record<string, unknown>
+}
+
+export interface ImportConfirmQuery {
+  queryText: string
+  sources: ImportConfirmSource[]
+}
+
+export interface ImportConfirmRequest {
+  queries: ImportConfirmQuery[]
+}
+
+export interface ImportConfirmResponse {
+  importedCount: number
 }

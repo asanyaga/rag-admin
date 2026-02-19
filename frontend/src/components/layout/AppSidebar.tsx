@@ -49,7 +49,7 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex h-14 items-center px-4">
           <h1 className="text-lg font-semibold text-primary">RAG Admin</h1>
@@ -70,7 +70,7 @@ export function AppSidebar() {
                     : location.pathname.startsWith(item.href)
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} className={cn(
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label} className={cn(
                       isActive && `border-l-[3px] ${item.activeColor}`,
                       !isActive && 'border-l-[3px] border-l-transparent'
                     )}>
@@ -92,7 +92,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="h-auto py-2">
+                <SidebarMenuButton className="h-auto py-2" tooltip={user?.fullName || user?.email || 'Account'}>
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
                       {getInitials(

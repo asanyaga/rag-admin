@@ -14,6 +14,9 @@ import type {
   GoldenSetSource,
   GenerateRequest,
   BulkReviewRequest,
+  ImportParseResponse,
+  ImportConfirmRequest,
+  ImportConfirmResponse,
 } from '@/types/golden-set'
 
 export async function listGoldenSets(projectId: string): Promise<GoldenSet[]> {
@@ -141,6 +144,33 @@ export async function bulkReviewQueries(
 ): Promise<{ updated: number }> {
   const response = await apiClient.post<{ updated: number }>(
     `/projects/${projectId}/golden-sets/${goldenSetId}/queries/bulk-review`,
+    data
+  )
+  return response.data
+}
+
+export async function parseImport(
+  projectId: string,
+  goldenSetId: string,
+  file: File
+): Promise<ImportParseResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await apiClient.post<ImportParseResponse>(
+    `/projects/${projectId}/golden-sets/${goldenSetId}/import/parse`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  )
+  return response.data
+}
+
+export async function confirmImport(
+  projectId: string,
+  goldenSetId: string,
+  data: ImportConfirmRequest
+): Promise<ImportConfirmResponse> {
+  const response = await apiClient.post<ImportConfirmResponse>(
+    `/projects/${projectId}/golden-sets/${goldenSetId}/import/confirm`,
     data
   )
   return response.data

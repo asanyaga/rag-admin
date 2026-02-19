@@ -29,6 +29,7 @@ class SourceMethod(str, enum.Enum):
     """How a query was created."""
     manual = "manual"
     auto_generated = "auto_generated"
+    imported = "imported"
 
 
 class ReviewStatus(str, enum.Enum):

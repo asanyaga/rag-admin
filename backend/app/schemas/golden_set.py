@@ -159,3 +159,95 @@ class BulkReviewRequest(BaseModel):
     query_ids: list[UUID] = Field(..., min_length=1, alias="queryIds")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+# ---------------------------------------------------------------------------
+# Import schemas
+# ---------------------------------------------------------------------------
+
+class ImportParsedSource(BaseModel):
+    """A source resolved during import parsing."""
+    document_name: str = Field(..., alias="documentName")
+    document_id: UUID | None = Field(None, alias="documentId")
+    pages: list[int] = Field(default_factory=list)
+    resolved: bool = False
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ImportValidQuery(BaseModel):
+    """A valid query from the parsed file."""
+    row: int
+    query_text: str = Field(..., alias="queryText")
+    sources: list[ImportParsedSource] = Field(default_factory=list)
+    is_duplicate: bool = Field(False, alias="isDuplicate")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ImportParseError(BaseModel):
+    """An error from parsing."""
+    row: int
+    query_text: str = Field("", alias="queryText")
+    error: str
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ImportDuplicate(BaseModel):
+    """A duplicate query detected during parsing."""
+    row: int
+    query_text: str = Field(..., alias="queryText")
+    existing_query_id: str | None = Field(None, alias="existingQueryId")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ImportParseSummary(BaseModel):
+    """Summary counts for the parse result."""
+    total_rows: int = Field(..., alias="totalRows")
+    valid_count: int = Field(..., alias="validCount")
+    error_count: int = Field(..., alias="errorCount")
+    duplicate_count: int = Field(..., alias="duplicateCount")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ImportParseResponse(BaseModel):
+    """Response from the parse/preview endpoint."""
+    valid_queries: list[ImportValidQuery] = Field(..., alias="validQueries")
+    errors: list[ImportParseError] = Field(default_factory=list)
+    duplicates: list[ImportDuplicate] = Field(default_factory=list)
+    summary: ImportParseSummary
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ImportConfirmSource(BaseModel):
+    """A source to create during import confirmation."""
+    document_id: UUID = Field(..., alias="documentId")
+    locator: dict = Field(default_factory=dict)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ImportConfirmQuery(BaseModel):
+    """A query to create during import confirmation."""
+    query_text: str = Field(..., min_length=1, alias="queryText")
+    sources: list[ImportConfirmSource] = Field(default_factory=list)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ImportConfirmRequest(BaseModel):
+    """Request to confirm and execute the import."""
+    queries: list[ImportConfirmQuery] = Field(..., min_length=1)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ImportConfirmResponse(BaseModel):
+    """Response from the confirm/import endpoint."""
+    imported_count: int = Field(..., alias="importedCount")
+
+    model_config = ConfigDict(populate_by_name=True)

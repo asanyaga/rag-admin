@@ -1,6 +1,6 @@
 """Golden Sets API router."""
 from uuid import UUID
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -22,9 +22,18 @@ from app.schemas.golden_set import (
     SourceResponse,
     GenerateGoldenSetRequest,
     BulkReviewRequest,
+    ImportParseResponse,
+    ImportValidQuery,
+    ImportParsedSource,
+    ImportParseError,
+    ImportDuplicate,
+    ImportParseSummary,
+    ImportConfirmRequest,
+    ImportConfirmResponse,
 )
 from app.services.golden_set_service import GoldenSetService
 from app.services.golden_set_generation_service import GoldenSetGenerationService
+from app.services.golden_set_import_service import GoldenSetImportService
 from app.services.exceptions import NotFoundError, ValidationError
 
 router = APIRouter(
@@ -228,6 +237,121 @@ async def bulk_review_queries(
         return {"updated": count}
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Import
+# ---------------------------------------------------------------------------
+
+@router.post("/{gs_id}/import/parse", response_model=ImportParseResponse)
+async def parse_import(
+    project_id: UUID,
+    gs_id: UUID,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    service: GoldenSetService = Depends(get_golden_set_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+    db: AsyncSession = Depends(get_db),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    # Verify golden set exists
+    try:
+        await service.get(gs_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    content = await file.read()
+    filename = file.filename or "unknown.csv"
+
+    import_service = GoldenSetImportService(db)
+    try:
+        result = await import_service.parse_file(content, filename, project_id, gs_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    return ImportParseResponse(
+        valid_queries=[
+            ImportValidQuery(
+                row=q.row,
+                query_text=q.query_text,
+                sources=[
+                    ImportParsedSource(
+                        document_name=s.document_name,
+                        document_id=s.document_id,
+                        pages=s.pages,
+                        resolved=s.resolved,
+                    )
+                    for s in q.sources
+                ],
+                is_duplicate=q.is_duplicate,
+            )
+            for q in result.valid_queries
+        ],
+        errors=[
+            ImportParseError(row=e.row, query_text=e.query_text, error=e.error)
+            for e in result.errors
+        ],
+        duplicates=[
+            ImportDuplicate(
+                row=d.row,
+                query_text=d.query_text,
+                existing_query_id=d.existing_query_id,
+            )
+            for d in result.duplicates
+        ],
+        summary=ImportParseSummary(
+            total_rows=result.total_rows,
+            valid_count=len(result.valid_queries),
+            error_count=len(result.errors),
+            duplicate_count=len(result.duplicates),
+        ),
+    )
+
+
+@router.post(
+    "/{gs_id}/import/confirm",
+    response_model=ImportConfirmResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def confirm_import(
+    project_id: UUID,
+    gs_id: UUID,
+    data: ImportConfirmRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: GoldenSetService = Depends(get_golden_set_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+    db: AsyncSession = Depends(get_db),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        await service.get(gs_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    import_service = GoldenSetImportService(db)
+    queries_data = [
+        {
+            "query_text": q.query_text,
+            "sources": [
+                {
+                    "document_id": s.document_id,
+                    "locator": s.locator,
+                }
+                for s in q.sources
+            ],
+        }
+        for q in data.queries
+    ]
+
+    try:
+        created = await import_service.import_queries(gs_id, queries_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Import failed: {str(e)}",
+        )
+
+    return ImportConfirmResponse(imported_count=len(created))
 
 
 # ---------------------------------------------------------------------------
