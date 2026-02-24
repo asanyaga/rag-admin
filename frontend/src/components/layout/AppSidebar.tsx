@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import ragadminLogo from '@/assets/ragadmin-logo.png'
 
 function getInitials(name?: string, email?: string): string {
   if (name) {
@@ -51,12 +52,17 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex h-14 items-center px-4">
-          <h1 className="text-lg font-semibold text-primary">RAG Admin</h1>
+        <div className="flex h-14 items-center gap-2 px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          <img
+            src={ragadminLogo}
+            alt="RAG Admin"
+            className="h-8 w-8 shrink-0"
+          />
+          <h1 className="text-lg font-semibold text-primary group-data-[collapsible=icon]:hidden">
+            RAG Admin
+          </h1>
         </div>
-        <div className="px-2 py-2">
-          <ProjectSwitcher />
-        </div>
+        <ProjectSwitcher />
       </SidebarHeader>
 
       <SidebarContent>
