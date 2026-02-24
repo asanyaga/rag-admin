@@ -1,15 +1,24 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
 import { useProject } from '@/contexts/ProjectContext'
 import { useEvalRunDetail } from '@/hooks/useEvalRuns'
 import { ScorePill } from '@/components/evaluation/ScorePill'
 import { ClaimBreakdown } from '@/components/evaluation/ClaimBreakdown'
 import { RetrievedChunksList } from '@/components/evaluation/RetrievedChunksList'
 import { ExpectedSourcesList } from '@/components/evaluation/ExpectedSourcesList'
+import { ChunkDetailPanel } from '@/components/shared/ChunkDetailPanel'
+import type { RetrievedChunk } from '@/types/eval-run'
 
 export default function EvalResultDetailPage() {
   const { runId, resultId } = useParams<{ runId: string; resultId: string }>()
@@ -18,6 +27,8 @@ export default function EvalResultDetailPage() {
   const projectId = currentProject?.id ?? null
 
   const { run, results, isLoading } = useEvalRunDetail(projectId, runId ?? null)
+
+  const [selectedChunk, setSelectedChunk] = useState<RetrievedChunk | null>(null)
 
   const currentIndex = useMemo(
     () => results.findIndex((r) => r.id === resultId),
@@ -188,7 +199,15 @@ export default function EvalResultDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <RetrievedChunksList chunks={result.retrievedChunks} />
+              <RetrievedChunksList
+                chunks={result.retrievedChunks}
+                selectedChunkId={selectedChunk?.chunkId}
+                onChunkClick={(chunk) =>
+                  setSelectedChunk(
+                    selectedChunk?.chunkId === chunk.chunkId ? null : chunk
+                  )
+                }
+              />
             </CardContent>
           </Card>
 
@@ -206,6 +225,64 @@ export default function EvalResultDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Chunk Detail Sheet */}
+      <Sheet
+        open={!!selectedChunk}
+        onOpenChange={(open) => {
+          if (!open) setSelectedChunk(null)
+        }}
+      >
+        <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              Chunk Detail
+              {selectedChunk && (
+                <Badge variant="outline" className="font-mono text-xs">
+                  Rank #{selectedChunk.rank}
+                </Badge>
+              )}
+            </SheetTitle>
+            <SheetDescription>
+              {selectedChunk?.documentName}
+            </SheetDescription>
+          </SheetHeader>
+
+          {selectedChunk && projectId && (
+            <div className="mt-4">
+              <ChunkDetailPanel
+                projectId={projectId}
+                indexId={run.indexId}
+                chunkId={selectedChunk.chunkId}
+                header={
+                  <div className="flex items-center gap-3 pb-3 border-b">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground">Score</span>
+                      <span className="text-sm font-mono font-medium">
+                        {(selectedChunk.score * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground">Relevant</span>
+                      {selectedChunk.isRelevant ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-400" />
+                      )}
+                    </div>
+                    {selectedChunk.page != null && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">Page</span>
+                        <span className="text-sm font-mono">{selectedChunk.page}</span>
+                      </div>
+                    )}
+                  </div>
+                }
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

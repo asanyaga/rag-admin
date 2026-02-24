@@ -31,7 +31,7 @@ class ChunkService:
             chunk_index=chunk.chunk_index,
             token_count=chunk.token_count,
             char_count=chunk.char_count,
-            metadata=chunk.metadata,
+            metadata=chunk.chunk_metadata or {},
             created_at=chunk.created_at,
             document_title=chunk.document.title if chunk.document else None,
             document_filename=(
