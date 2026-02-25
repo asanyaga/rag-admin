@@ -96,6 +96,7 @@ export interface EvalRunResult {
   claimBreakdown: ClaimItem[] | null
   judgeError: string | null
   generationError: string | null
+  traceData?: import('../types/trace').QueryTrace | null
 }
 
 // Progress tracking

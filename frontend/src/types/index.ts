@@ -218,6 +218,7 @@ export interface QueryResponse {
   totalResults: number
   searchType: SearchType
   executionTimeMs: number
+  trace?: import('./trace').QueryTrace
 }
 
 export interface ProviderInfo {

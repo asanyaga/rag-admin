@@ -150,6 +150,7 @@ class EvalRunRepository:
         claim_breakdown: list[dict] | None = None,
         judge_error: str | None = None,
         generation_error: str | None = None,
+        trace_data: dict | None = None,
     ) -> EvalRunResult:
         result = EvalRunResult(
             eval_run_id=eval_run_id,
@@ -164,6 +165,7 @@ class EvalRunRepository:
             claim_breakdown=claim_breakdown,
             judge_error=judge_error,
             generation_error=generation_error,
+            trace_data=trace_data,
         )
         self.session.add(result)
         await self.session.commit()

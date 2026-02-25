@@ -3,6 +3,7 @@
  */
 import { getAccessToken } from './client'
 import { RetrievalResult } from '@/types/index'
+import { QueryTrace } from '@/types/trace'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
@@ -37,6 +38,7 @@ export interface StreamAnswerCallbacks {
   onChunks: (chunks: RetrievalResult[]) => void
   onToken: (content: string) => void
   onDone: (metadata: AnswerDoneMetadata) => void
+  onTrace?: (trace: QueryTrace) => void
   onError: (error: { error: string; code: string }) => void
 }
 
@@ -87,12 +89,21 @@ export async function streamAnswer(
   indexId: string,
   params: PlaygroundAnswerRequest,
   callbacks: StreamAnswerCallbacks,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  options?: { trace?: boolean }
 ): Promise<void> {
   const token = getAccessToken()
 
-  const response = await fetch(
+  const url = new URL(
     `${API_BASE_URL}/projects/${projectId}/indexes/${indexId}/playground/answer`,
+    window.location.origin
+  )
+  if (options?.trace) {
+    url.searchParams.set('trace', 'true')
+  }
+
+  const response = await fetch(
+    url.toString(),
     {
       method: 'POST',
       headers: {
@@ -157,6 +168,9 @@ export async function streamAnswer(
             break
           case 'done':
             callbacks.onDone(JSON.parse(event.data))
+            break
+          case 'trace':
+            callbacks.onTrace?.(JSON.parse(event.data))
             break
           case 'error':
             callbacks.onError(JSON.parse(event.data))

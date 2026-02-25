@@ -7,6 +7,7 @@
  */
 import { useState, useCallback, useRef } from 'react'
 import { SearchType, RetrievalResult, QueryResponse } from '@/types/index'
+import { QueryTrace } from '@/types/trace'
 import { queryIndex } from '@/api/indexes'
 import {
   streamAnswer,
@@ -78,6 +79,9 @@ export interface UsePlaygroundReturn {
   highlightedChunk: number | null
   setHighlightedChunk: (n: number | null) => void
 
+  // Trace
+  trace: QueryTrace | null
+
   // Actions
   runSearch: () => Promise<void>
   handleStop: () => void
@@ -120,6 +124,9 @@ export function usePlayground(
   const [streamingPhase, setStreamingPhase] = useState<StreamingPhase>('idle')
   const [answerMetrics, setAnswerMetrics] = useState<AnswerMetrics | null>(null)
   const [highlightedChunk, setHighlightedChunk] = useState<number | null>(null)
+
+  // ─── Trace state ─────────────────────────────────────────────────────
+  const [trace, setTrace] = useState<QueryTrace | null>(null)
 
   // ─── UI state ───────────────────────────────────────────────────────────
   const [queryHistory, setQueryHistory] = useState<string[]>([])
@@ -170,6 +177,7 @@ export function usePlayground(
     setAnswer('')
     setAnswerMetrics(null)
     setHighlightedChunk(null)
+    setTrace(null)
 
     // Cancel any in-flight stream
     if (abortRef.current) {
@@ -192,9 +200,12 @@ export function usePlayground(
           topK,
           similarityThreshold: threshold,
           projectId,
-        })
+        }, { trace: true })
         setResults(response.results)
         setExecutionTimeMs(response.executionTimeMs)
+        if (response.trace) {
+          setTrace(response.trace)
+        }
         setStreamingPhase('done')
       } catch (err) {
         const message =
@@ -250,13 +261,17 @@ export function usePlayground(
               setStreamingPhase('done')
               setIsSearching(false)
             },
+            onTrace: (traceData: QueryTrace) => {
+              setTrace(traceData)
+            },
             onError: (err: { error: string; code: string }) => {
               setError(err.error)
               setStreamingPhase('done')
               setIsSearching(false)
             },
           },
-          controller.signal
+          controller.signal,
+          { trace: true }
         )
         // Stream may complete without a done event on abort
         setIsSearching(false)
@@ -340,6 +355,9 @@ export function usePlayground(
     answerMetrics,
     highlightedChunk,
     setHighlightedChunk,
+
+    // Trace
+    trace,
 
     // Actions
     runSearch,

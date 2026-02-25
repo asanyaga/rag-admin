@@ -160,6 +160,7 @@ class EvalRunResultResponse(BaseModel):
     claim_breakdown: list[ClaimItem] | None = Field(None, alias="claimBreakdown")
     judge_error: str | None = Field(None, alias="judgeError")
     generation_error: str | None = Field(None, alias="generationError")
+    trace_data: dict | None = Field(None, alias="traceData")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 

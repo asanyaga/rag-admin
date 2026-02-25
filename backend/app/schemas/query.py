@@ -1,4 +1,6 @@
 """Query request/response schemas for the playground search API."""
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
@@ -50,5 +52,6 @@ class QueryResponse(BaseModel):
     total_results: int = Field(alias="totalResults")
     search_type: str = Field(alias="searchType")
     execution_time_ms: float = Field(alias="executionTimeMs")
+    trace: dict | None = None
 
     model_config = {"populate_by_name": True}

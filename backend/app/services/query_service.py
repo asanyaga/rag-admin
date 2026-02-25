@@ -15,6 +15,7 @@ from app.schemas.query import (
 )
 from app.services.embedding_provider import EmbeddingProviderRegistry
 from app.services.exceptions import NotFoundError, ValidationError
+from app.services.trace_collector import TraceCollector
 from app.utils.encryption import decrypt
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class QueryService:
         project_id: UUID,
         user_id: UUID,
         request: QueryRequest,
+        collector: TraceCollector | None = None,
     ) -> QueryResponse:
         """Execute a search query against an index.
 
@@ -54,29 +56,47 @@ class QueryService:
 
         start = time.perf_counter()
 
+        # Record query input span
+        if collector:
+            with collector.span("query_input", "Query Input", input={
+                "query": request.query,
+                "search_type": request.search_type,
+                "top_k": request.top_k,
+                "similarity_threshold": request.similarity_threshold,
+            }) as s:
+                s.output = {"search_type": request.search_type}
+                s.metrics.top_k = request.top_k
+                s.metrics.similarity_threshold = request.similarity_threshold
+
         search_type = request.search_type
         if search_type == "semantic":
             results = await self._semantic_search(
-                index, user_id, project_id, request
+                index, user_id, project_id, request, collector
             )
         elif search_type == "keyword":
-            results = await self._keyword_search(index, request)
+            results = await self._keyword_search(index, request, collector)
         elif search_type == "hybrid":
             results = await self._hybrid_search(
-                index, user_id, project_id, request
+                index, user_id, project_id, request, collector
             )
         else:
             raise ValidationError(f"Unsupported search type: {search_type}")
 
         elapsed_ms = (time.perf_counter() - start) * 1000
 
-        return QueryResponse(
+        response = QueryResponse(
             query=request.query,
             results=results,
             total_results=len(results),
             search_type=search_type,
             execution_time_ms=round(elapsed_ms, 1),
         )
+
+        if collector:
+            trace = collector.build_trace()
+            response.trace = trace.model_dump(by_alias=True)
+
+        return response
 
     # ------------------------------------------------------------------
     # Private search methods
@@ -88,6 +108,7 @@ class QueryService:
         user_id: UUID,
         project_id: UUID,
         query_text: str,
+        collector: TraceCollector | None = None,
     ) -> list[float]:
         """Embed the query string using the index's configured provider/model."""
         provider_name = index_config.get("embedding_provider", "openai")
@@ -109,55 +130,119 @@ class QueryService:
         provider = EmbeddingProviderRegistry.get_provider(
             provider_name, api_key=api_key, model=model_name
         )
-        embeddings = await provider.embed_texts([query_text])
-        return embeddings[0]
+
+        if collector:
+            with collector.span("embedding", f"Embed Query ({model_name})", input={
+                "query": query_text,
+                "model": model_name,
+                "provider": provider_name,
+            }) as s:
+                embeddings = await provider.embed_texts([query_text])
+                result = embeddings[0]
+                s.output = {"dimensions": len(result)}
+                s.metrics.embedding_dimensions = len(result)
+                s.metrics.char_count = len(query_text)
+                s.metrics.model = model_name
+                s.metrics.provider = provider_name
+            return result
+        else:
+            embeddings = await provider.embed_texts([query_text])
+            return embeddings[0]
 
     async def _semantic_search(
-        self, index, user_id: UUID, project_id: UUID, request: QueryRequest
+        self, index, user_id: UUID, project_id: UUID, request: QueryRequest,
+        collector: TraceCollector | None = None,
     ) -> list[RetrievalResult]:
         embedding = await self._get_query_embedding(
-            index.config, user_id, project_id, request.query
+            index.config, user_id, project_id, request.query, collector
         )
-        scored_chunks = await self.chunk_repo.vector_search(
-            index_id=index.id,
-            query_embedding=embedding,
-            top_k=request.top_k,
-            similarity_threshold=request.similarity_threshold,
-        )
+
+        if collector:
+            with collector.span("vector_search", "Vector Search", input={
+                "top_k": request.top_k,
+                "similarity_threshold": request.similarity_threshold,
+            }) as s:
+                scored_chunks = await self.chunk_repo.vector_search(
+                    index_id=index.id,
+                    query_embedding=embedding,
+                    top_k=request.top_k,
+                    similarity_threshold=request.similarity_threshold,
+                )
+                s.metrics.result_count = len(scored_chunks)
+                s.metrics.top_k = request.top_k
+                s.metrics.similarity_threshold = request.similarity_threshold
+                s.output = {"result_count": len(scored_chunks)}
+        else:
+            scored_chunks = await self.chunk_repo.vector_search(
+                index_id=index.id,
+                query_embedding=embedding,
+                top_k=request.top_k,
+                similarity_threshold=request.similarity_threshold,
+            )
+
         return [
             self._to_result(chunk, score, rank)
             for rank, (chunk, score) in enumerate(scored_chunks, 1)
         ]
 
     async def _keyword_search(
-        self, index, request: QueryRequest
+        self, index, request: QueryRequest,
+        collector: TraceCollector | None = None,
     ) -> list[RetrievalResult]:
         # Fetch more than top_k so we can filter by threshold after normalizing
         raw_k = request.top_k * 3
-        scored_chunks = await self.chunk_repo.fulltext_search(
-            index_id=index.id,
-            query_text=request.query,
-            top_k=raw_k,
-        )
-        if not scored_chunks:
-            return []
 
-        # Normalize ts_rank scores to 0-1 range
-        max_score = max(s for _, s in scored_chunks)
-        if max_score > 0:
-            normalized = [
-                (chunk, score / max_score)
-                for chunk, score in scored_chunks
-            ]
+        if collector:
+            with collector.span("keyword_search", "Keyword Search", input={
+                "query": request.query,
+                "top_k": request.top_k,
+            }) as s:
+                scored_chunks = await self.chunk_repo.fulltext_search(
+                    index_id=index.id,
+                    query_text=request.query,
+                    top_k=raw_k,
+                )
+                if not scored_chunks:
+                    s.metrics.result_count = 0
+                    s.output = {"result_count": 0}
+                    return []
+
+                # Normalize ts_rank scores to 0-1 range
+                max_score = max(sc for _, sc in scored_chunks)
+                if max_score > 0:
+                    normalized = [(chunk, score / max_score) for chunk, score in scored_chunks]
+                else:
+                    normalized = [(chunk, 0.0) for chunk, _ in scored_chunks]
+
+                filtered = [
+                    (chunk, score)
+                    for chunk, score in normalized
+                    if score >= request.similarity_threshold
+                ][:request.top_k]
+
+                s.metrics.result_count = len(filtered)
+                s.metrics.top_k = request.top_k
+                s.output = {"result_count": len(filtered)}
         else:
-            normalized = [(chunk, 0.0) for chunk, _ in scored_chunks]
+            scored_chunks = await self.chunk_repo.fulltext_search(
+                index_id=index.id,
+                query_text=request.query,
+                top_k=raw_k,
+            )
+            if not scored_chunks:
+                return []
 
-        # Apply threshold and limit
-        filtered = [
-            (chunk, score)
-            for chunk, score in normalized
-            if score >= request.similarity_threshold
-        ][:request.top_k]
+            max_score = max(sc for _, sc in scored_chunks)
+            if max_score > 0:
+                normalized = [(chunk, score / max_score) for chunk, score in scored_chunks]
+            else:
+                normalized = [(chunk, 0.0) for chunk, _ in scored_chunks]
+
+            filtered = [
+                (chunk, score)
+                for chunk, score in normalized
+                if score >= request.similarity_threshold
+            ][:request.top_k]
 
         return [
             self._to_result(chunk, score, rank)
@@ -165,30 +250,96 @@ class QueryService:
         ]
 
     async def _hybrid_search(
-        self, index, user_id: UUID, project_id: UUID, request: QueryRequest
+        self, index, user_id: UUID, project_id: UUID, request: QueryRequest,
+        collector: TraceCollector | None = None,
     ) -> list[RetrievalResult]:
         """Hybrid search using Reciprocal Rank Fusion (RRF)."""
         pool_k = request.top_k * 3
 
         embedding = await self._get_query_embedding(
-            index.config, user_id, project_id, request.query
+            index.config, user_id, project_id, request.query, collector
         )
 
-        # Run sequentially — asyncpg doesn't support concurrent queries
-        # on a single connection.
-        vector_results = await self.chunk_repo.vector_search(
-            index_id=index.id,
-            query_embedding=embedding,
-            top_k=pool_k,
-            similarity_threshold=0.0,  # no threshold during fusion
-        )
-        keyword_results = await self.chunk_repo.fulltext_search(
-            index_id=index.id,
-            query_text=request.query,
-            top_k=pool_k,
-        )
+        if collector:
+            # Parent span for hybrid fusion
+            with collector.span("hybrid_fusion", "Hybrid Search (RRF)", input={
+                "top_k": request.top_k,
+                "pool_k": pool_k,
+            }) as parent_span:
+                # Vector child
+                with collector.span("vector_search", "Vector Search", input={
+                    "top_k": pool_k,
+                }, parent_id=parent_span.id) as vs:
+                    vector_results = await self.chunk_repo.vector_search(
+                        index_id=index.id,
+                        query_embedding=embedding,
+                        top_k=pool_k,
+                        similarity_threshold=0.0,
+                    )
+                    vs.metrics.result_count = len(vector_results)
+                    vs.output = {"result_count": len(vector_results)}
+                parent_span.children.append(vs)
 
-        # Build RRF scores (k=60 is standard)
+                # Keyword child
+                with collector.span("keyword_search", "Keyword Search", input={
+                    "query": request.query,
+                    "top_k": pool_k,
+                }, parent_id=parent_span.id) as ks:
+                    keyword_results = await self.chunk_repo.fulltext_search(
+                        index_id=index.id,
+                        query_text=request.query,
+                        top_k=pool_k,
+                    )
+                    ks.metrics.result_count = len(keyword_results)
+                    ks.output = {"result_count": len(keyword_results)}
+                parent_span.children.append(ks)
+
+                # RRF merge child
+                with collector.span("rrf_merge", "RRF Merge", input={
+                    "rrf_k": 60,
+                    "vector_count": len(vector_results),
+                    "keyword_count": len(keyword_results),
+                }, parent_id=parent_span.id) as rrf_span:
+                    results = self._rrf_merge(
+                        vector_results, keyword_results, request, pool_k
+                    )
+                    rrf_span.metrics.result_count = len(results)
+                    rrf_span.output = {"result_count": len(results)}
+                parent_span.children.append(rrf_span)
+
+                parent_span.metrics.result_count = len(results)
+                parent_span.output = {"result_count": len(results)}
+        else:
+            # Run sequentially — asyncpg doesn't support concurrent queries
+            # on a single connection.
+            vector_results = await self.chunk_repo.vector_search(
+                index_id=index.id,
+                query_embedding=embedding,
+                top_k=pool_k,
+                similarity_threshold=0.0,
+            )
+            keyword_results = await self.chunk_repo.fulltext_search(
+                index_id=index.id,
+                query_text=request.query,
+                top_k=pool_k,
+            )
+            results = self._rrf_merge(
+                vector_results, keyword_results, request, pool_k
+            )
+
+        return [
+            self._to_result(chunk, score, rank)
+            for rank, (chunk, score) in enumerate(results, 1)
+        ]
+
+    def _rrf_merge(
+        self,
+        vector_results: list,
+        keyword_results: list,
+        request: QueryRequest,
+        pool_k: int,
+    ) -> list[tuple]:
+        """Reciprocal Rank Fusion merge."""
         rrf_k = 60
         rrf_scores: dict[UUID, float] = {}
         vector_score_map: dict[UUID, float] = {}
@@ -210,8 +361,6 @@ class QueryService:
         # Sort by RRF score descending
         sorted_ids = sorted(rrf_scores, key=lambda cid: rrf_scores[cid], reverse=True)
 
-        # Use vector similarity as the display score (more intuitive for users)
-        # For chunks only found via keyword, use 0.0
         results = []
         for cid in sorted_ids:
             display_score = vector_score_map.get(cid, 0.0)
@@ -221,10 +370,7 @@ class QueryService:
             if len(results) >= request.top_k:
                 break
 
-        return [
-            self._to_result(chunk, score, rank)
-            for rank, (chunk, score) in enumerate(results, 1)
-        ]
+        return results
 
     # ------------------------------------------------------------------
     # Helpers

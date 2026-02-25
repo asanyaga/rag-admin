@@ -45,6 +45,7 @@ from app.services.index_processing_service import (
     process_index_background,
 )
 from app.services.answer_service import AnswerService
+from app.services.trace_collector import TraceCollector
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 from app.utils.encryption import decrypt
 
@@ -485,6 +486,7 @@ async def query_index(
     project_id: UUID,
     index_id: UUID,
     data: QueryRequest,
+    trace: bool = Query(False, description="Include query trace in response"),
     current_user: User = Depends(get_current_active_user),
     query_service: QueryService = Depends(get_query_service),
     project_repo: ProjectRepository = Depends(get_project_repo),
@@ -492,9 +494,13 @@ async def query_index(
     """Query an index with semantic, keyword, or hybrid search."""
     await verify_project_access(project_id, current_user, project_repo)
 
+    collector = None
+    if trace:
+        collector = TraceCollector(query=data.query, search_type=data.search_type)
+
     try:
         return await query_service.query_index(
-            index_id, project_id, current_user.id, data
+            index_id, project_id, current_user.id, data, collector
         )
     except NotFoundError as e:
         raise HTTPException(
@@ -521,6 +527,7 @@ async def playground_answer(
     project_id: UUID,
     index_id: UUID,
     data: PlaygroundAnswerRequest,
+    trace: bool = Query(False, description="Include query trace as SSE event"),
     current_user: User = Depends(get_current_active_user),
     answer_service: AnswerService = Depends(get_answer_service),
     project_repo: ProjectRepository = Depends(get_project_repo),
@@ -547,6 +554,13 @@ async def playground_answer(
 
     api_key = decrypt(key_record.api_key_encrypted)
 
+    collector = None
+    if trace:
+        collector = TraceCollector(
+            query=data.query,
+            search_type=data.retrieval_config.search_type,
+        )
+
     return StreamingResponse(
         answer_service.stream_answer(
             index_id=index_id,
@@ -554,6 +568,7 @@ async def playground_answer(
             user_id=current_user.id,
             request=data,
             api_key=api_key,
+            collector=collector,
         ),
         media_type="text/event-stream",
         headers={

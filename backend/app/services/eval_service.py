@@ -25,8 +25,9 @@ from app.schemas.eval_run import (
 )
 from app.schemas.query import QueryRequest
 from app.services.query_service import QueryService
-from app.services.judge_service import JudgeService
-from app.services.answer_generation_service import generate_answer
+from app.services.trace_collector import TraceCollector
+from app.services.judge_service import JudgeService, JUDGE_PROMPT_TEMPLATE
+from app.services.answer_generation_service import generate_answer, DEFAULT_SYSTEM_PROMPT
 from app.services.llm.types import LLMConfig
 from app.services.llm.port import LLMPort
 from app.services.exceptions import NotFoundError, ValidationError
@@ -141,6 +142,7 @@ class EvalService:
                 claim_breakdown=r.claim_breakdown,
                 judge_error=r.judge_error,
                 generation_error=r.generation_error,
+                trace_data=r.trace_data,
             )
             for r in results
         ]
@@ -326,7 +328,13 @@ class EvalService:
                 for page in locator.get("pages", []):
                     relevance_set.add((str(source.document_id), page))
 
-        # Query the index
+        # Create trace collector for this query
+        collector = TraceCollector(
+            query=query.query_text,
+            search_type=config.search_type,
+        )
+
+        # Query the index (with tracing)
         query_request = QueryRequest(
             query=query.query_text,
             search_type=config.search_type,
@@ -334,7 +342,8 @@ class EvalService:
             similarity_threshold=config.similarity_threshold,
         )
         response = await self.query_service.query_index(
-            run.index_id, run.project_id, run.created_by, query_request
+            run.index_id, run.project_id, run.created_by, query_request,
+            collector,
         )
 
         # Evaluate retrieved chunks
@@ -384,7 +393,18 @@ class EvalService:
         had_error = False
 
         if is_answer_mode and self._generation_adapter and self._judge_adapter:
-            # Generate answer
+            # Build the generation messages (mirrors answer_generation_service logic)
+            gen_sys_prompt = run.system_prompt or DEFAULT_SYSTEM_PROMPT
+            gen_context = "\n\n".join(
+                f"[{i + 1}] {chunk.get('content', '')}"
+                for i, chunk in enumerate(retrieved_chunks_info)
+            )
+            gen_messages = [
+                {"role": "system", "content": gen_sys_prompt},
+                {"role": "user", "content": f"Context:\n{gen_context}\n\nQuestion: {query.query_text}"},
+            ]
+
+            # Generate answer (with tracing)
             try:
                 gen_config = LLMConfig(
                     provider=run.generation_model_provider,
@@ -392,13 +412,25 @@ class EvalService:
                     temperature=0.0,
                     max_tokens=1024,
                 )
-                generated_answer = await generate_answer(
-                    question=query.query_text,
-                    chunks=retrieved_chunks_info,
-                    generation_adapter=self._generation_adapter,
-                    generation_config=gen_config,
-                    system_prompt=run.system_prompt,
-                )
+                with collector.span("llm_generation", f"Answer Generation ({gen_config.model})", input={
+                    "model": gen_config.model,
+                    "provider": gen_config.provider,
+                    "temperature": gen_config.temperature,
+                    "max_tokens": gen_config.max_tokens,
+                    "messages": gen_messages,
+                }) as gen_span:
+                    generated_answer = await generate_answer(
+                        question=query.query_text,
+                        chunks=retrieved_chunks_info,
+                        generation_adapter=self._generation_adapter,
+                        generation_config=gen_config,
+                        system_prompt=run.system_prompt,
+                    )
+                    gen_span.output = {
+                        "answer_length": len(generated_answer),
+                    }
+                    gen_span.metrics.model = gen_config.model
+                    gen_span.metrics.provider = gen_config.provider
             except Exception as e:
                 logger.warning(f"Generation failed for query {query.id}: {e}")
                 generation_error = str(e)
@@ -411,27 +443,54 @@ class EvalService:
                         provider=run.judge_model_provider,
                         model=run.judge_model_id,
                     )
-                    judge_result = await self.judge_service.evaluate(
+                    # Build the judge messages (mirrors judge_service logic)
+                    judge_prompt = JUDGE_PROMPT_TEMPLATE.format(
                         question=query.query_text,
-                        chunks=retrieved_chunks_info,
+                        context=gen_context,
                         answer=generated_answer,
-                        judge_adapter=self._judge_adapter,
-                        judge_config=judge_config,
                     )
-                    if judge_result.error:
-                        judge_error = judge_result.error
-                        had_error = True
-                    else:
-                        faithfulness_score = judge_result.faithfulness_score
-                        relevance_score = judge_result.relevance_score
-                        claim_breakdown = [
-                            {"text": c.text, "label": c.label, "source": c.source}
-                            for c in judge_result.claims
-                        ]
+                    judge_messages = [
+                        {"role": "user", "content": judge_prompt},
+                    ]
+                    with collector.span("llm_judge", f"Judge Evaluation ({judge_config.model})", input={
+                        "model": judge_config.model,
+                        "provider": judge_config.provider,
+                        "messages": judge_messages,
+                    }) as judge_span:
+                        judge_result = await self.judge_service.evaluate(
+                            question=query.query_text,
+                            chunks=retrieved_chunks_info,
+                            answer=generated_answer,
+                            judge_adapter=self._judge_adapter,
+                            judge_config=judge_config,
+                        )
+                        if judge_result.error:
+                            judge_error = judge_result.error
+                            had_error = True
+                            judge_span.status = "error"
+                            judge_span.error = judge_result.error
+                        else:
+                            faithfulness_score = judge_result.faithfulness_score
+                            relevance_score = judge_result.relevance_score
+                            claim_breakdown = [
+                                {"text": c.text, "label": c.label, "source": c.source}
+                                for c in judge_result.claims
+                            ]
+                            judge_span.output = {
+                                "faithfulness_score": faithfulness_score,
+                                "relevance_score": relevance_score,
+                                "claim_count": len(claim_breakdown),
+                            }
+                        judge_span.metrics.model = judge_config.model
+                        judge_span.metrics.provider = judge_config.provider
                 except Exception as e:
                     logger.warning(f"Judge failed for query {query.id}: {e}")
                     judge_error = str(e)
                     had_error = True
+
+        # Build and serialize the trace
+        trace = collector.build_trace()
+        trace_data = trace.model_dump(by_alias=True)
 
         await self.eval_repo.create_result(
             eval_run_id=run_id,
@@ -446,6 +505,7 @@ class EvalService:
             claim_breakdown=claim_breakdown,
             judge_error=judge_error,
             generation_error=generation_error,
+            trace_data=trace_data,
         )
 
         return {

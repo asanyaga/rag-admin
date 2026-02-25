@@ -9,6 +9,7 @@ import { GenerationParameters } from './GenerationParameters'
 import { QueryHistory } from './QueryHistory'
 import { ResultsPanel } from './ResultsPanel'
 import { AnswerPanel } from './AnswerPanel'
+import { QueryTracePanel } from './QueryTracePanel'
 import { cn } from '@/lib/utils'
 import { Search, Sparkles, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -65,6 +66,7 @@ export function PlaygroundPanel({
     answerMetrics,
     highlightedChunk,
     handleCitationClick,
+    trace,
   } = playground
 
   const isReady = indexStatus === 'ready'
@@ -265,6 +267,9 @@ export function PlaygroundPanel({
             onRetry={runSearch}
           />
         )}
+
+        {/* Query Trace */}
+        {trace && <QueryTracePanel trace={trace} />}
       </div>
     </div>
   )

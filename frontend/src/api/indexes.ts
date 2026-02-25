@@ -202,7 +202,8 @@ export async function getChunk(
 export async function queryIndex(
   projectId: string,
   indexId: string,
-  params: QueryRequest
+  params: QueryRequest,
+  options?: { trace?: boolean }
 ): Promise<QueryResponse> {
   const response = await apiClient.post<QueryResponse>(
     `/projects/${projectId}/indexes/${indexId}/query`,
@@ -211,6 +212,9 @@ export async function queryIndex(
       searchType: params.searchType,
       topK: params.topK,
       similarityThreshold: params.similarityThreshold,
+    },
+    {
+      params: options?.trace ? { trace: true } : undefined,
     }
   )
   return response.data

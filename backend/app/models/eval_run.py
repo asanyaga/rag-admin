@@ -153,6 +153,9 @@ class EvalRunResult(Base):
     judge_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     generation_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Query trace data
+    trace_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -18,6 +18,7 @@ import { ClaimBreakdown } from '@/components/evaluation/ClaimBreakdown'
 import { RetrievedChunksList } from '@/components/evaluation/RetrievedChunksList'
 import { ExpectedSourcesList } from '@/components/evaluation/ExpectedSourcesList'
 import { ChunkDetailPanel } from '@/components/shared/ChunkDetailPanel'
+import { QueryTracePanel } from '@/components/indexes/QueryTracePanel'
 import type { RetrievedChunk } from '@/types/eval-run'
 
 export default function EvalResultDetailPage() {
@@ -183,6 +184,11 @@ export default function EvalResultDetailPage() {
                 <ClaimBreakdown claims={result.claimBreakdown} />
               </CardContent>
             </Card>
+          )}
+
+          {/* Query Trace */}
+          {result.traceData && (
+            <QueryTracePanel trace={result.traceData} />
           )}
         </div>
 
