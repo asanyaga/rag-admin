@@ -78,6 +78,14 @@ class EvalRun(Base):
         Integer, nullable=False, default=0, server_default="0"
     )
 
+    # Experiment fields
+    experiment_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("experiments.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    variant_label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id"),
@@ -102,6 +110,10 @@ class EvalRun(Base):
     golden_set: Mapped["GoldenSet"] = relationship()
     index: Mapped["Index"] = relationship()
     user: Mapped["User"] = relationship()
+    experiment: Mapped["Experiment"] = relationship(
+        back_populates="runs",
+        foreign_keys=[experiment_id],
+    )
     results: Mapped[list["EvalRunResult"]] = relationship(
         back_populates="eval_run",
         cascade="all, delete-orphan"
@@ -112,6 +124,7 @@ class EvalRun(Base):
         sa.Index('ix_eval_runs_golden_set_id', 'golden_set_id'),
         sa.Index('ix_eval_runs_index_id', 'index_id'),
         sa.Index('ix_eval_runs_created_at', 'created_at'),
+        sa.Index('ix_eval_runs_experiment_id', 'experiment_id'),
     )
 
 

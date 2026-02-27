@@ -78,6 +78,8 @@ class EvalService:
             judge_model_provider=data.judge_model.provider if data.judge_model else None,
             judge_model_id=data.judge_model.model_id if data.judge_model else None,
             system_prompt=data.system_prompt,
+            experiment_id=data.experiment_id,
+            variant_label=data.variant_label,
         )
         # Reload with relationships
         run = await self.eval_repo.get_by_id(run.id, project_id)
@@ -97,6 +99,31 @@ class EvalService:
         deleted = await self.eval_repo.delete(run_id, project_id)
         if not deleted:
             raise NotFoundError(f"Eval run {run_id} not found")
+
+    async def get_run_config(self, run_id: UUID, project_id: UUID) -> dict:
+        """Return the full config of a run for the clone feature."""
+        run = await self.eval_repo.get_by_id(run_id, project_id)
+        if not run:
+            raise NotFoundError(f"Eval run {run_id} not found")
+
+        return {
+            "goldenSetId": str(run.golden_set_id),
+            "indexId": str(run.index_id),
+            "name": run.name,
+            "config": run.config,
+            "mode": run.mode,
+            "generationModel": {
+                "provider": run.generation_model_provider,
+                "modelId": run.generation_model_id,
+            } if run.generation_model_provider else None,
+            "judgeModel": {
+                "provider": run.judge_model_provider,
+                "modelId": run.judge_model_id,
+            } if run.judge_model_provider else None,
+            "systemPrompt": run.system_prompt,
+            "experimentId": str(run.experiment_id) if run.experiment_id else None,
+            "variantLabel": run.variant_label,
+        }
 
     async def get_results(
         self, run_id: UUID, project_id: UUID, filter_type: str | None = None
@@ -626,6 +653,10 @@ class EvalService:
                 model_id=run.judge_model_id,
             )
 
+        exp_name = None
+        if hasattr(run, 'experiment') and run.experiment:
+            exp_name = run.experiment.name
+
         return EvalRunResponse(
             id=run.id,
             name=run.name,
@@ -644,4 +675,7 @@ class EvalService:
             judge_model=judge_model,
             items_completed=run.items_completed,
             failed_item_count=run.failed_item_count,
+            experiment_id=run.experiment_id,
+            experiment_name=exp_name,
+            variant_label=run.variant_label,
         )

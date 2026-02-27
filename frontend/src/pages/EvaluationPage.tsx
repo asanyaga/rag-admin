@@ -2,8 +2,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useProject } from '@/contexts/ProjectContext'
 import { useEvalRuns } from '@/hooks/useEvalRuns'
 import { useGoldenSets } from '@/hooks/useGoldenSets'
+import { useExperiments } from '@/hooks/useExperiments'
 import { EvalRunsTab } from '@/components/evaluation/EvalRunsTab'
 import { GoldenSetsTab } from '@/components/evaluation/GoldenSetsTab'
+import { ExperimentsTab } from '@/components/evaluation/ExperimentsTab'
 
 export default function EvaluationPage() {
   const { currentProject } = useProject()
@@ -14,6 +16,13 @@ export default function EvaluationPage() {
     isLoading: runsLoading,
     deleteRun,
   } = useEvalRuns(projectId)
+
+  const {
+    experiments,
+    isLoading: experimentsLoading,
+    createExperiment,
+    deleteExperiment,
+  } = useExperiments(projectId)
 
   const {
     goldenSets,
@@ -42,6 +51,7 @@ export default function EvaluationPage() {
       <Tabs defaultValue="runs">
         <TabsList>
           <TabsTrigger value="runs">Runs</TabsTrigger>
+          <TabsTrigger value="experiments">Experiments</TabsTrigger>
           <TabsTrigger value="golden-sets">Golden Sets</TabsTrigger>
         </TabsList>
         <TabsContent value="runs" className="mt-4">
@@ -49,6 +59,14 @@ export default function EvaluationPage() {
             runs={runs}
             isLoading={runsLoading}
             onDelete={deleteRun}
+          />
+        </TabsContent>
+        <TabsContent value="experiments" className="mt-4">
+          <ExperimentsTab
+            experiments={experiments}
+            isLoading={experimentsLoading}
+            onCreate={createExperiment}
+            onDelete={deleteExperiment}
           />
         </TabsContent>
         <TabsContent value="golden-sets" className="mt-4">

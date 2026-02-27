@@ -258,6 +258,22 @@ async def delete_eval_run(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+@router.get("/{run_id}/config")
+async def get_eval_run_config(
+    project_id: UUID,
+    run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: EvalService = Depends(get_eval_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    """Return the full config of a run for the clone/variant feature."""
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.get_run_config(run_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
 @router.get("/{run_id}/results", response_model=list[EvalRunResultResponse])
 async def get_eval_run_results(
     project_id: UUID,

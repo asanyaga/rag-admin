@@ -76,6 +76,16 @@ export async function fetchLlmModels(): Promise<LlmModelOption[]> {
   return response.data.models
 }
 
+export async function getEvalRunConfig(
+  projectId: string,
+  runId: string
+): Promise<Record<string, unknown>> {
+  const response = await apiClient.get<Record<string, unknown>>(
+    `/projects/${projectId}/eval-runs/${runId}/config`
+  )
+  return response.data
+}
+
 export async function compareRuns(
   projectId: string,
   runId1: string,

@@ -29,6 +29,8 @@ class EvalRunRepository:
         judge_model_provider: str | None = None,
         judge_model_id: str | None = None,
         system_prompt: str | None = None,
+        experiment_id: UUID | None = None,
+        variant_label: str | None = None,
     ) -> EvalRun:
         run = EvalRun(
             project_id=project_id,
@@ -43,6 +45,8 @@ class EvalRunRepository:
             judge_model_provider=judge_model_provider,
             judge_model_id=judge_model_id,
             system_prompt=system_prompt,
+            experiment_id=experiment_id,
+            variant_label=variant_label,
         )
         self.session.add(run)
         await self.session.commit()
@@ -55,6 +59,7 @@ class EvalRunRepository:
             .options(
                 selectinload(EvalRun.golden_set),
                 selectinload(EvalRun.index),
+                selectinload(EvalRun.experiment),
             )
             .where(
                 EvalRun.id == run_id,
@@ -69,6 +74,7 @@ class EvalRunRepository:
             .options(
                 selectinload(EvalRun.golden_set),
                 selectinload(EvalRun.index),
+                selectinload(EvalRun.experiment),
             )
             .where(EvalRun.project_id == project_id)
             .order_by(EvalRun.created_at.desc())

@@ -44,6 +44,9 @@ export interface EvalRun {
   judgeModel: ModelConfig | null
   itemsCompleted: number
   failedItemCount: number
+  experimentId?: string
+  experimentName?: string
+  variantLabel?: string
 }
 
 export interface CreateEvalRunRequest {
@@ -55,6 +58,8 @@ export interface CreateEvalRunRequest {
   generationModel?: ModelConfig
   judgeModel?: ModelConfig
   systemPrompt?: string
+  experimentId?: string
+  variantLabel?: string
 }
 
 // Per-query results

@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Play, Search, MessageSquare, AlertTriangle } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Play, Search, MessageSquare, AlertTriangle, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -21,6 +21,7 @@ import { useProject } from '@/contexts/ProjectContext'
 import { useGoldenSets } from '@/hooks/useGoldenSets'
 import { useEvalRuns, useLlmModels } from '@/hooks/useEvalRuns'
 import { useIndexes } from '@/hooks/useIndexes'
+import { getEvalRunConfig } from '@/api/eval-runs'
 import type { EvalRunConfig, EvalMode } from '@/types/eval-run'
 
 const DEFAULT_SYSTEM_PROMPT =
@@ -28,8 +29,12 @@ const DEFAULT_SYSTEM_PROMPT =
 
 export default function NewEvalRunPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { currentProject } = useProject()
   const projectId = currentProject?.id ?? null
+
+  const cloneRunId = searchParams.get('clone')
+  const experimentId = searchParams.get('experiment')
 
   const { goldenSets } = useGoldenSets(projectId)
   const { indexes } = useIndexes(projectId)
@@ -39,6 +44,7 @@ export default function NewEvalRunPage() {
   const [goldenSetId, setGoldenSetId] = useState('')
   const [indexId, setIndexId] = useState('')
   const [name, setName] = useState('')
+  const [variantLabel, setVariantLabel] = useState('')
   const [searchType, setSearchType] = useState<EvalRunConfig['searchType']>('semantic')
   const [topK, setTopK] = useState(5)
   const [similarityThreshold, setSimilarityThreshold] = useState(0)
@@ -47,6 +53,49 @@ export default function NewEvalRunPage() {
   const [judgeModel, setJudgeModel] = useState('')
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [cloneSourceName, setCloneSourceName] = useState<string | null>(null)
+
+  // Clone: fetch source run config and pre-fill
+  useEffect(() => {
+    if (!cloneRunId || !projectId) return
+    let cancelled = false
+
+    const loadConfig = async () => {
+      try {
+        const config = await getEvalRunConfig(projectId, cloneRunId)
+        if (cancelled) return
+
+        if (config.goldenSetId) setGoldenSetId(config.goldenSetId as string)
+        if (config.indexId) setIndexId(config.indexId as string)
+        if (config.name) setCloneSourceName(config.name as string)
+        if (config.mode) setMode(config.mode as EvalMode)
+
+        const runConfig = config.config as Record<string, unknown> | undefined
+        if (runConfig) {
+          if (runConfig.searchType) setSearchType(runConfig.searchType as EvalRunConfig['searchType'])
+          if (runConfig.topK) setTopK(runConfig.topK as number)
+          if (runConfig.similarityThreshold != null) setSimilarityThreshold(runConfig.similarityThreshold as number)
+        }
+
+        const genModel = config.generationModel as Record<string, string> | null
+        if (genModel?.provider && genModel?.modelId) {
+          setGenerationModel(`${genModel.provider}:${genModel.modelId}`)
+        }
+        const jModel = config.judgeModel as Record<string, string> | null
+        if (jModel?.provider && jModel?.modelId) {
+          setJudgeModel(`${jModel.provider}:${jModel.modelId}`)
+        }
+        if (config.systemPrompt) {
+          setSystemPrompt(config.systemPrompt as string)
+        }
+      } catch {
+        // ignore clone errors — user can fill manually
+      }
+    }
+
+    loadConfig()
+    return () => { cancelled = true }
+  }, [cloneRunId, projectId])
 
   const readyIndexes = indexes.filter((i) => i.status === 'ready')
 
@@ -99,6 +148,8 @@ export default function NewEvalRunPage() {
           mode === 'retrieval_and_answer'
             ? systemPrompt || undefined
             : undefined,
+        experimentId: experimentId || undefined,
+        variantLabel: variantLabel.trim() || undefined,
       })
       navigate(`/evaluation/runs/${run.id}`)
     } catch {
@@ -112,12 +163,29 @@ export default function NewEvalRunPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate('/evaluation')}
+          onClick={() =>
+            experimentId
+              ? navigate(`/evaluation/experiments/${experimentId}`)
+              : navigate('/evaluation')
+          }
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold">New Evaluation Run</h1>
+        <h1 className="text-2xl font-bold">
+          {cloneRunId ? 'New Variant' : 'New Evaluation Run'}
+        </h1>
       </div>
+
+      {/* Clone banner */}
+      {cloneSourceName && (
+        <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 text-sm dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+          <Copy className="h-4 w-4 shrink-0" />
+          <span>
+            Creating variant based on <strong>{cloneSourceName}</strong>.
+            Change the variable you want to test.
+          </span>
+        </div>
+      )}
 
       {/* Mode Selector */}
       <div className="space-y-2">
@@ -245,17 +313,27 @@ export default function NewEvalRunPage() {
           </CardContent>
         </Card>
 
-        {/* Run Name */}
+        {/* Run Name + Variant Label */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Run Name</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Optional — auto-generated if empty"
             />
+            {experimentId && (
+              <div className="space-y-1">
+                <Label className="text-xs">Variant Label</Label>
+                <Input
+                  value={variantLabel}
+                  onChange={(e) => setVariantLabel(e.target.value)}
+                  placeholder="e.g. topK=10, hybrid search"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -359,7 +437,14 @@ export default function NewEvalRunPage() {
           <Play className="mr-2 h-4 w-4" />
           {isSubmitting ? 'Starting...' : 'Run Evaluation'}
         </Button>
-        <Button variant="outline" onClick={() => navigate('/evaluation')}>
+        <Button
+          variant="outline"
+          onClick={() =>
+            experimentId
+              ? navigate(`/evaluation/experiments/${experimentId}`)
+              : navigate('/evaluation')
+          }
+        >
           Cancel
         </Button>
       </div>

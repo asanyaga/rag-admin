@@ -22,6 +22,7 @@ import NewEvalRunPage from './pages/NewEvalRunPage'
 import EvalRunDetailPage from './pages/EvalRunDetailPage'
 import EvalResultDetailPage from './pages/EvalResultDetailPage'
 import RunComparisonPage from './pages/RunComparisonPage'
+import ExperimentDetailPage from './pages/ExperimentDetailPage'
 
 const router = createBrowserRouter([
   {
@@ -96,6 +97,11 @@ const router = createBrowserRouter([
             path: 'evaluation/golden-sets/:goldenSetId/generate',
             element: <GoldenSetGeneratePage />,
             handle: { breadcrumb: 'Auto-Generate' },
+          },
+          {
+            path: 'evaluation/experiments/:experimentId',
+            element: <ExperimentDetailPage />,
+            handle: { breadcrumb: 'Experiment Detail' },
           },
           {
             path: 'evaluation/runs/new',

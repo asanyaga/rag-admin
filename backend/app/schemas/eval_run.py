@@ -40,6 +40,8 @@ class EvalRunCreate(BaseModel):
     generation_model: ModelConfig | None = Field(None, alias="generationModel")
     judge_model: ModelConfig | None = Field(None, alias="judgeModel")
     system_prompt: str | None = Field(None, alias="systemPrompt")
+    experiment_id: UUID | None = Field(None, alias="experimentId")
+    variant_label: str | None = Field(None, alias="variantLabel", max_length=255)
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -90,6 +92,9 @@ class EvalRunResponse(BaseModel):
     judge_model: ModelConfig | None = Field(None, alias="judgeModel")
     items_completed: int = Field(0, alias="itemsCompleted")
     failed_item_count: int = Field(0, alias="failedItemCount")
+    experiment_id: UUID | None = Field(None, alias="experimentId")
+    experiment_name: str | None = Field(None, alias="experimentName")
+    variant_label: str | None = Field(None, alias="variantLabel")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 

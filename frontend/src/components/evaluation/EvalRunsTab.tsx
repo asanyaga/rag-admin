@@ -110,6 +110,7 @@ export function EvalRunsTab({ runs, isLoading, onDelete }: EvalRunsTabProps) {
             <TableRow>
               <TableHead className="w-10" />
               <TableHead>Name</TableHead>
+              <TableHead>Experiment</TableHead>
               <TableHead>Mode</TableHead>
               <TableHead>Index</TableHead>
               <TableHead className="text-right">P@k</TableHead>
@@ -141,6 +142,20 @@ export function EvalRunsTab({ runs, isLoading, onDelete }: EvalRunsTabProps) {
                       {new Date(run.createdAt).toLocaleDateString()}
                     </p>
                   </div>
+                </TableCell>
+                <TableCell className="text-sm" onClick={(e) => {
+                  if (run.experimentId) {
+                    e.stopPropagation()
+                    navigate(`/evaluation/experiments/${run.experimentId}`)
+                  }
+                }}>
+                  {run.experimentName ? (
+                    <span className="text-primary hover:underline cursor-pointer">
+                      {run.experimentName}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <ModeBadge mode={run.mode} />

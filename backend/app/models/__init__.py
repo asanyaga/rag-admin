@@ -12,6 +12,7 @@ from app.models.golden_set import (
     GoldenSetQuery, GoldenSetSource,
 )
 from app.models.eval_run import EvalRun, EvalRunStatus, EvalRunResult
+from app.models.experiment import Experiment, ExperimentStatus
 
 __all__ = [
     "User",
@@ -38,4 +39,6 @@ __all__ = [
     "EvalRun",
     "EvalRunStatus",
     "EvalRunResult",
+    "Experiment",
+    "ExperimentStatus",
 ]
