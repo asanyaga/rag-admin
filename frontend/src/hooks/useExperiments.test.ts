@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useExperiments, useExperimentDetail } from './useExperiments'
 import { buildExperiment, buildExperimentDetail, buildEvalRun } from '@/test/builders'
-import type { Experiment, ExperimentDetail } from '@/types/experiment'
+import type { Experiment } from '@/types/experiment'
 
 // Mock the API module
 vi.mock('@/api/experiments', () => ({

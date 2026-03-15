@@ -7,7 +7,7 @@ Create Date: 2026-02-27 00:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ENUM, UUID
 
 
 # revision identifiers, used by Alembic.
@@ -18,11 +18,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create experiment_status enum
-    experiment_status = sa.Enum('active', 'concluded', name='experiment_status', create_type=False)
-    experiment_status.create(op.get_bind(), checkfirst=True)
+    # Create experiment_status enum via raw SQL to avoid async/checkfirst issues
+    op.execute(sa.text(
+        "DO $$ BEGIN "
+        "CREATE TYPE experiment_status AS ENUM ('active', 'concluded'); "
+        "EXCEPTION WHEN duplicate_object THEN NULL; "
+        "END $$"
+    ))
 
     # Create experiments table
+    experiment_status = ENUM('active', 'concluded', name='experiment_status', create_type=False)
     op.create_table(
         'experiments',
         sa.Column('id', UUID(as_uuid=True), server_default=sa.text('gen_random_uuid()'), nullable=False),
@@ -61,4 +66,4 @@ def downgrade() -> None:
     op.drop_column('eval_runs', 'experiment_id')
     op.drop_index('ix_experiments_project_id', table_name='experiments')
     op.drop_table('experiments')
-    sa.Enum(name='experiment_status').drop(op.get_bind(), checkfirst=True)
+    op.execute(sa.text("DROP TYPE IF EXISTS experiment_status"))
