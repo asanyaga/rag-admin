@@ -1,4 +1,5 @@
 """Documents API router."""
+import json
 from uuid import UUID
 from fastapi import (
     APIRouter,
@@ -20,13 +21,16 @@ from app.models import User, DocumentStatus
 from app.ports import StorageService, DocumentExtractor
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.project_repository import ProjectRepository
+from app.repositories.parse_result_repository import ParseResultRepository
 from app.schemas.document import (
     DocumentResponse,
     DocumentListResponse,
     DocumentUpdate,
 )
 from app.services.document_service import DocumentService, process_document_extraction
+from app.services.parse_service import ParseService, process_document_parsing
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
+from app.adapters.parsing.registry import get_parser
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -60,6 +64,8 @@ async def upload_document(
     project_id: UUID = Form(..., description="Project ID to associate document with"),
     title: str = Form(..., description="Document title"),
     description: str | None = Form(None, description="Optional document description"),
+    parser_type: str = Form("simple", description="Parser type: simple or llamaparse"),
+    parse_config: str | None = Form(None, description="JSON parser config (for llamaparse)"),
     file: UploadFile = ...,
     current_user: User = Depends(get_current_active_user),
     document_service: DocumentService = Depends(get_document_service),
@@ -69,6 +75,14 @@ async def upload_document(
 ):
     """Upload a document and initiate background processing."""
     try:
+        # Parse config JSON if provided
+        config_dict = None
+        if parse_config:
+            try:
+                config_dict = json.loads(parse_config)
+            except json.JSONDecodeError:
+                raise ValidationError("Invalid JSON in parse_config")
+
         # Initiate upload (synchronous: validate, save, create record)
         file_content = await file.read()
         filename = file.filename or "upload.pdf"
@@ -81,15 +95,40 @@ async def upload_document(
             description=description,
         )
 
-        # Schedule background text extraction
-        document_repo = DocumentRepository(db)
-        background_tasks.add_task(
-            process_document_extraction,
-            document_id=document.id,
-            document_repo=document_repo,
-            storage_service=storage_service,
-            document_extractor=document_extractor,
-        )
+        if parser_type != "simple":
+            # Intelligent parser flow: create parse_result, schedule parsing
+            parser = get_parser(parser_type)
+            if parser is None:
+                raise ValidationError(f"Unknown parser type: {parser_type}")
+
+            parse_result_repo = ParseResultRepository(db)
+            document_repo = DocumentRepository(db)
+            parse_service = ParseService(parse_result_repo, document_repo)
+            parse_result = await parse_service.create_parse_result(
+                document_id=document.id,
+                user_id=current_user.id,
+                parser_type=parser_type,
+                parser_config=config_dict,
+            )
+
+            background_tasks.add_task(
+                process_document_parsing,
+                parse_result_id=parse_result.id,
+                parse_result_repo=parse_result_repo,
+                document_repo=document_repo,
+                storage_service=storage_service,
+                parser=parser,
+            )
+        else:
+            # Simple flow: existing extractor
+            document_repo = DocumentRepository(db)
+            background_tasks.add_task(
+                process_document_extraction,
+                document_id=document.id,
+                document_repo=document_repo,
+                storage_service=storage_service,
+                document_extractor=document_extractor,
+            )
 
         return document
 

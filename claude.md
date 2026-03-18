@@ -1,12 +1,12 @@
 # RAG Admin
 
-Web application for creating and managing RAG pipelines. Learning/portfolio project—prioritize clean architecture and readability.
+Web application for creating and managing RAG pipelines for AI Agents. Prioritize clean architecture and readability.
 
 ## Stack
 
 - **Backend:** Python 3.12, FastAPI (async), SQLAlchemy 2.0, Paradedb, Alembic,Otel, Signoz
 - **Frontend:** React 18, TypeScript, Vite
-- **Auth:** JWT + HTTP-only refresh tokens, Google OAuth
+- **Auth:** JWT + HTTP-only refresh tokens
 
 ## Structure
 
@@ -55,13 +55,9 @@ cd frontend && npm run lint  # Run ESLint checks
 ### Component Library
 - **shadcn/ui** with Tailwind CSS
 
-## Current Focus
-
-Project scaffold → Authentication implementation
 
 ## Working with Me
 
-- **Learning preference:** Explain *why* (reasoning, patterns, trade-offs) not basic concepts
-- **Session tracking:** Use `/tasks` for work items + `docs/session-log.md` for context
-- **Before implementing:** Read relevant PRD in `docs/planning/`, plan first
-- **End of session:** Ask for "Session wrap-up" to capture learning and update docs
+- **Planning preference:** Explain *why* (reasoning, patterns, trade-offs) not basic concepts
+- **Before implementing:** Read relevant spec in `docs/planning/`, plan first
+

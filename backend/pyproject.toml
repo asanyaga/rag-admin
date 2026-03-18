@@ -40,6 +40,7 @@ dependencies = [
     # -------------------------------------------------------------------------
     "llama-index>=0.10.0", # Core LlamaIndex for document parsing
     "llama-index-readers-file>=0.1.0", # File readers for various formats
+    "llama-cloud>=1.0.0", # LlamaParse v2 SDK for intelligent document parsing
     "aiofiles>=23.2.0", # Async file operations
     "python-magic>=0.4.27", # MIME type detection from content
     # -------------------------------------------------------------------------

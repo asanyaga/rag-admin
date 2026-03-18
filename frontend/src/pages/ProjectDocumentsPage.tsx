@@ -10,8 +10,13 @@ import { DocumentsTable } from '@/components/documents/DocumentsTable'
 import { DocumentTextViewer } from '@/components/documents/DocumentTextViewer'
 import { DocumentEditDialog } from '@/components/documents/DocumentEditDialog'
 import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialog'
+import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
+import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
+import { useParseResults } from '@/hooks/useParseResults'
+import type { ParseConfig } from '@/types/parsing'
 
 export default function ProjectDocumentsPage(): JSX.Element {
   const { projectId } = useParams<{ projectId: string }>()
@@ -31,6 +36,9 @@ export default function ProjectDocumentsPage(): JSX.Element {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<DocumentListItem | null>(null)
+  const [reparseDialogOpen, setReparseDialogOpen] = useState(false)
+
+  const { parseResults, reparseDocument } = useParseResults(viewDocumentId)
 
   if (!projectId) {
     return (
@@ -42,16 +50,26 @@ export default function ProjectDocumentsPage(): JSX.Element {
     )
   }
 
-  const handleUpload = async (file: File, title: string, description?: string) => {
+  const handleUpload = async (
+    file: File,
+    title: string,
+    description?: string,
+    parserType?: string,
+    parseConfig?: ParseConfig,
+  ) => {
     try {
       await uploadDocument({
         projectId,
         title,
         description,
         file,
+        parserType,
+        parseConfig,
       })
       toast.success('Document uploaded successfully', {
-        description: 'Text extraction is in progress',
+        description: parserType === 'llamaparse'
+          ? 'LlamaParse processing is in progress'
+          : 'Text extraction is in progress',
       })
     } catch (err) {
       toast.error('Upload failed', {
@@ -188,9 +206,27 @@ export default function ProjectDocumentsPage(): JSX.Element {
       <Sheet open={viewDocumentId !== null} onOpenChange={(open) => !open && setViewDocumentId(null)}>
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>{viewedDocument?.title}</SheetTitle>
+            <div className="flex items-center justify-between pr-8">
+              <SheetTitle>{viewedDocument?.title}</SheetTitle>
+              {viewDocumentId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setReparseDialogOpen(true)}
+                >
+                  <RotateCw className="h-4 w-4 mr-2" />
+                  Re-parse
+                </Button>
+              )}
+            </div>
           </SheetHeader>
-          <div className="mt-6">
+          <div className="mt-6 space-y-6">
+            {/* Parse Results (if any) */}
+            {viewDocumentId && parseResults.length > 0 && (
+              <ParseResultViewer documentId={viewDocumentId} />
+            )}
+
+            {/* Extracted Text — always shown as baseline */}
             {viewDocumentId && viewedDocument && (
               <DocumentTextViewer
                 documentId={viewDocumentId}
@@ -216,6 +252,16 @@ export default function ProjectDocumentsPage(): JSX.Element {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
+      />
+
+      {/* Re-parse Dialog */}
+      <ReParseDialog
+        open={reparseDialogOpen}
+        onOpenChange={setReparseDialogOpen}
+        onReparse={async (parserType, config) => {
+          await reparseDocument(parserType, config)
+          toast.success('Re-parse started')
+        }}
       />
     </div>
   )

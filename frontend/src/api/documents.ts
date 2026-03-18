@@ -23,6 +23,12 @@ export async function uploadDocument(data: DocumentUpload): Promise<Document> {
     formData.append('description', data.description)
   }
   formData.append('file', data.file)
+  if (data.parserType) {
+    formData.append('parser_type', data.parserType)
+  }
+  if (data.parseConfig) {
+    formData.append('parse_config', JSON.stringify(data.parseConfig))
+  }
 
   const response = await apiClient.post<Document>('/documents', formData, {
     headers: {

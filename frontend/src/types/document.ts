@@ -34,6 +34,8 @@ export interface DocumentUpload {
   title: string
   description?: string
   file: File
+  parserType?: string
+  parseConfig?: Record<string, unknown>
 }
 
 export interface DocumentUpdate {

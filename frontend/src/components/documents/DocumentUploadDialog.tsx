@@ -6,11 +6,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { DocumentUploadZone } from './DocumentUploadZone'
+import type { ParseConfig } from '@/types/parsing'
 
 interface DocumentUploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onUpload: (file: File, title: string, description?: string) => Promise<void>
+  onUpload: (
+    file: File,
+    title: string,
+    description?: string,
+    parserType?: string,
+    parseConfig?: ParseConfig
+  ) => Promise<void>
   projectId: string
 }
 
@@ -20,8 +27,14 @@ export function DocumentUploadDialog({
   onUpload,
   projectId,
 }: DocumentUploadDialogProps) {
-  const handleUpload = async (file: File, title: string, description?: string) => {
-    await onUpload(file, title, description)
+  const handleUpload = async (
+    file: File,
+    title: string,
+    description?: string,
+    parserType?: string,
+    parseConfig?: ParseConfig
+  ) => {
+    await onUpload(file, title, description, parserType, parseConfig)
     onOpenChange(false)
   }
 

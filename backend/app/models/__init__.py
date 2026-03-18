@@ -13,6 +13,7 @@ from app.models.golden_set import (
 )
 from app.models.eval_run import EvalRun, EvalRunStatus, EvalRunResult
 from app.models.experiment import Experiment, ExperimentStatus
+from app.models.parse_result import ParseResult, ParseResultStatus
 
 __all__ = [
     "User",
@@ -41,4 +42,6 @@ __all__ = [
     "EvalRunResult",
     "Experiment",
     "ExperimentStatus",
+    "ParseResult",
+    "ParseResultStatus",
 ]

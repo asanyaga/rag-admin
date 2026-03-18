@@ -42,7 +42,10 @@ class Settings(BaseSettings):
     # For production: override with absolute path or mounted volume
     DOCUMENT_STORAGE_PATH: str = "./data/documents"
     MAX_UPLOAD_SIZE_MB: int = 25
-    ALLOWED_MIME_TYPES: list[str] = ["application/pdf"]
+    ALLOWED_MIME_TYPES: list[str] = ["application/pdf", "image/jpeg", "image/png"]
+
+    # LlamaParse / LlamaCloud
+    LLAMA_CLOUD_KEY: str = ""
 
     # -------------------------------------------------------------------------
     # Observability Configuration (OpenTelemetry)

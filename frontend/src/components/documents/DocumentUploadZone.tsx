@@ -4,12 +4,23 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { ParseMethodSelector } from './ParseMethodSelector'
+import type { ParseConfig } from '@/types/parsing'
 
 interface DocumentUploadZoneProps {
   projectId: string
-  onUpload: (file: File, title: string, description?: string) => Promise<void>
+  onUpload: (
+    file: File,
+    title: string,
+    description?: string,
+    parserType?: string,
+    parseConfig?: ParseConfig
+  ) => Promise<void>
   disabled?: boolean
 }
+
+const ALLOWED_PDF_TYPES = ['application/pdf']
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png']
 
 export function DocumentUploadZone({
   onUpload,
@@ -21,38 +32,53 @@ export function DocumentUploadZone({
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [parserType, setParserType] = useState('simple')
+  const [parseConfig, setParseConfig] = useState<ParseConfig>({
+    tier: 'agentic',
+    expand: ['markdown', 'text'],
+  })
 
-  const validateFile = (file: File): string | null => {
-    // Check file type
-    if (file.type !== 'application/pdf') {
-      return 'Only PDF files are supported'
+  const allowedTypes =
+    parserType === 'llamaparse'
+      ? [...ALLOWED_PDF_TYPES, ...ALLOWED_IMAGE_TYPES]
+      : ALLOWED_PDF_TYPES
+
+  const acceptString =
+    parserType === 'llamaparse'
+      ? '.pdf,application/pdf,image/jpeg,image/png,.jpg,.jpeg,.png'
+      : '.pdf,application/pdf'
+
+  const validateFile = (f: File): string | null => {
+    if (!allowedTypes.includes(f.type)) {
+      return parserType === 'llamaparse'
+        ? 'Only PDF and image files (JPEG, PNG) are supported'
+        : 'Only PDF files are supported'
     }
 
-    // Check file size (25MB max)
     const maxSize = 25 * 1024 * 1024
-    if (file.size > maxSize) {
+    if (f.size > maxSize) {
       return 'File size must be less than 25MB'
     }
 
     return null
   }
 
-  const handleFile = useCallback((file: File) => {
-    const validationError = validateFile(file)
+  const handleFile = useCallback((f: File) => {
+    const validationError = validateFile(f)
     if (validationError) {
       setError(validationError)
       return
     }
 
-    setFile(file)
+    setFile(f)
     setError(null)
 
-    // Auto-fill title from filename if empty
     if (!title) {
-      const filename = file.name.replace(/\.pdf$/i, '')
+      const filename = f.name.replace(/\.\w+$/i, '')
       setTitle(filename)
     }
-  }, [title])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, parserType])
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -81,6 +107,25 @@ export function DocumentUploadZone({
     }
   }
 
+  const handleParserTypeChange = (type: string) => {
+    setParserType(type)
+    // Re-validate file if one is selected
+    if (file) {
+      const newAllowed =
+        type === 'llamaparse'
+          ? [...ALLOWED_PDF_TYPES, ...ALLOWED_IMAGE_TYPES]
+          : ALLOWED_PDF_TYPES
+      if (!newAllowed.includes(file.type)) {
+        setFile(null)
+        setError(
+          type === 'simple'
+            ? 'Selected file is not a PDF. Please choose a PDF file.'
+            : null
+        )
+      }
+    }
+  }
+
   const handleSubmit = async () => {
     if (!file || !title.trim()) {
       setError('Please select a file and enter a title')
@@ -91,12 +136,20 @@ export function DocumentUploadZone({
     setError(null)
 
     try {
-      await onUpload(file, title.trim(), description.trim() || undefined)
+      await onUpload(
+        file,
+        title.trim(),
+        description.trim() || undefined,
+        parserType,
+        parserType === 'llamaparse' ? parseConfig : undefined,
+      )
 
       // Reset form
       setFile(null)
       setTitle('')
       setDescription('')
+      setParserType('simple')
+      setParseConfig({ tier: 'agentic', expand: ['markdown', 'text'] })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -177,13 +230,17 @@ export function DocumentUploadZone({
                 <Input
                   id="file-upload"
                   type="file"
-                  accept=".pdf,application/pdf"
+                  accept={acceptString}
                   onChange={handleFileInput}
                   className="sr-only"
                   disabled={disabled}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">PDF up to 25MB</p>
+              <p className="text-xs text-muted-foreground">
+                {parserType === 'llamaparse'
+                  ? 'PDF or images (JPEG, PNG) up to 25MB'
+                  : 'PDF up to 25MB'}
+              </p>
             </div>
           )}
         </div>
@@ -216,6 +273,15 @@ export function DocumentUploadZone({
             </div>
           </div>
         )}
+
+        {/* Parse Method Selector */}
+        <ParseMethodSelector
+          parserType={parserType}
+          config={parseConfig}
+          onParserTypeChange={handleParserTypeChange}
+          onConfigChange={setParseConfig}
+          disabled={isUploading}
+        />
 
         {/* Error Message */}
         {error && (
