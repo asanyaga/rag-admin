@@ -54,6 +54,17 @@ jobs:
           npm ci
           npm run build
 
+      - name: Prepare target directory on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            rm -rf ~/rag-admin-frontend-build
+            mkdir -p ~/rag-admin-frontend-build
+
       - name: Copy frontend build to server
         uses: appleboy/scp-action@v0.1.7
         with:
