@@ -23,6 +23,7 @@ import EvalRunDetailPage from './pages/EvalRunDetailPage'
 import EvalResultDetailPage from './pages/EvalResultDetailPage'
 import RunComparisonPage from './pages/RunComparisonPage'
 import ExperimentDetailPage from './pages/ExperimentDetailPage'
+import ExtractionPage from './pages/ExtractionPage'
 
 const router = createBrowserRouter([
   {
@@ -82,6 +83,11 @@ const router = createBrowserRouter([
             path: 'index/:indexId',
             element: <IndexDetailPage />,
             handle: { breadcrumb: 'Index Details' },
+          },
+          {
+            path: 'extraction',
+            element: <ExtractionPage />,
+            handle: { breadcrumb: 'Extraction' },
           },
           {
             path: 'evaluation',

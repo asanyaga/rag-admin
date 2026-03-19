@@ -16,6 +16,7 @@ interface DocumentsTableProps {
   onEdit: (id: string) => void
   onDelete: (id: string) => void
   onDownload: (id: string, title: string) => void
+  onExtract?: (id: string) => void
   onUploadClick?: () => void
 }
 
@@ -25,6 +26,7 @@ export function DocumentsTable({
   onEdit,
   onDelete,
   onDownload,
+  onExtract,
   onUploadClick,
 }: DocumentsTableProps) {
   if (documents.length === 0) {
@@ -153,6 +155,19 @@ export function DocumentsTable({
                         </svg>
                         Download
                       </DropdownMenuItem>
+                      {onExtract && (
+                        <DropdownMenuItem onClick={() => onExtract(document.id)}>
+                          <svg
+                            className="mr-2 h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm4.75 11.25a.75.75 0 001.5 0v-2.546l.943.942a.75.75 0 001.06-1.06l-2.22-2.22a.75.75 0 00-1.06 0l-2.22 2.22a.75.75 0 001.06 1.06l.937-.938v2.542z" clipRule="evenodd" />
+                          </svg>
+                          Extract
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => onEdit(document.id)}>
                         <svg
                           className="mr-2 h-4 w-4"

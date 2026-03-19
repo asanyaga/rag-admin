@@ -16,9 +16,11 @@ import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Plus, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
+import { useNavigate } from 'react-router-dom'
 import { useParseResults } from '@/hooks/useParseResults'
 
 export default function DocumentsPage(): JSX.Element {
+  const navigate = useNavigate()
   const { currentProject } = useProject()
 
   const {
@@ -123,6 +125,10 @@ export default function DocumentsPage(): JSX.Element {
     }
   }
 
+  const handleExtract = (documentId: string) => {
+    navigate(`/extraction?documentId=${documentId}`)
+  }
+
   const handleDownload = async (documentId: string, title: string) => {
     try {
       await downloadDocument(documentId, `${title}.pdf`)
@@ -187,6 +193,7 @@ export default function DocumentsPage(): JSX.Element {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onDownload={handleDownload}
+          onExtract={handleExtract}
           onUploadClick={() => setUploadDialogOpen(true)}
         />
       )}
