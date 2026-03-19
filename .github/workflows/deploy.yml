@@ -8,12 +8,12 @@ on:
       skip_build:
         description: 'Skip Docker build (just restart containers)'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       first_time_deploy:
         description: 'First-time deployment (skip .env.prod check)'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 # Ensure only one deployment runs at a time

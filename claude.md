@@ -1,11 +1,11 @@
 # RAG Admin
 
-Web application for creating and managing RAG pipelines for AI Agents. Prioritize clean architecture and readability.
+Web application for managing RAG pipelines for AI Agents. Prioritize clean architecture and readability.
 
 ## Stack
 
-- **Backend:** Python 3.12, FastAPI (async), SQLAlchemy 2.0, Paradedb, Alembic,Otel, Signoz
-- **Frontend:** React 18, TypeScript, Vite
+- **Backend:** Python 3.12, FastAPI (async), SQLAlchemy 2.0, ParadeDB, Alembic, OpenTelemetry, SigNoz
+- **Frontend:** React 18, TypeScript, Vite, shadcn/ui, Tailwind CSS
 - **Auth:** JWT + HTTP-only refresh tokens
 
 ## Structure
@@ -13,7 +13,8 @@ Web application for creating and managing RAG pipelines for AI Agents. Prioritiz
 ```
 backend/app/    → routers/ → services/ → repositories/ → models/
 frontend/src/   → pages/ → components/ → hooks/ → api/
-docs/planning/  → PRD, TDD, API spec, database schema
+docs/planning/  → PRD, specs, wireframes
+docs/specs/     → detailed feature specs
 ```
 
 ## Commands
@@ -21,43 +22,33 @@ docs/planning/  → PRD, TDD, API spec, database schema
 ```bash
 # Backend
 cd backend && uvicorn app.main:app --reload
-cd backend && pytest
+cd backend && uv run python -m pytest -o "addopts="
 cd backend && alembic upgrade head
-
-# Package Management
-uv add <package-name>        # Add Python package (backend uses uv, not pip)
-cd frontend && npm install   # Add Node package
 
 # Frontend
 cd frontend && npm run dev
-cd frontend && npm run lint  # Run ESLint checks
+cd frontend && npm run lint
+cd frontend && npm run build
+cd frontend && npx vitest run
+
+# Packages
+cd backend && uv add <package>
+cd frontend && npm install <package>
 ```
-
-## Quality Checks
-
-**After making frontend code changes:**
-1. Run `cd frontend && npm run lint` to verify no TypeScript/ESLint errors
-2. Common issues to watch for:
-   - Avoid `any` types - use proper interfaces or unions like `Record<string, unknown>`
-   - Remove unnecessary semicolons (especially in statement expressions)
-   - Ensure all functions have explicit return types
 
 ## Patterns
 
 - Data flow: router → service → repository → database
 - Services raise exceptions; routers catch and return HTTP responses
-- All database operations async
-- Type hints on all functions
-- Read the relevant spec in `docs/planning/` before implementing features
+- All database operations async with type hints
+- Frontend: one hook per feature, one page per route, feature-scoped components
+- shadcn/ui with Tailwind CSS for all UI
+- Read relevant spec in `docs/` before implementing features
 
-## UI/Design Direction
+## Workflow
 
-### Component Library
-- **shadcn/ui** with Tailwind CSS
-
-
-## Working with Me
-
-- **Planning preference:** Explain *why* (reasoning, patterns, trade-offs) not basic concepts
-- **Before implementing:** Read relevant spec in `docs/planning/`, plan first
-
+- Always work against a GitHub issue + spec
+- Create feature branch from main (e.g., `feat/issue-42-short-description`)
+- Write tests alongside implementation
+- Run change-verifier agent after changes
+- Create PR linked to issue; wait for user to merge before cleanup
