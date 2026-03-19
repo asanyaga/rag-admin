@@ -11,29 +11,18 @@ import type {
   ExtractorInfo,
   RunExtractionRequest,
 } from '@/types/extraction'
+import type { DocumentUpload } from '@/types/document'
+import type { ParseConfig } from '@/types/parsing'
 import { ExtractionSchemaEditor } from '@/components/extraction/ExtractionSchemaEditor'
-import { RunExtractionDialog } from '@/components/extraction/RunExtractionDialog'
-import { ExtractionResultViewer } from '@/components/extraction/ExtractionResultViewer'
+import { ExtractionForm } from '@/components/extraction/ExtractionForm'
+import { ExtractionHistory } from '@/components/extraction/ExtractionHistory'
+import { DocumentSelector } from '@/components/extraction/DocumentSelector'
+import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Plus, Play, MoreHorizontal, Pencil, Trash2, Eye } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import { Plus, FileSearch } from 'lucide-react'
 import { toast } from 'sonner'
 import * as extractionApi from '@/api/extraction'
 
@@ -41,17 +30,19 @@ export default function ExtractionPage(): JSX.Element {
   const { currentProject } = useProject()
   const projectId = currentProject?.id || null
 
-  const { documents } = useDocuments(projectId)
+  const {
+    documents,
+    isLoading: documentsLoading,
+    uploadDocument,
+  } = useDocuments(projectId)
   const {
     schemas,
-    isLoading: schemasLoading,
     error: schemasError,
     createSchema,
     updateSchema,
-    deleteSchema,
   } = useExtractionSchemas(projectId)
 
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const preselectedDocumentId = searchParams.get('documentId')
 
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
@@ -70,14 +61,14 @@ export default function ExtractionPage(): JSX.Element {
   const [extractors, setExtractors] = useState<ExtractorInfo[]>([])
   const [schemaEditorOpen, setSchemaEditorOpen] = useState(false)
   const [editingSchema, setEditingSchema] = useState<ExtractionSchema | null>(null)
-  const [runDialogOpen, setRunDialogOpen] = useState(false)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
 
   const fetchExtractors = useCallback(async () => {
     try {
       const data = await extractionApi.listExtractors()
       setExtractors(data)
     } catch {
-      // Extractors not available — that's fine
+      // Extractors not available
     }
   }, [])
 
@@ -85,23 +76,17 @@ export default function ExtractionPage(): JSX.Element {
     fetchExtractors()
   }, [fetchExtractors])
 
-  if (!currentProject) {
-    return (
-      <div className="space-y-6">
-        <Alert>
-          <AlertDescription>Loading project...</AlertDescription>
-        </Alert>
-      </div>
-    )
+  const handleSelectDocument = (docId: string) => {
+    setSelectedDocumentId(docId)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('documentId', docId)
+      return next
+    })
   }
 
   const handleCreateSchema = () => {
     setEditingSchema(null)
-    setSchemaEditorOpen(true)
-  }
-
-  const handleEditSchema = (schema: ExtractionSchema) => {
-    setEditingSchema(schema)
     setSchemaEditorOpen(true)
   }
 
@@ -124,20 +109,8 @@ export default function ExtractionPage(): JSX.Element {
     }
   }
 
-  const handleDeleteSchema = async (schema: ExtractionSchema) => {
-    try {
-      await deleteSchema(schema.id)
-      toast.success('Schema deleted')
-    } catch (err) {
-      toast.error('Failed to delete schema', {
-        description: err instanceof Error ? err.message : 'An error occurred',
-      })
-    }
-  }
-
   const handleRunExtraction = async (request: RunExtractionRequest) => {
     try {
-      setSelectedDocumentId(request.documentId)
       await runExtraction(request)
       toast.success('Extraction started', {
         description: 'Processing is in progress',
@@ -150,191 +123,171 @@ export default function ExtractionPage(): JSX.Element {
     }
   }
 
+  const handleUpload = async (
+    file: File,
+    title: string,
+    description?: string,
+    parserType?: string,
+    parseConfig?: ParseConfig
+  ) => {
+    if (!projectId) return
+
+    const data: DocumentUpload = {
+      projectId,
+      title,
+      description,
+      file,
+      parserType,
+      parseConfig: parseConfig as Record<string, unknown>,
+    }
+
+    const newDoc = await uploadDocument(data)
+    toast.success('Document uploaded', {
+      description: newDoc.status === 'processing' ? 'Processing in progress...' : undefined,
+    })
+    handleSelectDocument(newDoc.id)
+  }
+
+  if (!currentProject) {
+    return (
+      <div className="space-y-6">
+        <Alert>
+          <AlertDescription>Loading project...</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  const selectedDocument = documents.find((d) => d.id === selectedDocumentId)
+  const isDocumentReady = selectedDocument?.status === 'ready'
+
   return (
-    <div className="space-y-6">
+    <div className="-m-6 flex flex-col h-[calc(100vh-3.5rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-6 py-3 border-b shrink-0">
         <div>
-          <h1 className="text-3xl font-bold">Extraction</h1>
-          <p className="text-muted-foreground mt-1">{currentProject.name}</p>
+          <h1 className="text-lg font-semibold">Extraction</h1>
+          <p className="text-xs text-muted-foreground">{currentProject.name}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleCreateSchema}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Schema
-          </Button>
-          <Button
-            onClick={() => setRunDialogOpen(true)}
-            disabled={schemas.length === 0 || extractors.length === 0}
-          >
-            <Play className="h-4 w-4 mr-2" />
-            Run Extraction
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={handleCreateSchema}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          New Schema
+        </Button>
       </div>
 
       {/* Errors */}
       {(schemasError || resultsError) && (
-        <Alert variant="destructive">
-          <AlertDescription>{schemasError || resultsError}</AlertDescription>
-        </Alert>
+        <div className="px-6 pt-3 shrink-0">
+          <Alert variant="destructive">
+            <AlertDescription>{schemasError || resultsError}</AlertDescription>
+          </Alert>
+        </div>
       )}
 
-      {extractors.length === 0 && (
-        <Alert>
-          <AlertDescription>
-            No extraction methods available. Please contact your administrator to configure an extraction provider.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Two-panel layout */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left panel: Document selector */}
+        <div className="w-72 border-r shrink-0 flex flex-col">
+          <DocumentSelector
+            documents={documents}
+            isLoading={documentsLoading}
+            selectedDocumentId={selectedDocumentId}
+            onSelect={handleSelectDocument}
+            onUploadClick={() => setUploadDialogOpen(true)}
+          />
+        </div>
 
-      {/* Schemas Section */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Schemas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {schemasLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : schemas.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No schemas yet. Create one to get started.
-            </p>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {schemas.map((schema) => (
-                    <TableRow key={schema.id}>
-                      <TableCell className="font-medium">{schema.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {schema.extractionTarget}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {schema.description || '—'}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditSchema(schema)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDeleteSchema(schema)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Results Section */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Extraction Results</CardTitle>
-        </CardHeader>
-        <CardContent>
+        {/* Right panel: Extraction workspace */}
+        <div className="flex-1 overflow-y-auto">
           {!selectedDocumentId ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Run an extraction to see results here.
-            </p>
-          ) : resultsLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+            /* Empty state */
+            <div className="flex flex-col items-center justify-center h-full text-center px-6">
+              <FileSearch className="h-12 w-12 text-muted-foreground/40 mb-4" />
+              <h2 className="text-lg font-medium text-muted-foreground">
+                Select a document to get started
+              </h2>
+              <p className="text-sm text-muted-foreground/70 mt-1 max-w-sm">
+                Choose a document from the list, or upload a new one to begin extracting structured data.
+              </p>
             </div>
-          ) : results.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No extraction results for this document.
-            </p>
           ) : (
-            <div className="space-y-4">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="w-10"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell>
-                          <Badge variant="outline">{r.extractionMethod}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              r.status === 'completed'
-                                ? 'default'
-                                : r.status === 'pending'
-                                  ? 'secondary'
-                                  : 'destructive'
-                            }
-                          >
-                            {r.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {new Date(r.createdAt).toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => selectResult(r.id)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            <div className="p-6 space-y-6 max-w-3xl">
+              {/* Document header */}
+              {selectedDocument && (
+                <div className="flex items-center gap-3">
+                  <h2 className="text-base font-medium truncate">
+                    {selectedDocument.title}
+                  </h2>
+                  <Badge
+                    variant={
+                      selectedDocument.status === 'ready'
+                        ? 'outline'
+                        : selectedDocument.status === 'processing'
+                          ? 'secondary'
+                          : 'destructive'
+                    }
+                    className="shrink-0 text-xs"
+                  >
+                    {selectedDocument.status}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    Uploaded {new Date(selectedDocument.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              )}
+
+              {/* Run New Extraction */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="text-sm font-medium">Run New Extraction</h3>
+                  {!isDocumentReady && selectedDocument && (
+                    <span className="text-xs text-muted-foreground">
+                      (document must be ready)
+                    </span>
+                  )}
+                </div>
+                {isDocumentReady ? (
+                  <div className="rounded-lg border p-4">
+                    <ExtractionForm
+                      documentId={selectedDocumentId}
+                      schemas={schemas}
+                      extractors={extractors}
+                      onRun={handleRunExtraction}
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                    {selectedDocument?.status === 'processing'
+                      ? 'Document is still processing. Extraction will be available once it completes.'
+                      : 'This document cannot be used for extraction.'}
+                  </div>
+                )}
               </div>
 
-              {/* Selected result detail */}
-              <ExtractionResultViewer
-                result={selectedResult}
-                isLoading={isLoadingResult}
-              />
+              <Separator />
+
+              {/* Previous Extractions */}
+              <div>
+                <h3 className="text-sm font-medium mb-3">
+                  Previous Extractions
+                  {results.length > 0 && (
+                    <span className="text-muted-foreground font-normal ml-1.5">
+                      ({results.length})
+                    </span>
+                  )}
+                </h3>
+                <ExtractionHistory
+                  results={results}
+                  isLoading={resultsLoading}
+                  selectedResult={selectedResult}
+                  isLoadingResult={isLoadingResult}
+                  onSelectResult={selectResult}
+                />
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Dialogs */}
       <ExtractionSchemaEditor
@@ -344,14 +297,11 @@ export default function ExtractionPage(): JSX.Element {
         onSave={handleSaveSchema}
       />
 
-      <RunExtractionDialog
-        open={runDialogOpen}
-        onOpenChange={setRunDialogOpen}
-        schemas={schemas}
-        extractors={extractors}
-        documents={documents}
-        preselectedDocumentId={preselectedDocumentId}
-        onRun={handleRunExtraction}
+      <DocumentUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onUpload={handleUpload}
+        projectId={projectId || ''}
       />
     </div>
   )
