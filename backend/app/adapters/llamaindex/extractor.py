@@ -1,44 +1,36 @@
-"""LlamaIndex document extraction adapter."""
+"""Document extraction adapter.
+
+Uses LlamaIndex SimpleDirectoryReader for PDFs and pytesseract + Pillow for images.
+"""
 import time
 from pathlib import Path
 
 from llama_index.core import SimpleDirectoryReader
-from llama_index.core.schema import Document as LlamaDocument
 
 from app.ports.document_processing import ExtractionResult
 
+IMAGE_MIME_TYPES = {"image/jpeg", "image/png"}
+
 
 class LlamaIndexExtractor:
-    """LlamaIndex implementation of DocumentExtractor.
+    """DocumentExtractor implementation.
 
-    Uses LlamaIndex SimpleDirectoryReader for document parsing.
+    Routes PDFs to LlamaIndex SimpleDirectoryReader and images to pytesseract OCR.
     """
 
-    # Supported MIME types
     SUPPORTED_MIME_TYPES = {
         "application/pdf",
+        *IMAGE_MIME_TYPES,
     }
 
     def supports_mime_type(self, mime_type: str) -> bool:
-        """Check if this extractor supports the given MIME type.
-
-        Args:
-            mime_type: MIME type to check
-
-        Returns:
-            True if supported, False otherwise
-        """
+        """Check if this extractor supports the given MIME type."""
         return mime_type in self.SUPPORTED_MIME_TYPES
 
     async def extract(self, file_path: str, mime_type: str) -> ExtractionResult:
-        """Extract text from a document using LlamaIndex.
+        """Extract text from a document.
 
-        Args:
-            file_path: Path to the document file
-            mime_type: MIME type of the document
-
-        Returns:
-            ExtractionResult containing extracted text with page markers
+        Routes to the appropriate extraction method based on MIME type.
 
         Raises:
             ValueError: If file type is not supported
@@ -52,13 +44,18 @@ class LlamaIndexExtractor:
         if not file_path_obj.exists():
             raise IOError(f"File not found: {file_path}")
 
+        if mime_type in IMAGE_MIME_TYPES:
+            return self._extract_image(file_path_obj)
+
+        return self._extract_pdf(file_path_obj)
+
+    def _extract_pdf(self, file_path: Path) -> ExtractionResult:
+        """Extract text from a PDF using LlamaIndex SimpleDirectoryReader."""
         start_time = time.time()
 
         try:
-            # Use SimpleDirectoryReader to load the document
-            # It automatically handles PDFs and extracts text page by page
             reader = SimpleDirectoryReader(
-                input_files=[str(file_path_obj)],
+                input_files=[str(file_path)],
                 filename_as_id=True
             )
             documents = reader.load_data()
@@ -66,7 +63,6 @@ class LlamaIndexExtractor:
             if not documents:
                 raise Exception("No content extracted from document")
 
-            # Add page markers and combine text, tracking character offsets
             pages_with_markers = []
             page_boundaries = []
             current_offset = 0
@@ -79,25 +75,62 @@ class LlamaIndexExtractor:
 
             combined_text = "\n\n".join(pages_with_markers)
             page_count = len(documents)
-
-            # Calculate extraction metrics
             duration_ms = int((time.time() - start_time) * 1000)
-            token_count = len(combined_text.split())  # Rough token estimate
-
-            metadata = {
-                "extraction_method": "llamaindex",
-                "extraction_version": "0.1.0",
-                "extracted_at": time.time(),
-                "duration_ms": duration_ms,
-                "token_count": token_count,
-            }
 
             return ExtractionResult(
                 text=combined_text,
                 page_count=page_count,
-                metadata=metadata,
+                metadata={
+                    "extraction_method": "llamaindex",
+                    "extraction_version": "0.1.0",
+                    "extracted_at": time.time(),
+                    "duration_ms": duration_ms,
+                    "token_count": len(combined_text.split()),
+                },
                 page_boundaries=page_boundaries,
             )
 
         except Exception as e:
             raise Exception(f"Failed to extract text from {file_path}: {e}") from e
+
+    def _extract_image(self, file_path: Path) -> ExtractionResult:
+        """Extract text from an image using pytesseract OCR."""
+        try:
+            import pytesseract
+            from PIL import Image
+        except ImportError as e:
+            raise ImportError(
+                "Image OCR requires pytesseract and Pillow. "
+                "Install them with: pip install pytesseract Pillow"
+            ) from e
+
+        start_time = time.time()
+
+        try:
+            image = Image.open(file_path)
+            if image.mode != "RGB":
+                image = image.convert("RGB")
+
+            width, height = image.size
+            text = pytesseract.image_to_string(image).strip()
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            page_text = f"[Page 1]\n{text}"
+
+            return ExtractionResult(
+                text=page_text,
+                page_count=1,
+                metadata={
+                    "extraction_method": "pytesseract",
+                    "extraction_version": "0.1.0",
+                    "extracted_at": time.time(),
+                    "duration_ms": duration_ms,
+                    "token_count": len(text.split()),
+                    "image_width": width,
+                    "image_height": height,
+                },
+                page_boundaries=[{"page": 1, "start_char": 0, "end_char": len(page_text)}],
+            )
+
+        except Exception as e:
+            raise Exception(f"Failed to extract text from image {file_path}: {e}") from e

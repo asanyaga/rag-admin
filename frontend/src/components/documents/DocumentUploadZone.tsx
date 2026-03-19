@@ -38,21 +38,13 @@ export function DocumentUploadZone({
     expand: ['markdown', 'text'],
   })
 
-  const allowedTypes =
-    parserType === 'llamaparse'
-      ? [...ALLOWED_PDF_TYPES, ...ALLOWED_IMAGE_TYPES]
-      : ALLOWED_PDF_TYPES
+  const allowedTypes = [...ALLOWED_PDF_TYPES, ...ALLOWED_IMAGE_TYPES]
 
-  const acceptString =
-    parserType === 'llamaparse'
-      ? '.pdf,application/pdf,image/jpeg,image/png,.jpg,.jpeg,.png'
-      : '.pdf,application/pdf'
+  const acceptString = '.pdf,application/pdf,image/jpeg,image/png,.jpg,.jpeg,.png'
 
   const validateFile = (f: File): string | null => {
     if (!allowedTypes.includes(f.type)) {
-      return parserType === 'llamaparse'
-        ? 'Only PDF and image files (JPEG, PNG) are supported'
-        : 'Only PDF files are supported'
+      return 'Only PDF and image files (JPEG, PNG) are supported'
     }
 
     const maxSize = 25 * 1024 * 1024
@@ -109,21 +101,6 @@ export function DocumentUploadZone({
 
   const handleParserTypeChange = (type: string) => {
     setParserType(type)
-    // Re-validate file if one is selected
-    if (file) {
-      const newAllowed =
-        type === 'llamaparse'
-          ? [...ALLOWED_PDF_TYPES, ...ALLOWED_IMAGE_TYPES]
-          : ALLOWED_PDF_TYPES
-      if (!newAllowed.includes(file.type)) {
-        setFile(null)
-        setError(
-          type === 'simple'
-            ? 'Selected file is not a PDF. Please choose a PDF file.'
-            : null
-        )
-      }
-    }
   }
 
   const handleSubmit = async () => {
@@ -237,9 +214,7 @@ export function DocumentUploadZone({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                {parserType === 'llamaparse'
-                  ? 'PDF or images (JPEG, PNG) up to 25MB'
-                  : 'PDF up to 25MB'}
+                PDF or images (JPEG, PNG) up to 25MB
               </p>
             </div>
           )}
