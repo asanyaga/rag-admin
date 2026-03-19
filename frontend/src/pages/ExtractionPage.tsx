@@ -183,7 +183,7 @@ export default function ExtractionPage(): JSX.Element {
       {extractors.length === 0 && (
         <Alert>
           <AlertDescription>
-            No extraction methods available. Configure LLAMA_CLOUD_KEY to enable LlamaExtract.
+            No extraction methods available. Please contact your administrator to configure an extraction provider.
           </AlertDescription>
         </Alert>
       )}

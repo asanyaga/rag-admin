@@ -1,7 +1,7 @@
 """add_extraction_tables
 
-Revision ID: a1b2c3d4e5f6
-Revises: f6a7b8c9d0e1
+Revision ID: c1d2e3f4a5b6
+Revises: b8c9d0e1f2a3
 Create Date: 2026-03-19 10:00:00.000000
 
 """
@@ -12,8 +12,8 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 
-revision: str = 'a1b2c3d4e5f6'
-down_revision: Union[str, None] = 'f6a7b8c9d0e1'
+revision: str = 'c1d2e3f4a5b6'
+down_revision: Union[str, None] = 'b8c9d0e1f2a3'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
