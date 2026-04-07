@@ -54,6 +54,11 @@ dependencies = [
     "openai>=1.0.0", # OpenAI embedding API
     "anthropic>=0.39.0", # Anthropic Claude API
     "cryptography>=41.0.0", # Fernet encryption for API key storage
+    # -------------------------------------------------------------------------
+    # Extraction Evaluation
+    # -------------------------------------------------------------------------
+    "rapidfuzz>=3.0.0", # Fuzzy string matching for field comparison
+    "scipy>=1.11.0", # Hungarian algorithm for line item matching
 ]
 
 [project.optional-dependencies]

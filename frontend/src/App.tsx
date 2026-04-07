@@ -89,7 +89,7 @@ const router = createBrowserRouter([
             element: <ExtractionPage />,
             handle: { breadcrumb: 'Extraction' },
           },
-          {
+{
             path: 'evaluation',
             element: <EvaluationPage />,
             handle: { breadcrumb: 'Evaluation' },

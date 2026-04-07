@@ -12,7 +12,7 @@ You are starting the implementation workflow for a GitHub issue.
 ## Step 1: Resolve the issue
 
 - If $ARGUMENTS is empty, ask the user what they want to implement. If there's no GitHub issue yet, suggest creating one and wait for confirmation.
-- If $ARGUMENTS is a task, plan with user to determine if it is a feature, fix or chore and create a gihub issue and spec if needed.
+- If $ARGUMENTS is an open ended task, plan with user to determine if it is a feature, fix or chore and create a gihub issue and spec if needed.
 - If $ARGUMENTS is a number, fetch the issue from the current repo using `gh issue view <number>`.
 - If $ARGUMENTS is a URL, fetch it with `gh issue view <url>`.
 - Read the issue title, body, and labels.
@@ -24,13 +24,15 @@ You are starting the implementation workflow for a GitHub issue.
 - If no spec exists, note this and proceed — not all work needs a spec.
 
 ## Step 3: Plan (for non-trivial work)
-
-- If the issue involves changes to 3+ files or touches both frontend and backend, enter Plan mode and outline:
+- If there is no spec, evaluate whether to plan before implementing. 
+- If there is a spec, review it to determine if it is sufficient for implementation or if additional planning is needed.
+- If you determine planning is necessary, enter Plan mode and outline:
   - Files to create/modify
   - Key design decisions
   - Test approach
 - Present the plan to the user and wait for alignment before proceeding.
 - For simple changes (1-2 files, straightforward), skip planning and proceed.
+- Once you finish planning, create a spec if one does not already exist, update github issue or create a github issue if one doesn't exist. Link the to the spec in the issue.
 
 ## Step 4: Create a branch
 
@@ -51,6 +53,7 @@ You are starting the implementation workflow for a GitHub issue.
 - Launch the regression-runner agent to run the full test suites.
 - Run both agents in parallel.
 - Fix any failures before proceeding.
+- restart local docker compose containers if needed for manual local verification.
 
 ## Step 7: Create PR
 
@@ -64,3 +67,4 @@ You are starting the implementation workflow for a GitHub issue.
 - Only when the user confirms the PR is merged:
   - Switch to main and pull
   - Delete the local and remote feature branch
+  - close the associated issue if it is still open

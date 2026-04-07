@@ -16,6 +16,8 @@ from app.models.experiment import Experiment, ExperimentStatus
 from app.models.parse_result import ParseResult, ParseResultStatus
 from app.models.extraction_schema import ExtractionSchema
 from app.models.extraction_result import ExtractionResult, ExtractionResultStatus
+from app.models.extraction_ground_truth import ExtractionGroundTruthSet, ExtractionGroundTruthItem
+from app.models.extraction_eval import ExtractionEvalRun, ExtractionEvalRunStatus, ExtractionEvalResult
 
 __all__ = [
     "User",
@@ -49,4 +51,9 @@ __all__ = [
     "ExtractionSchema",
     "ExtractionResult",
     "ExtractionResultStatus",
+    "ExtractionGroundTruthSet",
+    "ExtractionGroundTruthItem",
+    "ExtractionEvalRun",
+    "ExtractionEvalRunStatus",
+    "ExtractionEvalResult",
 ]
