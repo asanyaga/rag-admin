@@ -35,7 +35,7 @@ export function DocumentResultsTable({ results }: DocumentResultsTableProps) {
       {/* Rows */}
       {results.map((result) => {
         const isExpanded = expandedId === result.id
-        const scalarScores = Object.entries(result.fieldScores).filter(([k]) => k !== 'line_items')
+        const scalarScores = Object.entries(result.fieldScores).filter(([k]) => k !== 'line_items' && k !== 'items')
         const fieldCount = scalarScores.length
         const exactCount = scalarScores.filter(([, s]) => s.exact).length
 
@@ -81,10 +81,10 @@ export function DocumentResultsTable({ results }: DocumentResultsTableProps) {
                   <LineItemsBreakdownView
                     lineItemsScore={result.lineItemsScore}
                     expectedLineItems={
-                      (result.expectedData?.line_items as Record<string, unknown>[] | undefined)
+                      (result.expectedData?.line_items ?? result.expectedData?.items) as Record<string, unknown>[] | undefined
                     }
                     predictedLineItems={
-                      (result.predictedData?.line_items as Record<string, unknown>[] | undefined)
+                      (result.predictedData?.line_items ?? result.predictedData?.items) as Record<string, unknown>[] | undefined
                     }
                   />
                 )}

@@ -22,7 +22,7 @@ export function FieldBreakdownView({
         <span>Score</span>
         <span>Match</span>
       </div>
-      {Object.entries(fieldScores).filter(([field]) => field !== 'line_items').map(([field, score]) => (
+      {Object.entries(fieldScores).filter(([field]) => field !== 'line_items' && field !== 'items').map(([field, score]) => (
         <div
           key={field}
           className="grid grid-cols-[1fr_1fr_1fr_80px_60px] gap-2 px-3 py-2 items-center"

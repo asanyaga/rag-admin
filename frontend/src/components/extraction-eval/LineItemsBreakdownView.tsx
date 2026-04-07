@@ -15,8 +15,8 @@ interface RowData {
   expected?: Record<string, unknown>
   predicted?: Record<string, unknown>
   similarity?: number
-  expectedIdx?: number
-  predictedIdx?: number
+  expected_idx?: number
+  predicted_idx?: number
 }
 
 export function LineItemsBreakdownView({
@@ -27,8 +27,8 @@ export function LineItemsBreakdownView({
   const [expanded, setExpanded] = useState(false)
   const matches = lineItemsScore.matches ?? []
 
-  const matchedExpectedIndices = new Set(matches.map((m) => m.expectedIdx))
-  const matchedPredictedIndices = new Set(matches.map((m) => m.predictedIdx))
+  const matchedExpectedIndices = new Set(matches.map((m) => m.expected_idx))
+  const matchedPredictedIndices = new Set(matches.map((m) => m.predicted_idx))
 
   const rows: RowData[] = []
 
@@ -36,11 +36,11 @@ export function LineItemsBreakdownView({
   for (const match of matches) {
     rows.push({
       status: 'match',
-      expected: expectedLineItems?.[match.expectedIdx],
-      predicted: predictedLineItems?.[match.predictedIdx],
+      expected: expectedLineItems?.[match.expected_idx],
+      predicted: predictedLineItems?.[match.predicted_idx],
       similarity: 1 - match.cost,
-      expectedIdx: match.expectedIdx,
-      predictedIdx: match.predictedIdx,
+      expected_idx: match.expected_idx,
+      predicted_idx: match.predicted_idx,
     })
   }
 
@@ -51,7 +51,7 @@ export function LineItemsBreakdownView({
         rows.push({
           status: 'miss',
           expected: expectedLineItems[i],
-          expectedIdx: i,
+          expected_idx: i,
         })
       }
     }
@@ -64,7 +64,7 @@ export function LineItemsBreakdownView({
         rows.push({
           status: 'extra',
           predicted: predictedLineItems[i],
-          predictedIdx: i,
+          predicted_idx: i,
         })
       }
     }
@@ -134,10 +134,10 @@ export function LineItemsBreakdownView({
                 </div>
                 <span className="text-muted-foreground">
                   {row.status === 'match'
-                    ? `E${row.expectedIdx!}→P${row.predictedIdx!}`
+                    ? `E${row.expected_idx!}→P${row.predicted_idx!}`
                     : row.status === 'miss'
-                      ? `E${row.expectedIdx!}`
-                      : `P${row.predictedIdx!}`}
+                      ? `E${row.expected_idx!}`
+                      : `P${row.predicted_idx!}`}
                 </span>
               </div>
             ))
@@ -168,18 +168,30 @@ function FieldValues({ data }: { data: Record<string, unknown> }) {
   )
   if (entries.length === 0) return <span className="text-muted-foreground">—</span>
 
+  // Show as a compact single line: "Description: X | Qty: 1 | Price: 270"
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-      {entries.map(([key, value]) => (
+    <span className="truncate block" title={entries.map(([k, v]) => `${k}: ${formatValue(v)}`).join(', ')}>
+      {entries.map(([key, value], i) => (
         <span key={key}>
+          {i > 0 && <span className="text-muted-foreground mx-1">|</span>}
           <span className="text-muted-foreground capitalize">
-            {key.replace(/_/g, ' ')}:
+            {abbreviateKey(key)}:
           </span>{' '}
           <span className="font-medium">{formatValue(value)}</span>
         </span>
       ))}
-    </div>
+    </span>
   )
+}
+
+function abbreviateKey(key: string): string {
+  const abbrevs: Record<string, string> = {
+    description: 'Desc',
+    quantity: 'Qty',
+    item_total: 'Total',
+    unit_price: 'Price',
+  }
+  return abbrevs[key] ?? key.replace(/_/g, ' ')
 }
 
 function formatValue(value: unknown): string {

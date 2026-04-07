@@ -81,17 +81,20 @@ def score_document(
     expected_line_items = None
     has_line_items = False
 
+    # Keys that represent line-item arrays (not scalar fields)
+    line_item_keys = {"line_items", "items"}
+
     # Collect all field keys (union of predicted and expected)
     all_keys = set()
     for key in expected:
-        if key == "line_items":
+        if key in line_item_keys:
             expected_line_items = expected[key]
             has_line_items = True
             continue
         all_keys.add(key)
 
     for key in predicted:
-        if key == "line_items":
+        if key in line_item_keys:
             predicted_line_items = predicted[key]
             has_line_items = True
             continue

@@ -45,8 +45,8 @@ export interface FieldScore {
 }
 
 export interface LineItemMatch {
-  predictedIdx: number
-  expectedIdx: number
+  predicted_idx: number
+  expected_idx: number
   cost: number
 }
 
