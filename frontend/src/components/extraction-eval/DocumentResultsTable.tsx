@@ -35,8 +35,9 @@ export function DocumentResultsTable({ results }: DocumentResultsTableProps) {
       {/* Rows */}
       {results.map((result) => {
         const isExpanded = expandedId === result.id
-        const fieldCount = Object.keys(result.fieldScores).length
-        const exactCount = Object.values(result.fieldScores).filter((s) => s.exact).length
+        const scalarScores = Object.entries(result.fieldScores).filter(([k]) => k !== 'line_items')
+        const fieldCount = scalarScores.length
+        const exactCount = scalarScores.filter(([, s]) => s.exact).length
 
         return (
           <div key={result.id}>
