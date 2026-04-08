@@ -16,13 +16,13 @@ import type { ParseConfig } from '@/types/parsing'
 import { ExtractionSchemaEditor } from '@/components/extraction/ExtractionSchemaEditor'
 import { ExtractionForm } from '@/components/extraction/ExtractionForm'
 import { ExtractionHistory } from '@/components/extraction/ExtractionHistory'
+import { SchemaManager } from '@/components/extraction/SchemaManager'
 import { DocumentSelector } from '@/components/extraction/DocumentSelector'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Plus, FileSearch } from 'lucide-react'
+import { FileSearch } from 'lucide-react'
 import { toast } from 'sonner'
 import * as extractionApi from '@/api/extraction'
 
@@ -40,6 +40,7 @@ export default function ExtractionPage(): JSX.Element {
     error: schemasError,
     createSchema,
     updateSchema,
+    deleteSchema,
   } = useExtractionSchemas(projectId)
 
   const [searchParams, setSearchParams] = useSearchParams()
@@ -88,6 +89,22 @@ export default function ExtractionPage(): JSX.Element {
   const handleCreateSchema = () => {
     setEditingSchema(null)
     setSchemaEditorOpen(true)
+  }
+
+  const handleEditSchema = (schema: ExtractionSchema) => {
+    setEditingSchema(schema)
+    setSchemaEditorOpen(true)
+  }
+
+  const handleDeleteSchema = async (schemaId: string) => {
+    try {
+      await deleteSchema(schemaId)
+      toast.success('Schema deleted')
+    } catch (err) {
+      toast.error('Failed to delete schema', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
+    }
   }
 
   const handleSaveSchema = async (
@@ -169,10 +186,6 @@ export default function ExtractionPage(): JSX.Element {
           <h1 className="text-lg font-semibold">Extraction</h1>
           <p className="text-xs text-muted-foreground">{currentProject.name}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleCreateSchema}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          New Schema
-        </Button>
       </div>
 
       {/* Errors */}
@@ -212,6 +225,16 @@ export default function ExtractionPage(): JSX.Element {
             </div>
           ) : (
             <div className="p-6 space-y-6 max-w-3xl">
+              {/* Schema management */}
+              <SchemaManager
+                schemas={schemas}
+                onEdit={handleEditSchema}
+                onDelete={handleDeleteSchema}
+                onCreate={handleCreateSchema}
+              />
+
+              <Separator />
+
               {/* Document header */}
               {selectedDocument && (
                 <div className="flex items-center gap-3">
@@ -253,6 +276,7 @@ export default function ExtractionPage(): JSX.Element {
                       schemas={schemas}
                       extractors={extractors}
                       onRun={handleRunExtraction}
+                      onEditSchema={handleEditSchema}
                     />
                   </div>
                 ) : (

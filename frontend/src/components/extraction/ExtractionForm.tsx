@@ -11,13 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Play } from 'lucide-react'
+import { Pencil, Play } from 'lucide-react'
 
 interface ExtractionFormProps {
   documentId: string
   schemas: ExtractionSchema[]
   extractors: ExtractorInfo[]
   onRun: (request: RunExtractionRequest) => Promise<void>
+  onEditSchema?: (schema: ExtractionSchema) => void
 }
 
 export function ExtractionForm({
@@ -25,6 +26,7 @@ export function ExtractionForm({
   schemas,
   extractors,
   onRun,
+  onEditSchema,
 }: ExtractionFormProps) {
   const [schemaId, setSchemaId] = useState('')
   const [extractionMethod, setExtractionMethod] = useState('')
@@ -95,18 +97,34 @@ export function ExtractionForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs">Schema</Label>
-          <Select value={schemaId} onValueChange={setSchemaId}>
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder="Select schema" />
-            </SelectTrigger>
-            <SelectContent>
-              {schemas.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-1">
+            <Select value={schemaId} onValueChange={setSchemaId}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Select schema" />
+              </SelectTrigger>
+              <SelectContent>
+                {schemas.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {onEditSchema && schemaId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                title="Edit selected schema"
+                onClick={() => {
+                  const selected = schemas.find((s) => s.id === schemaId)
+                  if (selected) onEditSchema(selected)
+                }}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {extractors.length > 1 ? (
