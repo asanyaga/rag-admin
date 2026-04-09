@@ -59,22 +59,65 @@ def _normalise_inputs(
     predicted: dict[str, Any] | list | Any,
     expected: dict[str, Any] | list | Any,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Ensure both sides are dicts.
+    """Ensure both sides are dicts with compatible structure.
 
-    Extraction results may store structured_data as a raw list of records
-    (e.g. ``[{receipt_number: …}, …]``) while ground truth may wrap them
-    under a key (e.g. ``{transactions: […]}``).  This helper normalises
-    both sides so the engine can compare them.
+    Handles two common mismatches:
+
+    1. **Raw list predicted data** — extraction results stored as a flat
+       list of records (``[{field: val}, …]``).  If expected is a dict
+       with a single list-valued key (e.g. ``{transactions: […]}``), the
+       predicted list is wrapped under the same key.
+
+    2. **Paginated predicted data** — extraction results stored as a list
+       of per-page dicts (``[{transactions: […]}, {transactions: […]}]``).
+       The inner arrays are merged so the structure matches expected.
     """
-    if isinstance(predicted, list):
-        predicted = {"_items": predicted}
-    if isinstance(expected, list):
-        expected = {"_items": expected}
-    if not isinstance(predicted, dict):
-        predicted = {}
     if not isinstance(expected, dict):
-        expected = {}
+        expected = {} if not isinstance(expected, list) else {"_items": expected}
+    if not isinstance(predicted, dict):
+        if not isinstance(predicted, list):
+            predicted = {}
+        else:
+            predicted = _flatten_predicted_list(predicted, expected)
     return predicted, expected
+
+
+def _flatten_predicted_list(
+    predicted_list: list, expected: dict[str, Any]
+) -> dict[str, Any]:
+    """Convert a list-type predicted value into a dict matching expected's shape."""
+    if not predicted_list:
+        return {}
+
+    # Case 1: list of dicts that each have the same keys as expected
+    # (paginated results) — merge their list-valued fields.
+    # e.g. predicted = [{"transactions": [...]}, {"transactions": [...]}]
+    #      expected  = {"transactions": [...]}
+    first = predicted_list[0]
+    if isinstance(first, dict):
+        # Check if every element shares keys with expected
+        expected_keys = set(expected.keys())
+        if expected_keys and all(
+            isinstance(item, dict) and set(item.keys()) & expected_keys
+            for item in predicted_list
+        ):
+            merged: dict[str, Any] = {}
+            for item in predicted_list:
+                for key, val in item.items():
+                    if isinstance(val, list) and isinstance(merged.get(key), list):
+                        merged[key].extend(val)
+                    elif key not in merged:
+                        merged[key] = val if not isinstance(val, list) else list(val)
+                    # For scalar fields, keep the first value
+            return merged
+
+        # Case 2: list of flat record dicts — wrap under expected's key
+        # if expected has a single list-valued key
+        list_keys = [k for k, v in expected.items() if isinstance(v, list)]
+        if len(list_keys) == 1:
+            return {list_keys[0]: predicted_list}
+
+    return {"_items": predicted_list}
 
 
 def score_document(
