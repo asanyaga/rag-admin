@@ -18,36 +18,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Plus, Trash2, Pencil, Upload } from 'lucide-react'
-import { CsvImportModal } from './CsvImportModal'
+import { ArrowLeft, Plus, Trash2, Pencil } from 'lucide-react'
 
 interface GroundTruthSetDetailProps {
   set: ExtractionGroundTruthSet
   items: ExtractionGroundTruthItem[]
   documents: DocumentListItem[]
-  schemaDefinition: Record<string, unknown> | null
   isLoading: boolean
   onBack: () => void
   onAddItem: (documentId: string) => Promise<void>
   onDeleteItem: (itemId: string) => Promise<void>
   onEditItem: (item: ExtractionGroundTruthItem) => void
-  onImportComplete: () => void
 }
 
 export function GroundTruthSetDetail({
   set,
   items,
   documents,
-  schemaDefinition,
   isLoading,
   onBack,
   onAddItem,
   onDeleteItem,
   onEditItem,
-  onImportComplete,
 }: GroundTruthSetDetailProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [importModalOpen, setImportModalOpen] = useState(false)
   const [selectedDocId, setSelectedDocId] = useState('')
   const [isAdding, setIsAdding] = useState(false)
 
@@ -85,18 +79,10 @@ export function GroundTruthSetDetail({
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {schemaDefinition && (
-            <Button size="sm" variant="outline" onClick={() => setImportModalOpen(true)}>
-              <Upload className="h-3.5 w-3.5 mr-1.5" />
-              Import CSV
-            </Button>
-          )}
-          <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Add Document
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add Document
+        </Button>
       </div>
 
       {set.description && (
@@ -160,18 +146,6 @@ export function GroundTruthSetDetail({
             </div>
           ))}
         </div>
-      )}
-
-      {/* CSV Import modal */}
-      {schemaDefinition && (
-        <CsvImportModal
-          open={importModalOpen}
-          onOpenChange={setImportModalOpen}
-          setId={set.id}
-          schemaDefinition={schemaDefinition}
-          existingDocumentIds={existingDocIds}
-          onImportComplete={onImportComplete}
-        />
       )}
 
       {/* Add document dialog */}

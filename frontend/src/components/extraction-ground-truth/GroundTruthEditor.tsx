@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import type { ExtractionGroundTruthItem } from '@/types/extractionGroundTruth'
 import type { ExtractionSchema } from '@/types/extraction'
 import { DynamicFieldForm } from './DynamicFieldForm'
+import { CsvImportModal } from './CsvImportModal'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, ChevronLeft, ChevronRight, Save, Code, FormInput } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Save, Code, FormInput, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface GroundTruthEditorProps {
@@ -39,6 +40,7 @@ export function GroundTruthEditor({
   const [jsonMode, setJsonMode] = useState(false)
   const [jsonText, setJsonText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [csvImportOpen, setCsvImportOpen] = useState(false)
 
   const currentIndex = items.findIndex((i) => i.id === item.id)
   const hasPrev = currentIndex > 0
@@ -151,7 +153,19 @@ export function GroundTruthEditor({
 
         {/* Expected data */}
         <div>
-          <h3 className="text-sm font-medium mb-3">Expected Output</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium">Expected Output</h3>
+            {schema && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCsvImportOpen(true)}
+              >
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                Import CSV
+              </Button>
+            )}
+          </div>
           {jsonMode ? (
             <Textarea
               value={jsonText}
@@ -229,6 +243,28 @@ export function GroundTruthEditor({
           </div>
         </div>
       </div>
+
+      {/* CSV Import Modal */}
+      {schema && (
+        <CsvImportModal
+          open={csvImportOpen}
+          onOpenChange={setCsvImportOpen}
+          schemaDefinition={schema.schemaDefinition}
+          onImport={(records) => {
+            // Single row → set as flat expectedData; multiple rows → switch to JSON mode with array
+            if (records.length === 1) {
+              setExpectedData(records[0])
+              setJsonText(JSON.stringify(records[0], null, 2))
+            } else {
+              // Multiple records: use JSON mode since the form doesn't support arrays of records
+              setExpectedData(records as unknown as Record<string, unknown>)
+              setJsonText(JSON.stringify(records, null, 2))
+              if (!jsonMode) setJsonMode(true)
+            }
+            toast.success(`Imported ${records.length} ${records.length === 1 ? 'record' : 'records'}`)
+          }}
+        />
+      )}
     </div>
   )
 }

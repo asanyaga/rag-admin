@@ -186,13 +186,11 @@ export default function ExtractionGroundTruthPage(): JSX.Element {
                 set={nav.selectedSet}
                 items={items}
                 documents={documents}
-                schemaDefinition={selectedSchema?.schemaDefinition ?? null}
                 isLoading={itemsLoading}
                 onBack={() => dispatch({ type: 'BACK_TO_LIST' })}
                 onAddItem={handleAddItem}
                 onDeleteItem={handleDeleteItem}
                 onEditItem={(item) => dispatch({ type: 'EDIT_ITEM', item })}
-                onImportComplete={() => { fetchItems(); fetchSets() }}
               />
             )}
           </div>
