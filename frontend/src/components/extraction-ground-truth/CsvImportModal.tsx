@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Dialog,
   DialogContent,
@@ -499,59 +498,51 @@ export function CsvImportModal({
               </div>
             )}
 
-            {/* Data table */}
-            <ScrollArea className="flex-1 max-h-[400px] border rounded-lg">
-              <div className="min-w-0">
-                {/* Table header */}
-                <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm border-b px-3 py-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <span className="w-8 text-center shrink-0">#</span>
-                  {parseResult.columns.map((col) => (
-                    <span key={col} className="flex-1 min-w-[80px] truncate capitalize">
-                      {col.replace(/_/g, ' ')}
-                    </span>
-                  ))}
-                  <span className="w-10 text-center shrink-0">Status</span>
-                </div>
-
-                {/* Valid records */}
-                {parseResult.records.map((record) => (
-                  <div
-                    key={record.row}
-                    className="flex items-center gap-2 px-3 py-2 border-b text-sm hover:bg-muted/50"
-                  >
-                    <span className="w-8 text-center text-xs text-muted-foreground shrink-0">
-                      {record.row}
-                    </span>
+            {/* Data table — horizontally scrollable so all columns are visible */}
+            <div className="flex-1 max-h-[400px] border rounded-lg overflow-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm">
+                  <tr className="border-b">
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground w-10 whitespace-nowrap">#</th>
                     {parseResult.columns.map((col) => (
-                      <span key={col} className="flex-1 min-w-[80px] text-xs truncate">
-                        {String(record.data[col] ?? '')}
-                      </span>
+                      <th key={col} className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap capitalize">
+                        {col.replace(/_/g, ' ')}
+                      </th>
                     ))}
-                    <span className="w-10 flex justify-center shrink-0">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                    </span>
-                  </div>
-                ))}
+                    <th className="px-2 py-2 text-center font-medium text-muted-foreground w-10 whitespace-nowrap">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Valid records */}
+                  {parseResult.records.map((record) => (
+                    <tr key={record.row} className="border-b hover:bg-muted/50">
+                      <td className="px-2 py-1.5 text-muted-foreground text-center">{record.row}</td>
+                      {parseResult.columns.map((col) => (
+                        <td key={col} className="px-2 py-1.5 max-w-[200px] truncate">
+                          {String(record.data[col] ?? '')}
+                        </td>
+                      ))}
+                      <td className="px-2 py-1.5 text-center">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 inline-block" />
+                      </td>
+                    </tr>
+                  ))}
 
-                {/* Error rows */}
-                {parseResult.errors.map((err, i) => (
-                  <div
-                    key={`err-${i}`}
-                    className="flex items-center gap-2 px-3 py-2 border-b text-sm opacity-60"
-                  >
-                    <span className="w-8 text-center text-xs text-muted-foreground shrink-0">
-                      {err.row}
-                    </span>
-                    <span className="flex-1 text-xs text-destructive truncate">
-                      {err.message}
-                    </span>
-                    <span className="w-10 flex justify-center shrink-0">
-                      <AlertCircle className="h-3.5 w-3.5 text-destructive" />
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
+                  {/* Error rows */}
+                  {parseResult.errors.map((err, i) => (
+                    <tr key={`err-${i}`} className="border-b opacity-60">
+                      <td className="px-2 py-1.5 text-muted-foreground text-center">{err.row}</td>
+                      <td className="px-2 py-1.5 text-destructive" colSpan={parseResult.columns.length}>
+                        {err.message}
+                      </td>
+                      <td className="px-2 py-1.5 text-center">
+                        <AlertCircle className="h-3.5 w-3.5 text-destructive inline-block" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => { setStep('upload'); setParseResult(null) }}>
