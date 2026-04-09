@@ -80,12 +80,8 @@ export function DocumentResultsTable({ results }: DocumentResultsTableProps) {
                 {result.lineItemsScore && (
                   <LineItemsBreakdownView
                     lineItemsScore={result.lineItemsScore}
-                    expectedLineItems={
-                      (result.expectedData?.line_items ?? result.expectedData?.items) as Record<string, unknown>[] | undefined
-                    }
-                    predictedLineItems={
-                      (result.predictedData?.line_items ?? result.predictedData?.items) as Record<string, unknown>[] | undefined
-                    }
+                    expectedLineItems={findArrayField(result.expectedData)}
+                    predictedLineItems={findArrayField(result.predictedData)}
                   />
                 )}
               </div>
@@ -95,6 +91,23 @@ export function DocumentResultsTable({ results }: DocumentResultsTableProps) {
       })}
     </div>
   )
+}
+
+/** Find the first array-of-objects field in a data dict (e.g. transactions, line_items, items). */
+function findArrayField(
+  data: Record<string, unknown> | Array<Record<string, unknown>> | null | undefined
+): Record<string, unknown>[] | undefined {
+  if (!data) return undefined
+  // If the data itself is an array (raw list from extraction), use it directly
+  if (Array.isArray(data)) {
+    return data.length > 0 && typeof data[0] === 'object' ? data as Record<string, unknown>[] : undefined
+  }
+  for (const val of Object.values(data)) {
+    if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object') {
+      return val as Record<string, unknown>[]
+    }
+  }
+  return undefined
 }
 
 function StatusIcon({ score }: { score: number }) {
