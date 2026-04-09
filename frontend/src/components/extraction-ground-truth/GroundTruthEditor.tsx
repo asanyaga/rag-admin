@@ -250,14 +250,20 @@ export function GroundTruthEditor({
           open={csvImportOpen}
           onOpenChange={setCsvImportOpen}
           schemaDefinition={schema.schemaDefinition}
-          onImport={(records) => {
+          onImport={async (records) => {
             // Modal returns:
             // - Array schema: [{ transactions: [row1, row2, ...] }] — single wrapped record
             // - Scalar schema: [row1, row2, ...] — each row is a flat record
             const data = records[0]
             setExpectedData(data)
             setJsonText(JSON.stringify(data, null, 2))
-            toast.success('Expected output imported from CSV')
+            // Auto-save after import
+            try {
+              await onSave(item.id, data, Object.keys(annotations).length > 0 ? annotations : null)
+              toast.success('Expected output imported and saved')
+            } catch {
+              toast.error('Imported but failed to save — click Save to retry')
+            }
           }}
         />
       )}
