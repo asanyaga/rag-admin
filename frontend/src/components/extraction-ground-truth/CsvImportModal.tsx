@@ -38,22 +38,29 @@ const MAX_ROWS = 5000
 // CSV Parsing Helpers
 // ---------------------------------------------------------------------------
 
-function parseCsvLine(line: string): string[] {
-  const fields: string[] = []
+/**
+ * Parse an entire CSV string into rows of fields.
+ * Handles multiline values inside quoted fields (RFC 4180).
+ */
+function parseCsvRows(text: string): string[][] {
+  const rows: string[][] = []
   let current = ''
   let inQuotes = false
+  let fields: string[] = []
 
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+
     if (inQuotes) {
       if (ch === '"') {
-        if (i + 1 < line.length && line[i + 1] === '"') {
+        if (i + 1 < text.length && text[i + 1] === '"') {
           current += '"'
-          i++
+          i++ // skip escaped quote
         } else {
           inQuotes = false
         }
       } else {
+        // Include newlines inside quoted fields as part of the value
         current += ch
       }
     } else {
@@ -62,13 +69,31 @@ function parseCsvLine(line: string): string[] {
       } else if (ch === ',') {
         fields.push(current)
         current = ''
+      } else if (ch === '\n' || ch === '\r') {
+        // End of row (skip \r in \r\n)
+        if (ch === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
+          i++
+        }
+        fields.push(current)
+        current = ''
+        // Skip empty rows (all fields empty)
+        if (fields.some((f) => f.trim() !== '')) {
+          rows.push(fields)
+        }
+        fields = []
       } else {
         current += ch
       }
     }
   }
+
+  // Handle last row (no trailing newline)
   fields.push(current)
-  return fields
+  if (fields.some((f) => f.trim() !== '')) {
+    rows.push(fields)
+  }
+
+  return rows
 }
 
 type FieldSchema = { type?: string; items?: { properties?: Record<string, { type?: string }> } }
@@ -120,7 +145,9 @@ function resolveColumns(schemaDefinition: Record<string, unknown>): ResolvedColu
 function convertValue(value: string, fieldType?: string): unknown {
   if (value === '') return ''
   if (fieldType === 'number') {
-    const num = parseFloat(value)
+    // Strip thousands separators (commas) before parsing, e.g. "30,000.00" → "30000.00"
+    const cleaned = value.replace(/,/g, '')
+    const num = parseFloat(cleaned)
     return isNaN(num) ? value : num
   }
   return value
@@ -149,12 +176,12 @@ function parseCsv(
   text: string,
   schemaDefinition: Record<string, unknown>
 ): ParseResult {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim() !== '')
-  if (lines.length === 0) {
+  const allRows = parseCsvRows(text)
+  if (allRows.length === 0) {
     return { records: [], errors: [{ row: 0, message: 'File is empty' }], warnings: [], totalRows: 0, columns: [], arrayFieldName: null }
   }
 
-  const headers = parseCsvLine(lines[0]).map((h) => h.trim())
+  const headers = allRows[0].map((h) => h.trim())
   const { columns, arrayFieldName } = resolveColumns(schemaDefinition)
   const columnKeys = Object.keys(columns)
 
@@ -165,7 +192,7 @@ function parseCsv(
       records: [],
       errors: [{ row: 0, message: `No columns match schema fields. Expected: ${columnKeys.join(', ')}` }],
       warnings: [],
-      totalRows: lines.length - 1,
+      totalRows: allRows.length - 1,
       columns: headers,
       arrayFieldName,
     }
@@ -182,7 +209,7 @@ function parseCsv(
     warnings.push(`Missing schema fields (will be empty): ${missingColumns.join(', ')}`)
   }
 
-  const dataRows = lines.slice(1)
+  const dataRows = allRows.slice(1)
   if (dataRows.length > MAX_ROWS) {
     return {
       records: [],
@@ -199,7 +226,7 @@ function parseCsv(
 
   for (let i = 0; i < dataRows.length; i++) {
     const rowNum = i + 2
-    const values = parseCsvLine(dataRows[i])
+    const values = dataRows[i]
 
     const data: Record<string, unknown> = {}
     let rowError: string | null = null
