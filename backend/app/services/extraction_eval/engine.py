@@ -184,19 +184,22 @@ def _compute_overall_score(
         w_numeric = 0.35
         w_line = 0.0
 
-    components.append((w_exact, exact_rate))
+    # No scalar fields at all — give all weight to line items
+    if total_fields == 0 and has_line_items and line_items_score:
+        return line_items_score["f1"]
 
-    if fuzzy_scores:
-        components.append((w_fuzzy, avg_fuzzy))
-    else:
-        # Redistribute fuzzy weight to exact
-        components[0] = (components[0][0] + w_fuzzy, components[0][1])
+    if total_fields > 0:
+        components.append((w_exact, exact_rate))
 
-    if numeric_scores:
-        components.append((w_numeric, numeric_accuracy))
-    else:
-        # Redistribute numeric weight to exact
-        components[0] = (components[0][0] + w_numeric, components[0][1])
+        if fuzzy_scores:
+            components.append((w_fuzzy, avg_fuzzy))
+        else:
+            components[0] = (components[0][0] + w_fuzzy, components[0][1])
+
+        if numeric_scores:
+            components.append((w_numeric, numeric_accuracy))
+        else:
+            components[0] = (components[0][0] + w_numeric, components[0][1])
 
     if has_line_items and line_items_score and w_line > 0:
         components.append((w_line, line_items_score["f1"]))

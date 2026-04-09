@@ -135,6 +135,10 @@ export function useExtractionEvalRunDetail(
   }, [runId])
 
   useEffect(() => {
+    // Clear stale data from previous run before fetching
+    setRun(null)
+    setResults([])
+    setError(null)
     if (runId) {
       fetchRun()
       fetchResults()
