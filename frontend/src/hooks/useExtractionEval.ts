@@ -134,12 +134,37 @@ export function useExtractionEvalRunDetail(
     }
   }, [runId])
 
+  // Fetch run + results when runId changes
   useEffect(() => {
-    if (runId) {
-      fetchRun()
-      fetchResults()
+    if (!runId) {
+      setRun(null)
+      setResults([])
+      return
     }
-  }, [runId, fetchRun, fetchResults])
+    let cancelled = false
+    const load = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const [runData, resultsData] = await Promise.all([
+          api.getExtractionEvalRun(runId),
+          api.getExtractionEvalRunResults(runId),
+        ])
+        if (!cancelled) {
+          setRun(runData)
+          setResults(resultsData)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to fetch eval run')
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [runId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Poll while pending/running
   useEffect(() => {

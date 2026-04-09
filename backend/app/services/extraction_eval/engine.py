@@ -55,71 +55,6 @@ def infer_field_type(key: str, value: Any) -> str:
     return "string"
 
 
-def _normalise_inputs(
-    predicted: dict[str, Any] | list | Any,
-    expected: dict[str, Any] | list | Any,
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Ensure both sides are dicts with compatible structure.
-
-    Handles two common mismatches:
-
-    1. **Raw list predicted data** — extraction results stored as a flat
-       list of records (``[{field: val}, …]``).  If expected is a dict
-       with a single list-valued key (e.g. ``{transactions: […]}``), the
-       predicted list is wrapped under the same key.
-
-    2. **Paginated predicted data** — extraction results stored as a list
-       of per-page dicts (``[{transactions: […]}, {transactions: […]}]``).
-       The inner arrays are merged so the structure matches expected.
-    """
-    if not isinstance(expected, dict):
-        expected = {} if not isinstance(expected, list) else {"_items": expected}
-    if not isinstance(predicted, dict):
-        if not isinstance(predicted, list):
-            predicted = {}
-        else:
-            predicted = _flatten_predicted_list(predicted, expected)
-    return predicted, expected
-
-
-def _flatten_predicted_list(
-    predicted_list: list, expected: dict[str, Any]
-) -> dict[str, Any]:
-    """Convert a list-type predicted value into a dict matching expected's shape."""
-    if not predicted_list:
-        return {}
-
-    # Case 1: list of dicts that each have the same keys as expected
-    # (paginated results) — merge their list-valued fields.
-    # e.g. predicted = [{"transactions": [...]}, {"transactions": [...]}]
-    #      expected  = {"transactions": [...]}
-    first = predicted_list[0]
-    if isinstance(first, dict):
-        # Check if every element shares keys with expected
-        expected_keys = set(expected.keys())
-        if expected_keys and all(
-            isinstance(item, dict) and set(item.keys()) & expected_keys
-            for item in predicted_list
-        ):
-            merged: dict[str, Any] = {}
-            for item in predicted_list:
-                for key, val in item.items():
-                    if isinstance(val, list) and isinstance(merged.get(key), list):
-                        merged[key].extend(val)
-                    elif key not in merged:
-                        merged[key] = val if not isinstance(val, list) else list(val)
-                    # For scalar fields, keep the first value
-            return merged
-
-        # Case 2: list of flat record dicts — wrap under expected's key
-        # if expected has a single list-valued key
-        list_keys = [k for k, v in expected.items() if isinstance(v, list)]
-        if len(list_keys) == 1:
-            return {list_keys[0]: predicted_list}
-
-    return {"_items": predicted_list}
-
-
 def score_document(
     predicted: dict[str, Any],
     expected: dict[str, Any],
@@ -140,10 +75,6 @@ def score_document(
 
     field_scores: dict[str, dict] = {}
     line_items_score: dict | None = None
-
-    # Normalise inputs: if either side is a raw list, wrap it under a
-    # synthetic key so the rest of the logic can treat it uniformly.
-    predicted, expected = _normalise_inputs(predicted, expected)
 
     # Separate line items from scalar fields
     predicted_line_items = None
@@ -253,19 +184,22 @@ def _compute_overall_score(
         w_numeric = 0.35
         w_line = 0.0
 
-    components.append((w_exact, exact_rate))
+    # No scalar fields at all — give all weight to line items
+    if total_fields == 0 and has_line_items and line_items_score:
+        return line_items_score["f1"]
 
-    if fuzzy_scores:
-        components.append((w_fuzzy, avg_fuzzy))
-    else:
-        # Redistribute fuzzy weight to exact
-        components[0] = (components[0][0] + w_fuzzy, components[0][1])
+    if total_fields > 0:
+        components.append((w_exact, exact_rate))
 
-    if numeric_scores:
-        components.append((w_numeric, numeric_accuracy))
-    else:
-        # Redistribute numeric weight to exact
-        components[0] = (components[0][0] + w_numeric, components[0][1])
+        if fuzzy_scores:
+            components.append((w_fuzzy, avg_fuzzy))
+        else:
+            components[0] = (components[0][0] + w_fuzzy, components[0][1])
+
+        if numeric_scores:
+            components.append((w_numeric, numeric_accuracy))
+        else:
+            components[0] = (components[0][0] + w_numeric, components[0][1])
 
     if has_line_items and line_items_score and w_line > 0:
         components.append((w_line, line_items_score["f1"]))

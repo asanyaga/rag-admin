@@ -66,8 +66,8 @@ class ExtractionEvalResultResponse(BaseModel):
     overall_score: float = Field(..., alias="overallScore")
     field_scores: dict = Field(..., alias="fieldScores")
     line_items_score: dict | None = Field(None, alias="lineItemsScore")
-    expected_data: dict | None = Field(None, alias="expectedData")
-    predicted_data: dict | None = Field(None, alias="predictedData")
+    expected_data: dict | list | None = Field(None, alias="expectedData")
+    predicted_data: dict | list | None = Field(None, alias="predictedData")
     evaluation_metadata: dict | None = Field(None, alias="evaluationMetadata")
     created_at: datetime = Field(..., alias="createdAt")
 
