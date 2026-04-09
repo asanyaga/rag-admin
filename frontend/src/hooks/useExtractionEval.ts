@@ -134,11 +134,18 @@ export function useExtractionEvalRunDetail(
     }
   }, [runId])
 
+  // Reset and fetch when runId changes
+  const prevRunIdRef = useRef<string | null>(null)
   useEffect(() => {
-    // Clear stale data from previous run before fetching
-    setRun(null)
-    setResults([])
-    setError(null)
+    if (runId !== prevRunIdRef.current) {
+      prevRunIdRef.current = runId
+      setResults([])
+      setError(null)
+      if (!runId) {
+        setRun(null)
+        return
+      }
+    }
     if (runId) {
       fetchRun()
       fetchResults()
