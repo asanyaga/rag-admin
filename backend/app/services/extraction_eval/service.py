@@ -256,10 +256,15 @@ class ExtractionEvalService:
             result.ground_truth_item.expected_data
             if result.ground_truth_item else None
         )
-        predicted_data = (
-            result.extraction_result.structured_data
-            if result.extraction_result else None
-        )
+        # Normalise predicted data so the UI sees the same canonical form
+        # that the eval engine scored against
+        predicted_data = None
+        if result.extraction_result:
+            predicted_data = normalise(
+                structured_data=result.extraction_result.structured_data,
+                extraction_method=result.extraction_result.extraction_method,
+                schema_definition=result.extraction_result.schema_definition_snapshot,
+            )
         return ExtractionEvalResultResponse(
             id=result.id,
             eval_run_id=result.eval_run_id,
