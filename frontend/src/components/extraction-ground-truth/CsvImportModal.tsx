@@ -71,18 +71,55 @@ function parseCsvLine(line: string): string[] {
   return fields
 }
 
-type FieldSchema = { type?: string }
+type FieldSchema = { type?: string; items?: { properties?: Record<string, { type?: string }> } }
 
-function getSchemaFields(
-  schemaDefinition: Record<string, unknown>
-): Record<string, FieldSchema> {
-  const properties = (schemaDefinition.properties ?? {}) as Record<string, FieldSchema>
-  return properties
+/**
+ * Resolve the effective CSV columns from a schema definition.
+ *
+ * Two schema shapes:
+ *  1. Scalar fields:  { properties: { invoice_number: {type:"string"}, total: {type:"number"} } }
+ *     → columns are the top-level property keys, each row is a flat record.
+ *  2. Array field:    { properties: { transactions: {type:"array", items:{properties:{receipt_number:{type:"string"}, ...}}} } }
+ *     → columns are the *sub-properties* of the array items, each row is one array entry.
+ *     The array field name is returned as `arrayFieldName` so we can wrap the result.
+ */
+interface ResolvedColumns {
+  /** Column names that appear in the CSV header */
+  columns: Record<string, { type?: string }>
+  /** If the schema is an array-field schema, this is the parent field name (e.g. "transactions") */
+  arrayFieldName: string | null
 }
 
-function convertValue(value: string, fieldSchema: FieldSchema): unknown {
+function resolveColumns(schemaDefinition: Record<string, unknown>): ResolvedColumns {
+  const properties = (schemaDefinition.properties ?? {}) as Record<string, FieldSchema>
+  const keys = Object.keys(properties)
+
+  // Check if there's a single array field whose items have properties — flatten it
+  const arrayFields = keys.filter(
+    (k) => properties[k].type === 'array' && properties[k].items?.properties
+  )
+
+  if (arrayFields.length === 1 && keys.length === 1) {
+    // Schema is a single array field — use sub-properties as columns
+    const arrayKey = arrayFields[0]
+    const subProps = properties[arrayKey].items!.properties!
+    return {
+      columns: subProps as Record<string, { type?: string }>,
+      arrayFieldName: arrayKey,
+    }
+  }
+
+  // Otherwise treat all top-level properties as columns (scalar fields)
+  const cols: Record<string, { type?: string }> = {}
+  for (const key of keys) {
+    cols[key] = { type: properties[key].type }
+  }
+  return { columns: cols, arrayFieldName: null }
+}
+
+function convertValue(value: string, fieldType?: string): unknown {
   if (value === '') return ''
-  if (fieldSchema.type === 'number') {
+  if (fieldType === 'number') {
     const num = parseFloat(value)
     return isNaN(num) ? value : num
   }
@@ -105,6 +142,7 @@ interface ParseResult {
   warnings: string[]
   totalRows: number
   columns: string[]
+  arrayFieldName: string | null
 }
 
 function parseCsv(
@@ -113,32 +151,33 @@ function parseCsv(
 ): ParseResult {
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== '')
   if (lines.length === 0) {
-    return { records: [], errors: [{ row: 0, message: 'File is empty' }], warnings: [], totalRows: 0, columns: [] }
+    return { records: [], errors: [{ row: 0, message: 'File is empty' }], warnings: [], totalRows: 0, columns: [], arrayFieldName: null }
   }
 
   const headers = parseCsvLine(lines[0]).map((h) => h.trim())
-  const fields = getSchemaFields(schemaDefinition)
-  const fieldKeys = Object.keys(fields)
+  const { columns, arrayFieldName } = resolveColumns(schemaDefinition)
+  const columnKeys = Object.keys(columns)
 
-  // Check that at least one column matches a schema field
-  const matchedColumns = headers.filter((h) => fieldKeys.includes(h))
+  // Check that at least one column matches
+  const matchedColumns = headers.filter((h) => columnKeys.includes(h))
   if (matchedColumns.length === 0) {
     return {
       records: [],
-      errors: [{ row: 0, message: `No columns match schema fields. Expected: ${fieldKeys.join(', ')}` }],
+      errors: [{ row: 0, message: `No columns match schema fields. Expected: ${columnKeys.join(', ')}` }],
       warnings: [],
       totalRows: lines.length - 1,
       columns: headers,
+      arrayFieldName,
     }
   }
 
-  const unknownColumns = headers.filter((h) => !fieldKeys.includes(h))
+  const unknownColumns = headers.filter((h) => !columnKeys.includes(h))
   const warnings: string[] = []
   if (unknownColumns.length > 0) {
     warnings.push(`Unknown columns ignored: ${unknownColumns.join(', ')}`)
   }
 
-  const missingColumns = fieldKeys.filter((k) => !headers.includes(k))
+  const missingColumns = columnKeys.filter((k) => !headers.includes(k))
   if (missingColumns.length > 0) {
     warnings.push(`Missing schema fields (will be empty): ${missingColumns.join(', ')}`)
   }
@@ -151,6 +190,7 @@ function parseCsv(
       warnings,
       totalRows: dataRows.length,
       columns: matchedColumns,
+      arrayFieldName,
     }
   }
 
@@ -164,13 +204,13 @@ function parseCsv(
     const data: Record<string, unknown> = {}
     let rowError: string | null = null
 
-    for (const key of fieldKeys) {
+    for (const key of columnKeys) {
       const colIndex = headers.indexOf(key)
       if (colIndex === -1) continue
       const rawValue = values[colIndex]?.trim() ?? ''
       if (rawValue === '') continue
       try {
-        data[key] = convertValue(rawValue, fields[key])
+        data[key] = convertValue(rawValue, columns[key].type)
       } catch {
         rowError = `Failed to parse field "${key}"`
         break
@@ -188,16 +228,16 @@ function parseCsv(
     records.push({ row: rowNum, data })
   }
 
-  return { records, errors, warnings, totalRows: dataRows.length, columns: matchedColumns }
+  return { records, errors, warnings, totalRows: dataRows.length, columns: matchedColumns, arrayFieldName }
 }
 
 function generateTemplate(schemaDefinition: Record<string, unknown>): string {
-  const fields = getSchemaFields(schemaDefinition)
-  const keys = Object.keys(fields)
+  const { columns } = resolveColumns(schemaDefinition)
+  const keys = Object.keys(columns)
   const headers = keys.join(',')
 
   const exampleValues = keys.map((key) => {
-    if (fields[key].type === 'number') return '0'
+    if (columns[key].type === 'number') return '0'
     return ''
   })
 
@@ -278,8 +318,15 @@ export function CsvImportModal({
 
   const handleImport = () => {
     if (!parseResult) return
-    const records = parseResult.records.map((r) => r.data)
-    onImport(records)
+    const rows = parseResult.records.map((r) => r.data)
+
+    if (parseResult.arrayFieldName) {
+      // Array schema: wrap rows under the array field name
+      // e.g. { transactions: [row1, row2, ...] }
+      onImport([{ [parseResult.arrayFieldName]: rows }])
+    } else {
+      onImport(rows)
+    }
     handleOpenChange(false)
   }
 
@@ -294,8 +341,8 @@ export function CsvImportModal({
     URL.revokeObjectURL(url)
   }
 
-  const fields = getSchemaFields(schemaDefinition)
-  const fieldKeys = Object.keys(fields)
+  const { columns: resolvedCols } = resolveColumns(schemaDefinition)
+  const columnKeys = Object.keys(resolvedCols)
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -362,7 +409,7 @@ export function CsvImportModal({
                       Drop a CSV file here or click to browse
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Columns: {fieldKeys.join(', ')}
+                      Columns: {columnKeys.join(', ')}
                     </p>
                   </div>
                 </>

@@ -251,17 +251,13 @@ export function GroundTruthEditor({
           onOpenChange={setCsvImportOpen}
           schemaDefinition={schema.schemaDefinition}
           onImport={(records) => {
-            // Single row → set as flat expectedData; multiple rows → switch to JSON mode with array
-            if (records.length === 1) {
-              setExpectedData(records[0])
-              setJsonText(JSON.stringify(records[0], null, 2))
-            } else {
-              // Multiple records: use JSON mode since the form doesn't support arrays of records
-              setExpectedData(records as unknown as Record<string, unknown>)
-              setJsonText(JSON.stringify(records, null, 2))
-              if (!jsonMode) setJsonMode(true)
-            }
-            toast.success(`Imported ${records.length} ${records.length === 1 ? 'record' : 'records'}`)
+            // Modal returns:
+            // - Array schema: [{ transactions: [row1, row2, ...] }] — single wrapped record
+            // - Scalar schema: [row1, row2, ...] — each row is a flat record
+            const data = records[0]
+            setExpectedData(data)
+            setJsonText(JSON.stringify(data, null, 2))
+            toast.success('Expected output imported from CSV')
           }}
         />
       )}
