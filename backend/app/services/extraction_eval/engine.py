@@ -55,6 +55,28 @@ def infer_field_type(key: str, value: Any) -> str:
     return "string"
 
 
+def _normalise_inputs(
+    predicted: dict[str, Any] | list | Any,
+    expected: dict[str, Any] | list | Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Ensure both sides are dicts.
+
+    Extraction results may store structured_data as a raw list of records
+    (e.g. ``[{receipt_number: …}, …]``) while ground truth may wrap them
+    under a key (e.g. ``{transactions: […]}``).  This helper normalises
+    both sides so the engine can compare them.
+    """
+    if isinstance(predicted, list):
+        predicted = {"_items": predicted}
+    if isinstance(expected, list):
+        expected = {"_items": expected}
+    if not isinstance(predicted, dict):
+        predicted = {}
+    if not isinstance(expected, dict):
+        expected = {}
+    return predicted, expected
+
+
 def score_document(
     predicted: dict[str, Any],
     expected: dict[str, Any],
@@ -76,26 +98,29 @@ def score_document(
     field_scores: dict[str, dict] = {}
     line_items_score: dict | None = None
 
+    # Normalise inputs: if either side is a raw list, wrap it under a
+    # synthetic key so the rest of the logic can treat it uniformly.
+    predicted, expected = _normalise_inputs(predicted, expected)
+
     # Separate line items from scalar fields
     predicted_line_items = None
     expected_line_items = None
     has_line_items = False
 
-    # Keys that represent line-item arrays (not scalar fields)
-    line_item_keys = {"line_items", "items"}
-
     # Collect all field keys (union of predicted and expected)
     all_keys = set()
     for key in expected:
-        if key in line_item_keys:
-            expected_line_items = expected[key]
+        val = expected[key]
+        if isinstance(val, list) and val and isinstance(val[0], dict):
+            expected_line_items = val
             has_line_items = True
             continue
         all_keys.add(key)
 
     for key in predicted:
-        if key in line_item_keys:
-            predicted_line_items = predicted[key]
+        val = predicted[key]
+        if isinstance(val, list) and val and isinstance(val[0], dict):
+            predicted_line_items = val
             has_line_items = True
             continue
         all_keys.add(key)
