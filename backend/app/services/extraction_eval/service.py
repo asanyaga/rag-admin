@@ -16,6 +16,7 @@ from app.schemas.extraction_eval import (
     ExtractionEvalResultResponse,
 )
 from app.services.extraction_eval.engine import EvalConfig, score_document
+from app.services.extraction.normaliser import normalise
 from app.services.exceptions import NotFoundError
 
 logger = logging.getLogger(__name__)
@@ -135,7 +136,12 @@ class ExtractionEvalService:
                     await self.eval_repo.update_progress(run_id, items_completed)
                     continue
 
-                predicted = extraction_result.structured_data or {}
+                # Normalise predicted data into canonical form
+                predicted = normalise(
+                    structured_data=extraction_result.structured_data,
+                    extraction_method=extraction_result.extraction_method,
+                    schema_definition=extraction_result.schema_definition_snapshot,
+                )
                 expected = gt_item.expected_data or {}
 
                 # Score the document
