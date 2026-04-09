@@ -57,3 +57,27 @@ export interface BulkImportResponse {
   created: number
   errors: string[]
 }
+
+// ---------------------------------------------------------------------------
+// CSV Import (client-side parsing)
+// ---------------------------------------------------------------------------
+
+export interface CsvParsedRow {
+  row: number
+  documentId: string
+  expectedData: Record<string, unknown>
+  annotations: Record<string, unknown> | null
+}
+
+export interface CsvParseError {
+  row: number
+  message: string
+}
+
+export interface CsvParseResult {
+  validRows: CsvParsedRow[]
+  errors: CsvParseError[]
+  duplicateRows: CsvParsedRow[]
+  warnings: string[]
+  totalRows: number
+}

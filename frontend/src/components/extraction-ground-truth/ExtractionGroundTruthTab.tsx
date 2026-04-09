@@ -166,10 +166,12 @@ export function ExtractionGroundTruthTab({
         items={items}
         documents={documents}
         isLoading={itemsLoading}
+        schemaDefinition={selectedSchema?.schemaDefinition ?? null}
         onBack={() => dispatch({ type: 'BACK_TO_LIST' })}
         onAddItem={handleAddItem}
         onDeleteItem={handleDeleteItem}
         onEditItem={(item) => dispatch({ type: 'EDIT_ITEM', item })}
+        onImportComplete={fetchItems}
       />
     )
   }
