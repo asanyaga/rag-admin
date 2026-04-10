@@ -1,11 +1,61 @@
-"""Pydantic schemas for the agent receipt processing pipeline."""
+"""Pydantic schemas for the agent module."""
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.agent_receipt import AgentReceiptStatus
+
+
+# --- Agent Type schemas ---
+
+class AgentTypeResponse(BaseModel):
+    """Available agent type from the registry."""
+    slug: str
+    name: str
+    description: str
+    nodes: list[dict[str, str]]
+    config_schema: dict[str, Any] = Field(default_factory=dict, alias="configSchema")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# --- Agent Config schemas ---
+
+class AgentConfigCreate(BaseModel):
+    """Request to enable an agent type for a project."""
+    agent_type: str = Field(..., alias="agentType")
+    config: dict | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class AgentConfigResponse(BaseModel):
+    """Agent config response."""
+    id: UUID
+    project_id: UUID = Field(..., alias="projectId")
+    agent_type: str = Field(..., alias="agentType")
+    config: dict | None = None
+    enabled: bool
+    created_by: UUID = Field(..., alias="createdBy")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @classmethod
+    def from_orm_model(cls, obj) -> "AgentConfigResponse":
+        return cls(
+            id=obj.id,
+            projectId=obj.project_id,
+            agentType=obj.agent_type,
+            config=obj.config,
+            enabled=obj.enabled,
+            createdBy=obj.created_by,
+            createdAt=obj.created_at,
+            updatedAt=obj.updated_at,
+        )
 
 
 class StartProcessingRequest(BaseModel):

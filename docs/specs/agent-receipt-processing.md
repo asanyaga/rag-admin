@@ -292,3 +292,84 @@ frontend/src/App.tsx                   # Add routes
 - Non-receipt document types (mpesa, bank statements — future)
 - File upload in Agent UI (uses existing Documents upload)
 - Receipt image preview in review UI (future enhancement)
+
+---
+
+## Future: Per-Project Agent Types & Registry
+
+### Motivation
+
+Different projects need different agent workflows:
+- **Personal Budget** project → receipt processing (extract → review → export)
+- **REIT Financial Analysis** project → financial research (research → analyze → review → report)
+- **Digital Ocean Analysis** project → its own flow
+
+The Agent page should show only the flows relevant to the current project. Adding a new flow means writing a new Python module — Claude Code writes and tests each one.
+
+### Design: Agent Types as Code Modules
+
+```
+backend/app/services/agent/types/
+  __init__.py                          # Registry — discovers available agent types
+  receipt_processing/
+    __init__.py                        # AgentTypeDefinition metadata
+    graph.py                           # StateGraph builder
+    nodes.py                           # Node functions
+    state.py                           # TypedDict state
+  financial_research/
+    __init__.py
+    graph.py
+    nodes.py
+    state.py
+```
+
+Each agent type module exports an `AgentTypeDefinition` with:
+- `slug`: unique identifier (e.g., `receipt-processing`)
+- `name`: display name
+- `description`: what this flow does
+- `graph_builder`: function that returns a compiled StateGraph
+- `node_descriptions`: ordered list of node names + labels for UI status display
+- `review_schema`: hints for what the review UI should render (JSON editor, form fields, etc.)
+
+### Data Model Changes
+
+**`agent_configs` table** — links projects to agent types:
+
+| Column | Type | Description |
+|---|---|---|
+| id | UUID | PK |
+| project_id | UUID | FK projects.id |
+| agent_type | VARCHAR | Slug matching a registered agent type |
+| config | JSON | Per-project config overrides (LLM model, prompts, etc.) |
+| enabled | BOOLEAN | Toggle without deleting |
+| created_at | TIMESTAMPTZ | |
+
+**`agent_runs` table** — generalizes `agent_receipts` for any agent type:
+
+| Column | Type | Description |
+|---|---|---|
+| id | UUID | PK |
+| project_id | UUID | FK |
+| agent_config_id | UUID | FK agent_configs.id |
+| status | enum | Pipeline status |
+| input_data | JSON | What was fed into the graph |
+| extracted_data | JSON | Output from processing nodes |
+| reviewed_data | JSON | Human-reviewed output |
+| thread_id | VARCHAR | LangGraph checkpointer thread |
+| created_by | UUID | FK |
+| created_at / updated_at | TIMESTAMPTZ | |
+
+### Frontend Changes
+
+- Agent page queries agent configs for current project
+- If no configs → shows "Configure an agent for this project" prompt
+- If configs exist → shows tabs/sections per enabled agent type
+- Each agent type can declare its own review component (or fall back to JSON editor)
+
+### Adding a New Agent Type (Developer Workflow)
+
+1. Create new directory under `services/agent/types/<slug>/`
+2. Define state, nodes, graph, and metadata
+3. Register in the type registry `__init__.py`
+4. Create an `agent_config` row linking it to a project
+5. The UI picks it up automatically

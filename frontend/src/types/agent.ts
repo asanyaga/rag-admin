@@ -1,3 +1,31 @@
+// --- Agent Types & Configs ---
+
+export interface AgentType {
+  slug: string
+  name: string
+  description: string
+  nodes: { name: string; label: string }[]
+  configSchema: Record<string, unknown>
+}
+
+export interface AgentConfig {
+  id: string
+  projectId: string
+  agentType: string
+  config: Record<string, unknown> | null
+  enabled: boolean
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AgentConfigCreate {
+  agentType: string
+  config?: Record<string, unknown>
+}
+
+// --- Receipt Processing ---
+
 export type AgentReceiptStatus =
   | 'pending'
   | 'extracting'
