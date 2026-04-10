@@ -18,6 +18,7 @@ from app.models.extraction_schema import ExtractionSchema
 from app.models.extraction_result import ExtractionResult, ExtractionResultStatus
 from app.models.extraction_ground_truth import ExtractionGroundTruthSet, ExtractionGroundTruthItem
 from app.models.extraction_eval import ExtractionEvalRun, ExtractionEvalRunStatus, ExtractionEvalResult
+from app.models.agent_receipt import AgentReceipt, AgentReceiptStatus
 
 __all__ = [
     "User",
@@ -56,4 +57,6 @@ __all__ = [
     "ExtractionEvalRun",
     "ExtractionEvalRunStatus",
     "ExtractionEvalResult",
+    "AgentReceipt",
+    "AgentReceiptStatus",
 ]
