@@ -16,9 +16,7 @@ def get_checkpoint_connection_string() -> str:
     return re.sub(r"^postgresql\+asyncpg://", "postgresql://", url)
 
 
-async def create_checkpointer() -> AsyncPostgresSaver:
-    """Create and set up the AsyncPostgresSaver checkpointer."""
+def get_checkpointer_context():
+    """Return an async context manager for the checkpointer."""
     conn_string = get_checkpoint_connection_string()
-    checkpointer = AsyncPostgresSaver.from_conn_string(conn_string)
-    await checkpointer.setup()
-    return checkpointer
+    return AsyncPostgresSaver.from_conn_string(conn_string)

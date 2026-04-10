@@ -19,13 +19,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create the enum type
-    agent_receipt_status = postgresql.ENUM(
-        'pending', 'extracting', 'reviewing', 'approved', 'exported', 'failed',
-        name='agent_receipt_status',
-        create_type=True,
-    )
-    agent_receipt_status.create(op.get_bind(), checkfirst=True)
+    # Create the enum type using raw SQL to avoid asyncpg checkfirst issues
+    op.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'agent_receipt_status') THEN
+                CREATE TYPE agent_receipt_status AS ENUM (
+                    'pending', 'extracting', 'reviewing', 'approved', 'exported', 'failed'
+                );
+            END IF;
+        END
+        $$;
+    """)
 
     op.create_table(
         'agent_receipts',
@@ -33,7 +38,7 @@ def upgrade() -> None:
         sa.Column('project_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('document_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('extraction_schema_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('status', sa.Enum('pending', 'extracting', 'reviewing', 'approved', 'exported', 'failed', name='agent_receipt_status', create_type=False), server_default='pending', nullable=False),
+        sa.Column('status', postgresql.ENUM('pending', 'extracting', 'reviewing', 'approved', 'exported', 'failed', name='agent_receipt_status', create_type=False), server_default='pending', nullable=False),
         sa.Column('status_message', sa.Text(), nullable=True),
         sa.Column('extracted_data', sa.JSON(), nullable=True),
         sa.Column('reviewed_data', sa.JSON(), nullable=True),
@@ -57,4 +62,4 @@ def downgrade() -> None:
     op.drop_index('ix_agent_receipts_status', table_name='agent_receipts')
     op.drop_index('ix_agent_receipts_project_id', table_name='agent_receipts')
     op.drop_table('agent_receipts')
-    sa.Enum(name='agent_receipt_status').drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS agent_receipt_status")

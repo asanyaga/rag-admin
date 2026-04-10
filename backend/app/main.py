@@ -63,15 +63,16 @@ async def lifespan(app: FastAPI):
     setup_oauth(settings)
 
     # Initialize LangGraph checkpointer for agent pipeline
-    from app.services.agent.checkpointer import create_checkpointer
-    app.state.agent_checkpointer = await create_checkpointer()
+    from app.services.agent.checkpointer import get_checkpointer_context
+    async with get_checkpointer_context() as checkpointer:
+        await checkpointer.setup()
+        app.state.agent_checkpointer = checkpointer
 
-    yield
+        yield
 
-    # Shutdown
-    # Clean up resources
-    await otel_proxy.close_http_client(app)
-    shutdown_tracing()
+        # Shutdown — clean up resources
+        await otel_proxy.close_http_client(app)
+        shutdown_tracing()
 
 
 # ============================================================================
