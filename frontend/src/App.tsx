@@ -24,6 +24,8 @@ import EvalResultDetailPage from './pages/EvalResultDetailPage'
 import RunComparisonPage from './pages/RunComparisonPage'
 import ExperimentDetailPage from './pages/ExperimentDetailPage'
 import ExtractionPage from './pages/ExtractionPage'
+import AgentPage from './pages/AgentPage'
+import AgentReceiptPage from './pages/AgentReceiptPage'
 
 const router = createBrowserRouter([
   {
@@ -88,6 +90,16 @@ const router = createBrowserRouter([
             path: 'extraction',
             element: <ExtractionPage />,
             handle: { breadcrumb: 'Extraction' },
+          },
+          {
+            path: 'agent',
+            element: <AgentPage />,
+            handle: { breadcrumb: 'Agent' },
+          },
+          {
+            path: 'agent/receipts/:receiptId',
+            element: <AgentReceiptPage />,
+            handle: { breadcrumb: 'Receipt Detail' },
           },
 {
             path: 'evaluation',

@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
-from app.routers import auth, oauth, otel_proxy, projects, users, documents, indexes, provider_keys, golden_sets, eval_runs, experiments, parse_results, extraction, extraction_ground_truth, extraction_eval
+from app.routers import auth, oauth, otel_proxy, projects, users, documents, indexes, provider_keys, golden_sets, eval_runs, experiments, parse_results, extraction, extraction_ground_truth, extraction_eval, agent
 from app.utils.oauth import setup_oauth
 
 # Import database engine for SQLAlchemy instrumentation
@@ -62,12 +62,17 @@ async def lifespan(app: FastAPI):
     # Initialize OAuth client
     setup_oauth(settings)
 
-    yield
+    # Initialize LangGraph checkpointer for agent pipeline
+    from app.services.agent.checkpointer import get_checkpointer_context
+    async with get_checkpointer_context() as checkpointer:
+        await checkpointer.setup()
+        app.state.agent_checkpointer = checkpointer
 
-    # Shutdown
-    # Clean up resources
-    await otel_proxy.close_http_client(app)
-    shutdown_tracing()
+        yield
+
+        # Shutdown — clean up resources
+        await otel_proxy.close_http_client(app)
+        shutdown_tracing()
 
 
 # ============================================================================
@@ -159,3 +164,4 @@ app.include_router(parse_results.router, prefix="/api/v1")
 app.include_router(extraction.router, prefix="/api/v1")
 app.include_router(extraction_ground_truth.router, prefix="/api/v1")
 app.include_router(extraction_eval.router, prefix="/api/v1")
+app.include_router(agent.router, prefix="/api/v1")
