@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { AgentFlowGraph } from './AgentFlowGraph'
 import { Plus, Trash2, Bot } from 'lucide-react'
 import type { AgentType, AgentConfig } from '@/types/agent'
 
@@ -22,34 +23,36 @@ export function AgentSetup({
     <div className="space-y-4">
       {/* Enabled agents */}
       {configs.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <h2 className="text-sm font-medium">Enabled Agents</h2>
           {configs.map((config) => {
             const agentType = agentTypes.find((t) => t.slug === config.agentType)
             return (
-              <div
-                key={config.id}
-                className="flex items-center justify-between rounded-lg border p-3"
-              >
-                <div className="flex items-center gap-3">
-                  <Bot className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      {agentType?.name || config.agentType}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {agentType?.description}
-                    </p>
+              <div key={config.id} className="rounded-lg border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Bot className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">
+                        {agentType?.name || config.agentType}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {agentType?.description}
+                      </p>
+                    </div>
                   </div>
+                  {onRemove && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemove(config.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
                 </div>
-                {onRemove && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onRemove(config.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </Button>
+                {agentType && (
+                  <AgentFlowGraph nodes={agentType.nodes} height={100} />
                 )}
               </div>
             )
@@ -71,29 +74,29 @@ export function AgentSetup({
             </p>
           )}
           {availableTypes.map((agentType) => (
-            <div
-              key={agentType.slug}
-              className="flex items-center justify-between rounded-lg border border-dashed p-3"
-            >
-              <div className="flex items-center gap-3">
-                <Bot className="h-4 w-4 text-muted-foreground/50" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {agentType.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground/70">
-                    {agentType.description}
-                  </p>
+            <div key={agentType.slug} className="rounded-lg border border-dashed p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Bot className="h-4 w-4 text-muted-foreground/50" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {agentType.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70">
+                      {agentType.description}
+                    </p>
+                  </div>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEnable(agentType.slug)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Enable
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onEnable(agentType.slug)}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Enable
-              </Button>
+              <AgentFlowGraph nodes={agentType.nodes} height={100} />
             </div>
           ))}
         </div>

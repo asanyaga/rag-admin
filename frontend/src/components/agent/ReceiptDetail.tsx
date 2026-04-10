@@ -1,9 +1,16 @@
 import { StatusBadge } from './StatusBadge'
+import { AgentFlowGraph } from './AgentFlowGraph'
 import { ReceiptReviewForm } from './ReceiptReviewForm'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Loader2 } from 'lucide-react'
 import type { AgentReceipt, SubmitReviewRequest } from '@/types/agent'
+
+const RECEIPT_NODES = [
+  { name: 'extract', label: 'Extract Data' },
+  { name: 'review', label: 'Human Review' },
+  { name: 'export', label: 'Export' },
+]
 
 interface ReceiptDetailProps {
   receipt: AgentReceipt | null
@@ -54,6 +61,18 @@ export function ReceiptDetail({
           })}
         </span>
       </div>
+
+      {/* Flow visualization */}
+      <AgentFlowGraph
+        nodes={RECEIPT_NODES}
+        status={receipt.status}
+        currentStep={
+          receipt.status === 'extracting' ? 'extract' :
+          receipt.status === 'reviewing' ? 'review' :
+          receipt.status === 'exported' || receipt.status === 'approved' ? 'export' :
+          receipt.status === 'failed' ? 'review' : null
+        }
+      />
 
       {error && (
         <Alert variant="destructive">
