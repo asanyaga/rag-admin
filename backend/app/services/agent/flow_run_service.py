@@ -11,7 +11,7 @@ from app.repositories.flow_definition_repository import FlowDefinitionRepository
 from app.repositories.flow_run_repository import FlowRunRepository
 from app.schemas.agent import FlowRunResponse, FlowRunListItem
 from app.services.agent.graph import build_graph_from_definition
-from app.services.agent.state import GenericFlowState
+from app.services.agent.state import AgentState
 from app.services.exceptions import NotFoundError
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ class FlowRunService:
         compiled = build_graph_from_definition(
             flow=flow_def.definition,
             checkpointer=self.checkpointer,
-            state_type=GenericFlowState,
+            state_type=AgentState,
         )
         config = {"configurable": {"thread_id": thread_id}}
 
@@ -160,7 +160,7 @@ class FlowRunService:
         compiled = build_graph_from_definition(
             flow=flow_def.definition,
             checkpointer=self.checkpointer,
-            state_type=GenericFlowState,
+            state_type=AgentState,
         )
         config = {"configurable": {"thread_id": run.thread_id}}
 

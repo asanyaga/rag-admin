@@ -1,4 +1,4 @@
-"""Dynamic LangGraph builder — constructs StateGraph from flow definitions."""
+"""Dynamic LangGraph builder — constructs StateGraph from agent definitions."""
 from typing import Any, Callable
 
 from langgraph.graph import StateGraph, START, END
@@ -23,47 +23,8 @@ def get_router(slug: str) -> Callable:
     return fn
 
 
-def route_after_review(state: AgentState) -> str:
-    """Route to export or end based on review action."""
-    if state.get("current_step") == "rejected":
-        return END
-    return "export"
-
-
-register_router("route_after_review", route_after_review)
-
-
-# --- Flow definition types ---
-
-FlowDefinition = dict[str, Any]
-"""
-A flow definition describes how to wire tools into a LangGraph.
-
-Structure:
-{
-    "nodes": [
-        {"id": "extract", "tool": "llamaextract"},
-        {"id": "review", "tool": "human-review"},
-        {"id": "export", "tool": "receipt-export"},
-    ],
-    "edges": [
-        {"source": "__start__", "target": "extract"},
-        {"source": "extract", "target": "review"},
-        {"source": "export", "target": "__end__"},
-    ],
-    "conditional_edges": [
-        {
-            "source": "review",
-            "router": "route_after_review",
-            "targets": ["export", "__end__"],
-        },
-    ],
-}
-"""
-
-
 def build_graph_from_definition(
-    flow: FlowDefinition,
+    flow: dict[str, Any],
     checkpointer=None,
     state_type=None,
 ) -> Any:
@@ -130,31 +91,3 @@ def build_graph_from_definition(
             graph.add_edge(flow["nodes"][-1]["id"], END)
 
     return graph.compile(checkpointer=checkpointer)
-
-
-# --- Backwards-compatible helper for the receipt-processing agent type ---
-
-RECEIPT_PROCESSING_FLOW: FlowDefinition = {
-    "nodes": [
-        {"id": "extract", "tool": "llamaextract"},
-        {"id": "review", "tool": "human-review"},
-        {"id": "export", "tool": "receipt-export"},
-    ],
-    "edges": [
-        {"source": "__start__", "target": "extract"},
-        {"source": "extract", "target": "review"},
-        {"source": "export", "target": "__end__"},
-    ],
-    "conditional_edges": [
-        {
-            "source": "review",
-            "router": "route_after_review",
-            "targets": ["export", "__end__"],
-        },
-    ],
-}
-
-
-def build_receipt_graph(checkpointer=None):
-    """Build the receipt processing graph from its flow definition."""
-    return build_graph_from_definition(RECEIPT_PROCESSING_FLOW, checkpointer=checkpointer)
