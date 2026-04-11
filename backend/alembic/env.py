@@ -16,6 +16,7 @@ from app.models import (
     EvalRun, EvalRunResult,
     AgentReceipt,
     AgentConfig,
+    FlowDefinition,
 )
 
 config = context.config

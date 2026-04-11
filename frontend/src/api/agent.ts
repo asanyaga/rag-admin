@@ -1,5 +1,9 @@
 import apiClient from './client'
 import type {
+  AgentTool,
+  FlowDefinition,
+  FlowDefinitionCreate,
+  FlowDefinitionUpdate,
   AgentType,
   AgentConfig,
   AgentConfigCreate,
@@ -8,6 +12,61 @@ import type {
   StartProcessingRequest,
   SubmitReviewRequest,
 } from '@/types/agent'
+
+// --- Agent Tools ---
+
+export async function listAgentTools(): Promise<AgentTool[]> {
+  const response = await apiClient.get<AgentTool[]>('/agent/tools')
+  return response.data
+}
+
+// --- Flow Definitions ---
+
+export async function listFlowDefinitions(
+  projectId: string
+): Promise<FlowDefinition[]> {
+  const response = await apiClient.get<FlowDefinition[]>(
+    `/agent/projects/${projectId}/flows`
+  )
+  return response.data
+}
+
+export async function getFlowDefinition(
+  flowId: string
+): Promise<FlowDefinition> {
+  const response = await apiClient.get<FlowDefinition>(
+    `/agent/flows/${flowId}`
+  )
+  return response.data
+}
+
+export async function createFlowDefinition(
+  projectId: string,
+  data: FlowDefinitionCreate
+): Promise<FlowDefinition> {
+  const response = await apiClient.post<FlowDefinition>(
+    `/agent/projects/${projectId}/flows`,
+    data
+  )
+  return response.data
+}
+
+export async function updateFlowDefinition(
+  flowId: string,
+  data: FlowDefinitionUpdate
+): Promise<FlowDefinition> {
+  const response = await apiClient.put<FlowDefinition>(
+    `/agent/flows/${flowId}`,
+    data
+  )
+  return response.data
+}
+
+export async function deleteFlowDefinition(
+  flowId: string
+): Promise<void> {
+  await apiClient.delete(`/agent/flows/${flowId}`)
+}
 
 // --- Agent Types ---
 

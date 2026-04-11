@@ -8,6 +8,21 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.agent_receipt import AgentReceiptStatus
 
 
+# --- Agent Tool schemas ---
+
+class AgentToolResponse(BaseModel):
+    """A reusable tool from the tool registry."""
+    slug: str
+    name: str
+    category: str
+    description: str
+    input_keys: list[str] = Field(..., alias="inputKeys")
+    output_keys: list[str] = Field(..., alias="outputKeys")
+    config_schema: dict[str, Any] = Field(default_factory=dict, alias="configSchema")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 # --- Agent Type schemas ---
 
 class AgentTypeResponse(BaseModel):
@@ -52,6 +67,76 @@ class AgentConfigResponse(BaseModel):
             agentType=obj.agent_type,
             config=obj.config,
             enabled=obj.enabled,
+            createdBy=obj.created_by,
+            createdAt=obj.created_at,
+            updatedAt=obj.updated_at,
+        )
+
+
+# --- Flow Definition schemas ---
+
+class FlowNodeSchema(BaseModel):
+    """A node in a flow definition."""
+    id: str
+    tool: str
+    config: dict[str, Any] = Field(default_factory=dict)
+    position: dict[str, float] | None = None  # {x, y} for canvas layout
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class FlowEdgeSchema(BaseModel):
+    """A simple edge in a flow definition."""
+    source: str
+    target: str
+
+
+class FlowConditionalEdgeSchema(BaseModel):
+    """A conditional edge in a flow definition."""
+    source: str
+    router: str
+    targets: list[str]
+
+
+class FlowDefinitionCreate(BaseModel):
+    """Request to create a flow definition."""
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=500)
+    definition: dict[str, Any]
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class FlowDefinitionUpdate(BaseModel):
+    """Request to update a flow definition."""
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=500)
+    definition: dict[str, Any] | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class FlowDefinitionResponse(BaseModel):
+    """Flow definition response."""
+    id: UUID
+    project_id: UUID = Field(..., alias="projectId")
+    name: str
+    description: str | None = None
+    definition: dict[str, Any]
+    created_by: UUID = Field(..., alias="createdBy")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @classmethod
+    def from_orm_model(cls, obj) -> "FlowDefinitionResponse":
+        return cls(
+            id=obj.id,
+            projectId=obj.project_id,
+            name=obj.name,
+            description=obj.description,
+            definition=obj.definition,
             createdBy=obj.created_by,
             createdAt=obj.created_at,
             updatedAt=obj.updated_at,

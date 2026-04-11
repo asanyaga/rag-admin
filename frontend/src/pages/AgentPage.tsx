@@ -3,17 +3,22 @@ import { useDocuments } from '@/hooks/useDocuments'
 import { useExtractionSchemas } from '@/hooks/useExtractionSchemas'
 import { useAgentReceipts } from '@/hooks/useAgentReceipts'
 import { useAgentConfigs } from '@/hooks/useAgentConfigs'
+import { useFlowDefinitions } from '@/hooks/useFlowDefinitions'
 import { ReceiptProcessForm } from '@/components/agent/ReceiptProcessForm'
 import { ReceiptList } from '@/components/agent/ReceiptList'
+import { FlowList } from '@/components/agent/FlowList'
 import { AgentSetup } from '@/components/agent/AgentSetup'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Bot } from 'lucide-react'
+import { Bot, Plus } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import type { StartProcessingRequest } from '@/types/agent'
 
 export default function AgentPage(): JSX.Element {
+  const navigate = useNavigate()
   const { currentProject } = useProject()
   const projectId = currentProject?.id || null
 
@@ -39,6 +44,23 @@ export default function AgentPage(): JSX.Element {
     error: receiptsError,
     startProcessing,
   } = useAgentReceipts(hasReceiptProcessing ? projectId : null)
+
+  const {
+    flows,
+    isLoading: flowsLoading,
+    deleteFlow,
+  } = useFlowDefinitions(projectId)
+
+  const handleDeleteFlow = async (flowId: string) => {
+    try {
+      await deleteFlow(flowId)
+      toast.success('Flow deleted')
+    } catch (err) {
+      toast.error('Failed to delete flow', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
+    }
+  }
 
   const handleProcess = async (request: StartProcessingRequest) => {
     try {
@@ -90,14 +112,20 @@ export default function AgentPage(): JSX.Element {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5" />
-          <h1 className="text-lg font-semibold">Agent</h1>
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Bot className="h-5 w-5" />
+            <h1 className="text-lg font-semibold">Agent</h1>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Configure and run agent workflows for {currentProject.name}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          Configure and run agent workflows for {currentProject.name}
-        </p>
+        <Button size="sm" onClick={() => navigate('/agent/flows/new')}>
+          <Plus className="h-4 w-4 mr-1.5" />
+          New Flow
+        </Button>
       </div>
 
       {error && (
@@ -105,6 +133,25 @@ export default function AgentPage(): JSX.Element {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {/* Flows */}
+      <div>
+        <h2 className="text-sm font-medium mb-3">
+          Flows
+          {flows.length > 0 && (
+            <span className="text-muted-foreground font-normal ml-1.5">
+              ({flows.length})
+            </span>
+          )}
+        </h2>
+        <FlowList
+          flows={flows}
+          isLoading={flowsLoading}
+          onDelete={handleDeleteFlow}
+        />
+      </div>
+
+      <Separator />
 
       {configsLoading ? (
         <div className="space-y-3">

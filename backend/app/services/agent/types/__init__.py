@@ -12,6 +12,7 @@ class AgentTypeDefinition:
     nodes: list[dict[str, str]]  # [{"name": "extract", "label": "Extract Data"}, ...]
     graph_builder: Callable  # (checkpointer) -> compiled graph
     config_schema: dict[str, Any] = field(default_factory=dict)
+    flow_definition: dict[str, Any] | None = None  # composable flow definition
 
 
 _registry: dict[str, AgentTypeDefinition] = {}

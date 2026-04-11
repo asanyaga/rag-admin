@@ -1,5 +1,5 @@
 """Receipt processing agent type — extract → review → export pipeline."""
-from app.services.agent.graph import build_receipt_graph
+from app.services.agent.graph import build_receipt_graph, RECEIPT_PROCESSING_FLOW
 from app.services.agent.types import AgentTypeDefinition, register_agent_type
 
 definition = AgentTypeDefinition(
@@ -12,6 +12,7 @@ definition = AgentTypeDefinition(
         {"name": "export", "label": "Export"},
     ],
     graph_builder=build_receipt_graph,
+    flow_definition=RECEIPT_PROCESSING_FLOW,
 )
 
 register_agent_type(definition)

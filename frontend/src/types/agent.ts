@@ -1,3 +1,64 @@
+// --- Agent Tools ---
+
+export interface AgentTool {
+  slug: string
+  name: string
+  category: string
+  description: string
+  inputKeys: string[]
+  outputKeys: string[]
+  configSchema: Record<string, unknown>
+}
+
+// --- Flow Definitions ---
+
+export interface FlowNodeDef {
+  id: string
+  tool: string
+  config?: Record<string, unknown>
+  position?: { x: number; y: number }
+}
+
+export interface FlowEdgeDef {
+  source: string
+  target: string
+}
+
+export interface FlowConditionalEdgeDef {
+  source: string
+  router: string
+  targets: string[]
+}
+
+export interface FlowDefinitionData {
+  nodes: FlowNodeDef[]
+  edges: FlowEdgeDef[]
+  conditional_edges?: FlowConditionalEdgeDef[]
+}
+
+export interface FlowDefinition {
+  id: string
+  projectId: string
+  name: string
+  description: string | null
+  definition: FlowDefinitionData
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface FlowDefinitionCreate {
+  name: string
+  description?: string
+  definition: FlowDefinitionData
+}
+
+export interface FlowDefinitionUpdate {
+  name?: string
+  description?: string
+  definition?: FlowDefinitionData
+}
+
 // --- Agent Types & Configs ---
 
 export interface AgentType {

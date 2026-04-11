@@ -26,6 +26,7 @@ import ExperimentDetailPage from './pages/ExperimentDetailPage'
 import ExtractionPage from './pages/ExtractionPage'
 import AgentPage from './pages/AgentPage'
 import AgentReceiptPage from './pages/AgentReceiptPage'
+import FlowComposerPage from './pages/FlowComposerPage'
 
 const router = createBrowserRouter([
   {
@@ -100,6 +101,16 @@ const router = createBrowserRouter([
             path: 'agent/receipts/:receiptId',
             element: <AgentReceiptPage />,
             handle: { breadcrumb: 'Receipt Detail' },
+          },
+          {
+            path: 'agent/flows/new',
+            element: <FlowComposerPage />,
+            handle: { breadcrumb: 'New Flow' },
+          },
+          {
+            path: 'agent/flows/:flowId',
+            element: <FlowComposerPage />,
+            handle: { breadcrumb: 'Edit Flow' },
           },
 {
             path: 'evaluation',

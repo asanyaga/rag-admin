@@ -20,6 +20,7 @@ from app.models.extraction_ground_truth import ExtractionGroundTruthSet, Extract
 from app.models.extraction_eval import ExtractionEvalRun, ExtractionEvalRunStatus, ExtractionEvalResult
 from app.models.agent_receipt import AgentReceipt, AgentReceiptStatus
 from app.models.agent_config import AgentConfig
+from app.models.flow_definition import FlowDefinition
 
 __all__ = [
     "User",
@@ -61,4 +62,5 @@ __all__ = [
     "AgentReceipt",
     "AgentReceiptStatus",
     "AgentConfig",
+    "FlowDefinition",
 ]
