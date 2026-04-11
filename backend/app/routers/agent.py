@@ -218,14 +218,28 @@ async def create_flow(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
+    from sqlalchemy.exc import IntegrityError
+
     repo = FlowDefinitionRepository(db)
-    flow = await repo.create(
-        project_id=project_id,
-        name=body.name,
-        description=body.description,
-        definition=body.definition,
-        created_by=current_user.id,
-    )
+    try:
+        flow = await repo.create(
+            project_id=project_id,
+            name=body.name,
+            description=body.description,
+            definition=body.definition,
+            created_by=current_user.id,
+        )
+    except IntegrityError as e:
+        error_str = str(e).lower()
+        if 'uq_flow_definitions_project_name' in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A flow named '{body.name}' already exists in this project",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create flow definition",
+        )
     return FlowDefinitionResponse.from_orm_model(flow)
 
 
@@ -257,13 +271,27 @@ async def update_flow(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
+    from sqlalchemy.exc import IntegrityError
+
     repo = FlowDefinitionRepository(db)
-    flow = await repo.update(
-        flow_id=flow_id,
-        name=body.name,
-        description=body.description,
-        definition=body.definition,
-    )
+    try:
+        flow = await repo.update(
+            flow_id=flow_id,
+            name=body.name,
+            description=body.description,
+            definition=body.definition,
+        )
+    except IntegrityError as e:
+        error_str = str(e).lower()
+        if 'uq_flow_definitions_project_name' in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A flow named '{body.name}' already exists in this project",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to update flow definition",
+        )
     if not flow:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     return FlowDefinitionResponse.from_orm_model(flow)
