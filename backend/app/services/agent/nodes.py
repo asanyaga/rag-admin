@@ -51,3 +51,14 @@ async def review_node(state: dict) -> dict:
         "reviewed_data": data if action == "edit" else state.get("extracted_data"),
         "current_step": "approved" if action in ("approve", "edit") else "rejected",
     }
+
+
+async def export_node(state: dict) -> dict:
+    """Mark data as exported for downstream consumption."""
+    logger.info("export_node: exporting data")
+
+    return {
+        **state,
+        "exported": True,
+        "current_step": "done",
+    }

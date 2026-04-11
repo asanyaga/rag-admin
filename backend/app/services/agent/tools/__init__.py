@@ -52,3 +52,4 @@ def _ensure_loaded() -> None:
     _loaded = True
     from app.services.agent.tools import extract  # noqa: F401
     from app.services.agent.tools import review  # noqa: F401
+    from app.services.agent.tools import export  # noqa: F401
