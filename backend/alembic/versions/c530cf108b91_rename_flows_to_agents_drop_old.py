@@ -1,6 +1,6 @@
 """Rename flow tables to agent tables and drop old agent prototype tables.
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: c530cf108b91
 Revises: 23528140ed0b
 Create Date: 2026-04-11
 """
@@ -8,7 +8,7 @@ from typing import Sequence, Union
 
 from alembic import op
 
-revision: str = 'a1b2c3d4e5f6'
+revision: str = 'c530cf108b91'
 down_revision: Union[str, None] = '23528140ed0b'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
