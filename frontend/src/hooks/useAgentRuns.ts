@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
   AgentRunListItem,
   StartAgentRunRequest,
+  StartExtractRunRequest,
 } from '@/types/agent'
 import * as agentApi from '@/api/agent'
 
@@ -15,6 +16,7 @@ interface UseAgentRunsReturn {
   error: string | null
   fetchRuns: () => Promise<void>
   startRun: (request: StartAgentRunRequest) => Promise<void>
+  startExtractRun: (request: StartExtractRunRequest) => Promise<void>
   deleteRun: (runId: string) => Promise<void>
 }
 
@@ -74,6 +76,26 @@ export function useAgentRuns(
     [projectId, fetchRuns]
   )
 
+  const startExtractRun = useCallback(
+    async (request: StartExtractRunRequest) => {
+      if (!projectId) throw new Error('No project selected')
+      setIsStarting(true)
+      setError(null)
+      try {
+        await agentApi.startExtractRun(projectId, request)
+        await fetchRuns()
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to start extract run'
+        )
+        throw err
+      } finally {
+        setIsStarting(false)
+      }
+    },
+    [projectId, fetchRuns]
+  )
+
   const deleteRun = useCallback(
     async (runId: string) => {
       await agentApi.deleteAgentRun(runId)
@@ -115,6 +137,6 @@ export function useAgentRuns(
 
   return {
     runs, isLoading, isStarting, error,
-    fetchRuns, startRun, deleteRun,
+    fetchRuns, startRun, startExtractRun, deleteRun,
   }
 }

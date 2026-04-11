@@ -9,17 +9,21 @@ from app.dependencies.auth import get_current_active_user
 from app.models import User
 from app.repositories.agent_definition_repository import AgentDefinitionRepository
 from app.repositories.agent_run_repository import AgentRunRepository
+from app.repositories.document_repository import DocumentRepository
+from app.repositories.extraction_schema_repository import ExtractionSchemaRepository
 from app.schemas.agent import (
     AgentToolResponse,
     AgentDefinitionCreate,
     AgentDefinitionUpdate,
     AgentDefinitionResponse,
     StartAgentRunRequest,
+    StartExtractRunRequest,
     ResumeAgentRunRequest,
     AgentRunResponse,
     AgentRunListItem,
 )
 from app.services.agent.agent_run_service import AgentRunService
+from app.services.agent.extract_run_service import ExtractRunService
 from app.services.agent.tools import list_tools
 from app.services.exceptions import NotFoundError
 
@@ -282,3 +286,47 @@ async def delete_run(
     deleted = await repo.delete(run_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+
+
+# --- Extract Runs ---
+
+def get_extract_run_service(
+    db: AsyncSession = Depends(get_db),
+) -> ExtractRunService:
+    from app.main import app
+    checkpointer = app.state.agent_checkpointer
+    return ExtractRunService(
+        agent_run_service=AgentRunService(
+            agent_run_repo=AgentRunRepository(db),
+            agent_def_repo=AgentDefinitionRepository(db),
+            checkpointer=checkpointer,
+        ),
+        document_repo=DocumentRepository(db),
+        schema_repo=ExtractionSchemaRepository(db),
+    )
+
+
+@router.post(
+    "/agent/extract/projects/{project_id}/runs",
+    response_model=AgentRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Start an extract agent run",
+)
+async def start_extract_run(
+    project_id: UUID,
+    body: StartExtractRunRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: ExtractRunService = Depends(get_extract_run_service),
+):
+    try:
+        return await service.start_extract_run(
+            project_id=project_id,
+            agent_definition_id=body.agent_definition_id,
+            document_id=body.document_id,
+            extraction_schema_id=body.extraction_schema_id,
+            user_id=current_user.id,
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

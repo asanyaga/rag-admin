@@ -2,6 +2,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
 import { useAgentRuns } from '@/hooks/useAgentRuns'
 import { useAgentComposer } from '@/hooks/useAgentComposer'
+import { useDocuments } from '@/hooks/useDocuments'
+import { useExtractionSchemas } from '@/hooks/useExtractionSchemas'
 import { AgentRunInputForm } from '@/components/agent/AgentRunInputForm'
 import { AgentRunList } from '@/components/agent/AgentRunList'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -10,7 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Workflow } from 'lucide-react'
 import { toast } from 'sonner'
-import type { StartAgentRunRequest } from '@/types/agent'
+import type { StartExtractRunRequest } from '@/types/agent'
 
 export default function AgentRunsPage(): JSX.Element {
   const { agentId } = useParams<{ agentId: string }>()
@@ -26,18 +28,21 @@ export default function AgentRunsPage(): JSX.Element {
     isLoading: runsLoading,
     isStarting,
     error: runsError,
-    startRun,
+    startExtractRun,
     deleteRun,
   } = useAgentRuns(projectId)
+
+  const { documents } = useDocuments(projectId)
+  const { schemas } = useExtractionSchemas(projectId)
 
   // Filter runs to this agent
   const agentRuns = agentId
     ? runs.filter((r) => r.agentDefinitionId === agentId)
     : runs
 
-  const handleStartRun = async (request: StartAgentRunRequest) => {
+  const handleStartRun = async (request: StartExtractRunRequest) => {
     try {
-      await startRun(request)
+      await startExtractRun(request)
       toast.success('Run started', {
         description: 'Agent is running...',
       })
@@ -107,6 +112,8 @@ export default function AgentRunsPage(): JSX.Element {
           ) : (
             <AgentRunInputForm
               agentDefinitionId={agentId}
+              documents={documents}
+              schemas={schemas}
               isStarting={isStarting}
               onStart={handleStartRun}
             />

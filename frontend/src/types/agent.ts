@@ -97,6 +97,17 @@ export interface StartAgentRunRequest {
   initialState: Record<string, unknown>
 }
 
+export interface StartExtractRunRequest {
+  agentDefinitionId: string
+  documentId: string
+  extractionSchemaId: string
+}
+
+export interface SubmitReviewRequest {
+  action: 'approve' | 'edit' | 'reject'
+  data?: Record<string, unknown>
+}
+
 export interface ResumeAgentRunRequest {
   resumeValue: Record<string, unknown>
 }

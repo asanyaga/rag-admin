@@ -7,6 +7,7 @@ import type {
   AgentRun,
   AgentRunListItem,
   StartAgentRunRequest,
+  StartExtractRunRequest,
   ResumeAgentRunRequest,
 } from '@/types/agent'
 
@@ -73,6 +74,17 @@ export async function startAgentRun(
 ): Promise<AgentRun> {
   const response = await apiClient.post<AgentRun>(
     `/agent/projects/${projectId}/runs`,
+    data
+  )
+  return response.data
+}
+
+export async function startExtractRun(
+  projectId: string,
+  data: StartExtractRunRequest
+): Promise<AgentRun> {
+  const response = await apiClient.post<AgentRun>(
+    `/agent/extract/projects/${projectId}/runs`,
     data
   )
   return response.data

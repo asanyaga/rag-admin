@@ -95,6 +95,15 @@ class AgentDefinitionResponse(BaseModel):
 
 # --- Agent Run schemas ---
 
+class StartExtractRunRequest(BaseModel):
+    """Request to start an extract agent run."""
+    agent_definition_id: UUID = Field(..., alias="agentDefinitionId")
+    document_id: UUID = Field(..., alias="documentId")
+    extraction_schema_id: UUID = Field(..., alias="extractionSchemaId")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class StartAgentRunRequest(BaseModel):
     """Request to start an agent run."""
     agent_definition_id: UUID = Field(..., alias="agentDefinitionId")

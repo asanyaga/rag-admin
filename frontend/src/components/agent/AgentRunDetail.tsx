@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import type { AgentRun, AgentDefinition, ResumeAgentRunRequest } from '@/types/agent'
+import type { AgentRun, AgentDefinition, SubmitReviewRequest, ResumeAgentRunRequest } from '@/types/agent'
+import { AgentFlowGraph } from '@/components/agent/AgentFlowGraph'
+import { ReviewForm } from '@/components/agent/ReviewForm'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -9,8 +11,6 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface AgentRunDetailProps {
@@ -24,14 +24,13 @@ interface AgentRunDetailProps {
 
 export function AgentRunDetail({
   run,
+  agentDefinition,
   isLoading,
   isResuming,
   error,
   onResume,
 }: AgentRunDetailProps) {
   const [stateOpen, setStateOpen] = useState(false)
-  const [resumeJson, setResumeJson] = useState('{}')
-  const [resumeJsonError, setResumeJsonError] = useState<string | null>(null)
 
   if (isLoading || !run) {
     return (
@@ -42,22 +41,22 @@ export function AgentRunDetail({
     )
   }
 
-  const handleResume = async () => {
-    setResumeJsonError(null)
-    let parsed: Record<string, unknown>
-    try {
-      parsed = JSON.parse(resumeJson)
-    } catch {
-      setResumeJsonError('Invalid JSON — please fix before resuming.')
-      return
-    }
-    await onResume({ resumeValue: parsed })
-  }
+  const graphNodes = agentDefinition
+    ? agentDefinition.definition.nodes.map((n) => ({
+        name: n.id,
+        label: n.tool,
+      }))
+    : []
 
-  const currentStateData =
-    run.currentState && Object.keys(run.currentState).length > 0
-      ? run.currentState
-      : null
+  const extractedData =
+    (run.currentState?.extracted_data as Record<string, unknown>) ?? null
+  const reviewedData =
+    (run.currentState?.reviewed_data as Record<string, unknown>) ?? null
+  const finalData = reviewedData ?? extractedData
+
+  const handleReview = async (request: SubmitReviewRequest) => {
+    await onResume({ resumeValue: { action: request.action, data: request.data } })
+  }
 
   return (
     <div className="space-y-4">
@@ -79,6 +78,16 @@ export function AgentRunDetail({
         </span>
       </div>
 
+      {/* Flow graph */}
+      {graphNodes.length > 0 && (
+        <AgentFlowGraph
+          nodes={graphNodes}
+          currentStep={run.currentNode}
+          status={run.status}
+          height={120}
+        />
+      )}
+
       {/* Status-driven content */}
       {(run.status === 'pending' || run.status === 'running') && (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
@@ -90,56 +99,36 @@ export function AgentRunDetail({
         </div>
       )}
 
-      {run.status === 'waiting_for_input' && (
-        <div className="space-y-3 rounded-lg border p-4">
-          <div>
-            <h3 className="text-sm font-medium">Resume Run</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Waiting for input at node{' '}
-              <span className="font-mono">{run.currentNode}</span>. Provide a
-              JSON resume value below.
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Resume Value (JSON)</Label>
-            <Textarea
-              className="font-mono text-xs"
-              rows={6}
-              value={resumeJson}
-              onChange={(e) => setResumeJson(e.target.value)}
-              placeholder="{}"
-            />
-            {resumeJsonError && (
-              <p className="text-xs text-destructive">{resumeJsonError}</p>
-            )}
-          </div>
-          <Button
-            size="sm"
-            onClick={handleResume}
-            disabled={isResuming}
-          >
-            {isResuming ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                Resuming...
-              </>
-            ) : (
-              'Resume'
-            )}
-          </Button>
+      {run.status === 'waiting_for_input' && extractedData && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">Review Extracted Data</h3>
+          <ReviewForm
+            extractedData={extractedData}
+            isSubmitting={isResuming}
+            onSubmit={handleReview}
+          />
         </div>
       )}
 
-      {run.status === 'completed' && currentStateData && (
+      {run.status === 'waiting_for_input' && !extractedData && (
+        <Alert>
+          <AlertDescription>
+            Waiting for input at node <span className="font-mono">{run.currentNode}</span>.
+            No extracted data available to review.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {run.status === 'completed' && finalData && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium">Results</h3>
           <pre className="rounded-lg border bg-gray-50 p-4 text-xs overflow-auto max-h-96">
-            {JSON.stringify(currentStateData, null, 2)}
+            {JSON.stringify(finalData, null, 2)}
           </pre>
         </div>
       )}
 
-      {run.status === 'completed' && !currentStateData && (
+      {run.status === 'completed' && !finalData && (
         <Alert>
           <AlertDescription>Run completed with no output data.</AlertDescription>
         </Alert>
