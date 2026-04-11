@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 async def extract_node(state: AgentState) -> AgentState:
     """Extract structured data from receipt image using DataExtractor."""
-    logger.info("extract_node: processing receipt %s", state.get("receipt_id", state.get("document_id", "unknown")))
+    logger.info("extract_node: processing receipt %s", state.get("document_id", "unknown"))
 
     extractor = get_extractor("llamaextract")
     if extractor is None:
@@ -39,7 +39,7 @@ async def extract_node(state: AgentState) -> AgentState:
 
 async def review_node(state: AgentState) -> AgentState:
     """Interrupt graph execution for human review of extracted data."""
-    logger.info("review_node: awaiting review for receipt %s", state.get("receipt_id", state.get("document_id", "unknown")))
+    logger.info("review_node: awaiting review for receipt %s", state.get("document_id", "unknown"))
 
     review_input = interrupt(state.get("extracted_data", {}))
 
@@ -56,7 +56,7 @@ async def review_node(state: AgentState) -> AgentState:
 
 async def export_node(state: AgentState) -> AgentState:
     """Mark data as exported (actual DB save happens in the service layer)."""
-    logger.info("export_node: exporting receipt %s", state.get("receipt_id", state.get("document_id", "unknown")))
+    logger.info("export_node: exporting receipt %s", state.get("document_id", "unknown"))
 
     return {
         **state,
