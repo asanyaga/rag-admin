@@ -164,7 +164,7 @@ export function useExtractionEvalRunDetail(
     }
     load()
     return () => { cancelled = true }
-  }, [runId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [runId])
 
   // Poll while pending/running
   useEffect(() => {
