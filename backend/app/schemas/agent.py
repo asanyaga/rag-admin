@@ -220,6 +220,15 @@ class AgentReceiptListItem(BaseModel):
 
 # --- Flow Run schemas ---
 
+class StartExtractRunRequest(BaseModel):
+    """Request to start an extract flow run."""
+    flow_definition_id: UUID = Field(..., alias="flowDefinitionId")
+    document_id: UUID = Field(..., alias="documentId")
+    extraction_schema_id: UUID = Field(..., alias="extractionSchemaId")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class StartFlowRunRequest(BaseModel):
     """Request to start a flow run."""
     flow_definition_id: UUID = Field(..., alias="flowDefinitionId")

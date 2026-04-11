@@ -21,6 +21,7 @@ from app.schemas.agent import (
     FlowDefinitionCreate,
     FlowDefinitionUpdate,
     FlowDefinitionResponse,
+    StartExtractRunRequest,
     StartFlowRunRequest,
     ResumeFlowRunRequest,
     FlowRunResponse,
@@ -30,6 +31,7 @@ from app.schemas.agent import (
     AgentReceiptResponse,
     AgentReceiptListItem,
 )
+from app.services.agent.extract_run_service import ExtractRunService
 from app.services.agent.flow_run_service import FlowRunService
 from app.services.agent.service import AgentService
 from app.services.agent.tools import list_tools
@@ -299,6 +301,18 @@ def get_flow_run_service(
     )
 
 
+def get_extract_run_service(
+    db: AsyncSession = Depends(get_db),
+    flow_run_service: FlowRunService = Depends(get_flow_run_service),
+) -> ExtractRunService:
+    """Dependency to create ExtractRunService."""
+    return ExtractRunService(
+        flow_run_service=flow_run_service,
+        document_repo=DocumentRepository(db),
+        schema_repo=ExtractionSchemaRepository(db),
+    )
+
+
 @router.post(
     "/agent/projects/{project_id}/runs",
     response_model=FlowRunResponse,
@@ -368,6 +382,50 @@ async def resume_flow_run(
         return await service.resume_run(
             run_id=run_id,
             resume_value=body.resume_value,
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.delete(
+    "/agent/runs/{run_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a flow run",
+)
+async def delete_flow_run(
+    run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    repo = FlowRunRepository(db)
+    deleted = await repo.delete(run_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+
+
+# --- Extract Runs ---
+
+@router.post(
+    "/agent/extract/projects/{project_id}/runs",
+    response_model=FlowRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Start an extract flow run",
+)
+async def start_extract_run(
+    project_id: UUID,
+    body: StartExtractRunRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: ExtractRunService = Depends(get_extract_run_service),
+):
+    try:
+        return await service.start_extract_run(
+            project_id=project_id,
+            flow_definition_id=body.flow_definition_id,
+            document_id=body.document_id,
+            extraction_schema_id=body.extraction_schema_id,
+            user_id=current_user.id,
         )
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

@@ -27,6 +27,8 @@ import ExtractionPage from './pages/ExtractionPage'
 import AgentPage from './pages/AgentPage'
 import AgentReceiptPage from './pages/AgentReceiptPage'
 import FlowComposerPage from './pages/FlowComposerPage'
+import FlowRunsPage from './pages/FlowRunsPage'
+import FlowRunDetailPage from './pages/FlowRunDetailPage'
 
 const router = createBrowserRouter([
   {
@@ -111,6 +113,16 @@ const router = createBrowserRouter([
             path: 'agent/flows/:flowId',
             element: <FlowComposerPage />,
             handle: { breadcrumb: 'Edit Flow' },
+          },
+          {
+            path: 'agent/flows/:flowId/runs',
+            element: <FlowRunsPage />,
+            handle: { breadcrumb: 'Flow Runs' },
+          },
+          {
+            path: 'agent/runs/:runId',
+            element: <FlowRunDetailPage />,
+            handle: { breadcrumb: 'Run Detail' },
           },
 {
             path: 'evaluation',

@@ -14,6 +14,7 @@ import type {
   FlowRun,
   FlowRunListItem,
   StartFlowRunRequest,
+  StartExtractRunRequest,
   ResumeFlowRunRequest,
 } from '@/types/agent'
 
@@ -186,6 +187,23 @@ export async function resumeFlowRun(
 ): Promise<FlowRun> {
   const response = await apiClient.post<FlowRun>(
     `/agent/runs/${runId}/resume`,
+    data
+  )
+  return response.data
+}
+
+export async function deleteFlowRun(
+  runId: string
+): Promise<void> {
+  await apiClient.delete(`/agent/runs/${runId}`)
+}
+
+export async function startExtractRun(
+  projectId: string,
+  data: StartExtractRunRequest
+): Promise<FlowRun> {
+  const response = await apiClient.post<FlowRun>(
+    `/agent/extract/projects/${projectId}/runs`,
     data
   )
   return response.data

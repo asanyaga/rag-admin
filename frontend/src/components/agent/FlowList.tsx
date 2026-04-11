@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import type { FlowDefinition } from '@/types/agent'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Pencil, Trash2, Workflow } from 'lucide-react'
+import { Pencil, Play, Trash2, Workflow } from 'lucide-react'
 
 interface FlowListProps {
   flows: FlowDefinition[]
@@ -53,6 +53,15 @@ export function FlowList({ flows, isLoading, onDelete }: FlowListProps) {
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => navigate(`/agent/flows/${flow.id}/runs`)}
+              title="Runs"
+            >
+              <Play className="h-3.5 w-3.5" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"

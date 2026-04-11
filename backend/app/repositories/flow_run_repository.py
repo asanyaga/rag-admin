@@ -97,3 +97,12 @@ class FlowRunRepository:
         await self.session.commit()
         await self.session.refresh(run)
         return run
+
+    async def delete(self, run_id: UUID) -> bool:
+        """Delete a flow run."""
+        run = await self.get_by_id(run_id)
+        if not run:
+            return False
+        await self.session.delete(run)
+        await self.session.commit()
+        return True

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
   FlowRunListItem,
   StartFlowRunRequest,
+  StartExtractRunRequest,
 } from '@/types/agent'
 import * as agentApi from '@/api/agent'
 
@@ -15,6 +16,8 @@ interface UseFlowRunsReturn {
   error: string | null
   fetchRuns: () => Promise<void>
   startRun: (request: StartFlowRunRequest) => Promise<void>
+  startExtractRun: (request: StartExtractRunRequest) => Promise<void>
+  deleteRun: (runId: string) => Promise<void>
 }
 
 export function useFlowRuns(
@@ -73,6 +76,34 @@ export function useFlowRuns(
     [projectId, fetchRuns]
   )
 
+  const startExtractRun = useCallback(
+    async (request: StartExtractRunRequest) => {
+      if (!projectId) throw new Error('No project selected')
+      setIsStarting(true)
+      setError(null)
+      try {
+        await agentApi.startExtractRun(projectId, request)
+        await fetchRuns()
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to start extract run'
+        )
+        throw err
+      } finally {
+        setIsStarting(false)
+      }
+    },
+    [projectId, fetchRuns]
+  )
+
+  const deleteRun = useCallback(
+    async (runId: string) => {
+      await agentApi.deleteFlowRun(runId)
+      await fetchRuns()
+    },
+    [fetchRuns]
+  )
+
   // Poll when there are active runs
   useEffect(() => {
     const hasActive = runs.some(
@@ -104,5 +135,8 @@ export function useFlowRuns(
     }
   }, [projectId, fetchRuns])
 
-  return { runs, isLoading, isStarting, error, fetchRuns, startRun }
+  return {
+    runs, isLoading, isStarting, error,
+    fetchRuns, startRun, startExtractRun, deleteRun,
+  }
 }

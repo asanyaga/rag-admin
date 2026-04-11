@@ -167,6 +167,12 @@ export interface StartFlowRunRequest {
   initialState: Record<string, unknown>
 }
 
+export interface StartExtractRunRequest {
+  flowDefinitionId: string
+  documentId: string
+  extractionSchemaId: string
+}
+
 export interface ResumeFlowRunRequest {
   resumeValue: Record<string, unknown>
 }
