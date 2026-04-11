@@ -1,4 +1,4 @@
-"""Model for user-composed agent flow definitions."""
+"""Model for user-composed agent definitions."""
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -10,9 +10,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
-class FlowDefinition(Base):
-    """A composable agent flow built from registered tools."""
-    __tablename__ = "flow_definitions"
+class AgentDefinition(Base):
+    """A composable agent built from registered tools."""
+    __tablename__ = "agent_definitions"
 
     id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -27,7 +27,7 @@ class FlowDefinition(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # The flow graph: {"nodes": [...], "edges": [...], "conditional_edges": [...]}
+    # The agent graph: {"nodes": [...], "edges": [...], "conditional_edges": [...]}
     definition: Mapped[dict] = mapped_column(JSON, nullable=False)
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -53,6 +53,6 @@ class FlowDefinition(Base):
     user: Mapped["User"] = relationship()
 
     __table_args__ = (
-        sa.UniqueConstraint('project_id', 'name', name='uq_flow_definitions_project_name'),
-        sa.Index('ix_flow_definitions_project_id', 'project_id'),
+        sa.UniqueConstraint('project_id', 'name', name='uq_agent_definitions_project_name'),
+        sa.Index('ix_agent_definitions_project_id', 'project_id'),
     )

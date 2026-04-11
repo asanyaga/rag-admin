@@ -1,4 +1,4 @@
-"""Agent API router — agent configs, flow definitions, and flow run endpoints."""
+"""Agent API router — agent definitions and agent run endpoints."""
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,22 +7,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user
 from app.models import User
-from app.repositories.agent_config_repository import AgentConfigRepository
-from app.repositories.flow_definition_repository import FlowDefinitionRepository
-from app.repositories.flow_run_repository import FlowRunRepository
+from app.repositories.agent_definition_repository import AgentDefinitionRepository
+from app.repositories.agent_run_repository import AgentRunRepository
 from app.schemas.agent import (
     AgentToolResponse,
-    AgentConfigCreate,
-    AgentConfigResponse,
-    FlowDefinitionCreate,
-    FlowDefinitionUpdate,
-    FlowDefinitionResponse,
-    StartFlowRunRequest,
-    ResumeFlowRunRequest,
-    FlowRunResponse,
-    FlowRunListItem,
+    AgentDefinitionCreate,
+    AgentDefinitionUpdate,
+    AgentDefinitionResponse,
+    StartAgentRunRequest,
+    ResumeAgentRunRequest,
+    AgentRunResponse,
+    AgentRunListItem,
 )
-from app.services.agent.flow_run_service import FlowRunService
+from app.services.agent.agent_run_service import AgentRunService
 from app.services.agent.tools import list_tools
 from app.services.exceptions import NotFoundError
 
@@ -55,105 +52,40 @@ async def list_agent_tools(
     ]
 
 
-# --- Agent Configs ---
+# --- Agent Definitions ---
 
 @router.get(
-    "/agent/projects/{project_id}/configs",
-    response_model=list[AgentConfigResponse],
-    summary="List agent configs for a project",
+    "/agent/projects/{project_id}/definitions",
+    response_model=list[AgentDefinitionResponse],
+    summary="List agent definitions for a project",
 )
-async def list_configs(
+async def list_definitions(
     project_id: UUID,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    repo = AgentConfigRepository(db)
-    configs = await repo.list_by_project(project_id)
-    return [AgentConfigResponse.from_orm_model(c) for c in configs]
+    repo = AgentDefinitionRepository(db)
+    definitions = await repo.list_by_project(project_id)
+    return [AgentDefinitionResponse.from_orm_model(d) for d in definitions]
 
 
 @router.post(
-    "/agent/projects/{project_id}/configs",
-    response_model=AgentConfigResponse,
+    "/agent/projects/{project_id}/definitions",
+    response_model=AgentDefinitionResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Enable an agent config for a project",
+    summary="Create an agent definition",
 )
-async def create_config(
+async def create_definition(
     project_id: UUID,
-    body: AgentConfigCreate,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-):
-    repo = AgentConfigRepository(db)
-
-    # Check for duplicate
-    existing = await repo.get_by_project_and_type(project_id, body.agent_type)
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Agent type '{body.agent_type}' already configured for this project",
-        )
-
-    config = await repo.create(
-        project_id=project_id,
-        agent_type=body.agent_type,
-        created_by=current_user.id,
-        config=body.config,
-    )
-
-    return AgentConfigResponse.from_orm_model(config)
-
-
-@router.delete(
-    "/agent/configs/{config_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Remove an agent config",
-)
-async def delete_config(
-    config_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-):
-    repo = AgentConfigRepository(db)
-    deleted = await repo.delete(config_id)
-    if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Config not found")
-
-
-# --- Flow Definitions ---
-
-@router.get(
-    "/agent/projects/{project_id}/flows",
-    response_model=list[FlowDefinitionResponse],
-    summary="List flow definitions for a project",
-)
-async def list_flows(
-    project_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-):
-    repo = FlowDefinitionRepository(db)
-    flows = await repo.list_by_project(project_id)
-    return [FlowDefinitionResponse.from_orm_model(f) for f in flows]
-
-
-@router.post(
-    "/agent/projects/{project_id}/flows",
-    response_model=FlowDefinitionResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a flow definition",
-)
-async def create_flow(
-    project_id: UUID,
-    body: FlowDefinitionCreate,
+    body: AgentDefinitionCreate,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
     from sqlalchemy.exc import IntegrityError
 
-    repo = FlowDefinitionRepository(db)
+    repo = AgentDefinitionRepository(db)
     try:
-        flow = await repo.create(
+        definition = await repo.create(
             project_id=project_id,
             name=body.name,
             description=body.description,
@@ -162,120 +94,120 @@ async def create_flow(
         )
     except IntegrityError as e:
         error_str = str(e).lower()
-        if 'uq_flow_definitions_project_name' in error_str:
+        if 'uq_agent_definitions_project_name' in error_str:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"A flow named '{body.name}' already exists in this project",
+                detail=f"An agent named '{body.name}' already exists in this project",
             )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to create flow definition",
+            detail="Failed to create agent definition",
         )
-    return FlowDefinitionResponse.from_orm_model(flow)
+    return AgentDefinitionResponse.from_orm_model(definition)
 
 
 @router.get(
-    "/agent/flows/{flow_id}",
-    response_model=FlowDefinitionResponse,
-    summary="Get a flow definition",
+    "/agent/definitions/{definition_id}",
+    response_model=AgentDefinitionResponse,
+    summary="Get an agent definition",
 )
-async def get_flow(
-    flow_id: UUID,
+async def get_definition(
+    definition_id: UUID,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    repo = FlowDefinitionRepository(db)
-    flow = await repo.get_by_id(flow_id)
-    if not flow:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
-    return FlowDefinitionResponse.from_orm_model(flow)
+    repo = AgentDefinitionRepository(db)
+    definition = await repo.get_by_id(definition_id)
+    if not definition:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent definition not found")
+    return AgentDefinitionResponse.from_orm_model(definition)
 
 
 @router.put(
-    "/agent/flows/{flow_id}",
-    response_model=FlowDefinitionResponse,
-    summary="Update a flow definition",
+    "/agent/definitions/{definition_id}",
+    response_model=AgentDefinitionResponse,
+    summary="Update an agent definition",
 )
-async def update_flow(
-    flow_id: UUID,
-    body: FlowDefinitionUpdate,
+async def update_definition(
+    definition_id: UUID,
+    body: AgentDefinitionUpdate,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
     from sqlalchemy.exc import IntegrityError
 
-    repo = FlowDefinitionRepository(db)
+    repo = AgentDefinitionRepository(db)
     try:
-        flow = await repo.update(
-            flow_id=flow_id,
+        definition = await repo.update(
+            agent_id=definition_id,
             name=body.name,
             description=body.description,
             definition=body.definition,
         )
     except IntegrityError as e:
         error_str = str(e).lower()
-        if 'uq_flow_definitions_project_name' in error_str:
+        if 'uq_agent_definitions_project_name' in error_str:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"A flow named '{body.name}' already exists in this project",
+                detail=f"An agent named '{body.name}' already exists in this project",
             )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to update flow definition",
+            detail="Failed to update agent definition",
         )
-    if not flow:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
-    return FlowDefinitionResponse.from_orm_model(flow)
+    if not definition:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent definition not found")
+    return AgentDefinitionResponse.from_orm_model(definition)
 
 
 @router.delete(
-    "/agent/flows/{flow_id}",
+    "/agent/definitions/{definition_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a flow definition",
+    summary="Delete an agent definition",
 )
-async def delete_flow(
-    flow_id: UUID,
+async def delete_definition(
+    definition_id: UUID,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    repo = FlowDefinitionRepository(db)
-    deleted = await repo.delete(flow_id)
+    repo = AgentDefinitionRepository(db)
+    deleted = await repo.delete(definition_id)
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent definition not found")
 
 
-# --- Flow Runs ---
+# --- Agent Runs ---
 
-def get_flow_run_service(
+def get_agent_run_service(
     db: AsyncSession = Depends(get_db),
-) -> FlowRunService:
-    """Dependency to create FlowRunService with checkpointer from app state."""
+) -> AgentRunService:
+    """Dependency to create AgentRunService with checkpointer from app state."""
     from app.main import app
     checkpointer = app.state.agent_checkpointer
 
-    return FlowRunService(
-        flow_run_repo=FlowRunRepository(db),
-        flow_def_repo=FlowDefinitionRepository(db),
+    return AgentRunService(
+        agent_run_repo=AgentRunRepository(db),
+        agent_def_repo=AgentDefinitionRepository(db),
         checkpointer=checkpointer,
     )
 
 
 @router.post(
     "/agent/projects/{project_id}/runs",
-    response_model=FlowRunResponse,
+    response_model=AgentRunResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="Start a flow run",
+    summary="Start an agent run",
 )
-async def start_flow_run(
+async def start_run(
     project_id: UUID,
-    body: StartFlowRunRequest,
+    body: StartAgentRunRequest,
     current_user: User = Depends(get_current_active_user),
-    service: FlowRunService = Depends(get_flow_run_service),
+    service: AgentRunService = Depends(get_agent_run_service),
 ):
     try:
         return await service.start_run(
             project_id=project_id,
-            flow_definition_id=body.flow_definition_id,
+            agent_definition_id=body.agent_definition_id,
             initial_state=body.initial_state,
             user_id=current_user.id,
         )
@@ -287,26 +219,26 @@ async def start_flow_run(
 
 @router.get(
     "/agent/projects/{project_id}/runs",
-    response_model=list[FlowRunListItem],
-    summary="List flow runs for a project",
+    response_model=list[AgentRunListItem],
+    summary="List agent runs for a project",
 )
-async def list_flow_runs(
+async def list_runs(
     project_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: FlowRunService = Depends(get_flow_run_service),
+    service: AgentRunService = Depends(get_agent_run_service),
 ):
     return await service.list_runs(project_id)
 
 
 @router.get(
     "/agent/runs/{run_id}",
-    response_model=FlowRunResponse,
-    summary="Get a flow run",
+    response_model=AgentRunResponse,
+    summary="Get an agent run",
 )
-async def get_flow_run(
+async def get_run(
     run_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: FlowRunService = Depends(get_flow_run_service),
+    service: AgentRunService = Depends(get_agent_run_service),
 ):
     try:
         return await service.get_run(run_id)
@@ -316,14 +248,14 @@ async def get_flow_run(
 
 @router.post(
     "/agent/runs/{run_id}/resume",
-    response_model=FlowRunResponse,
-    summary="Resume an interrupted flow run",
+    response_model=AgentRunResponse,
+    summary="Resume an interrupted agent run",
 )
-async def resume_flow_run(
+async def resume_run(
     run_id: UUID,
-    body: ResumeFlowRunRequest,
+    body: ResumeAgentRunRequest,
     current_user: User = Depends(get_current_active_user),
-    service: FlowRunService = Depends(get_flow_run_service),
+    service: AgentRunService = Depends(get_agent_run_service),
 ):
     try:
         return await service.resume_run(
@@ -339,14 +271,14 @@ async def resume_flow_run(
 @router.delete(
     "/agent/runs/{run_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a flow run",
+    summary="Delete an agent run",
 )
-async def delete_flow_run(
+async def delete_run(
     run_id: UUID,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    repo = FlowRunRepository(db)
+    repo = AgentRunRepository(db)
     deleted = await repo.delete(run_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")

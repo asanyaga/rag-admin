@@ -23,12 +23,12 @@ def get_router(slug: str) -> Callable:
     return fn
 
 
-def build_graph_from_definition(
+def build_agent_graph(
     flow: dict[str, Any],
     checkpointer=None,
     state_type=None,
 ) -> Any:
-    """Build and compile a LangGraph StateGraph from a flow definition."""
+    """Build and compile a LangGraph StateGraph from an agent definition."""
     graph = StateGraph(state_type or AgentState)
 
     # Add nodes

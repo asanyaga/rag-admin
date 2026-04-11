@@ -18,8 +18,8 @@ from app.models.extraction_schema import ExtractionSchema
 from app.models.extraction_result import ExtractionResult, ExtractionResultStatus
 from app.models.extraction_ground_truth import ExtractionGroundTruthSet, ExtractionGroundTruthItem
 from app.models.extraction_eval import ExtractionEvalRun, ExtractionEvalRunStatus, ExtractionEvalResult
-from app.models.flow_definition import FlowDefinition
-from app.models.flow_run import FlowRun, FlowRunStatus
+from app.models.agent_definition import AgentDefinition
+from app.models.agent_run import AgentRun, AgentRunStatus
 
 __all__ = [
     "User",
@@ -58,7 +58,7 @@ __all__ = [
     "ExtractionEvalRun",
     "ExtractionEvalRunStatus",
     "ExtractionEvalResult",
-    "FlowDefinition",
-    "FlowRun",
-    "FlowRunStatus",
+    "AgentDefinition",
+    "AgentRun",
+    "AgentRunStatus",
 ]

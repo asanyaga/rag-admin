@@ -1,12 +1,11 @@
 """Pydantic schemas for the agent module."""
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.agent_receipt import AgentReceiptStatus
-from app.models.flow_run import FlowRunStatus
+from app.models.agent_run import AgentRunStatus
 
 
 # --- Agent Tool schemas ---
@@ -24,60 +23,10 @@ class AgentToolResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-# --- Agent Type schemas ---
+# --- Agent Definition schemas ---
 
-class AgentTypeResponse(BaseModel):
-    """Available agent type from the registry."""
-    slug: str
-    name: str
-    description: str
-    nodes: list[dict[str, str]]
-    config_schema: dict[str, Any] = Field(default_factory=dict, alias="configSchema")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# --- Agent Config schemas ---
-
-class AgentConfigCreate(BaseModel):
-    """Request to enable an agent type for a project."""
-    agent_type: str = Field(..., alias="agentType")
-    config: dict | None = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class AgentConfigResponse(BaseModel):
-    """Agent config response."""
-    id: UUID
-    project_id: UUID = Field(..., alias="projectId")
-    agent_type: str = Field(..., alias="agentType")
-    config: dict | None = None
-    enabled: bool
-    created_by: UUID = Field(..., alias="createdBy")
-    created_at: datetime = Field(..., alias="createdAt")
-    updated_at: datetime = Field(..., alias="updatedAt")
-
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    @classmethod
-    def from_orm_model(cls, obj) -> "AgentConfigResponse":
-        return cls(
-            id=obj.id,
-            projectId=obj.project_id,
-            agentType=obj.agent_type,
-            config=obj.config,
-            enabled=obj.enabled,
-            createdBy=obj.created_by,
-            createdAt=obj.created_at,
-            updatedAt=obj.updated_at,
-        )
-
-
-# --- Flow Definition schemas ---
-
-class FlowNodeSchema(BaseModel):
-    """A node in a flow definition."""
+class AgentNodeSchema(BaseModel):
+    """A node in an agent definition."""
     id: str
     tool: str
     config: dict[str, Any] = Field(default_factory=dict)
@@ -86,21 +35,21 @@ class FlowNodeSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class FlowEdgeSchema(BaseModel):
-    """A simple edge in a flow definition."""
+class AgentEdgeSchema(BaseModel):
+    """A simple edge in an agent definition."""
     source: str
     target: str
 
 
-class FlowConditionalEdgeSchema(BaseModel):
-    """A conditional edge in a flow definition."""
+class AgentConditionalEdgeSchema(BaseModel):
+    """A conditional edge in an agent definition."""
     source: str
     router: str
     targets: list[str]
 
 
-class FlowDefinitionCreate(BaseModel):
-    """Request to create a flow definition."""
+class AgentDefinitionCreate(BaseModel):
+    """Request to create an agent definition."""
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = Field(None, max_length=500)
     definition: dict[str, Any]
@@ -108,8 +57,8 @@ class FlowDefinitionCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class FlowDefinitionUpdate(BaseModel):
-    """Request to update a flow definition."""
+class AgentDefinitionUpdate(BaseModel):
+    """Request to update an agent definition."""
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = Field(None, max_length=500)
     definition: dict[str, Any] | None = None
@@ -117,8 +66,8 @@ class FlowDefinitionUpdate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class FlowDefinitionResponse(BaseModel):
-    """Flow definition response."""
+class AgentDefinitionResponse(BaseModel):
+    """Agent definition response."""
     id: UUID
     project_id: UUID = Field(..., alias="projectId")
     name: str
@@ -131,7 +80,7 @@ class FlowDefinitionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     @classmethod
-    def from_orm_model(cls, obj) -> "FlowDefinitionResponse":
+    def from_orm_model(cls, obj) -> "AgentDefinitionResponse":
         return cls(
             id=obj.id,
             projectId=obj.project_id,
@@ -144,112 +93,29 @@ class FlowDefinitionResponse(BaseModel):
         )
 
 
-class StartProcessingRequest(BaseModel):
-    """Request to start processing a receipt."""
-    document_id: UUID = Field(..., alias="documentId")
-    extraction_schema_id: UUID = Field(..., alias="extractionSchemaId")
+# --- Agent Run schemas ---
 
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class SubmitReviewRequest(BaseModel):
-    """Request to submit a review decision."""
-    action: Literal["approve", "edit", "reject"]
-    data: dict | None = None
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class AgentReceiptResponse(BaseModel):
-    """Full agent receipt response."""
-    id: UUID
-    project_id: UUID = Field(..., alias="projectId")
-    document_id: UUID = Field(..., alias="documentId")
-    extraction_schema_id: UUID = Field(..., alias="extractionSchemaId")
-    status: AgentReceiptStatus
-    status_message: str | None = Field(None, alias="statusMessage")
-    extracted_data: dict | None = Field(None, alias="extractedData")
-    reviewed_data: dict | None = Field(None, alias="reviewedData")
-    thread_id: str | None = Field(None, alias="threadId")
-    created_by: UUID = Field(..., alias="createdBy")
-    created_at: datetime = Field(..., alias="createdAt")
-    updated_at: datetime = Field(..., alias="updatedAt")
-
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    @classmethod
-    def from_orm_model(cls, obj) -> "AgentReceiptResponse":
-        return cls(
-            id=obj.id,
-            projectId=obj.project_id,
-            documentId=obj.document_id,
-            extractionSchemaId=obj.extraction_schema_id,
-            status=obj.status,
-            statusMessage=obj.status_message,
-            extractedData=obj.extracted_data,
-            reviewedData=obj.reviewed_data,
-            threadId=obj.thread_id,
-            createdBy=obj.created_by,
-            createdAt=obj.created_at,
-            updatedAt=obj.updated_at,
-        )
-
-
-class AgentReceiptListItem(BaseModel):
-    """Summary agent receipt for list endpoint."""
-    id: UUID
-    document_id: UUID = Field(..., alias="documentId")
-    status: AgentReceiptStatus
-    status_message: str | None = Field(None, alias="statusMessage")
-    extracted_data: dict | None = Field(None, alias="extractedData")
-    created_at: datetime = Field(..., alias="createdAt")
-
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    @classmethod
-    def from_orm_model(cls, obj) -> "AgentReceiptListItem":
-        return cls(
-            id=obj.id,
-            documentId=obj.document_id,
-            status=obj.status,
-            statusMessage=obj.status_message,
-            extractedData=obj.extracted_data,
-            createdAt=obj.created_at,
-        )
-
-
-# --- Flow Run schemas ---
-
-class StartExtractRunRequest(BaseModel):
-    """Request to start an extract flow run."""
-    flow_definition_id: UUID = Field(..., alias="flowDefinitionId")
-    document_id: UUID = Field(..., alias="documentId")
-    extraction_schema_id: UUID = Field(..., alias="extractionSchemaId")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class StartFlowRunRequest(BaseModel):
-    """Request to start a flow run."""
-    flow_definition_id: UUID = Field(..., alias="flowDefinitionId")
+class StartAgentRunRequest(BaseModel):
+    """Request to start an agent run."""
+    agent_definition_id: UUID = Field(..., alias="agentDefinitionId")
     initial_state: dict[str, Any] = Field(default_factory=dict, alias="initialState")
 
     model_config = ConfigDict(populate_by_name=True)
 
 
-class ResumeFlowRunRequest(BaseModel):
-    """Request to resume an interrupted flow run."""
+class ResumeAgentRunRequest(BaseModel):
+    """Request to resume an interrupted agent run."""
     resume_value: dict[str, Any] = Field(..., alias="resumeValue")
 
     model_config = ConfigDict(populate_by_name=True)
 
 
-class FlowRunResponse(BaseModel):
-    """Full flow run response."""
+class AgentRunResponse(BaseModel):
+    """Full agent run response."""
     id: UUID
     project_id: UUID = Field(..., alias="projectId")
-    flow_definition_id: UUID = Field(..., alias="flowDefinitionId")
-    status: FlowRunStatus
+    agent_definition_id: UUID = Field(..., alias="agentDefinitionId")
+    status: AgentRunStatus
     status_message: str | None = Field(None, alias="statusMessage")
     initial_state: dict[str, Any] | None = Field(None, alias="initialState")
     current_state: dict[str, Any] | None = Field(None, alias="currentState")
@@ -262,11 +128,11 @@ class FlowRunResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     @classmethod
-    def from_orm_model(cls, obj) -> "FlowRunResponse":
+    def from_orm_model(cls, obj) -> "AgentRunResponse":
         return cls(
             id=obj.id,
             projectId=obj.project_id,
-            flowDefinitionId=obj.flow_definition_id,
+            agentDefinitionId=obj.agent_definition_id,
             status=obj.status,
             statusMessage=obj.status_message,
             initialState=obj.initial_state,
@@ -279,11 +145,11 @@ class FlowRunResponse(BaseModel):
         )
 
 
-class FlowRunListItem(BaseModel):
-    """Summary flow run for list endpoint."""
+class AgentRunListItem(BaseModel):
+    """Summary agent run for list endpoint."""
     id: UUID
-    flow_definition_id: UUID = Field(..., alias="flowDefinitionId")
-    status: FlowRunStatus
+    agent_definition_id: UUID = Field(..., alias="agentDefinitionId")
+    status: AgentRunStatus
     status_message: str | None = Field(None, alias="statusMessage")
     current_node: str | None = Field(None, alias="currentNode")
     created_at: datetime = Field(..., alias="createdAt")
@@ -291,10 +157,10 @@ class FlowRunListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     @classmethod
-    def from_orm_model(cls, obj) -> "FlowRunListItem":
+    def from_orm_model(cls, obj) -> "AgentRunListItem":
         return cls(
             id=obj.id,
-            flowDefinitionId=obj.flow_definition_id,
+            agentDefinitionId=obj.agent_definition_id,
             status=obj.status,
             statusMessage=obj.status_message,
             currentNode=obj.current_node,

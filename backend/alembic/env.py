@@ -14,10 +14,8 @@ from app.models import (
     Index, IndexDocument, Chunk, ProviderKey,
     GoldenSet, GoldenSetQuery, GoldenSetSource,
     EvalRun, EvalRunResult,
-    AgentReceipt,
-    AgentConfig,
-    FlowDefinition,
-    FlowRun,
+    AgentDefinition,
+    AgentRun,
 )
 
 config = context.config

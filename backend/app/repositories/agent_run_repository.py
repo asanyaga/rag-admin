@@ -1,14 +1,14 @@
-"""Repository for flow run data access."""
+"""Repository for agent run data access."""
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.flow_run import FlowRun, FlowRunStatus
+from app.models.agent_run import AgentRun, AgentRunStatus
 
 
-class FlowRunRepository:
-    """Repository for flow run CRUD operations."""
+class AgentRunRepository:
+    """Repository for agent run CRUD operations."""
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -16,14 +16,14 @@ class FlowRunRepository:
     async def create(
         self,
         project_id: UUID,
-        flow_definition_id: UUID,
+        agent_definition_id: UUID,
         created_by: UUID,
         initial_state: dict | None = None,
-    ) -> FlowRun:
-        """Create a new flow run."""
-        obj = FlowRun(
+    ) -> AgentRun:
+        """Create a new agent run."""
+        obj = AgentRun(
             project_id=project_id,
-            flow_definition_id=flow_definition_id,
+            agent_definition_id=agent_definition_id,
             initial_state=initial_state,
             created_by=created_by,
         )
@@ -32,37 +32,37 @@ class FlowRunRepository:
         await self.session.refresh(obj)
         return obj
 
-    async def get_by_id(self, run_id: UUID) -> FlowRun | None:
-        """Get a flow run by ID."""
+    async def get_by_id(self, run_id: UUID) -> AgentRun | None:
+        """Get an agent run by ID."""
         result = await self.session.execute(
-            select(FlowRun).where(FlowRun.id == run_id)
+            select(AgentRun).where(AgentRun.id == run_id)
         )
         return result.scalar_one_or_none()
 
-    async def list_by_project(self, project_id: UUID) -> list[FlowRun]:
-        """List flow runs for a project."""
+    async def list_by_project(self, project_id: UUID) -> list[AgentRun]:
+        """List agent runs for a project."""
         result = await self.session.execute(
-            select(FlowRun)
-            .where(FlowRun.project_id == project_id)
-            .order_by(FlowRun.created_at.desc())
+            select(AgentRun)
+            .where(AgentRun.project_id == project_id)
+            .order_by(AgentRun.created_at.desc())
         )
         return list(result.scalars().all())
 
-    async def list_by_flow(self, flow_definition_id: UUID) -> list[FlowRun]:
-        """List flow runs for a specific flow definition."""
+    async def list_by_agent_definition(self, agent_definition_id: UUID) -> list[AgentRun]:
+        """List agent runs for a specific agent definition."""
         result = await self.session.execute(
-            select(FlowRun)
-            .where(FlowRun.flow_definition_id == flow_definition_id)
-            .order_by(FlowRun.created_at.desc())
+            select(AgentRun)
+            .where(AgentRun.agent_definition_id == agent_definition_id)
+            .order_by(AgentRun.created_at.desc())
         )
         return list(result.scalars().all())
 
     async def update_status(
         self,
         run_id: UUID,
-        status: FlowRunStatus,
+        status: AgentRunStatus,
         status_message: str | None = None,
-    ) -> FlowRun | None:
+    ) -> AgentRun | None:
         """Update run status and optional message."""
         run = await self.get_by_id(run_id)
         if not run:
@@ -79,10 +79,10 @@ class FlowRunRepository:
         run_id: UUID,
         current_state: dict | None,
         current_node: str | None,
-        status: FlowRunStatus,
+        status: AgentRunStatus,
         thread_id: str | None = None,
         status_message: str | None = None,
-    ) -> FlowRun | None:
+    ) -> AgentRun | None:
         """Update run state after graph invocation."""
         run = await self.get_by_id(run_id)
         if not run:
@@ -99,7 +99,7 @@ class FlowRunRepository:
         return run
 
     async def delete(self, run_id: UUID) -> bool:
-        """Delete a flow run."""
+        """Delete an agent run."""
         run = await self.get_by_id(run_id)
         if not run:
             return False
