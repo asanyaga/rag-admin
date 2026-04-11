@@ -1,4 +1,5 @@
 """Flow run service — generic execution engine for composed flows."""
+import json
 import logging
 from uuid import UUID, uuid4
 
@@ -14,6 +15,24 @@ from app.services.agent.state import GenericFlowState
 from app.services.exceptions import NotFoundError
 
 logger = logging.getLogger(__name__)
+
+
+def _make_json_safe(obj: dict) -> dict:
+    """Strip non-JSON-serializable values from a state dict.
+
+    LangGraph may embed Interrupt objects or other internal types in the
+    state returned by ainvoke. We need to remove them before storing in
+    a JSON column.
+    """
+    safe = {}
+    for key, value in obj.items():
+        try:
+            json.dumps(value)
+            safe[key] = value
+        except (TypeError, ValueError):
+            # Convert to string representation as fallback
+            safe[key] = str(value)
+    return safe
 
 
 class FlowRunService:
@@ -68,7 +87,7 @@ class FlowRunService:
             if result.get("error"):
                 await self.flow_run_repo.update_state(
                     run.id,
-                    current_state=result,
+                    current_state=_make_json_safe(result),
                     current_node=result.get("current_step"),
                     status=FlowRunStatus.failed,
                     thread_id=thread_id,
@@ -81,7 +100,7 @@ class FlowRunService:
                     # Interrupted — waiting for human input
                     await self.flow_run_repo.update_state(
                         run.id,
-                        current_state=result,
+                        current_state=_make_json_safe(result),
                         current_node=snapshot.next[0] if snapshot.next else None,
                         status=FlowRunStatus.waiting_for_input,
                         thread_id=thread_id,
@@ -90,7 +109,7 @@ class FlowRunService:
                     # Completed
                     await self.flow_run_repo.update_state(
                         run.id,
-                        current_state=result,
+                        current_state=_make_json_safe(result),
                         current_node=None,
                         status=FlowRunStatus.completed,
                         thread_id=thread_id,
@@ -156,14 +175,14 @@ class FlowRunService:
             if snapshot.next:
                 await self.flow_run_repo.update_state(
                     run.id,
-                    current_state=result,
+                    current_state=_make_json_safe(result),
                     current_node=snapshot.next[0] if snapshot.next else None,
                     status=FlowRunStatus.waiting_for_input,
                 )
             else:
                 await self.flow_run_repo.update_state(
                     run.id,
-                    current_state=result,
+                    current_state=_make_json_safe(result),
                     current_node=None,
                     status=FlowRunStatus.completed,
                 )
