@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.agent_receipt import AgentReceiptStatus
+from app.models.flow_run import FlowRunStatus
 
 
 # --- Agent Tool schemas ---
@@ -213,5 +214,80 @@ class AgentReceiptListItem(BaseModel):
             status=obj.status,
             statusMessage=obj.status_message,
             extractedData=obj.extracted_data,
+            createdAt=obj.created_at,
+        )
+
+
+# --- Flow Run schemas ---
+
+class StartFlowRunRequest(BaseModel):
+    """Request to start a flow run."""
+    flow_definition_id: UUID = Field(..., alias="flowDefinitionId")
+    initial_state: dict[str, Any] = Field(default_factory=dict, alias="initialState")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ResumeFlowRunRequest(BaseModel):
+    """Request to resume an interrupted flow run."""
+    resume_value: dict[str, Any] = Field(..., alias="resumeValue")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class FlowRunResponse(BaseModel):
+    """Full flow run response."""
+    id: UUID
+    project_id: UUID = Field(..., alias="projectId")
+    flow_definition_id: UUID = Field(..., alias="flowDefinitionId")
+    status: FlowRunStatus
+    status_message: str | None = Field(None, alias="statusMessage")
+    initial_state: dict[str, Any] | None = Field(None, alias="initialState")
+    current_state: dict[str, Any] | None = Field(None, alias="currentState")
+    current_node: str | None = Field(None, alias="currentNode")
+    thread_id: str | None = Field(None, alias="threadId")
+    created_by: UUID = Field(..., alias="createdBy")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @classmethod
+    def from_orm_model(cls, obj) -> "FlowRunResponse":
+        return cls(
+            id=obj.id,
+            projectId=obj.project_id,
+            flowDefinitionId=obj.flow_definition_id,
+            status=obj.status,
+            statusMessage=obj.status_message,
+            initialState=obj.initial_state,
+            currentState=obj.current_state,
+            currentNode=obj.current_node,
+            threadId=obj.thread_id,
+            createdBy=obj.created_by,
+            createdAt=obj.created_at,
+            updatedAt=obj.updated_at,
+        )
+
+
+class FlowRunListItem(BaseModel):
+    """Summary flow run for list endpoint."""
+    id: UUID
+    flow_definition_id: UUID = Field(..., alias="flowDefinitionId")
+    status: FlowRunStatus
+    status_message: str | None = Field(None, alias="statusMessage")
+    current_node: str | None = Field(None, alias="currentNode")
+    created_at: datetime = Field(..., alias="createdAt")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @classmethod
+    def from_orm_model(cls, obj) -> "FlowRunListItem":
+        return cls(
+            id=obj.id,
+            flowDefinitionId=obj.flow_definition_id,
+            status=obj.status,
+            statusMessage=obj.status_message,
+            currentNode=obj.current_node,
             createdAt=obj.created_at,
         )

@@ -128,3 +128,45 @@ export interface SubmitReviewRequest {
   action: 'approve' | 'edit' | 'reject'
   data?: Record<string, unknown>
 }
+
+// --- Flow Runs ---
+
+export type FlowRunStatus =
+  | 'pending'
+  | 'running'
+  | 'waiting_for_input'
+  | 'completed'
+  | 'failed'
+
+export interface FlowRun {
+  id: string
+  projectId: string
+  flowDefinitionId: string
+  status: FlowRunStatus
+  statusMessage: string | null
+  initialState: Record<string, unknown> | null
+  currentState: Record<string, unknown> | null
+  currentNode: string | null
+  threadId: string | null
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface FlowRunListItem {
+  id: string
+  flowDefinitionId: string
+  status: FlowRunStatus
+  statusMessage: string | null
+  currentNode: string | null
+  createdAt: string
+}
+
+export interface StartFlowRunRequest {
+  flowDefinitionId: string
+  initialState: Record<string, unknown>
+}
+
+export interface ResumeFlowRunRequest {
+  resumeValue: Record<string, unknown>
+}

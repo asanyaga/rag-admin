@@ -12,6 +12,7 @@ from app.repositories.agent_receipt_repository import AgentReceiptRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.extraction_schema_repository import ExtractionSchemaRepository
 from app.repositories.flow_definition_repository import FlowDefinitionRepository
+from app.repositories.flow_run_repository import FlowRunRepository
 from app.schemas.agent import (
     AgentToolResponse,
     AgentTypeResponse,
@@ -20,11 +21,16 @@ from app.schemas.agent import (
     FlowDefinitionCreate,
     FlowDefinitionUpdate,
     FlowDefinitionResponse,
+    StartFlowRunRequest,
+    ResumeFlowRunRequest,
+    FlowRunResponse,
+    FlowRunListItem,
     StartProcessingRequest,
     SubmitReviewRequest,
     AgentReceiptResponse,
     AgentReceiptListItem,
 )
+from app.services.agent.flow_run_service import FlowRunService
 from app.services.agent.service import AgentService
 from app.services.agent.tools import list_tools
 from app.services.agent.types import list_agent_types, get_agent_type
@@ -275,6 +281,98 @@ async def delete_flow(
     deleted = await repo.delete(flow_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
+
+# --- Flow Runs ---
+
+def get_flow_run_service(
+    db: AsyncSession = Depends(get_db),
+) -> FlowRunService:
+    """Dependency to create FlowRunService with checkpointer from app state."""
+    from app.main import app
+    checkpointer = app.state.agent_checkpointer
+
+    return FlowRunService(
+        flow_run_repo=FlowRunRepository(db),
+        flow_def_repo=FlowDefinitionRepository(db),
+        checkpointer=checkpointer,
+    )
+
+
+@router.post(
+    "/agent/projects/{project_id}/runs",
+    response_model=FlowRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Start a flow run",
+)
+async def start_flow_run(
+    project_id: UUID,
+    body: StartFlowRunRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: FlowRunService = Depends(get_flow_run_service),
+):
+    try:
+        return await service.start_run(
+            project_id=project_id,
+            flow_definition_id=body.flow_definition_id,
+            initial_state=body.initial_state,
+            user_id=current_user.id,
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/agent/projects/{project_id}/runs",
+    response_model=list[FlowRunListItem],
+    summary="List flow runs for a project",
+)
+async def list_flow_runs(
+    project_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: FlowRunService = Depends(get_flow_run_service),
+):
+    return await service.list_runs(project_id)
+
+
+@router.get(
+    "/agent/runs/{run_id}",
+    response_model=FlowRunResponse,
+    summary="Get a flow run",
+)
+async def get_flow_run(
+    run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: FlowRunService = Depends(get_flow_run_service),
+):
+    try:
+        return await service.get_run(run_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/agent/runs/{run_id}/resume",
+    response_model=FlowRunResponse,
+    summary="Resume an interrupted flow run",
+)
+async def resume_flow_run(
+    run_id: UUID,
+    body: ResumeFlowRunRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: FlowRunService = Depends(get_flow_run_service),
+):
+    try:
+        return await service.resume_run(
+            run_id=run_id,
+            resume_value=body.resume_value,
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # --- Receipt Processing ---

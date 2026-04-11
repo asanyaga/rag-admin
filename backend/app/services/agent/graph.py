@@ -65,9 +65,10 @@ Structure:
 def build_graph_from_definition(
     flow: FlowDefinition,
     checkpointer=None,
+    state_type=None,
 ) -> Any:
     """Build and compile a LangGraph StateGraph from a flow definition."""
-    graph = StateGraph(AgentState)
+    graph = StateGraph(state_type or AgentState)
 
     # Add nodes
     for node in flow["nodes"]:
