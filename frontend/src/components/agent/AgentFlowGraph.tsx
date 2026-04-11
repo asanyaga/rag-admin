@@ -8,12 +8,13 @@ import {
   MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import type { AgentReceiptStatus } from '@/types/agent'
+import type { AgentReceiptStatus, FlowRunStatus } from '@/types/agent'
 
 interface AgentFlowGraphProps {
   nodes: { name: string; label: string }[]
   currentStep?: string | null
   status?: AgentReceiptStatus | null
+  flowRunStatus?: FlowRunStatus | null
   height?: number
 }
 
@@ -24,8 +25,28 @@ function getNodeStatus(
   nodeIndex: number,
   nodes: { name: string }[],
   currentStep: string | null,
-  status: AgentReceiptStatus | null
+  status: AgentReceiptStatus | null,
+  flowRunStatus: FlowRunStatus | null = null
 ): NodeStatus {
+  // Generic flow run status handling
+  if (flowRunStatus) {
+    if (flowRunStatus === 'completed') return 'completed'
+    if (flowRunStatus === 'failed') {
+      const currentIndex = nodes.findIndex((n) => n.name === currentStep)
+      if (nodeIndex < currentIndex) return 'completed'
+      if (nodeIndex === currentIndex) return 'failed'
+      return 'pending'
+    }
+    if (flowRunStatus === 'pending') return 'pending'
+    // running or waiting_for_input
+    const currentIndex = nodes.findIndex((n) => n.name === currentStep)
+    if (currentIndex < 0) return nodeIndex === 0 ? 'active' : 'pending'
+    if (nodeIndex < currentIndex) return 'completed'
+    if (nodeIndex === currentIndex) return 'active'
+    return 'pending'
+  }
+
+  // Receipt-specific status handling
   if (!status || !currentStep) return 'pending'
   if (status === 'failed') {
     const currentIndex = nodes.findIndex((n) => n.name === currentStep)
@@ -84,6 +105,7 @@ export function AgentFlowGraph({
   nodes: graphNodes,
   currentStep = null,
   status = null,
+  flowRunStatus = null,
   height = 120,
 }: AgentFlowGraphProps) {
   const { nodes, edges } = useMemo(() => {
@@ -98,14 +120,14 @@ export function AgentFlowGraph({
       position: { x: startX + i * (NODE_WIDTH + NODE_SPACING), y: 0 },
       data: {
         label: node.label,
-        nodeStatus: getNodeStatus(node.name, i, graphNodes, currentStep, status),
+        nodeStatus: getNodeStatus(node.name, i, graphNodes, currentStep, status, flowRunStatus),
       },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
     }))
 
     const rfEdges: Edge[] = graphNodes.slice(0, -1).map((node, i) => {
-      const sourceStatus = getNodeStatus(node.name, i, graphNodes, currentStep, status)
+      const sourceStatus = getNodeStatus(node.name, i, graphNodes, currentStep, status, flowRunStatus)
       const isActive = sourceStatus === 'completed' || sourceStatus === 'active'
       return {
         id: `${node.name}-${graphNodes[i + 1].name}`,
@@ -125,7 +147,7 @@ export function AgentFlowGraph({
     })
 
     return { nodes: rfNodes, edges: rfEdges }
-  }, [graphNodes, currentStep, status])
+  }, [graphNodes, currentStep, status, flowRunStatus])
 
   return (
     <div style={{ height }} className="w-full rounded-lg border bg-white">

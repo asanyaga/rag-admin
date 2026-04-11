@@ -1,4 +1,4 @@
-"""LangGraph state definition for the receipt processing pipeline."""
+"""LangGraph state definitions for agent pipelines."""
 from typing import TypedDict
 
 
@@ -16,3 +16,8 @@ class AgentState(TypedDict, total=False):
     exported: bool
     error: str | None
     current_step: str
+
+
+# Generic flow state: plain dict so LangGraph preserves all keys.
+# TypedDict(total=False) drops undeclared keys, so we use dict instead.
+GenericFlowState = dict

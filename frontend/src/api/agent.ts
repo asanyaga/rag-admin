@@ -11,6 +11,11 @@ import type {
   AgentReceiptListItem,
   StartProcessingRequest,
   SubmitReviewRequest,
+  FlowRun,
+  FlowRunListItem,
+  StartFlowRunRequest,
+  StartExtractRunRequest,
+  ResumeFlowRunRequest,
 } from '@/types/agent'
 
 // --- Agent Tools ---
@@ -140,6 +145,65 @@ export async function submitReview(
 ): Promise<AgentReceipt> {
   const response = await apiClient.post<AgentReceipt>(
     `/agent/receipts/${receiptId}/review`,
+    data
+  )
+  return response.data
+}
+
+// --- Flow Runs ---
+
+export async function startFlowRun(
+  projectId: string,
+  data: StartFlowRunRequest
+): Promise<FlowRun> {
+  const response = await apiClient.post<FlowRun>(
+    `/agent/projects/${projectId}/runs`,
+    data
+  )
+  return response.data
+}
+
+export async function listFlowRuns(
+  projectId: string
+): Promise<FlowRunListItem[]> {
+  const response = await apiClient.get<FlowRunListItem[]>(
+    `/agent/projects/${projectId}/runs`
+  )
+  return response.data
+}
+
+export async function getFlowRun(
+  runId: string
+): Promise<FlowRun> {
+  const response = await apiClient.get<FlowRun>(
+    `/agent/runs/${runId}`
+  )
+  return response.data
+}
+
+export async function resumeFlowRun(
+  runId: string,
+  data: ResumeFlowRunRequest
+): Promise<FlowRun> {
+  const response = await apiClient.post<FlowRun>(
+    `/agent/runs/${runId}/resume`,
+    data
+  )
+  return response.data
+}
+
+export async function deleteFlowRun(
+  runId: string
+): Promise<void> {
+  await apiClient.delete(`/agent/runs/${runId}`)
+}
+
+export async function startExtractRun(
+  projectId: string,
+  data: StartExtractRunRequest
+): Promise<FlowRun> {
+  const response = await apiClient.post<FlowRun>(
+    `/agent/extract/projects/${projectId}/runs`,
     data
   )
   return response.data

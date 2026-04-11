@@ -1,17 +1,16 @@
-"""LangGraph node functions for the receipt processing pipeline."""
+"""LangGraph node functions for agent pipelines."""
 import logging
 
 from langgraph.types import interrupt
 
 from app.adapters.extraction.registry import get_extractor
-from app.services.agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 
 
-async def extract_node(state: AgentState) -> AgentState:
-    """Extract structured data from receipt image using DataExtractor."""
-    logger.info("extract_node: processing receipt %s", state["receipt_id"])
+async def extract_node(state: dict) -> dict:
+    """Extract structured data from a document using DataExtractor."""
+    logger.info("extract_node: processing document %s", state.get("document_id", "unknown"))
 
     extractor = get_extractor("llamaextract")
     if extractor is None:
@@ -37,9 +36,9 @@ async def extract_node(state: AgentState) -> AgentState:
     }
 
 
-async def review_node(state: AgentState) -> AgentState:
+async def review_node(state: dict) -> dict:
     """Interrupt graph execution for human review of extracted data."""
-    logger.info("review_node: awaiting review for receipt %s", state["receipt_id"])
+    logger.info("review_node: awaiting review for document %s", state.get("document_id", "unknown"))
 
     review_input = interrupt(state.get("extracted_data", {}))
 
@@ -54,9 +53,9 @@ async def review_node(state: AgentState) -> AgentState:
     }
 
 
-async def export_node(state: AgentState) -> AgentState:
+async def export_node(state: dict) -> dict:
     """Mark data as exported (actual DB save happens in the service layer)."""
-    logger.info("export_node: exporting receipt %s", state["receipt_id"])
+    logger.info("export_node: exporting document %s", state.get("document_id", "unknown"))
 
     return {
         **state,
