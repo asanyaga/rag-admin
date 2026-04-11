@@ -1,16 +1,16 @@
 import { useParams } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
-import { useFlowComposer } from '@/hooks/useFlowComposer'
-import { FlowComposer } from '@/components/agent/flow/FlowComposer'
+import { useAgentComposer } from '@/hooks/useAgentComposer'
+import { AgentComposer } from '@/components/agent/composer/AgentComposer'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 
-export default function FlowComposerPage(): JSX.Element {
-  const { flowId } = useParams<{ flowId?: string }>()
+export default function AgentComposerPage(): JSX.Element {
+  const { agentId } = useParams<{ agentId?: string }>()
   const { currentProject } = useProject()
   const projectId = currentProject?.id ?? null
 
-  const composer = useFlowComposer(projectId, flowId)
+  const composer = useAgentComposer(projectId, agentId)
 
   if (!currentProject) {
     return (
@@ -39,5 +39,5 @@ export default function FlowComposerPage(): JSX.Element {
     )
   }
 
-  return <FlowComposer composer={composer} />
+  return <AgentComposer composer={composer} />
 }

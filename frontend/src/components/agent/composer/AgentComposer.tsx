@@ -18,15 +18,15 @@ import { ToolPalette } from './ToolPalette'
 import { ComposerNode } from './ComposerNode'
 import { NodeConfigPanel } from './NodeConfigPanel'
 import type { AgentTool } from '@/types/agent'
-import type { UseFlowComposerReturn } from '@/hooks/useFlowComposer'
+import type { UseAgentComposerReturn } from '@/hooks/useAgentComposer'
 
 const nodeTypes = { composerNode: ComposerNode }
 
-interface FlowComposerProps {
-  composer: UseFlowComposerReturn
+interface AgentComposerProps {
+  composer: UseAgentComposerReturn
 }
 
-export function FlowComposer({ composer }: FlowComposerProps) {
+export function AgentComposer({ composer }: AgentComposerProps) {
   const navigate = useNavigate()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] =
@@ -44,13 +44,13 @@ export function FlowComposer({ composer }: FlowComposerProps) {
     addNode,
     removeNode,
     updateNodeConfig,
-    flowName,
-    setFlowName,
-    flowDescription,
-    setFlowDescription,
+    agentName,
+    setAgentName,
+    agentDescription,
+    setAgentDescription,
     isSaving,
     save,
-    savedFlow,
+    savedAgent,
   } = composer
 
   const selectedNode = useMemo(
@@ -99,13 +99,13 @@ export function FlowComposer({ composer }: FlowComposerProps) {
 
   const handleSave = async () => {
     try {
-      const flow = await save()
-      toast.success(savedFlow ? 'Flow updated' : 'Flow created')
-      if (!savedFlow) {
-        navigate(`/agent/flows/${flow.id}`, { replace: true })
+      const saved = await save()
+      toast.success(savedAgent ? 'Agent updated' : 'Agent created')
+      if (!savedAgent) {
+        navigate(`/agent/${saved.id}/runs`, { replace: true })
       }
     } catch (err) {
-      toast.error('Failed to save flow', {
+      toast.error('Failed to save agent', {
         description: err instanceof Error ? err.message : 'An error occurred',
       })
     }
@@ -130,24 +130,24 @@ export function FlowComposer({ composer }: FlowComposerProps) {
         <Separator orientation="vertical" className="h-6" />
         <Input
           className="h-8 w-56 text-sm font-medium"
-          placeholder="Flow name..."
-          value={flowName}
-          onChange={(e) => setFlowName(e.target.value)}
+          placeholder="Agent name..."
+          value={agentName}
+          onChange={(e) => setAgentName(e.target.value)}
         />
         <Input
           className="h-8 w-72 text-sm"
           placeholder="Description (optional)"
-          value={flowDescription}
-          onChange={(e) => setFlowDescription(e.target.value)}
+          value={agentDescription}
+          onChange={(e) => setAgentDescription(e.target.value)}
         />
         <div className="ml-auto">
           <Button
             size="sm"
             onClick={handleSave}
-            disabled={isSaving || !flowName.trim() || nodes.length === 0}
+            disabled={isSaving || !agentName.trim() || nodes.length === 0}
           >
             <Save className="h-4 w-4 mr-1.5" />
-            {isSaving ? 'Saving...' : savedFlow ? 'Update' : 'Save'}
+            {isSaving ? 'Saving...' : savedAgent ? 'Update' : 'Save'}
           </Button>
         </div>
       </div>

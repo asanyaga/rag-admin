@@ -24,11 +24,10 @@ import EvalResultDetailPage from './pages/EvalResultDetailPage'
 import RunComparisonPage from './pages/RunComparisonPage'
 import ExperimentDetailPage from './pages/ExperimentDetailPage'
 import ExtractionPage from './pages/ExtractionPage'
-import AgentPage from './pages/AgentPage'
-import AgentReceiptPage from './pages/AgentReceiptPage'
-import FlowComposerPage from './pages/FlowComposerPage'
-import FlowRunsPage from './pages/FlowRunsPage'
-import FlowRunDetailPage from './pages/FlowRunDetailPage'
+import AgentListPage from './pages/AgentListPage'
+import AgentComposerPage from './pages/AgentComposerPage'
+import AgentRunsPage from './pages/AgentRunsPage'
+import AgentRunDetailPage from './pages/AgentRunDetailPage'
 
 const router = createBrowserRouter([
   {
@@ -96,32 +95,27 @@ const router = createBrowserRouter([
           },
           {
             path: 'agent',
-            element: <AgentPage />,
-            handle: { breadcrumb: 'Agent' },
+            element: <AgentListPage />,
+            handle: { breadcrumb: 'Agents' },
           },
           {
-            path: 'agent/receipts/:receiptId',
-            element: <AgentReceiptPage />,
-            handle: { breadcrumb: 'Receipt Detail' },
+            path: 'agent/new',
+            element: <AgentComposerPage />,
+            handle: { breadcrumb: 'New Agent' },
           },
           {
-            path: 'agent/flows/new',
-            element: <FlowComposerPage />,
-            handle: { breadcrumb: 'New Flow' },
+            path: 'agent/:agentId',
+            element: <AgentComposerPage />,
+            handle: { breadcrumb: 'Edit Agent' },
           },
           {
-            path: 'agent/flows/:flowId',
-            element: <FlowComposerPage />,
-            handle: { breadcrumb: 'Edit Flow' },
-          },
-          {
-            path: 'agent/flows/:flowId/runs',
-            element: <FlowRunsPage />,
-            handle: { breadcrumb: 'Flow Runs' },
+            path: 'agent/:agentId/runs',
+            element: <AgentRunsPage />,
+            handle: { breadcrumb: 'Agent Runs' },
           },
           {
             path: 'agent/runs/:runId',
-            element: <FlowRunDetailPage />,
+            element: <AgentRunDetailPage />,
             handle: { breadcrumb: 'Run Detail' },
           },
 {

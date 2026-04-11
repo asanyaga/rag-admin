@@ -1,21 +1,13 @@
 import apiClient from './client'
 import type {
   AgentTool,
-  FlowDefinition,
-  FlowDefinitionCreate,
-  FlowDefinitionUpdate,
-  AgentType,
-  AgentConfig,
-  AgentConfigCreate,
-  AgentReceipt,
-  AgentReceiptListItem,
-  StartProcessingRequest,
-  SubmitReviewRequest,
-  FlowRun,
-  FlowRunListItem,
-  StartFlowRunRequest,
-  StartExtractRunRequest,
-  ResumeFlowRunRequest,
+  AgentDefinition,
+  AgentDefinitionCreate,
+  AgentDefinitionUpdate,
+  AgentRun,
+  AgentRunListItem,
+  StartAgentRunRequest,
+  ResumeAgentRunRequest,
 } from '@/types/agent'
 
 // --- Agent Tools ---
@@ -25,186 +17,98 @@ export async function listAgentTools(): Promise<AgentTool[]> {
   return response.data
 }
 
-// --- Flow Definitions ---
+// --- Agent Definitions ---
 
-export async function listFlowDefinitions(
+export async function listAgentDefinitions(
   projectId: string
-): Promise<FlowDefinition[]> {
-  const response = await apiClient.get<FlowDefinition[]>(
-    `/agent/projects/${projectId}/flows`
+): Promise<AgentDefinition[]> {
+  const response = await apiClient.get<AgentDefinition[]>(
+    `/agent/projects/${projectId}/definitions`
   )
   return response.data
 }
 
-export async function getFlowDefinition(
-  flowId: string
-): Promise<FlowDefinition> {
-  const response = await apiClient.get<FlowDefinition>(
-    `/agent/flows/${flowId}`
+export async function getAgentDefinition(
+  agentId: string
+): Promise<AgentDefinition> {
+  const response = await apiClient.get<AgentDefinition>(
+    `/agent/definitions/${agentId}`
   )
   return response.data
 }
 
-export async function createFlowDefinition(
+export async function createAgentDefinition(
   projectId: string,
-  data: FlowDefinitionCreate
-): Promise<FlowDefinition> {
-  const response = await apiClient.post<FlowDefinition>(
-    `/agent/projects/${projectId}/flows`,
+  data: AgentDefinitionCreate
+): Promise<AgentDefinition> {
+  const response = await apiClient.post<AgentDefinition>(
+    `/agent/projects/${projectId}/definitions`,
     data
   )
   return response.data
 }
 
-export async function updateFlowDefinition(
-  flowId: string,
-  data: FlowDefinitionUpdate
-): Promise<FlowDefinition> {
-  const response = await apiClient.put<FlowDefinition>(
-    `/agent/flows/${flowId}`,
+export async function updateAgentDefinition(
+  agentId: string,
+  data: AgentDefinitionUpdate
+): Promise<AgentDefinition> {
+  const response = await apiClient.put<AgentDefinition>(
+    `/agent/definitions/${agentId}`,
     data
   )
   return response.data
 }
 
-export async function deleteFlowDefinition(
-  flowId: string
+export async function deleteAgentDefinition(
+  agentId: string
 ): Promise<void> {
-  await apiClient.delete(`/agent/flows/${flowId}`)
+  await apiClient.delete(`/agent/definitions/${agentId}`)
 }
 
-// --- Agent Types ---
+// --- Agent Runs ---
 
-export async function listAgentTypes(): Promise<AgentType[]> {
-  const response = await apiClient.get<AgentType[]>('/agent/types')
-  return response.data
-}
-
-// --- Agent Configs ---
-
-export async function listAgentConfigs(
-  projectId: string
-): Promise<AgentConfig[]> {
-  const response = await apiClient.get<AgentConfig[]>(
-    `/agent/projects/${projectId}/configs`
-  )
-  return response.data
-}
-
-export async function createAgentConfig(
+export async function startAgentRun(
   projectId: string,
-  data: AgentConfigCreate
-): Promise<AgentConfig> {
-  const response = await apiClient.post<AgentConfig>(
-    `/agent/projects/${projectId}/configs`,
-    data
-  )
-  return response.data
-}
-
-export async function deleteAgentConfig(
-  configId: string
-): Promise<void> {
-  await apiClient.delete(`/agent/configs/${configId}`)
-}
-
-// --- Receipt Processing ---
-
-export async function startProcessing(
-  projectId: string,
-  data: StartProcessingRequest
-): Promise<AgentReceipt> {
-  const response = await apiClient.post<AgentReceipt>(
-    `/agent/projects/${projectId}/receipts`,
-    data
-  )
-  return response.data
-}
-
-export async function listReceipts(
-  projectId: string
-): Promise<AgentReceiptListItem[]> {
-  const response = await apiClient.get<AgentReceiptListItem[]>(
-    `/agent/projects/${projectId}/receipts`
-  )
-  return response.data
-}
-
-export async function getReceipt(
-  receiptId: string
-): Promise<AgentReceipt> {
-  const response = await apiClient.get<AgentReceipt>(
-    `/agent/receipts/${receiptId}`
-  )
-  return response.data
-}
-
-export async function submitReview(
-  receiptId: string,
-  data: SubmitReviewRequest
-): Promise<AgentReceipt> {
-  const response = await apiClient.post<AgentReceipt>(
-    `/agent/receipts/${receiptId}/review`,
-    data
-  )
-  return response.data
-}
-
-// --- Flow Runs ---
-
-export async function startFlowRun(
-  projectId: string,
-  data: StartFlowRunRequest
-): Promise<FlowRun> {
-  const response = await apiClient.post<FlowRun>(
+  data: StartAgentRunRequest
+): Promise<AgentRun> {
+  const response = await apiClient.post<AgentRun>(
     `/agent/projects/${projectId}/runs`,
     data
   )
   return response.data
 }
 
-export async function listFlowRuns(
+export async function listAgentRuns(
   projectId: string
-): Promise<FlowRunListItem[]> {
-  const response = await apiClient.get<FlowRunListItem[]>(
+): Promise<AgentRunListItem[]> {
+  const response = await apiClient.get<AgentRunListItem[]>(
     `/agent/projects/${projectId}/runs`
   )
   return response.data
 }
 
-export async function getFlowRun(
+export async function getAgentRun(
   runId: string
-): Promise<FlowRun> {
-  const response = await apiClient.get<FlowRun>(
+): Promise<AgentRun> {
+  const response = await apiClient.get<AgentRun>(
     `/agent/runs/${runId}`
   )
   return response.data
 }
 
-export async function resumeFlowRun(
+export async function resumeAgentRun(
   runId: string,
-  data: ResumeFlowRunRequest
-): Promise<FlowRun> {
-  const response = await apiClient.post<FlowRun>(
+  data: ResumeAgentRunRequest
+): Promise<AgentRun> {
+  const response = await apiClient.post<AgentRun>(
     `/agent/runs/${runId}/resume`,
     data
   )
   return response.data
 }
 
-export async function deleteFlowRun(
+export async function deleteAgentRun(
   runId: string
 ): Promise<void> {
   await apiClient.delete(`/agent/runs/${runId}`)
-}
-
-export async function startExtractRun(
-  projectId: string,
-  data: StartExtractRunRequest
-): Promise<FlowRun> {
-  const response = await apiClient.post<FlowRun>(
-    `/agent/extract/projects/${projectId}/runs`,
-    data
-  )
-  return response.data
 }

@@ -12,8 +12,8 @@ import {
 } from '@xyflow/react'
 import type {
   AgentTool,
-  FlowDefinition,
-  FlowDefinitionData,
+  AgentDefinition,
+  AgentDefinitionData,
 } from '@/types/agent'
 import * as agentApi from '@/api/agent'
 
@@ -30,9 +30,9 @@ const EDGE_MARKER = {
   color: '#94a3b8',
 }
 
-/** Convert a flow definition from the backend into React Flow nodes/edges */
+/** Convert an agent definition from the backend into React Flow nodes/edges */
 function definitionToReactFlow(
-  def: FlowDefinitionData,
+  def: AgentDefinitionData,
   tools: AgentTool[]
 ): { nodes: Node[]; edges: Edge[] } {
   const toolMap = new Map(tools.map((t) => [t.slug, t]))
@@ -82,27 +82,27 @@ function definitionToReactFlow(
   return { nodes, edges }
 }
 
-/** Convert React Flow nodes/edges back to a flow definition */
+/** Convert React Flow nodes/edges back to an agent definition */
 function reactFlowToDefinition(
   nodes: Node[],
   edges: Edge[]
-): FlowDefinitionData {
-  const flowNodes = nodes.map((n) => ({
+): AgentDefinitionData {
+  const agentNodes = nodes.map((n) => ({
     id: n.id,
     tool: n.data.toolSlug as string,
     config: (n.data.config ?? {}) as Record<string, unknown>,
     position: { x: n.position.x, y: n.position.y },
   }))
 
-  const flowEdges = edges.map((e) => ({
+  const agentEdges = edges.map((e) => ({
     source: e.source,
     target: e.target,
   }))
 
-  return { nodes: flowNodes, edges: flowEdges }
+  return { nodes: agentNodes, edges: agentEdges }
 }
 
-export interface UseFlowComposerReturn {
+export interface UseAgentComposerReturn {
   // Tool catalog
   tools: AgentTool[]
   toolsLoading: boolean
@@ -123,32 +123,32 @@ export interface UseFlowComposerReturn {
   ) => void
 
   // Persistence
-  flowName: string
-  setFlowName: (name: string) => void
-  flowDescription: string
-  setFlowDescription: (desc: string) => void
+  agentName: string
+  setAgentName: (name: string) => void
+  agentDescription: string
+  setAgentDescription: (desc: string) => void
   isSaving: boolean
   isLoading: boolean
-  savedFlow: FlowDefinition | null
-  save: () => Promise<FlowDefinition>
-  load: (flowId: string) => Promise<void>
+  savedAgent: AgentDefinition | null
+  save: () => Promise<AgentDefinition>
+  load: (agentId: string) => Promise<void>
 
   error: string | null
 }
 
-export function useFlowComposer(
+export function useAgentComposer(
   projectId: string | null,
-  flowId?: string | null
-): UseFlowComposerReturn {
+  agentId?: string | null
+): UseAgentComposerReturn {
   const [tools, setTools] = useState<AgentTool[]>([])
   const [toolsLoading, setToolsLoading] = useState(false)
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
-  const [flowName, setFlowName] = useState('')
-  const [flowDescription, setFlowDescription] = useState('')
-  const [savedFlow, setSavedFlow] = useState<FlowDefinition | null>(null)
+  const [agentName, setAgentName] = useState('')
+  const [agentDescription, setAgentDescription] = useState('')
+  const [savedAgent, setSavedAgent] = useState<AgentDefinition | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -181,27 +181,27 @@ export function useFlowComposer(
     }
   }, [])
 
-  // Load existing flow if flowId provided
+  // Load existing agent if agentId provided
   const load = useCallback(
     async (id: string) => {
       setIsLoading(true)
       setError(null)
       try {
-        const flow = await agentApi.getFlowDefinition(id)
-        setSavedFlow(flow)
-        setFlowName(flow.name)
-        setFlowDescription(flow.description ?? '')
+        const agent = await agentApi.getAgentDefinition(id)
+        setSavedAgent(agent)
+        setAgentName(agent.name)
+        setAgentDescription(agent.description ?? '')
         const currentTools =
           toolsRef.current.length > 0 ? toolsRef.current : tools
         const { nodes: n, edges: e } = definitionToReactFlow(
-          flow.definition,
+          agent.definition,
           currentTools
         )
         setNodes(n)
         setEdges(e)
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : 'Failed to load flow'
+          err instanceof Error ? err.message : 'Failed to load agent'
         )
       } finally {
         setIsLoading(false)
@@ -211,10 +211,10 @@ export function useFlowComposer(
   )
 
   useEffect(() => {
-    if (flowId && tools.length > 0) {
-      load(flowId)
+    if (agentId && tools.length > 0) {
+      load(agentId)
     }
-  }, [flowId, tools.length, load])
+  }, [agentId, tools.length, load])
 
   // Connect handler
   const onConnect: OnConnect = useCallback(
@@ -279,41 +279,41 @@ export function useFlowComposer(
   )
 
   // Save / update
-  const save = useCallback(async (): Promise<FlowDefinition> => {
+  const save = useCallback(async (): Promise<AgentDefinition> => {
     if (!projectId) throw new Error('No project selected')
-    if (!flowName.trim()) throw new Error('Flow name is required')
+    if (!agentName.trim()) throw new Error('Agent name is required')
 
     setIsSaving(true)
     setError(null)
     try {
       const definition = reactFlowToDefinition(nodes, edges)
-      let flow: FlowDefinition
+      let agent: AgentDefinition
 
-      if (savedFlow) {
-        flow = await agentApi.updateFlowDefinition(savedFlow.id, {
-          name: flowName,
-          description: flowDescription || undefined,
+      if (savedAgent) {
+        agent = await agentApi.updateAgentDefinition(savedAgent.id, {
+          name: agentName,
+          description: agentDescription || undefined,
           definition,
         })
       } else {
-        flow = await agentApi.createFlowDefinition(projectId, {
-          name: flowName,
-          description: flowDescription || undefined,
+        agent = await agentApi.createAgentDefinition(projectId, {
+          name: agentName,
+          description: agentDescription || undefined,
           definition,
         })
       }
 
-      setSavedFlow(flow)
-      return flow
+      setSavedAgent(agent)
+      return agent
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : 'Failed to save flow'
+        err instanceof Error ? err.message : 'Failed to save agent'
       setError(msg)
       throw err
     } finally {
       setIsSaving(false)
     }
-  }, [projectId, flowName, flowDescription, nodes, edges, savedFlow])
+  }, [projectId, agentName, agentDescription, nodes, edges, savedAgent])
 
   return {
     tools,
@@ -326,13 +326,13 @@ export function useFlowComposer(
     addNode,
     removeNode,
     updateNodeConfig,
-    flowName,
-    setFlowName,
-    flowDescription,
-    setFlowDescription,
+    agentName,
+    setAgentName,
+    agentDescription,
+    setAgentDescription,
     isSaving,
     isLoading,
-    savedFlow,
+    savedAgent,
     save,
     load,
     error,

@@ -1,23 +1,23 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { FlowRun, ResumeFlowRunRequest } from '@/types/agent'
+import type { AgentRun, ResumeAgentRunRequest } from '@/types/agent'
 import * as agentApi from '@/api/agent'
 
 const POLLING_INTERVAL = 3000
 const POLLING_TIMEOUT = 10 * 60 * 1000
 
-interface UseFlowRunReturn {
-  run: FlowRun | null
+interface UseAgentRunReturn {
+  run: AgentRun | null
   isLoading: boolean
   isResuming: boolean
   error: string | null
   fetchRun: () => Promise<void>
-  resumeRun: (data: ResumeFlowRunRequest) => Promise<void>
+  resumeRun: (data: ResumeAgentRunRequest) => Promise<void>
 }
 
-export function useFlowRun(
+export function useAgentRun(
   runId: string | null
-): UseFlowRunReturn {
-  const [run, setRun] = useState<FlowRun | null>(null)
+): UseAgentRunReturn {
+  const [run, setRun] = useState<AgentRun | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isResuming, setIsResuming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,11 +39,11 @@ export function useFlowRun(
     setIsLoading(true)
     setError(null)
     try {
-      const data = await agentApi.getFlowRun(runId)
+      const data = await agentApi.getAgentRun(runId)
       setRun(data)
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to fetch flow run'
+        err instanceof Error ? err.message : 'Failed to fetch agent run'
       )
     } finally {
       setIsLoading(false)
@@ -51,17 +51,17 @@ export function useFlowRun(
   }, [runId])
 
   const resumeRun = useCallback(
-    async (data: ResumeFlowRunRequest) => {
+    async (data: ResumeAgentRunRequest) => {
       if (!runId) throw new Error('No run ID')
       setIsResuming(true)
       setError(null)
       try {
-        const updated = await agentApi.resumeFlowRun(runId, data)
+        const updated = await agentApi.resumeAgentRun(runId, data)
         setRun(updated)
         stopPolling()
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : 'Failed to resume flow run'
+          err instanceof Error ? err.message : 'Failed to resume agent run'
         )
         throw err
       } finally {

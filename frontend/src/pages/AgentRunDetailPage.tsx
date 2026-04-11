@@ -1,45 +1,39 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { useFlowRun } from '@/hooks/useFlowRun'
-import { FlowRunDetail } from '@/components/agent/FlowRunDetail'
+import { useAgentRun } from '@/hooks/useAgentRun'
+import { AgentRunDetail } from '@/components/agent/AgentRunDetail'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
-import type { FlowDefinition, SubmitReviewRequest } from '@/types/agent'
+import type { AgentDefinition, ResumeAgentRunRequest } from '@/types/agent'
 import * as agentApi from '@/api/agent'
 
-export default function FlowRunDetailPage(): JSX.Element {
+export default function AgentRunDetailPage(): JSX.Element {
   const { runId } = useParams<{ runId: string }>()
   const navigate = useNavigate()
 
-  const { run, isLoading, isResuming, error, resumeRun } = useFlowRun(
+  const { run, isLoading, isResuming, error, resumeRun } = useAgentRun(
     runId ?? null
   )
 
-  // Load flow definition for graph visualization
-  const [flowDef, setFlowDef] = useState<FlowDefinition | null>(null)
+  // Load agent definition for context
+  const [agentDef, setAgentDef] = useState<AgentDefinition | null>(null)
   useEffect(() => {
-    if (run?.flowDefinitionId) {
+    if (run?.agentDefinitionId) {
       agentApi
-        .getFlowDefinition(run.flowDefinitionId)
-        .then(setFlowDef)
+        .getAgentDefinition(run.agentDefinitionId)
+        .then(setAgentDef)
         .catch(() => {})
     }
-  }, [run?.flowDefinitionId])
+  }, [run?.agentDefinitionId])
 
-  const handleResume = async (request: SubmitReviewRequest) => {
+  const handleResume = async (request: ResumeAgentRunRequest) => {
     try {
-      await resumeRun({
-        resumeValue: { action: request.action, data: request.data },
-      })
-      if (request.action === 'reject') {
-        toast.info('Run rejected')
-      } else {
-        toast.success('Review submitted')
-      }
+      await resumeRun(request)
+      toast.success('Run resumed')
     } catch (err) {
-      toast.error('Failed to submit review', {
+      toast.error('Failed to resume run', {
         description: err instanceof Error ? err.message : 'An error occurred',
       })
     }
@@ -67,9 +61,9 @@ export default function FlowRunDetailPage(): JSX.Element {
         <h1 className="text-lg font-semibold">Run Detail</h1>
       </div>
 
-      <FlowRunDetail
+      <AgentRunDetail
         run={run}
-        flowDefinition={flowDef}
+        agentDefinition={agentDef}
         isLoading={isLoading}
         isResuming={isResuming}
         error={error}

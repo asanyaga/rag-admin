@@ -10,139 +10,69 @@ export interface AgentTool {
   configSchema: Record<string, unknown>
 }
 
-// --- Flow Definitions ---
+// --- Agent Definitions ---
 
-export interface FlowNodeDef {
+export interface AgentNodeDef {
   id: string
   tool: string
   config?: Record<string, unknown>
   position?: { x: number; y: number }
 }
 
-export interface FlowEdgeDef {
+export interface AgentEdgeDef {
   source: string
   target: string
 }
 
-export interface FlowConditionalEdgeDef {
+export interface AgentConditionalEdgeDef {
   source: string
   router: string
   targets: string[]
 }
 
-export interface FlowDefinitionData {
-  nodes: FlowNodeDef[]
-  edges: FlowEdgeDef[]
-  conditional_edges?: FlowConditionalEdgeDef[]
+export interface AgentDefinitionData {
+  nodes: AgentNodeDef[]
+  edges: AgentEdgeDef[]
+  conditional_edges?: AgentConditionalEdgeDef[]
 }
 
-export interface FlowDefinition {
+export interface AgentDefinition {
   id: string
   projectId: string
   name: string
   description: string | null
-  definition: FlowDefinitionData
+  definition: AgentDefinitionData
   createdBy: string
   createdAt: string
   updatedAt: string
 }
 
-export interface FlowDefinitionCreate {
+export interface AgentDefinitionCreate {
   name: string
   description?: string
-  definition: FlowDefinitionData
+  definition: AgentDefinitionData
 }
 
-export interface FlowDefinitionUpdate {
+export interface AgentDefinitionUpdate {
   name?: string
   description?: string
-  definition?: FlowDefinitionData
+  definition?: AgentDefinitionData
 }
 
-// --- Agent Types & Configs ---
+// --- Agent Runs ---
 
-export interface AgentType {
-  slug: string
-  name: string
-  description: string
-  nodes: { name: string; label: string }[]
-  configSchema: Record<string, unknown>
-}
-
-export interface AgentConfig {
-  id: string
-  projectId: string
-  agentType: string
-  config: Record<string, unknown> | null
-  enabled: boolean
-  createdBy: string
-  createdAt: string
-  updatedAt: string
-}
-
-export interface AgentConfigCreate {
-  agentType: string
-  config?: Record<string, unknown>
-}
-
-// --- Receipt Processing ---
-
-export type AgentReceiptStatus =
-  | 'pending'
-  | 'extracting'
-  | 'reviewing'
-  | 'approved'
-  | 'exported'
-  | 'failed'
-
-export interface AgentReceipt {
-  id: string
-  projectId: string
-  documentId: string
-  extractionSchemaId: string
-  status: AgentReceiptStatus
-  statusMessage: string | null
-  extractedData: Record<string, unknown> | null
-  reviewedData: Record<string, unknown> | null
-  threadId: string | null
-  createdBy: string
-  createdAt: string
-  updatedAt: string
-}
-
-export interface AgentReceiptListItem {
-  id: string
-  documentId: string
-  status: AgentReceiptStatus
-  statusMessage: string | null
-  extractedData: Record<string, unknown> | null
-  createdAt: string
-}
-
-export interface StartProcessingRequest {
-  documentId: string
-  extractionSchemaId: string
-}
-
-export interface SubmitReviewRequest {
-  action: 'approve' | 'edit' | 'reject'
-  data?: Record<string, unknown>
-}
-
-// --- Flow Runs ---
-
-export type FlowRunStatus =
+export type AgentRunStatus =
   | 'pending'
   | 'running'
   | 'waiting_for_input'
   | 'completed'
   | 'failed'
 
-export interface FlowRun {
+export interface AgentRun {
   id: string
   projectId: string
-  flowDefinitionId: string
-  status: FlowRunStatus
+  agentDefinitionId: string
+  status: AgentRunStatus
   statusMessage: string | null
   initialState: Record<string, unknown> | null
   currentState: Record<string, unknown> | null
@@ -153,26 +83,20 @@ export interface FlowRun {
   updatedAt: string
 }
 
-export interface FlowRunListItem {
+export interface AgentRunListItem {
   id: string
-  flowDefinitionId: string
-  status: FlowRunStatus
+  agentDefinitionId: string
+  status: AgentRunStatus
   statusMessage: string | null
   currentNode: string | null
   createdAt: string
 }
 
-export interface StartFlowRunRequest {
-  flowDefinitionId: string
+export interface StartAgentRunRequest {
+  agentDefinitionId: string
   initialState: Record<string, unknown>
 }
 
-export interface StartExtractRunRequest {
-  flowDefinitionId: string
-  documentId: string
-  extractionSchemaId: string
-}
-
-export interface ResumeFlowRunRequest {
+export interface ResumeAgentRunRequest {
   resumeValue: Record<string, unknown>
 }

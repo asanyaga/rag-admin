@@ -1,29 +1,27 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
-  FlowRunListItem,
-  StartFlowRunRequest,
-  StartExtractRunRequest,
+  AgentRunListItem,
+  StartAgentRunRequest,
 } from '@/types/agent'
 import * as agentApi from '@/api/agent'
 
 const POLLING_INTERVAL = 3000
 const POLLING_TIMEOUT = 10 * 60 * 1000
 
-interface UseFlowRunsReturn {
-  runs: FlowRunListItem[]
+interface UseAgentRunsReturn {
+  runs: AgentRunListItem[]
   isLoading: boolean
   isStarting: boolean
   error: string | null
   fetchRuns: () => Promise<void>
-  startRun: (request: StartFlowRunRequest) => Promise<void>
-  startExtractRun: (request: StartExtractRunRequest) => Promise<void>
+  startRun: (request: StartAgentRunRequest) => Promise<void>
   deleteRun: (runId: string) => Promise<void>
 }
 
-export function useFlowRuns(
+export function useAgentRuns(
   projectId: string | null
-): UseFlowRunsReturn {
-  const [runs, setRuns] = useState<FlowRunListItem[]>([])
+): UseAgentRunsReturn {
+  const [runs, setRuns] = useState<AgentRunListItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -45,11 +43,11 @@ export function useFlowRuns(
     setIsLoading(true)
     setError(null)
     try {
-      const data = await agentApi.listFlowRuns(projectId)
+      const data = await agentApi.listAgentRuns(projectId)
       setRuns(data)
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to fetch flow runs'
+        err instanceof Error ? err.message : 'Failed to fetch agent runs'
       )
     } finally {
       setIsLoading(false)
@@ -57,36 +55,16 @@ export function useFlowRuns(
   }, [projectId])
 
   const startRun = useCallback(
-    async (request: StartFlowRunRequest) => {
+    async (request: StartAgentRunRequest) => {
       if (!projectId) throw new Error('No project selected')
       setIsStarting(true)
       setError(null)
       try {
-        await agentApi.startFlowRun(projectId, request)
+        await agentApi.startAgentRun(projectId, request)
         await fetchRuns()
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : 'Failed to start flow run'
-        )
-        throw err
-      } finally {
-        setIsStarting(false)
-      }
-    },
-    [projectId, fetchRuns]
-  )
-
-  const startExtractRun = useCallback(
-    async (request: StartExtractRunRequest) => {
-      if (!projectId) throw new Error('No project selected')
-      setIsStarting(true)
-      setError(null)
-      try {
-        await agentApi.startExtractRun(projectId, request)
-        await fetchRuns()
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to start extract run'
+          err instanceof Error ? err.message : 'Failed to start agent run'
         )
         throw err
       } finally {
@@ -98,7 +76,7 @@ export function useFlowRuns(
 
   const deleteRun = useCallback(
     async (runId: string) => {
-      await agentApi.deleteFlowRun(runId)
+      await agentApi.deleteAgentRun(runId)
       await fetchRuns()
     },
     [fetchRuns]
@@ -137,6 +115,6 @@ export function useFlowRuns(
 
   return {
     runs, isLoading, isStarting, error,
-    fetchRuns, startRun, startExtractRun, deleteRun,
+    fetchRuns, startRun, deleteRun,
   }
 }

@@ -1,16 +1,16 @@
 import { useNavigate } from 'react-router-dom'
-import type { FlowDefinition } from '@/types/agent'
+import type { AgentDefinition } from '@/types/agent'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pencil, Play, Trash2, Workflow } from 'lucide-react'
 
-interface FlowListProps {
-  flows: FlowDefinition[]
+interface AgentListProps {
+  agents: AgentDefinition[]
   isLoading: boolean
-  onDelete: (flowId: string) => Promise<void>
+  onDelete: (agentId: string) => Promise<void>
 }
 
-export function FlowList({ flows, isLoading, onDelete }: FlowListProps) {
+export function AgentList({ agents, isLoading, onDelete }: AgentListProps) {
   const navigate = useNavigate()
 
   if (isLoading) {
@@ -22,10 +22,10 @@ export function FlowList({ flows, isLoading, onDelete }: FlowListProps) {
     )
   }
 
-  if (flows.length === 0) {
+  if (agents.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        No flows yet. Click <span className="font-medium">New Flow</span> to
+        No agents yet. Click <span className="font-medium">New Agent</span> to
         compose your first agent workflow.
       </div>
     )
@@ -33,23 +33,23 @@ export function FlowList({ flows, isLoading, onDelete }: FlowListProps) {
 
   return (
     <div className="space-y-2">
-      {flows.map((flow) => (
+      {agents.map((agent) => (
         <div
-          key={flow.id}
+          key={agent.id}
           className="flex items-center gap-3 rounded-lg border px-4 py-3 hover:bg-gray-50/50 transition-colors"
         >
           <Workflow className="h-4 w-4 text-muted-foreground shrink-0" />
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium truncate">{flow.name}</div>
-            {flow.description && (
+            <div className="text-sm font-medium truncate">{agent.name}</div>
+            {agent.description && (
               <div className="text-xs text-muted-foreground truncate">
-                {flow.description}
+                {agent.description}
               </div>
             )}
             <div className="text-[10px] text-muted-foreground mt-0.5">
-              {flow.definition.nodes.length} node
-              {flow.definition.nodes.length !== 1 ? 's' : ''} &middot;{' '}
-              {new Date(flow.updatedAt).toLocaleDateString()}
+              {agent.definition.nodes.length} node
+              {agent.definition.nodes.length !== 1 ? 's' : ''} &middot;{' '}
+              {new Date(agent.updatedAt).toLocaleDateString()}
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -57,7 +57,7 @@ export function FlowList({ flows, isLoading, onDelete }: FlowListProps) {
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0"
-              onClick={() => navigate(`/agent/flows/${flow.id}/runs`)}
+              onClick={() => navigate(`/agent/${agent.id}/runs`)}
               title="Runs"
             >
               <Play className="h-3.5 w-3.5" />
@@ -66,8 +66,8 @@ export function FlowList({ flows, isLoading, onDelete }: FlowListProps) {
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0"
-              onClick={() => navigate(`/agent/flows/${flow.id}`)}
-              title="Edit flow"
+              onClick={() => navigate(`/agent/${agent.id}`)}
+              title="Edit agent"
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -75,8 +75,8 @@ export function FlowList({ flows, isLoading, onDelete }: FlowListProps) {
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
-              onClick={() => onDelete(flow.id)}
-              title="Delete flow"
+              onClick={() => onDelete(agent.id)}
+              title="Delete agent"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>

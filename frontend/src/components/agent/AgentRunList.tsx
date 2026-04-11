@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import type { FlowRunListItem } from '@/types/agent'
+import type { AgentRunListItem } from '@/types/agent'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -24,13 +24,13 @@ const statusConfig: Record<
   failed: { label: 'Failed', variant: 'destructive' },
 }
 
-interface FlowRunListProps {
-  runs: FlowRunListItem[]
+interface AgentRunListProps {
+  runs: AgentRunListItem[]
   isLoading: boolean
   onDelete: (runId: string) => Promise<void>
 }
 
-export function FlowRunList({ runs, isLoading, onDelete }: FlowRunListProps) {
+export function AgentRunList({ runs, isLoading, onDelete }: AgentRunListProps) {
   const navigate = useNavigate()
 
   if (isLoading) {
