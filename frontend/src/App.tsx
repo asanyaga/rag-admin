@@ -28,6 +28,8 @@ import AgentListPage from './pages/AgentListPage'
 import AgentComposerPage from './pages/AgentComposerPage'
 import AgentRunsPage from './pages/AgentRunsPage'
 import AgentRunDetailPage from './pages/AgentRunDetailPage'
+import DataStoresPage from './pages/DataStoresPage'
+import DataStoreDetailPage from './pages/DataStoreDetailPage'
 
 const router = createBrowserRouter([
   {
@@ -92,6 +94,16 @@ const router = createBrowserRouter([
             path: 'extraction',
             element: <ExtractionPage />,
             handle: { breadcrumb: 'Extraction' },
+          },
+          {
+            path: 'data-stores',
+            element: <DataStoresPage />,
+            handle: { breadcrumb: 'Data Stores' },
+          },
+          {
+            path: 'data-stores/:storeId',
+            element: <DataStoreDetailPage />,
+            handle: { breadcrumb: 'Data Store Detail' },
           },
           {
             path: 'agent',
