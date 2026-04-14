@@ -20,6 +20,7 @@ from app.models.extraction_ground_truth import ExtractionGroundTruthSet, Extract
 from app.models.extraction_eval import ExtractionEvalRun, ExtractionEvalRunStatus, ExtractionEvalResult
 from app.models.agent_definition import AgentDefinition
 from app.models.agent_run import AgentRun, AgentRunStatus
+from app.models.project_data_store import ProjectDataStore
 
 __all__ = [
     "User",
@@ -61,4 +62,5 @@ __all__ = [
     "AgentDefinition",
     "AgentRun",
     "AgentRunStatus",
+    "ProjectDataStore",
 ]

@@ -16,6 +16,7 @@ from app.models import (
     EvalRun, EvalRunResult,
     AgentDefinition,
     AgentRun,
+    ProjectDataStore,
 )
 
 config = context.config
