@@ -5,6 +5,7 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
+    File,
     Form,
     HTTPException,
     Query,
@@ -26,8 +27,10 @@ from app.schemas.document import (
     DocumentResponse,
     DocumentListResponse,
     DocumentUpdate,
+    BulkUploadItemResponse,
+    BulkUploadResponse,
 )
-from app.services.document_service import DocumentService, process_document_extraction
+from app.services.document_service import DocumentService, process_document_extraction, BulkUploadItemResult
 from app.services.parse_service import ParseService, process_document_parsing
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 from app.adapters.parsing.registry import get_parser
@@ -147,6 +150,110 @@ async def upload_document(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(e)
         )
+
+
+@router.post(
+    "/bulk",
+    response_model=BulkUploadResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Bulk upload documents",
+    description="Upload up to 20 documents at once. Files are processed independently — "
+                "a failure on one file does not block the rest. Titles are auto-set from filenames.",
+)
+async def bulk_upload_documents(
+    background_tasks: BackgroundTasks,
+    project_id: UUID = Form(..., description="Project ID to associate documents with"),
+    parser_type: str = Form("simple", description="Parser type applied to all files"),
+    parse_config: str | None = Form(None, description="JSON parser config (for llamaparse)"),
+    files: list[UploadFile] = File(..., description="Files to upload (max 20)"),
+    current_user: User = Depends(get_current_active_user),
+    document_service: DocumentService = Depends(get_document_service),
+    db: AsyncSession = Depends(get_db),
+    storage_service: StorageService = Depends(get_storage_service),
+    document_extractor: DocumentExtractor = Depends(get_document_extractor),
+):
+    """Bulk upload documents and initiate background processing for each."""
+    if len(files) > 20:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 20 files per batch",
+        )
+
+    config_dict = None
+    if parse_config:
+        try:
+            config_dict = json.loads(parse_config)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid JSON in parse_config",
+            )
+
+    # Validate parser type upfront
+    parser = None
+    if parser_type != "simple":
+        parser = get_parser(parser_type)
+        if parser is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown parser type: {parser_type}",
+            )
+
+    # Read all file contents
+    file_data: list[tuple[bytes, str]] = []
+    for f in files:
+        content = await f.read()
+        file_data.append((content, f.filename or "upload.pdf"))
+
+    results: list[BulkUploadItemResult] = await document_service.initiate_bulk_upload(
+        user_id=current_user.id,
+        project_id=project_id,
+        files=file_data,
+    )
+
+    # Register background tasks for newly created documents only
+    for item in results:
+        if item.document is None or not item.is_new:
+            continue
+        document_id = item.document.id
+        if parser is not None:
+            parse_result_repo = ParseResultRepository(db)
+            document_repo = DocumentRepository(db)
+            parse_service = ParseService(parse_result_repo, document_repo)
+            parse_result = await parse_service.create_parse_result(
+                document_id=document_id,
+                user_id=current_user.id,
+                parser_type=parser_type,
+                parser_config=config_dict,
+            )
+            background_tasks.add_task(
+                process_document_parsing,
+                parse_result_id=parse_result.id,
+                parse_result_repo=parse_result_repo,
+                document_repo=document_repo,
+                storage_service=storage_service,
+                parser=parser,
+            )
+        else:
+            document_repo = DocumentRepository(db)
+            background_tasks.add_task(
+                process_document_extraction,
+                document_id=document_id,
+                document_repo=document_repo,
+                storage_service=storage_service,
+                document_extractor=document_extractor,
+            )
+
+    return BulkUploadResponse(
+        results=[
+            BulkUploadItemResponse(
+                filename=item.filename,
+                document=item.document,
+                error=item.error,
+            )
+            for item in results
+        ]
+    )
 
 
 @router.get(
