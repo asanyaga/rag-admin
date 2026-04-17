@@ -137,6 +137,7 @@ class DataStoreRepository:
 
         columns.append("created_at TIMESTAMPTZ NOT NULL DEFAULT now()")
         columns.append("updated_at TIMESTAMPTZ NOT NULL DEFAULT now()")
+        columns.append("source_metadata JSONB NULL")
 
         sql = f'CREATE TABLE "{table_name}" ({", ".join(columns)})'
         await self.session.execute(text(sql))
@@ -171,7 +172,7 @@ class DataStoreRepository:
             await self.session.execute(text(sql))
         await self.session.commit()
 
-    async def insert_row(self, table_name: str, schema_definition: list[dict], data: dict) -> dict:
+    async def insert_row(self, table_name: str, schema_definition: list[dict], data: dict, source_metadata: dict | None = None) -> dict:
         """Insert a single row and return it."""
         if not TABLE_NAME_PATTERN.match(table_name):
             raise ValueError(f"Invalid table name: {table_name}")
@@ -179,6 +180,11 @@ class DataStoreRepository:
         col_names = [col["name"] for col in schema_definition if col["name"] in data]
         if not col_names:
             raise ValueError("No valid columns to insert")
+
+        # Add source_metadata if provided
+        if source_metadata is not None:
+            col_names.append("source_metadata")
+            data = {**data, "source_metadata": source_metadata}
 
         placeholders = ", ".join(f":{name}" for name in col_names)
         col_list = ", ".join(f'"{name}"' for name in col_names)
@@ -248,7 +254,7 @@ class DataStoreRepository:
         result = await self.session.execute(text(sql))
         return result.scalar_one()
 
-    async def bulk_insert(self, table_name: str, schema_definition: list[dict], rows: list[dict]) -> int:
+    async def bulk_insert(self, table_name: str, schema_definition: list[dict], rows: list[dict], source_metadata: dict | None = None) -> int:
         """Bulk insert rows. Returns count of inserted rows."""
         if not TABLE_NAME_PATTERN.match(table_name):
             raise ValueError(f"Invalid table name: {table_name}")
@@ -256,13 +262,20 @@ class DataStoreRepository:
             return 0
 
         col_names = [col["name"] for col in schema_definition]
+
+        # Add source_metadata column if provided
+        if source_metadata is not None:
+            col_names = col_names + ["source_metadata"]
+
         placeholders = ", ".join(f":{name}" for name in col_names)
         col_list = ", ".join(f'"{name}"' for name in col_names)
         sql = f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders})'
 
         params_list = []
         for row in rows:
-            params = {name: row.get(name) for name in col_names}
+            params = {name: row.get(name) for name in [c["name"] for c in schema_definition]}
+            if source_metadata is not None:
+                params["source_metadata"] = source_metadata
             params_list.append(params)
 
         for params in params_list:
