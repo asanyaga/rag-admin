@@ -1,4 +1,5 @@
 """Document service with business logic."""
+from dataclasses import dataclass
 from uuid import UUID
 from pathlib import Path
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +21,15 @@ from app.utils.file_validation import (
     validate_mime_type,
     compute_checksum,
 )
+
+
+@dataclass
+class BulkUploadItemResult:
+    """Result for a single file in a bulk upload."""
+    filename: str
+    document: "DocumentResponse | None" = None
+    error: str | None = None
+    is_new: bool = True
 
 
 class DocumentService:
@@ -147,6 +157,49 @@ class DocumentService:
             raise
 
         return DocumentResponse.model_validate(document)
+
+    async def initiate_bulk_upload(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+        files: list[tuple[bytes, str]],
+    ) -> list["BulkUploadItemResult"]:
+        """Initiate upload for multiple files. Each file is processed independently.
+
+        Args:
+            user_id: User UUID
+            project_id: Project UUID
+            files: List of (file_content, filename) tuples
+
+        Returns:
+            List of BulkUploadItemResult — one per file, with document or error set.
+            Duplicates are returned as the existing document with is_new=False.
+        """
+        results: list[BulkUploadItemResult] = []
+        for file_content, filename in files:
+            title = Path(filename).stem
+            try:
+                document = await self.initiate_upload(
+                    user_id=user_id,
+                    project_id=project_id,
+                    file_content=file_content,
+                    filename=filename,
+                    title=title,
+                )
+                results.append(BulkUploadItemResult(filename=filename, document=document, is_new=True))
+            except ConflictError:
+                checksum = compute_checksum(file_content)
+                existing = await self.document_repo.get_by_source(
+                    project_id=project_id,
+                    user_id=user_id,
+                    source_type="upload",
+                    source_identifier=checksum,
+                )
+                doc_response = DocumentResponse.model_validate(existing) if existing else None
+                results.append(BulkUploadItemResult(filename=filename, document=doc_response, is_new=False))
+            except (ValidationError, NotFoundError) as e:
+                results.append(BulkUploadItemResult(filename=filename, error=str(e)))
+        return results
 
     async def get_document(
         self,
