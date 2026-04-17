@@ -46,3 +46,29 @@ export interface DocumentUpdate {
 export interface DocumentTextResponse {
   text: string
 }
+
+export interface BulkDocumentUpload {
+  projectId: string
+  files: File[]
+  parserType?: string
+  parseConfig?: Record<string, unknown>
+}
+
+export interface BulkUploadItem {
+  filename: string
+  document: Document | null
+  error: string | null
+}
+
+export interface BulkUploadResponse {
+  results: BulkUploadItem[]
+}
+
+export type QueueItemStatus = 'pending' | 'uploading' | 'processing' | 'ready' | 'failed'
+
+export interface QueueItem {
+  file: File
+  status: QueueItemStatus
+  documentId: string | null
+  error: string | null
+}
