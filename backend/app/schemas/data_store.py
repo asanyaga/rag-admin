@@ -52,6 +52,7 @@ class DataStoreRowResponse(BaseModel):
     """Schema for a single row in a data store."""
     id: UUID
     data: dict
+    source_metadata: dict | None = Field(None, alias="sourceMetadata")
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
 
@@ -68,6 +69,29 @@ class DataStoreRowsResponse(BaseModel):
 
 class CsvImportResponse(BaseModel):
     """Response from CSV import."""
+    rows_imported: int = Field(..., alias="rowsImported")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ExportPreviewRequest(BaseModel):
+    """Request body for preview-export endpoint."""
+    source_data: dict = Field(..., alias="sourceData")
+    field_mapping: dict[str, str] = Field(..., alias="fieldMapping")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ExportPreviewResponse(BaseModel):
+    """Response from preview-export endpoint."""
+    rows: list[dict]
+    row_count: int = Field(..., alias="rowCount")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ExportExecuteResponse(BaseModel):
+    """Response from execute-export endpoint."""
     rows_imported: int = Field(..., alias="rowsImported")
 
     model_config = ConfigDict(populate_by_name=True)

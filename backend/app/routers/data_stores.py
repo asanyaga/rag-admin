@@ -15,6 +15,9 @@ from app.schemas.data_store import (
     DataStoreRowResponse,
     DataStoreRowsResponse,
     CsvImportResponse,
+    ExportPreviewRequest,
+    ExportPreviewResponse,
+    ExportExecuteResponse,
 )
 from app.services.data_store_service import DataStoreService
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
@@ -223,7 +226,44 @@ async def import_csv(
     csv_text = content.decode("utf-8")
 
     try:
-        return await service.import_csv(store_id, project_id, csv_text, mapping)
+        return await service.import_csv(store_id, project_id, csv_text, mapping, filename=file.filename)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# ── Export Preview/Execute ────────────────────────────────────────
+
+@router.post("/{store_id}/preview-export", response_model=ExportPreviewResponse)
+async def preview_export(
+    project_id: UUID,
+    store_id: UUID,
+    data: ExportPreviewRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: DataStoreService = Depends(get_data_store_service),
+):
+    """Preview export: validate mapping and return flattened rows without inserting."""
+    try:
+        return await service.preview_export(store_id, project_id, data.source_data, data.field_mapping)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/{store_id}/execute-export", response_model=ExportExecuteResponse)
+async def execute_export(
+    project_id: UUID,
+    store_id: UUID,
+    data: ExportPreviewRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: DataStoreService = Depends(get_data_store_service),
+):
+    """Execute export: validate, flatten, and insert rows into the data store."""
+    try:
+        count = await service.execute_export(store_id, project_id, data.source_data, data.field_mapping)
+        return ExportExecuteResponse(rows_imported=count)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationError as e:

@@ -1,6 +1,7 @@
 # backend/app/services/data_store_service.py
 import csv
 import io
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
@@ -116,7 +117,8 @@ class DataStoreService:
             raise NotFoundError(f"Data store {store_id} not found")
 
         self._validate_row_data(data, store.schema_definition)
-        row = await self.repo.insert_row(store.table_name, store.schema_definition, data)
+        source_metadata = {"source": "manual", "created_at": datetime.now(tz=timezone.utc).isoformat()}
+        row = await self.repo.insert_row(store.table_name, store.schema_definition, data, source_metadata=source_metadata)
         await self._refresh_row_count(store)
         return self._row_to_response(row, store.schema_definition)
 
@@ -154,7 +156,7 @@ class DataStoreService:
             raise NotFoundError(f"Row {row_id} not found")
         await self._refresh_row_count(store)
 
-    async def import_csv(self, store_id: UUID, project_id: UUID, csv_content: str, column_mapping: dict[str, str]) -> CsvImportResponse:
+    async def import_csv(self, store_id: UUID, project_id: UUID, csv_content: str, column_mapping: dict[str, str], filename: str | None = None) -> CsvImportResponse:
         """Import rows from CSV content.
 
         column_mapping: maps CSV header names → data store column names.
@@ -180,16 +182,66 @@ class DataStoreService:
         for i, row in enumerate(rows, start=2):
             self._validate_row_data(row, store.schema_definition, line_num=i)
 
-        count = await self.repo.bulk_insert(store.table_name, store.schema_definition, rows)
+        source_metadata = {
+            "source": "csv_import",
+            "filename": filename or "unknown",
+            "imported_at": datetime.now(tz=timezone.utc).isoformat(),
+        }
+        count = await self.repo.bulk_insert(store.table_name, store.schema_definition, rows, source_metadata=source_metadata)
         await self._refresh_row_count(store)
         return CsvImportResponse(rows_imported=count)
+
+    # ── Export operations ────────────────────────────────────────────
+
+    async def preview_export(
+        self, store_id: UUID, project_id: UUID, source_data: dict, field_mapping: dict[str, str]
+    ) -> dict:
+        """Preview export: validate mapping and return flattened rows without inserting."""
+        from app.services.agent.field_mapper import validate_field_mapping, flatten_to_rows
+
+        store = await self.repo.get_by_id(store_id, project_id)
+        if not store:
+            raise NotFoundError(f"Data store {store_id} not found")
+
+        errors = validate_field_mapping(field_mapping, store.schema_definition)
+        if errors:
+            raise ValidationError("Field mapping errors: " + "; ".join(errors))
+
+        rows = flatten_to_rows(source_data, field_mapping)
+        return {"rows": rows, "row_count": len(rows)}
+
+    async def execute_export(
+        self, store_id: UUID, project_id: UUID, source_data: dict, field_mapping: dict[str, str]
+    ) -> int:
+        """Execute export: validate, flatten, and insert rows."""
+        from app.services.agent.field_mapper import validate_field_mapping, flatten_to_rows
+
+        store = await self.repo.get_by_id(store_id, project_id)
+        if not store:
+            raise NotFoundError(f"Data store {store_id} not found")
+
+        errors = validate_field_mapping(field_mapping, store.schema_definition)
+        if errors:
+            raise ValidationError("Field mapping errors: " + "; ".join(errors))
+
+        rows = flatten_to_rows(source_data, field_mapping)
+        if not rows:
+            return 0
+
+        source_metadata = {
+            "source": "playground",
+            "created_at": datetime.now(tz=timezone.utc).isoformat(),
+        }
+        count = await self.repo.bulk_insert(store.table_name, store.schema_definition, rows, source_metadata=source_metadata)
+        await self._refresh_row_count(store)
+        return count
 
     # ── Helpers ────────────────────────────────────────────────────
 
     def _validate_schema(self, columns: list[ColumnDefinition]) -> None:
         """Validate all columns in a schema definition."""
         names = set()
-        reserved = {"id", "created_at", "updated_at"}
+        reserved = {"id", "created_at", "updated_at", "source_metadata"}
         for col in columns:
             if col.name in reserved:
                 raise ValidationError(f"Column name '{col.name}' is reserved")
@@ -270,6 +322,7 @@ class DataStoreService:
         return DataStoreRowResponse(
             id=row["id"],
             data=data,
+            source_metadata=row.get("source_metadata"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
