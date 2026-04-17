@@ -30,6 +30,7 @@ import AgentRunsPage from './pages/AgentRunsPage'
 import AgentRunDetailPage from './pages/AgentRunDetailPage'
 import DataStoresPage from './pages/DataStoresPage'
 import DataStoreDetailPage from './pages/DataStoreDetailPage'
+import ExportPlaygroundPage from './pages/ExportPlaygroundPage'
 
 const router = createBrowserRouter([
   {
@@ -104,6 +105,11 @@ const router = createBrowserRouter([
             path: 'data-stores/:storeId',
             element: <DataStoreDetailPage />,
             handle: { breadcrumb: 'Data Store Detail' },
+          },
+          {
+            path: 'export',
+            element: <ExportPlaygroundPage />,
+            handle: { breadcrumb: 'Export' },
           },
           {
             path: 'agent',

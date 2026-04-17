@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderKanban, FileText, Database, BarChart3, Settings, FileSearch, Bot, HardDrive } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, FileText, Database, BarChart3, Settings, FileSearch, Bot, HardDrive, ArrowUpFromLine } from 'lucide-react'
 
 export const navigationItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard, activeColor: 'border-l-primary' },
@@ -7,6 +7,7 @@ export const navigationItems = [
   { label: 'Index', href: '/index', icon: Database, activeColor: 'border-l-teal-500' },
   { label: 'Extraction', href: '/extraction', icon: FileSearch, activeColor: 'border-l-orange-500' },
   { label: 'Data Stores', href: '/data-stores', icon: HardDrive, activeColor: 'border-l-cyan-500' },
+  { label: 'Export', href: '/export', icon: ArrowUpFromLine, activeColor: 'border-l-emerald-500' },
   { label: 'Evaluation', href: '/evaluation', icon: BarChart3, activeColor: 'border-l-amber-500' },
   { label: 'Agents', href: '/agent', icon: Bot, activeColor: 'border-l-purple-500' },
   { label: 'Settings', href: '/settings', icon: Settings, activeColor: 'border-l-gray-400' },
