@@ -148,3 +148,32 @@ class TestLlamaParseAdapter:
             adapter = LlamaParseAdapter(api_key="test-key")
             with pytest.raises(Exception, match="API error"):
                 await adapter.parse("/tmp/test.pdf")
+
+    @pytest.mark.asyncio
+    async def test_semaphore_limits_concurrency_to_five(self):
+        """At most 5 parse calls should run concurrently."""
+        import asyncio
+        from app.adapters.parsing.llamaparse import LlamaParseAdapter
+
+        # Reset semaphore for test isolation
+        LlamaParseAdapter._semaphore = asyncio.Semaphore(5)
+
+        concurrent_count = 0
+        max_concurrent = 0
+
+        async def mock_parse(**kwargs):
+            nonlocal concurrent_count, max_concurrent
+            concurrent_count += 1
+            max_concurrent = max(max_concurrent, concurrent_count)
+            await asyncio.sleep(0.02)
+            concurrent_count -= 1
+            return MockParseResult(text_pages=[MockTextPage(1, "text")])
+
+        mock_client = MagicMock()
+        mock_client.parsing.parse = mock_parse
+
+        with patch("app.adapters.parsing.llamaparse.AsyncLlamaCloud", return_value=mock_client):
+            adapter = LlamaParseAdapter(api_key="test-key")
+            await asyncio.gather(*[adapter.parse("/tmp/test.pdf", {"tier": "fast"}) for _ in range(10)])
+
+        assert max_concurrent <= 5

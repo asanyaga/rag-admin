@@ -1,4 +1,5 @@
 """LlamaParse adapter using the llama-cloud SDK >= 1.0."""
+import asyncio
 import time
 from typing import Any
 
@@ -13,10 +14,9 @@ from app.ports.document_parsing import (
 
 
 class LlamaParseAdapter(DocumentParser):
-    """LlamaParse adapter using the llama-cloud SDK >= 1.0.
+    """LlamaParse adapter using the llama-cloud SDK >= 1.0."""
 
-    Uses client.parsing.parse() which handles upload + polling internally.
-    """
+    _semaphore = asyncio.Semaphore(5)  # shared across all instances
 
     def __init__(self, api_key: str | None = None):
         self.client = AsyncLlamaCloud(api_key=api_key) if api_key else AsyncLlamaCloud()
@@ -54,13 +54,13 @@ class LlamaParseAdapter(DocumentParser):
 
         start_time = time.time()
 
-        # parse() handles upload + polling internally and returns the full result
-        result = await self.client.parsing.parse(
-            upload_file=file_path,
-            tier=tier,
-            version=config.get("version", "latest"),
-            expand=expand,
-        )
+        async with self._semaphore:
+            result = await self.client.parsing.parse(
+                upload_file=file_path,
+                tier=tier,
+                version=config.get("version", "latest"),
+                expand=expand,
+            )
 
         latency_ms = int((time.time() - start_time) * 1000)
 
