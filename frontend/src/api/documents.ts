@@ -6,6 +6,8 @@ import {
   DocumentUpdate,
   DocumentTextResponse,
   DocumentStatus,
+  BulkDocumentUpload,
+  BulkUploadResponse,
 } from '@/types/document'
 
 export interface ListDocumentsParams {
@@ -81,4 +83,26 @@ export async function updateDocument(
 
 export async function deleteDocument(id: string): Promise<void> {
   await apiClient.delete(`/documents/${id}`)
+}
+
+export async function bulkUploadDocuments(
+  data: BulkDocumentUpload
+): Promise<BulkUploadResponse> {
+  const formData = new FormData()
+  formData.append('project_id', data.projectId)
+  if (data.parserType) {
+    formData.append('parser_type', data.parserType)
+  }
+  if (data.parseConfig) {
+    formData.append('parse_config', JSON.stringify(data.parseConfig))
+  }
+  data.files.forEach((file) => {
+    formData.append('files', file)
+  })
+  const response = await apiClient.post<BulkUploadResponse>(
+    '/documents/bulk',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  )
+  return response.data
 }
