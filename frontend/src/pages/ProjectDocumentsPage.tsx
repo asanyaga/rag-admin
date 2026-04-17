@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DocumentUploadZone } from '@/components/documents/DocumentUploadZone'
+import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { DocumentsTable } from '@/components/documents/DocumentsTable'
+import type { BulkDocumentUpload, BulkUploadResponse } from '@/types/document'
 import { DocumentTextViewer } from '@/components/documents/DocumentTextViewer'
 import { DocumentEditDialog } from '@/components/documents/DocumentEditDialog'
 import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialog'
@@ -27,6 +29,7 @@ export default function ProjectDocumentsPage(): JSX.Element {
     isLoading,
     error,
     uploadDocument,
+    uploadDocumentsBulk,
     updateDocument,
     deleteDocument,
     downloadDocument,
@@ -37,6 +40,7 @@ export default function ProjectDocumentsPage(): JSX.Element {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<DocumentListItem | null>(null)
   const [reparseDialogOpen, setReparseDialogOpen] = useState(false)
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
 
   const { parseResults, reparseDocument } = useParseResults(viewDocumentId)
 
@@ -73,6 +77,27 @@ export default function ProjectDocumentsPage(): JSX.Element {
       })
     } catch (err) {
       toast.error('Upload failed', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
+      throw err
+    }
+  }
+
+  const handleBulkUpload = async (data: BulkDocumentUpload): Promise<BulkUploadResponse> => {
+    try {
+      const response = await uploadDocumentsBulk(data)
+      const successCount = response.results.filter((r) => r.document !== null).length
+      const failureCount = response.results.filter((r) => r.error !== null).length
+      if (failureCount === 0) {
+        toast.success(`${successCount} document${successCount !== 1 ? 's' : ''} uploaded`)
+      } else {
+        toast.success(`${successCount} uploaded`, {
+          description: `${failureCount} failed — check the queue for details`,
+        })
+      }
+      return response
+    } catch (err) {
+      toast.error('Bulk upload failed', {
         description: err instanceof Error ? err.message : 'An error occurred',
       })
       throw err
@@ -166,6 +191,9 @@ export default function ProjectDocumentsPage(): JSX.Element {
             Upload and manage your documents
           </p>
         </div>
+        <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
+          Bulk Upload
+        </Button>
       </div>
 
       {/* Error Alert */}
@@ -262,6 +290,17 @@ export default function ProjectDocumentsPage(): JSX.Element {
           await reparseDocument(parserType, config)
           toast.success('Re-parse started')
         }}
+      />
+
+      {/* Bulk Upload Dialog */}
+      <DocumentUploadDialog
+        open={bulkUploadOpen}
+        onOpenChange={setBulkUploadOpen}
+        onUpload={handleUpload}
+        onBulkUpload={handleBulkUpload}
+        documents={documents}
+        projectId={projectId}
+        mode="bulk"
       />
     </div>
   )
