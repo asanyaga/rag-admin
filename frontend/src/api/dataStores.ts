@@ -7,6 +7,9 @@ import type {
   DataStoreRow,
   DataStoreRowsResponse,
   CsvImportResponse,
+  ExportPreviewRequest,
+  ExportPreviewResponse,
+  ExportExecuteResponse,
 } from '@/types/dataStore'
 
 // ── Store CRUD ────────────────────────────────────────────────────
@@ -126,6 +129,32 @@ export async function importCsv(
     `/projects/${projectId}/data-stores/${storeId}/import`,
     formData,
     { headers: { 'Content-Type': 'multipart/form-data' } }
+  )
+  return response.data
+}
+
+// ── Export Preview/Execute ────────────────────────────────────────
+
+export async function previewExport(
+  projectId: string,
+  storeId: string,
+  data: ExportPreviewRequest
+): Promise<ExportPreviewResponse> {
+  const response = await apiClient.post<ExportPreviewResponse>(
+    `/projects/${projectId}/data-stores/${storeId}/preview-export`,
+    data
+  )
+  return response.data
+}
+
+export async function executeExport(
+  projectId: string,
+  storeId: string,
+  data: ExportPreviewRequest
+): Promise<ExportExecuteResponse> {
+  const response = await apiClient.post<ExportExecuteResponse>(
+    `/projects/${projectId}/data-stores/${storeId}/execute-export`,
+    data
   )
   return response.data
 }
