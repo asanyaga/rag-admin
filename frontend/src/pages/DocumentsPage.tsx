@@ -14,7 +14,8 @@ import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialo
 import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Plus, RotateCw } from 'lucide-react'
+import { Plus, RotateCw, Files } from 'lucide-react'
+import type { BulkDocumentUpload, BulkUploadResponse } from '@/types/document'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { useParseResults } from '@/hooks/useParseResults'
@@ -28,12 +29,14 @@ export default function DocumentsPage(): JSX.Element {
     isLoading,
     error,
     uploadDocument,
+    uploadDocumentsBulk,
     updateDocument,
     deleteDocument,
     downloadDocument,
   } = useDocuments(currentProject?.id || null)
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
   const [viewDocumentId, setViewDocumentId] = useState<string | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -75,6 +78,27 @@ export default function DocumentsPage(): JSX.Element {
       })
     } catch (err) {
       toast.error('Upload failed', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
+      throw err
+    }
+  }
+
+  const handleBulkUpload = async (data: BulkDocumentUpload): Promise<BulkUploadResponse> => {
+    try {
+      const response = await uploadDocumentsBulk(data)
+      const successCount = response.results.filter((r) => r.document !== null).length
+      const failureCount = response.results.filter((r) => r.error !== null).length
+      if (failureCount === 0) {
+        toast.success(`${successCount} document${successCount !== 1 ? 's' : ''} uploaded`)
+      } else {
+        toast.success(`${successCount} uploaded`, {
+          description: `${failureCount} failed — check the queue for details`,
+        })
+      }
+      return response
+    } catch (err) {
+      toast.error('Bulk upload failed', {
         description: err instanceof Error ? err.message : 'An error occurred',
       })
       throw err
@@ -166,10 +190,16 @@ export default function DocumentsPage(): JSX.Element {
             {currentProject.name}
           </p>
         </div>
-        <Button onClick={() => setUploadDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Upload Document
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
+            <Files className="h-4 w-4 mr-2" />
+            Bulk Upload
+          </Button>
+          <Button onClick={() => setUploadDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Upload Document
+          </Button>
+        </div>
       </div>
 
       {/* Error Alert */}
@@ -256,6 +286,17 @@ export default function DocumentsPage(): JSX.Element {
         onOpenChange={setUploadDialogOpen}
         onUpload={handleUpload}
         projectId={currentProject.id}
+      />
+
+      {/* Bulk Upload Dialog */}
+      <DocumentUploadDialog
+        open={bulkUploadOpen}
+        onOpenChange={setBulkUploadOpen}
+        onUpload={handleUpload}
+        onBulkUpload={handleBulkUpload}
+        documents={documents}
+        projectId={currentProject.id}
+        mode="bulk"
       />
 
       {/* Re-parse Dialog */}

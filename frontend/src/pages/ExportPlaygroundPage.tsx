@@ -344,7 +344,7 @@ export default function ExportPlaygroundPage() {
               </Popover>
 
               {/* Rename */}
-              <Popover open={isRenameOpen} onOpenChange={(open) => {
+              <Popover open={isRenameOpen} onOpenChange={(open: boolean) => {
                 setIsRenameOpen(open)
                 if (open) setRenameName(activeMappingName || '')
               }}>
