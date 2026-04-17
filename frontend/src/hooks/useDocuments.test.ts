@@ -2,10 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useDocuments } from './useDocuments'
 import * as documentsApi from '@/api/documents'
+import type { DocumentStatus } from '@/types/document'
 
 vi.mock('@/api/documents')
 
-const mockDocumentListItem = (id: string, status = 'processing') => ({
+const mockDocumentListItem = (id: string, status: DocumentStatus = 'processing') => ({
   id,
   projectId: 'project-1',
   sourceType: 'upload',
@@ -17,7 +18,7 @@ const mockDocumentListItem = (id: string, status = 'processing') => ({
   updatedAt: '2026-01-01T00:00:00Z',
 })
 
-const mockDocument = (id: string, status = 'processing') => ({
+const mockDocument = (id: string, status: DocumentStatus = 'processing') => ({
   ...mockDocumentListItem(id, status),
   sourceIdentifier: 'hash',
   extractedText: null,
