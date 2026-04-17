@@ -93,3 +93,6 @@ backend/data/
 
 # Windows Zone Identifier files
 *:Zone.Identifier
+
+# Git worktrees
+.worktrees/
