@@ -1,4 +1,5 @@
 # backend/app/repositories/data_store_repository.py
+import json
 import re
 from uuid import UUID, uuid4
 
@@ -181,10 +182,10 @@ class DataStoreRepository:
         if not col_names:
             raise ValueError("No valid columns to insert")
 
-        # Add source_metadata if provided
+        # Add source_metadata if provided (serialize dict → JSON string for asyncpg)
         if source_metadata is not None:
             col_names.append("source_metadata")
-            data = {**data, "source_metadata": source_metadata}
+            data = {**data, "source_metadata": json.dumps(source_metadata)}
 
         placeholders = ", ".join(f":{name}" for name in col_names)
         col_list = ", ".join(f'"{name}"' for name in col_names)
@@ -275,7 +276,7 @@ class DataStoreRepository:
         for row in rows:
             params = {name: row.get(name) for name in [c["name"] for c in schema_definition]}
             if source_metadata is not None:
-                params["source_metadata"] = source_metadata
+                params["source_metadata"] = json.dumps(source_metadata)
             params_list.append(params)
 
         for params in params_list:
