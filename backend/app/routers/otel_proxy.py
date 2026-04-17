@@ -40,8 +40,17 @@ async def proxy_to_collector(request: Request, path: str) -> Response:
     Forward request to OTel collector and return response.
 
     Handles both JSON and Protobuf content types.
-    Returns 202 Accepted on collector failure to prevent breaking the frontend.
+    Returns 202 Accepted on collector failure or when telemetry is disabled.
     """
+    from app.config import settings
+
+    if not settings.OTEL_ENABLED:
+        return Response(
+            status_code=status.HTTP_202_ACCEPTED,
+            content=b'{"status": "accepted"}',
+            headers={"content-type": "application/json"},
+        )
+
     client = get_http_client(request)
 
     # Read raw body (works for both JSON and protobuf)
