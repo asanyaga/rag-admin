@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { MoreHorizontal, Check, X } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import type { ColumnDefinition, DataStoreRow } from '@/types/dataStore'
@@ -102,6 +104,7 @@ export function DataGrid({
                   </th>
                 ))}
                 <th className="text-left py-3 px-4 font-medium text-sm">Created</th>
+                <th className="text-left py-3 px-4 font-medium text-sm">Source</th>
                 <th className="text-right py-3 px-4 font-medium text-sm w-20">Actions</th>
               </tr>
             </thead>
@@ -117,6 +120,27 @@ export function DataGrid({
                   ))}
                   <td className="py-2 px-4 text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(row.createdAt), { addSuffix: true })}
+                  </td>
+                  <td className="py-2 px-4 text-sm">
+                    {row.sourceMetadata ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="cursor-pointer text-xs font-normal"
+                          >
+                            {(row.sourceMetadata as Record<string, unknown>).source as string || '—'}
+                          </Badge>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                          <pre className="text-xs whitespace-pre-wrap">
+                            {JSON.stringify(row.sourceMetadata, null, 2)}
+                          </pre>
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="py-2 px-4 text-right">
                     {editingRowId === row.id ? (

@@ -34,6 +34,7 @@ export interface DataStoreUpdate {
 export interface DataStoreRow {
   id: string
   data: Record<string, unknown>
+  sourceMetadata: Record<string, unknown> | null
   createdAt: string
   updatedAt: string
 }
@@ -46,5 +47,19 @@ export interface DataStoreRowsResponse {
 }
 
 export interface CsvImportResponse {
+  rowsImported: number
+}
+
+export interface ExportPreviewRequest {
+  sourceData: Record<string, unknown>
+  fieldMapping: Record<string, string>
+}
+
+export interface ExportPreviewResponse {
+  rows: Record<string, unknown>[]
+  rowCount: number
+}
+
+export interface ExportExecuteResponse {
   rowsImported: number
 }
