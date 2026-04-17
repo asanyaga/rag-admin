@@ -16,6 +16,8 @@ interface DocumentUploadZoneProps {
     parserType?: string,
     parseConfig?: ParseConfig
   ) => Promise<void>
+  onBulkUpload?: (files: File[]) => void
+  multiple?: boolean
   disabled?: boolean
 }
 
@@ -24,6 +26,8 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png']
 
 export function DocumentUploadZone({
   onUpload,
+  onBulkUpload,
+  multiple = false,
   disabled = false,
 }: DocumentUploadZoneProps) {
   const [file, setFile] = useState<File | null>(null)
@@ -86,13 +90,28 @@ export function DocumentUploadZone({
     e.preventDefault()
     setIsDragging(false)
 
+    if (multiple && onBulkUpload) {
+      const droppedFiles = Array.from(e.dataTransfer.files)
+      if (droppedFiles.length > 0) {
+        onBulkUpload(droppedFiles)
+      }
+      return
+    }
+
     const droppedFile = e.dataTransfer.files[0]
     if (droppedFile) {
       handleFile(droppedFile)
     }
-  }, [handleFile])
+  }, [handleFile, multiple, onBulkUpload])
 
   const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
+    if (multiple && onBulkUpload) {
+      const selectedFiles = Array.from(e.target.files ?? [])
+      if (selectedFiles.length > 0) {
+        onBulkUpload(selectedFiles)
+      }
+      return
+    }
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
       handleFile(selectedFile)
@@ -211,6 +230,7 @@ export function DocumentUploadZone({
                   onChange={handleFileInput}
                   className="sr-only"
                   disabled={disabled}
+                  multiple={multiple}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
