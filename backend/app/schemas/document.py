@@ -58,3 +58,15 @@ class DocumentListResponse(BaseModel):
         from_attributes=True,
         populate_by_name=True
     )
+
+
+class BulkUploadItemResponse(BaseModel):
+    """Schema for a single item in a bulk upload response."""
+    filename: str
+    document: DocumentResponse | None = None
+    error: str | None = None
+
+
+class BulkUploadResponse(BaseModel):
+    """Schema for bulk upload API response."""
+    results: list[BulkUploadItemResponse]
