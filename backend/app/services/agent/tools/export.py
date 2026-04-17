@@ -8,7 +8,7 @@ register_tool(ToolDefinition(
     category="export",
     description="Export data to a project data store",
     input_keys=["reviewed_data", "extracted_data"],
-    output_keys=["exported"],
+    output_keys=["exported", "rows_exported"],
     config_schema={
         "type": "object",
         "properties": {
@@ -16,6 +16,11 @@ register_tool(ToolDefinition(
                 "type": "string",
                 "format": "uuid",
                 "description": "Target data store to export rows into",
+            },
+            "field_mapping": {
+                "type": "object",
+                "additionalProperties": {"type": "string"},
+                "description": "Source dot-path → destination column name mapping",
             },
         },
         "required": ["data_store_id"],

@@ -56,11 +56,12 @@ async def review_node(state: dict) -> dict:
 async def export_node(state: dict) -> dict:
     """Export data to a project data store.
 
-    Reads data_store_id from node config, maps state fields to table columns
-    by name, and inserts a row.
+    Supports explicit field_mapping with dot-path notation and array fan-out.
+    Falls back to name-matching if no field_mapping is configured.
     """
     from app.database import AsyncSessionLocal
     from app.repositories.data_store_repository import DataStoreRepository
+    from app.services.agent.field_mapper import flatten_to_rows
 
     logger.info("export_node: exporting data")
 
@@ -72,6 +73,7 @@ async def export_node(state: dict) -> dict:
         return {
             **state,
             "exported": True,
+            "rows_exported": 0,
             "current_step": "done",
         }
 
@@ -87,29 +89,49 @@ async def export_node(state: dict) -> dict:
                 **state,
                 "error": f"Data store {data_store_id} not found",
                 "exported": False,
+                "rows_exported": 0,
                 "current_step": "failed",
             }
 
-        # Map state fields to table columns by name
-        col_names = {col["name"] for col in store.schema_definition}
-        row_data = {k: v for k, v in data.items() if k in col_names}
+        field_mapping = config.get("field_mapping")
 
-        # Check required columns
-        for col in store.schema_definition:
-            if not col.get("nullable", True) and col["name"] not in row_data:
-                return {
-                    **state,
-                    "error": f"Required column '{col['name']}' not found in pipeline data",
-                    "exported": False,
-                    "current_step": "failed",
-                }
+        if field_mapping:
+            # Explicit mapping with fan-out support
+            rows = flatten_to_rows(data, field_mapping)
+        else:
+            # Backward compat: name-match fields to columns
+            logger.warning(
+                "export_node: no field_mapping configured, falling back to name-matching "
+                "(deprecated — configure field_mapping for explicit control)"
+            )
+            col_names = {col["name"] for col in store.schema_definition}
+            row_data = {k: v for k, v in data.items() if k in col_names}
+            rows = [row_data] if row_data else []
 
-        await repo.insert_row(store.table_name, store.schema_definition, row_data)
-        count = await repo.count_rows(store.table_name)
-        await repo.update_row_count(store.id, count)
+        if not rows:
+            return {
+                **state,
+                "exported": True,
+                "rows_exported": 0,
+                "current_step": "done",
+            }
+
+        source_metadata = {
+            "source": "pipeline",
+            "run_id": str(state.get("run_id", "")),
+            "document_id": str(state.get("document_id", "")),
+            "extraction_result_id": str(state.get("extraction_result_id", "")),
+        }
+
+        count = await repo.bulk_insert(
+            store.table_name, store.schema_definition, rows, source_metadata=source_metadata
+        )
+        new_count = await repo.count_rows(store.table_name)
+        await repo.update_row_count(store.id, new_count)
 
     return {
         **state,
         "exported": True,
+        "rows_exported": count,
         "current_step": "done",
     }
