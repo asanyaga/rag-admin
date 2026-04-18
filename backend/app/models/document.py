@@ -32,6 +32,11 @@ class Document(Base):
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False
     )
+    folder_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("folders.id", ondelete="SET NULL"),
+        nullable=True
+    )
 
     # Source tracking
     source_type: Mapped[str] = mapped_column(
@@ -109,6 +114,7 @@ class Document(Base):
 
     # Relationships
     project: Mapped["Project"] = relationship(back_populates="documents")
+    folder: Mapped["Folder | None"] = relationship(back_populates="documents")
     user: Mapped["User"] = relationship()
     index_documents: Mapped[list["IndexDocument"]] = relationship(
         back_populates="document",
@@ -122,6 +128,7 @@ class Document(Base):
     __table_args__ = (
         sa.UniqueConstraint('project_id', 'source_type', 'source_identifier', name='uq_documents_project_source'),
         sa.Index('ix_documents_project_id', 'project_id'),
+        sa.Index('ix_documents_folder_id', 'folder_id'),
         sa.Index('ix_documents_source_type', 'source_type'),
         sa.Index('ix_documents_status', 'status'),
         sa.Index('ix_documents_created_at', 'created_at'),

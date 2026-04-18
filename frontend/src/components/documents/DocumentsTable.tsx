@@ -1,6 +1,8 @@
 import { DocumentListItem } from '@/types/document'
+import { Folder } from '@/types/folder'
 import { DocumentStatusBadge } from './DocumentStatusBadge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,10 +10,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { formatDistanceToNow } from 'date-fns'
-import { Plus } from 'lucide-react'
+import { Plus, Folder as FolderIcon } from 'lucide-react'
 
 interface DocumentsTableProps {
   documents: DocumentListItem[]
+  folders?: Folder[]
+  selectedIds?: Set<string>
+  onToggleSelect?: (id: string) => void
+  onToggleSelectAll?: () => void
   onView: (id: string) => void
   onEdit: (id: string) => void
   onDelete: (id: string) => void
@@ -22,6 +28,10 @@ interface DocumentsTableProps {
 
 export function DocumentsTable({
   documents,
+  folders = [],
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
   onView,
   onEdit,
   onDelete,
@@ -29,6 +39,12 @@ export function DocumentsTable({
   onExtract,
   onUploadClick,
 }: DocumentsTableProps) {
+  const selectionEnabled = !!onToggleSelect
+  const allSelected = selectionEnabled && documents.length > 0 && documents.every((d) => selectedIds?.has(d.id))
+  const someSelected = selectionEnabled && !!selectedIds?.size && !allSelected
+
+  const folderMap = new Map(folders.map((f) => [f.id, f.name]))
+
   if (documents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -66,14 +82,20 @@ export function DocumentsTable({
         <table className="w-full">
           <thead className="bg-muted/50">
             <tr>
+              {selectionEnabled && (
+                <th className="py-3 px-3 w-10">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                    onCheckedChange={onToggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </th>
+              )}
               <th className="text-left py-3 px-4 font-medium text-sm">Title</th>
+              <th className="text-left py-3 px-4 font-medium text-sm">Folder</th>
               <th className="text-left py-3 px-4 font-medium text-sm">Status</th>
-              <th className="text-left py-3 px-4 font-medium text-sm">
-                Uploaded
-              </th>
-              <th className="text-right py-3 px-4 font-medium text-sm">
-                Actions
-              </th>
+              <th className="text-left py-3 px-4 font-medium text-sm">Uploaded</th>
+              <th className="text-right py-3 px-4 font-medium text-sm">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -82,6 +104,15 @@ export function DocumentsTable({
                 key={document.id}
                 className="hover:bg-primary/5 transition-colors"
               >
+                {selectionEnabled && (
+                  <td className="py-3 px-3">
+                    <Checkbox
+                      checked={selectedIds?.has(document.id) ?? false}
+                      onCheckedChange={() => onToggleSelect(document.id)}
+                      aria-label={`Select ${document.title}`}
+                    />
+                  </td>
+                )}
                 <td className="py-3 px-4">
                   <div>
                     <button
@@ -96,6 +127,16 @@ export function DocumentsTable({
                       </p>
                     )}
                   </div>
+                </td>
+                <td className="py-3 px-4 text-sm text-muted-foreground">
+                  {document.folderId ? (
+                    <span className="inline-flex items-center gap-1">
+                      <FolderIcon className="h-3.5 w-3.5" />
+                      {folderMap.get(document.folderId) ?? '—'}
+                    </span>
+                  ) : (
+                    <span>—</span>
+                  )}
                 </td>
                 <td className="py-3 px-4">
                   <DocumentStatusBadge status={document.status} />

@@ -6,8 +6,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import { DocumentUploadZone } from './DocumentUploadZone'
 import { BulkUploadQueue } from './BulkUploadQueue'
+import type { Folder } from '@/types/folder'
 import type { ParseConfig } from '@/types/parsing'
 import type {
   BulkDocumentUpload,
@@ -23,13 +32,18 @@ interface DocumentUploadDialogProps {
     title: string,
     description?: string,
     parserType?: string,
-    parseConfig?: ParseConfig
+    parseConfig?: ParseConfig,
+    folderId?: string | null
   ) => Promise<void>
   onBulkUpload?: (data: BulkDocumentUpload) => Promise<BulkUploadResponse>
   documents?: DocumentListItem[]
   projectId: string
   mode?: 'single' | 'bulk'
+  folders?: Folder[]
+  initialFolderId?: string | null
 }
+
+const NO_FOLDER_VALUE = '__none__'
 
 export function DocumentUploadDialog({
   open,
@@ -39,13 +53,18 @@ export function DocumentUploadDialog({
   documents = [],
   projectId,
   mode = 'single',
+  folders = [],
+  initialFolderId = null,
 }: DocumentUploadDialogProps) {
   const [bulkFiles, setBulkFiles] = useState<File[]>([])
+  const [folderId, setFolderId] = useState<string | null>(initialFolderId)
 
-  // Reset bulk files when the dialog closes
   useEffect(() => {
-    if (!open) setBulkFiles([])
-  }, [open])
+    if (!open) {
+      setBulkFiles([])
+      setFolderId(initialFolderId)
+    }
+  }, [open, initialFolderId])
 
   const handleUpload = async (
     file: File,
@@ -54,7 +73,7 @@ export function DocumentUploadDialog({
     parserType?: string,
     parseConfig?: ParseConfig
   ) => {
-    await onUpload(file, title, description, parserType, parseConfig)
+    await onUpload(file, title, description, parserType, parseConfig, folderId)
     if (mode === 'single') onOpenChange(false)
   }
 
@@ -73,6 +92,30 @@ export function DocumentUploadDialog({
               : 'Upload a PDF document to extract and index its content'}
           </DialogDescription>
         </DialogHeader>
+
+        {folders.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="upload-folder">Folder (optional)</Label>
+            <Select
+              value={folderId ?? NO_FOLDER_VALUE}
+              onValueChange={(v) => setFolderId(v === NO_FOLDER_VALUE ? null : v)}
+            >
+              <SelectTrigger id="upload-folder">
+                <SelectValue placeholder="No folder" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_FOLDER_VALUE}>
+                  <span className="text-muted-foreground">No folder</span>
+                </SelectItem>
+                {folders.map((folder) => (
+                  <SelectItem key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {showQueue ? (
           <BulkUploadQueue

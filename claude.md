@@ -45,6 +45,30 @@ cd frontend && npm install <package>
 - shadcn/ui with Tailwind CSS for all UI
 - Read relevant spec in `docs/` before implementing features
 
+## Local Testing (Docker)
+
+To test a feature branch locally while reusing the main branch's DB volumes and data:
+
+```bash
+# 1. Build the frontend first
+cd frontend && npm run build
+
+# 2. Copy files not tracked in git (needed once per worktree)
+cp -r /c/Repos/rag-admin/caddy ./caddy
+cp /c/Repos/rag-admin/.env.local ./.env.local
+# Fix CRLF line endings on Windows (required for Docker)
+sed -i 's/\r//' backend/entrypoint.sh
+
+# 3. Start containers — -p rag-admin reuses volumes from the main branch stack
+docker compose -f docker-compose.local.yml -p rag-admin up --build -d
+```
+
+Using `-p rag-admin` ensures Docker reuses the named volumes (`rag-admin_postgres_data_local`,
+`rag-admin_document_storage_local`) that the main branch stack created, so existing data is
+preserved. Alembic migrations run automatically on backend startup.
+
+Access: http://localhost (or http://localhost:3000)
+
 ## Workflow
 
 - Always work against a GitHub issue + spec

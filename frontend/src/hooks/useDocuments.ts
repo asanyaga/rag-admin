@@ -21,6 +21,7 @@ interface UseDocumentsReturn {
   updateDocument: (id: string, data: DocumentUpdate) => Promise<Document>
   deleteDocument: (id: string) => Promise<void>
   downloadDocument: (id: string, filename: string) => Promise<void>
+  bulkMoveDocuments: (documentIds: string[], folderId: string | null) => Promise<number>
 }
 
 const POLLING_INTERVAL = 2000 // Poll every 2 seconds
@@ -28,7 +29,8 @@ const POLLING_TIMEOUT = 5 * 60 * 1000 // Stop polling after 5 minutes
 
 export function useDocuments(
   projectId: string | null,
-  statusFilter?: DocumentStatus
+  statusFilter?: DocumentStatus,
+  folderFilter?: string | null
 ): UseDocumentsReturn {
   const [documents, setDocuments] = useState<DocumentListItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -125,6 +127,7 @@ export function useDocuments(
       const data = await documentsApi.listDocuments({
         projectId,
         status: statusFilter,
+        folderId: folderFilter,
       })
       setDocuments(data)
 
@@ -144,7 +147,7 @@ export function useDocuments(
     } finally {
       setIsLoading(false)
     }
-  }, [projectId, statusFilter])
+  }, [projectId, statusFilter, folderFilter])
 
   const uploadDocument = useCallback(
     async (data: DocumentUpload): Promise<Document> => {
@@ -163,6 +166,7 @@ export function useDocuments(
             {
               id: newDocument.id,
               projectId: newDocument.projectId,
+              folderId: newDocument.folderId,
               sourceType: newDocument.sourceType,
               title: newDocument.title,
               description: newDocument.description,
@@ -203,6 +207,7 @@ export function useDocuments(
             {
               id: doc.id,
               projectId: doc.projectId,
+              folderId: doc.folderId,
               sourceType: doc.sourceType,
               title: doc.title,
               description: doc.description,
@@ -288,6 +293,24 @@ export function useDocuments(
     []
   )
 
+  const bulkMoveDocuments = useCallback(
+    async (documentIds: string[], folderId: string | null): Promise<number> => {
+      try {
+        const response = await documentsApi.bulkMoveDocuments({ documentIds, folderId })
+        setDocuments((prev) =>
+          prev.map((doc) =>
+            documentIds.includes(doc.id) ? { ...doc, folderId } : doc
+          )
+        )
+        return response.movedCount
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to move documents')
+        throw err
+      }
+    },
+    []
+  )
+
   const downloadDocument = useCallback(
     async (id: string, filename: string): Promise<void> => {
       return traceAsync('documents.download', async (span) => {
@@ -344,5 +367,6 @@ export function useDocuments(
     updateDocument,
     deleteDocument,
     downloadDocument,
+    bulkMoveDocuments,
   }
 }

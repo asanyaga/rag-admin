@@ -8,11 +8,14 @@ import {
   DocumentStatus,
   BulkDocumentUpload,
   BulkUploadResponse,
+  BulkMoveRequest,
+  BulkMoveResponse,
 } from '@/types/document'
 
 export interface ListDocumentsParams {
   projectId: string
   status?: DocumentStatus
+  folderId?: string | null
   limit?: number
   offset?: number
 }
@@ -31,6 +34,9 @@ export async function uploadDocument(data: DocumentUpload): Promise<Document> {
   if (data.parseConfig) {
     formData.append('parse_config', JSON.stringify(data.parseConfig))
   }
+  if (data.folderId) {
+    formData.append('folder_id', data.folderId)
+  }
 
   const response = await apiClient.post<Document>('/documents', formData, {
     headers: {
@@ -47,6 +53,7 @@ export async function listDocuments(
     params: {
       project_id: params.projectId,
       status: params.status,
+      folderId: params.folderId,
       limit: params.limit,
       offset: params.offset,
     },
@@ -83,6 +90,16 @@ export async function updateDocument(
 
 export async function deleteDocument(id: string): Promise<void> {
   await apiClient.delete(`/documents/${id}`)
+}
+
+export async function bulkMoveDocuments(
+  data: BulkMoveRequest
+): Promise<BulkMoveResponse> {
+  const response = await apiClient.post<BulkMoveResponse>(
+    '/documents/bulk-move',
+    { document_ids: data.documentIds, folder_id: data.folderId }
+  )
+  return response.data
 }
 
 export async function bulkUploadDocuments(
