@@ -1,42 +1,13 @@
 from datetime import datetime
 from uuid import UUID, uuid4
-import json
 
 import sqlalchemy as sa
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, TypeDecorator
-from sqlalchemy.dialects.postgresql import ARRAY, TEXT, UUID as PGUUID
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-
-
-class StringList(TypeDecorator):
-    """Custom type to store list of strings.
-
-    Uses PostgreSQL ARRAY in production, JSON in SQLite for testing.
-    """
-    impl = Text
-    cache_ok = True
-
-    def load_dialect_impl(self, dialect):
-        if dialect.name == 'postgresql':
-            return dialect.type_descriptor(ARRAY(TEXT))
-        else:
-            return dialect.type_descriptor(Text())
-
-    def process_bind_param(self, value, dialect):
-        if dialect.name == 'postgresql':
-            return value
-        elif value is not None:
-            return json.dumps(value)
-        return value
-
-    def process_result_value(self, value, dialect):
-        if dialect.name == 'postgresql':
-            return value if value is not None else []
-        elif value is not None:
-            return json.loads(value) if value else []
-        return []
+from app.models.types import StringList
 
 
 class Project(Base):
@@ -95,6 +66,7 @@ class Project(Base):
     # Relationships
     user: Mapped["User"] = relationship(back_populates="projects")
     documents: Mapped[list["Document"]] = relationship(back_populates="project", cascade="all, delete-orphan")
+    folders: Mapped[list["Folder"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     indexes: Mapped[list["Index"]] = relationship(back_populates="project", cascade="all, delete-orphan")
 
     __table_args__ = (

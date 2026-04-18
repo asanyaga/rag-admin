@@ -2,6 +2,7 @@ from app.models.user import User, AuthProvider
 from app.models.refresh_token import RefreshToken
 from app.models.login_attempt import LoginAttempt
 from app.models.project import Project
+from app.models.folder import Folder
 from app.models.document import Document, DocumentStatus
 from app.models.index import Index, IndexStatus
 from app.models.index_document import IndexDocument, IndexDocumentStatus
@@ -28,6 +29,7 @@ __all__ = [
     "RefreshToken",
     "LoginAttempt",
     "Project",
+    "Folder",
     "Document",
     "DocumentStatus",
     "Index",
