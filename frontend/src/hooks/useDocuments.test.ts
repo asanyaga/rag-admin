@@ -9,6 +9,7 @@ vi.mock('@/api/documents')
 const mockDocumentListItem = (id: string, status: DocumentStatus = 'processing') => ({
   id,
   projectId: 'project-1',
+  folderId: null,
   sourceType: 'upload',
   title: id,
   description: null,
