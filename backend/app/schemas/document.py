@@ -17,12 +17,14 @@ class DocumentUpdate(BaseModel):
     """Schema for updating an existing document."""
     title: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+    folder_id: UUID | None = None
 
 
 class DocumentResponse(BaseModel):
     """Schema for document API responses with camelCase fields."""
     id: UUID = Field(..., alias="id")
     project_id: UUID = Field(..., alias="projectId")
+    folder_id: UUID | None = Field(None, alias="folderId")
     source_type: str = Field(..., alias="sourceType")
     source_identifier: str = Field(..., alias="sourceIdentifier")
     title: str
@@ -46,6 +48,7 @@ class DocumentListResponse(BaseModel):
     """Schema for document list API responses with camelCase fields."""
     id: UUID = Field(..., alias="id")
     project_id: UUID = Field(..., alias="projectId")
+    folder_id: UUID | None = Field(None, alias="folderId")
     source_type: str = Field(..., alias="sourceType")
     title: str
     description: str | None
@@ -70,3 +73,16 @@ class BulkUploadItemResponse(BaseModel):
 class BulkUploadResponse(BaseModel):
     """Schema for bulk upload API response."""
     results: list[BulkUploadItemResponse]
+
+
+class BulkMoveRequest(BaseModel):
+    """Schema for bulk move request."""
+    document_ids: list[UUID]
+    folder_id: UUID | None = None
+
+
+class BulkMoveResponse(BaseModel):
+    """Schema for bulk move response."""
+    moved_count: int = Field(..., alias="movedCount")
+
+    model_config = ConfigDict(populate_by_name=True)

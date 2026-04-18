@@ -29,6 +29,8 @@ from app.schemas.document import (
     DocumentUpdate,
     BulkUploadItemResponse,
     BulkUploadResponse,
+    BulkMoveRequest,
+    BulkMoveResponse,
 )
 from app.services.document_service import DocumentService, process_document_extraction, BulkUploadItemResult
 from app.services.parse_service import ParseService, process_document_parsing
@@ -69,6 +71,7 @@ async def upload_document(
     description: str | None = Form(None, description="Optional document description"),
     parser_type: str = Form("simple", description="Parser type: simple or llamaparse"),
     parse_config: str | None = Form(None, description="JSON parser config (for llamaparse)"),
+    folder_id: UUID | None = Form(None, description="Optional folder to place document in"),
     file: UploadFile = ...,
     current_user: User = Depends(get_current_active_user),
     document_service: DocumentService = Depends(get_document_service),
@@ -96,6 +99,7 @@ async def upload_document(
             filename=filename,
             title=title,
             description=description,
+            folder_id=folder_id,
         )
 
         if parser_type != "simple":
@@ -256,6 +260,26 @@ async def bulk_upload_documents(
     )
 
 
+@router.post(
+    "/bulk-move",
+    response_model=BulkMoveResponse,
+    summary="Bulk move documents",
+    description="Move multiple documents to a folder, or unfile them (folder_id=null).",
+)
+async def bulk_move_documents(
+    body: BulkMoveRequest,
+    current_user: User = Depends(get_current_active_user),
+    document_service: DocumentService = Depends(get_document_service),
+):
+    """Move documents to a folder or unfile them."""
+    moved_count = await document_service.bulk_move(
+        user_id=current_user.id,
+        document_ids=body.document_ids,
+        folder_id=body.folder_id,
+    )
+    return BulkMoveResponse(moved_count=moved_count)
+
+
 @router.get(
     "",
     response_model=list[DocumentListResponse],
@@ -265,6 +289,7 @@ async def bulk_upload_documents(
 async def list_documents(
     project_id: UUID = Query(..., description="Project ID to list documents for"),
     status_filter: DocumentStatus | None = Query(None, alias="status", description="Filter by status"),
+    folder_id: str | None = Query(None, alias="folderId", description="Filter by folder UUID or 'none' for unfiled"),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     current_user: User = Depends(get_current_active_user),
@@ -276,6 +301,7 @@ async def list_documents(
             project_id=project_id,
             user_id=current_user.id,
             status=status_filter,
+            folder_id=folder_id,
             limit=limit,
             offset=offset,
         )

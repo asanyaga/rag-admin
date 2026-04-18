@@ -55,6 +55,7 @@ class DocumentService:
         filename: str,
         title: str,
         description: str | None = None,
+        folder_id: "UUID | None" = None,
     ) -> DocumentResponse:
         """Initiate document upload (validate, save file, create record).
 
@@ -143,6 +144,7 @@ class DocumentService:
                 title=title,
                 description=description,
                 source_metadata=source_metadata,
+                folder_id=folder_id,
             )
         except IntegrityError as e:
             # Clean up file if database insert fails
@@ -223,11 +225,21 @@ class DocumentService:
             raise NotFoundError(f"Document {document_id} not found")
         return DocumentResponse.model_validate(document)
 
+    async def bulk_move(
+        self,
+        user_id: UUID,
+        document_ids: list[UUID],
+        folder_id: "UUID | None",
+    ) -> int:
+        """Move documents to a folder (or unfile). Returns count of moved documents."""
+        return await self.document_repo.bulk_move(document_ids, user_id, folder_id)
+
     async def list_documents(
         self,
         project_id: UUID,
         user_id: UUID,
         status: DocumentStatus | None = None,
+        folder_id: "str | None" = None,
         limit: int = 100,
         offset: int = 0
     ) -> list[DocumentListResponse]:
@@ -255,6 +267,7 @@ class DocumentService:
             project_id=project_id,
             user_id=user_id,
             status=status,
+            folder_id=folder_id,
             limit=limit,
             offset=offset
         )
