@@ -3,6 +3,7 @@ export type DocumentStatus = 'processing' | 'ready' | 'failed'
 export interface Document {
   id: string
   projectId: string
+  folderId: string | null
   sourceType: string
   sourceIdentifier: string
   title: string
@@ -20,6 +21,7 @@ export interface Document {
 export interface DocumentListItem {
   id: string
   projectId: string
+  folderId: string | null
   sourceType: string
   title: string
   description: string | null
@@ -41,6 +43,16 @@ export interface DocumentUpload {
 export interface DocumentUpdate {
   title?: string
   description?: string
+  folderId?: string | null
+}
+
+export interface BulkMoveRequest {
+  documentIds: string[]
+  folderId: string | null
+}
+
+export interface BulkMoveResponse {
+  movedCount: number
 }
 
 export interface DocumentTextResponse {
