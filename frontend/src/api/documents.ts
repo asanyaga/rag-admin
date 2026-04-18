@@ -34,6 +34,9 @@ export async function uploadDocument(data: DocumentUpload): Promise<Document> {
   if (data.parseConfig) {
     formData.append('parse_config', JSON.stringify(data.parseConfig))
   }
+  if (data.folderId) {
+    formData.append('folder_id', data.folderId)
+  }
 
   const response = await apiClient.post<Document>('/documents', formData, {
     headers: {

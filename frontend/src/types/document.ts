@@ -38,6 +38,7 @@ export interface DocumentUpload {
   file: File
   parserType?: string
   parseConfig?: Record<string, unknown>
+  folderId?: string | null
 }
 
 export interface DocumentUpdate {

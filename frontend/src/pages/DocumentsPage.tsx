@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import { useProject } from '@/contexts/ProjectContext'
 import { useDocuments } from '@/hooks/useDocuments'
+import { useFolders } from '@/hooks/useFolders'
 import { DocumentListItem } from '@/types/document'
+import { FolderCreate } from '@/types/folder'
 import type { ParseConfig } from '@/types/parsing'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { DocumentsTable } from '@/components/documents/DocumentsTable'
+import { FolderSidebar } from '@/components/documents/FolderSidebar'
+import { BulkActionBar } from '@/components/documents/BulkActionBar'
 import { DocumentTextViewer } from '@/components/documents/DocumentTextViewer'
 import { DocumentEditDialog } from '@/components/documents/DocumentEditDialog'
 import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialog'
@@ -24,6 +28,9 @@ export default function DocumentsPage(): JSX.Element {
   const navigate = useNavigate()
   const { currentProject } = useProject()
 
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
   const {
     documents,
     isLoading,
@@ -33,7 +40,15 @@ export default function DocumentsPage(): JSX.Element {
     updateDocument,
     deleteDocument,
     downloadDocument,
-  } = useDocuments(currentProject?.id || null)
+    bulkMoveDocuments,
+  } = useDocuments(currentProject?.id || null, undefined, selectedFolderId)
+
+  const {
+    folders,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+  } = useFolders(currentProject?.id || null)
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
@@ -61,6 +76,7 @@ export default function DocumentsPage(): JSX.Element {
     description?: string,
     parserType?: string,
     parseConfig?: ParseConfig,
+    folderId?: string | null,
   ) => {
     try {
       await uploadDocument({
@@ -70,6 +86,7 @@ export default function DocumentsPage(): JSX.Element {
         file,
         parserType,
         parseConfig,
+        folderId: folderId ?? selectedFolderId ?? undefined,
       })
       toast.success('Document uploaded successfully', {
         description: parserType === 'llamaparse'
@@ -117,9 +134,14 @@ export default function DocumentsPage(): JSX.Element {
     }
   }
 
-  const handleEditSave = async (id: string, title: string, description?: string) => {
+  const handleEditSave = async (
+    id: string,
+    title: string,
+    description?: string,
+    folderId?: string | null,
+  ) => {
     try {
-      await updateDocument(id, { title, description })
+      await updateDocument(id, { title, description, folderId })
       toast.success('Document updated successfully')
     } catch (err) {
       toast.error('Update failed', {
@@ -178,6 +200,72 @@ export default function DocumentsPage(): JSX.Element {
     }
   }
 
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.size === documents.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(documents.map((d) => d.id)))
+    }
+  }
+
+  const handleBulkMove = async (folderId: string | null) => {
+    try {
+      const count = await bulkMoveDocuments(Array.from(selectedIds), folderId)
+      toast.success(`${count} document${count !== 1 ? 's' : ''} moved`)
+    } catch (err) {
+      toast.error('Move failed', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
+      throw err
+    }
+  }
+
+  const handleCreateFolder = async (data: FolderCreate) => {
+    try {
+      await createFolder(data)
+      toast.success(`Folder "${data.name}" created`)
+    } catch (err) {
+      toast.error('Failed to create folder', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
+      throw err
+    }
+  }
+
+  const handleUpdateFolder = async (folderId: string, data: FolderCreate) => {
+    try {
+      await updateFolder(folderId, data)
+      toast.success('Folder updated')
+    } catch (err) {
+      toast.error('Failed to update folder', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
+      throw err
+    }
+  }
+
+  const handleDeleteFolder = async (folderId: string) => {
+    try {
+      await deleteFolder(folderId)
+      if (selectedFolderId === folderId) setSelectedFolderId(null)
+      toast.success('Folder deleted')
+    } catch (err) {
+      toast.error('Failed to delete folder', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
+      throw err
+    }
+  }
+
   const viewedDocument = documents.find((d) => d.id === viewDocumentId)
 
   return (
@@ -209,24 +297,53 @@ export default function DocumentsPage(): JSX.Element {
         </Alert>
       )}
 
-      {/* Documents Table */}
-      {isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
-      ) : (
-        <DocumentsTable
-          documents={documents}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onDownload={handleDownload}
-          onExtract={handleExtract}
-          onUploadClick={() => setUploadDialogOpen(true)}
+      {/* Two-column layout: folder sidebar + documents */}
+      <div className="flex gap-6">
+        <FolderSidebar
+          folders={folders}
+          selectedFolderId={selectedFolderId}
+          onSelectFolder={(id) => {
+            setSelectedFolderId(id)
+            setSelectedIds(new Set())
+          }}
+          onCreateFolder={handleCreateFolder}
+          onUpdateFolder={handleUpdateFolder}
+          onDeleteFolder={handleDeleteFolder}
         />
-      )}
+
+        <div className="flex-1 min-w-0 space-y-3">
+          {selectedIds.size > 0 && (
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              folders={folders}
+              onMove={handleBulkMove}
+              onClearSelection={() => setSelectedIds(new Set())}
+            />
+          )}
+
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : (
+            <DocumentsTable
+              documents={documents}
+              folders={folders}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onToggleSelectAll={handleToggleSelectAll}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onDownload={handleDownload}
+              onExtract={handleExtract}
+              onUploadClick={() => setUploadDialogOpen(true)}
+            />
+          )}
+        </div>
+      </div>
 
       {/* View Document Sheet */}
       <Sheet open={viewDocumentId !== null} onOpenChange={(open) => !open && setViewDocumentId(null)}>
@@ -247,12 +364,9 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           </SheetHeader>
           <div className="mt-6 space-y-6">
-            {/* Parse Results (if any) */}
             {viewDocumentId && parseResults.length > 0 && (
               <ParseResultViewer documentId={viewDocumentId} />
             )}
-
-            {/* Extracted Text — always shown as baseline */}
             {viewDocumentId && viewedDocument && (
               <DocumentTextViewer
                 documentId={viewDocumentId}
@@ -270,6 +384,7 @@ export default function DocumentsPage(): JSX.Element {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSave={handleEditSave}
+        folders={folders}
       />
 
       {/* Delete Dialog */}
@@ -286,6 +401,8 @@ export default function DocumentsPage(): JSX.Element {
         onOpenChange={setUploadDialogOpen}
         onUpload={handleUpload}
         projectId={currentProject.id}
+        folders={folders}
+        initialFolderId={selectedFolderId}
       />
 
       {/* Bulk Upload Dialog */}
@@ -297,6 +414,8 @@ export default function DocumentsPage(): JSX.Element {
         documents={documents}
         projectId={currentProject.id}
         mode="bulk"
+        folders={folders}
+        initialFolderId={selectedFolderId}
       />
 
       {/* Re-parse Dialog */}

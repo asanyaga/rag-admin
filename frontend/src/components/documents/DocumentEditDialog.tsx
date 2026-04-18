@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { DocumentListItem } from '@/types/document'
+import { Folder } from '@/types/folder'
 import {
   Dialog,
   DialogContent,
@@ -11,30 +12,42 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface DocumentEditDialogProps {
   document: DocumentListItem | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (id: string, title: string, description?: string) => Promise<void>
+  onSave: (id: string, title: string, description?: string, folderId?: string | null) => Promise<void>
+  folders?: Folder[]
 }
+
+const NO_FOLDER_VALUE = '__none__'
 
 export function DocumentEditDialog({
   document,
   open,
   onOpenChange,
   onSave,
+  folders = [],
 }: DocumentEditDialogProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [folderId, setFolderId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Update form when document changes
   useEffect(() => {
     if (document) {
       setTitle(document.title)
       setDescription(document.description || '')
+      setFolderId(document.folderId)
       setError(null)
     }
   }, [document])
@@ -52,7 +65,8 @@ export function DocumentEditDialog({
       await onSave(
         document.id,
         title.trim(),
-        description.trim() || undefined
+        description.trim() || undefined,
+        folderId
       )
       onOpenChange(false)
     } catch (err) {
@@ -98,6 +112,31 @@ export function DocumentEditDialog({
               rows={4}
             />
           </div>
+
+          {folders.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-folder">Folder</Label>
+              <Select
+                value={folderId ?? NO_FOLDER_VALUE}
+                onValueChange={(v) => setFolderId(v === NO_FOLDER_VALUE ? null : v)}
+                disabled={isSaving}
+              >
+                <SelectTrigger id="edit-folder">
+                  <SelectValue placeholder="No folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_FOLDER_VALUE}>
+                    <span className="text-muted-foreground">No folder</span>
+                  </SelectItem>
+                  {folders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {error && (
             <div className="text-sm text-red-600 dark:text-red-400">
