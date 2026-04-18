@@ -21,6 +21,7 @@ class DocumentRepository:
         title: str,
         description: str | None,
         source_metadata: dict,
+        folder_id: "UUID | None" = None,
     ) -> Document:
         """Create a new document.
 
@@ -45,6 +46,7 @@ class DocumentRepository:
             description=description,
             source_metadata=source_metadata,
             status=DocumentStatus.processing,
+            folder_id=folder_id,
         )
         self.session.add(document)
         await self.session.commit()
@@ -117,6 +119,7 @@ class DocumentRepository:
         project_id: UUID,
         user_id: UUID,
         status: DocumentStatus | None = None,
+        folder_id: "UUID | str | None" = None,
         limit: int = 100,
         offset: int = 0
     ) -> list[Document]:
@@ -126,6 +129,7 @@ class DocumentRepository:
             project_id: Project UUID
             user_id: User UUID
             status: Optional status filter
+            folder_id: UUID to filter by folder, "none" for unfiled, None for all
             limit: Maximum number of results
             offset: Number of results to skip
 
@@ -146,10 +150,45 @@ class DocumentRepository:
         if status:
             query = query.where(Document.status == status)
 
+        if folder_id == "none":
+            query = query.where(Document.folder_id.is_(None))
+        elif folder_id is not None:
+            query = query.where(Document.folder_id == folder_id)
+
         query = query.order_by(Document.created_at.desc()).limit(limit).offset(offset)
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+    async def bulk_move(
+        self,
+        document_ids: list[UUID],
+        user_id: UUID,
+        folder_id: "UUID | None",
+    ) -> int:
+        """Move documents to a folder (or unfile). Returns count updated."""
+        from sqlalchemy import update as sa_update
+        # Fetch only IDs the user owns (silently ignore others)
+        accessible = await self.session.execute(
+            select(Document.id)
+            .join(Document.project)
+            .where(
+                and_(
+                    Document.id.in_(document_ids),
+                    Project.user_id == user_id,
+                )
+            )
+        )
+        accessible_ids = [row[0] for row in accessible.all()]
+        if not accessible_ids:
+            return 0
+        await self.session.execute(
+            sa_update(Document)
+            .where(Document.id.in_(accessible_ids))
+            .values(folder_id=folder_id)
+        )
+        await self.session.commit()
+        return len(accessible_ids)
 
     async def update(
         self,
