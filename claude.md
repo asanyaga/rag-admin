@@ -71,8 +71,33 @@ Access: http://localhost (or http://localhost:3000)
 
 ## Workflow
 
-- Always work against a GitHub issue + spec
-- Create feature branch from main (e.g., `feat/issue-42-short-description`)
-- Write tests alongside implementation
-- Run change-verifier agent after changes
+- Always work against a GitHub issue + spec + Plan
 - Create PR linked to issue; wait for user to merge before cleanup
+
+## Superpowers Workflow Customizations
+
+### Pre-Implementation Gate (applies after any planning step)
+After writing an implementation plan and before writing any code:
+1. Create a GitHub issue with:
+   - Title: one-line summary of the work
+   - Body: acceptance criteria derived from the plan
+   - Links to the relevant spec (`docs/specs/`) and plan
+2. Confirm Github issue details with the user
+3. Continue with implementation
+4. Do not begin implementation until the issue exists.
+
+### Systematic Debugging — Stop Rule
+When running the systematic-debugging skill:
+- If you cannot identify a root cause after **3 fix attempts** on a failing test, **STOP immediately**.
+- Do not attempt a 4th fix.
+- Report to the user:
+  1. The failing test and what behaviour it asserts
+  2. Each of the 3 approaches tried and why each did not resolve it
+  3. Your recommended next step (rewrite the test, investigate upstream dependency, ask for clarification, etc.)
+- **Wait for explicit user instruction before continuing.**
+
+### Finishing a Development Branch — Issue Close Gate
+After running the finishing-a-development-branch skill:
+- Ask the user: *"Should I close GitHub issue #[number] for this branch?"*
+- Close the issue **only on explicit consent**.
+- Do not close automatically as part of the skill flow.
