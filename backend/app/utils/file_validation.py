@@ -4,7 +4,7 @@ import mimetypes
 from pathlib import Path
 from typing import BinaryIO
 
-import magic
+import filetype
 
 
 class FileValidationError(Exception):
@@ -50,12 +50,9 @@ def validate_mime_type(file_content: bytes, filename: str, allowed_types: list[s
     Raises:
         FileValidationError: If MIME type is not allowed or cannot be detected
     """
-    # Try to detect MIME type from content using python-magic
-    try:
-        mime = magic.Magic(mime=True)
-        detected_mime = mime.from_buffer(file_content[:2048])  # Read first 2KB
-    except Exception:
-        # Fallback to extension-based detection
+    kind = filetype.guess(file_content[:2048])
+    detected_mime = kind.mime if kind is not None else None
+    if detected_mime is None:
         detected_mime, _ = mimetypes.guess_type(filename)
         if not detected_mime:
             raise FileValidationError(f"Could not determine MIME type for file: {filename}")

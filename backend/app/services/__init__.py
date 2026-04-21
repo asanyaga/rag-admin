@@ -1,13 +1,8 @@
-"""Service layer for business logic."""
-from app.services.auth_service import AuthService
-from app.services.oauth_service import OAuthService
-from app.services.project_service import ProjectService
-from app.services.document_service import DocumentService, process_document_extraction
+"""Service layer for business logic.
 
-__all__ = [
-    "AuthService",
-    "OAuthService",
-    "ProjectService",
-    "DocumentService",
-    "process_document_extraction",
-]
+Import service classes directly from their modules (e.g. ``from
+app.services.auth_service import AuthService``). This package does not
+re-export at the top level — doing so forces eager imports of every
+service and their transitive dependencies whenever any submodule is
+touched.
+"""

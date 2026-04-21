@@ -42,7 +42,7 @@ dependencies = [
     "llama-index-readers-file>=0.1.0", # File readers for various formats
     "llama-cloud>=1.0.0", # LlamaParse v2 SDK for intelligent document parsing
     "aiofiles>=23.2.0", # Async file operations
-    "python-magic>=0.4.27", # MIME type detection from content
+    "filetype>=1.2.0", # Pure-Python MIME detection from content (no native deps)
     "Pillow>=10.0.0", # Image processing for OCR extraction
     "pytesseract>=0.3.10", # Tesseract OCR wrapper for image text extraction
     # -------------------------------------------------------------------------
