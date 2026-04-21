@@ -311,3 +311,74 @@ All 10 items in `docs/planning/cdm_architecture.md` §9 remain deferred. Additio
 - **Persistence schema** — Alembic migration extending `documents`, splitting `parse_results` into `parse_runs` + ParsedDocument storage (JSONB vs. decomposed tables), dropping `Document.extracted_text`, and retiring `app/adapters/parsing/` in favor of the CDM stack. See §8 for the reconciliation plan — follow-up PR.
 - **UI integration** — Playground documents view and Agents flow view surfacing ParseRun metrics — follow-up spec.
 - **Config-matrix eval** — per-parse-config eval framework (promoted from §5 when needed) — deferred.
+
+---
+
+## 11. Next Steps (for follow-up sessions)
+
+v1 delivered in PR #25: CDM types, LlamaParse adapter, runner, eval harness. **This spec is done** — do NOT expand it further. The work below is scoped to new specs in `docs/specs/`, each with its own plan under `docs/planning/`.
+
+### 11.1 Merge gate (small, same PR or immediate follow-up)
+
+1. **Unblock libmagic** — `app/services/__init__.py` eagerly imports `document_service` → `magic`. Either install libmagic in the backend env (`pip install python-magic-bin` on Windows) or lazify the imports so the full pytest suite can run. Task 15 regression is blocked until this lands.
+2. **Failed ParseRun plumbing** — `run_llamaparse` currently constructs a `ParseRun(status=FAILED)` in its except block but discards it. Decide:
+   - Option A: raise a custom `LlamaParseRunError(RuntimeError)` carrying `.run` so persistence can record it.
+   - Option B: return `(ParseRun, Optional[ParsedDocument])` and never raise.
+   - Option C: delete the dead local and commit to raise-and-log only.
+   - Recommendation: Option A — keeps the call-site clean but lets the persistence layer (§11.2) record failures without a second API.
+
+### 11.2 Persistence spec (largest, load-bearing)
+
+**New spec:** `docs/specs/cdm_persistence.md`
+
+Reconcile the in-memory CDM types with the existing ORM and write the migration. Key design questions:
+
+- **`Document` ↔ `SourceDocument` unification.** Keep `documents` table, widen it to cover `SourceDocument` fields (add `sha256`, `storage_uri`, `byte_size` if missing), drop `extracted_text` (now derivable from `ParsedDocument.full_text`). Decide whether `Document.id` remains the single identity or is replaced by `SourceDocument.id`.
+- **Split `parse_results` into `parse_runs` + `parsed_documents`.** `parse_runs` stores execution metrics; `parsed_documents` stores CDM content. Foreign key: `parsed_documents.parse_run_id → parse_runs.id`.
+- **ParsedDocument storage: JSONB blob vs. normalized tables.** Trade-off: blob is simple and round-trips cleanly; normalized tables (`pages`, `blocks`, `cells`) enable SQL queries on structure but bloat schema and require bidirectional mapping. **Recommendation: start with JSONB, add selective extraction (e.g. `blocks` table with `role`, `page_index`, `text_fts`) only when a query need shows up.**
+- **Migration of existing rows.** Retire `app/adapters/parsing/llamaparse.py` and `app/ports/document_parsing.py`. Existing `parse_results` rows either (a) migrate by replaying parser against stored source bytes, (b) wrap as a single legacy `ParseRun(parser=ParserKind.LEGACY, ...)` without re-parsing, or (c) drop. Decide based on how much production data exists.
+- **Repository layer:** `SourceDocumentRepository`, `ParseRunRepository`, `ParsedDocumentRepository` under `app/repositories/`.
+
+### 11.3 Ingestion integration
+
+**New spec:** `docs/specs/cdm_ingestion.md`
+
+Wire the runner into the upload flow:
+
+- `document_service.py` upload path calls `run_llamaparse()` instead of the legacy `DocumentParser` port.
+- Retire `app/adapters/parsing/llamaparse.py` and `app/ports/document_parsing.py` after persistence lands.
+- Background worker (if one exists) writes `ParseRun` + `ParsedDocument` via the repositories from §11.2.
+- Idempotency: re-upload of same `sha256` reuses the existing `SourceDocument`; re-parse creates a new `ParseRun`.
+
+### 11.4 UI viewer
+
+**New spec:** `docs/specs/cdm_viewer.md`
+
+Playground surface for `ParsedDocument`. Spec should cover:
+
+- Page list sidebar with confidence indicators
+- Block tree / reading-order view
+- Markdown and text tabs
+- PDF + normalized-bbox overlay (citation rendering uses the same bbox pipeline)
+- ParseRun history panel with re-run-with-different-config button
+- Cost/latency readout per run
+
+This is where provenance earns its keep visually — a user should be able to click a block and see where it came from in the PDF.
+
+### 11.5 First downstream workload (extract) + real fixtures
+
+**New spec:** `docs/specs/cdm_extract_adapter.md`
+
+Port one existing extract path to consume `ParsedDocument` and emit `CitationRef`s. Prove the CDM hypothesis end-to-end: parser-agnostic extract, citations that resolve back to bboxes.
+
+In parallel: replace synthetic eval fixtures with 3-5 recorded real LlamaParse responses from representative PDFs (short memo, multi-column paper, table-heavy financial doc, nested-list contract). Regenerate snapshots. Keep synthetic fixtures as edge-case probes (empty document, single-page, deep nesting).
+
+### Suggested sequencing
+
+1. 11.1 (merge gate, hours)
+2. 11.2 persistence (spec + plan + PR, likely 2-3 days)
+3. 11.3 ingestion (builds on 11.2, ~1 day)
+4. 11.4 viewer (parallel with 11.5, ~2 days)
+5. 11.5 extract + real fixtures (~2 days)
+
+Each follow-up should follow the same flow: spec in `docs/specs/`, plan in `docs/planning/YYYY-MM-DD-<name>.md`, GitHub issue, subagent-driven execution.
