@@ -1,0 +1,116 @@
+{
+  "blocks": [
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          72.0,
+          200.0,
+          24.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.11764705882352941,
+        "x1": 0.4444444444444444,
+        "y0": 0.09090909090909091,
+        "y1": 0.12121212121212122
+      },
+      "children_ids": [],
+      "depth": 1,
+      "html": null,
+      "id": "src-eval:p0:b0",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "# Hello World",
+      "native_label": "paragraph_title",
+      "native_type": "heading",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {},
+      "quality": {
+        "confidence": 0.99,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "reading_order": 0,
+      "role": "heading",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "Hello World"
+    },
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          120.0,
+          300.0,
+          18.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.11764705882352941,
+        "x1": 0.6078431372549019,
+        "y0": 0.15151515151515152,
+        "y1": 0.17424242424242425
+      },
+      "children_ids": [],
+      "depth": 0,
+      "html": null,
+      "id": "src-eval:p0:b1",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "This is a test.",
+      "native_label": "text",
+      "native_type": "text",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {},
+      "quality": {
+        "confidence": 0.97,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "reading_order": 1,
+      "role": "paragraph",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "This is a test."
+    }
+  ],
+  "derivation": null,
+  "derived_from": null,
+  "full_markdown": "# Hello World\n\nThis is a test.",
+  "full_text": "Hello World.",
+  "id": "<doc-id>",
+  "labels": [],
+  "page_count": 1,
+  "pages": [
+    {
+      "block_ids": [
+        "src-eval:p0:b0",
+        "src-eval:p0:b1"
+      ],
+      "height": 792.0,
+      "index": 0,
+      "parser_extras": {
+        "source_page_number": 1
+      },
+      "quality": {
+        "confidence": 0.98,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "rotation": 0,
+      "unit": "points",
+      "width": 612.0
+    }
+  ],
+  "parse_run_id": "run-eval",
+  "schema_version": "1.0",
+  "source_document_id": "src-eval",
+  "source_filename": null
+}

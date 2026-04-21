@@ -1,0 +1,25 @@
+{
+  "text": "Results\n\nScores table follows.\n\nName\tScore\nAlice\t95\nBob\t87",
+  "markdown": "# Results\n\n## Scores table follows.\n\n| Name | Score |\n|------|-------|\n| Alice | 95 |\n| Bob | 87 |",
+  "items": {
+    "pages": [
+      {
+        "page_number": 1,
+        "width": 612.0,
+        "height": 792.0,
+        "items": [
+          {"type": "heading", "level": 1, "value": "Results", "md": "# Results",
+           "bbox": [{"x": 72, "y": 72, "w": 100, "h": 24, "confidence": 0.99, "label": "paragraph_title"}]},
+          {"type": "heading", "level": 2, "value": "Scores table follows.",
+           "md": "## Scores table follows.",
+           "bbox": [{"x": 72, "y": 110, "w": 300, "h": 18, "confidence": 0.98, "label": "paragraph_title"}]},
+          {"type": "table", "value": "Name Score Alice 95 Bob 87",
+           "md": "| Name | Score |\n|------|-------|\n| Alice | 95 |\n| Bob | 87 |",
+           "bbox": [{"x": 72, "y": 140, "w": 400, "h": 80, "confidence": 0.94, "label": "table"}]}
+        ]
+      }
+    ]
+  },
+  "metadata": {"pages": [{"page_number": 1, "confidence": 0.96, "original_orientation_angle": 0}]},
+  "job_metadata": {"job_id": "fixture-job-2", "pdf-inputTokens": 60, "pdf-outputTokens": 40, "pdf-llmTime": 510}
+}

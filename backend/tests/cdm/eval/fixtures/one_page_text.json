@@ -1,0 +1,34 @@
+{
+  "text": "Hello World.",
+  "markdown": "# Hello World\n\nThis is a test.",
+  "items": {
+    "pages": [
+      {
+        "page_number": 1,
+        "width": 612.0,
+        "height": 792.0,
+        "items": [
+          {
+            "type": "heading",
+            "level": 1,
+            "value": "Hello World",
+            "md": "# Hello World",
+            "bbox": [{"x": 72, "y": 72, "w": 200, "h": 24,
+                      "confidence": 0.99, "label": "paragraph_title"}]
+          },
+          {
+            "type": "text",
+            "value": "This is a test.",
+            "md": "This is a test.",
+            "bbox": [{"x": 72, "y": 120, "w": 300, "h": 18,
+                      "confidence": 0.97, "label": "text"}]
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {"pages": [{"page_number": 1, "confidence": 0.98,
+                          "original_orientation_angle": 0}]},
+  "job_metadata": {"job_id": "fixture-job",
+                   "pdf-inputTokens": 42, "pdf-outputTokens": 21, "pdf-llmTime": 333}
+}

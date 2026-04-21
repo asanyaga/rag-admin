@@ -1,0 +1,157 @@
+{
+  "blocks": [
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          72.0,
+          100.0,
+          24.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.11764705882352941,
+        "x1": 0.28104575163398693,
+        "y0": 0.09090909090909091,
+        "y1": 0.12121212121212122
+      },
+      "children_ids": [],
+      "depth": 1,
+      "html": null,
+      "id": "src-eval:p0:b0",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "# Results",
+      "native_label": "paragraph_title",
+      "native_type": "heading",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {},
+      "quality": {
+        "confidence": 0.99,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "reading_order": 0,
+      "role": "heading",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "Results"
+    },
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          110.0,
+          300.0,
+          18.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.11764705882352941,
+        "x1": 0.6078431372549019,
+        "y0": 0.1388888888888889,
+        "y1": 0.16161616161616163
+      },
+      "children_ids": [],
+      "depth": 2,
+      "html": null,
+      "id": "src-eval:p0:b1",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "## Scores table follows.",
+      "native_label": "paragraph_title",
+      "native_type": "heading",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {},
+      "quality": {
+        "confidence": 0.98,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "reading_order": 1,
+      "role": "heading",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "Scores table follows."
+    },
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          140.0,
+          400.0,
+          80.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.11764705882352941,
+        "x1": 0.7712418300653595,
+        "y0": 0.17676767676767677,
+        "y1": 0.2777777777777778
+      },
+      "children_ids": [],
+      "depth": 0,
+      "html": null,
+      "id": "src-eval:p0:b2",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "| Name | Score |\n|------|-------|\n| Alice | 95 |\n| Bob | 87 |",
+      "native_label": "table",
+      "native_type": "table",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {},
+      "quality": {
+        "confidence": 0.94,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "reading_order": 2,
+      "role": "table",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "Name Score Alice 95 Bob 87"
+    }
+  ],
+  "derivation": null,
+  "derived_from": null,
+  "full_markdown": "# Results\n\n## Scores table follows.\n\n| Name | Score |\n|------|-------|\n| Alice | 95 |\n| Bob | 87 |",
+  "full_text": "Results\n\nScores table follows.\n\nName\tScore\nAlice\t95\nBob\t87",
+  "id": "<doc-id>",
+  "labels": [],
+  "page_count": 1,
+  "pages": [
+    {
+      "block_ids": [
+        "src-eval:p0:b0",
+        "src-eval:p0:b1",
+        "src-eval:p0:b2"
+      ],
+      "height": 792.0,
+      "index": 0,
+      "parser_extras": {
+        "source_page_number": 1
+      },
+      "quality": {
+        "confidence": 0.96,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "rotation": 0,
+      "unit": "points",
+      "width": 612.0
+    }
+  ],
+  "parse_run_id": "run-eval",
+  "schema_version": "1.0",
+  "source_document_id": "src-eval",
+  "source_filename": null
+}
