@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.cdm.models import BBox, BlockRole, Cell, CoordSpace, ParserKind, Quality, Span, Style, Table
+from app.cdm.models import BBox, Block, BlockRole, Cell, CoordSpace, Label, Page, ParserKind, Quality, Span, Style, Table
 
 
 def test_parser_kind_values():
@@ -79,3 +79,40 @@ def test_table_requires_dimensions_and_cells():
     assert len(t.cells) == 4
     assert t.html is None
     assert t.markdown is None
+
+
+def test_block_minimum_fields():
+    b = Block(
+        id="b1",
+        role=BlockRole.PARAGRAPH,
+        native_type="text",
+        page_index=0,
+    )
+    assert b.text == ""
+    assert b.children_ids == []
+    assert b.parser_extras == {}
+    assert b.is_continuation is False
+
+
+def test_block_parser_extras_accept_arbitrary_values():
+    b = Block(
+        id="b1",
+        role=BlockRole.OTHER,
+        native_type="weird",
+        page_index=0,
+        parser_extras={"foo": [1, 2, 3], "bar": {"nested": True}},
+    )
+    assert b.parser_extras["foo"] == [1, 2, 3]
+
+
+def test_page_defaults():
+    p = Page(index=0)
+    assert p.rotation == 0
+    assert p.block_ids == []
+    assert p.width is None
+
+
+def test_label_scope_defaults_to_document():
+    lbl = Label(name="annual_report")
+    assert lbl.scope == "document"
+    assert lbl.source == "classifier"

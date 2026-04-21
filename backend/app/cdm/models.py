@@ -6,7 +6,7 @@ via `model_copy(update=...)`.
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from pydantic import BaseModel, ConfigDict
 
@@ -91,3 +91,46 @@ class Table(_Frozen):
     html: Optional[str] = None
     markdown: Optional[str] = None
     caption: Optional[str] = None
+
+
+class Block(_Frozen):
+    id: str
+    role: BlockRole
+    native_type: str
+    native_label: Optional[str] = None
+    text: str = ""
+    markdown: Optional[str] = None
+    html: Optional[str] = None
+    page_index: int
+    bbox: Optional[BBox] = None
+    reading_order: Optional[int] = None
+    depth: Optional[int] = None
+    parent_id: Optional[str] = None
+    children_ids: List[str] = []
+    spans: List[Span] = []
+    table: Optional[Table] = None
+    image_ref: Optional[str] = None
+    style: Optional[Style] = None
+    quality: Optional[Quality] = None
+    language: Optional[str] = None
+    is_continuation: bool = False
+    parser_extras: Dict[str, Any] = {}
+
+
+class Page(_Frozen):
+    index: int
+    width: Optional[float] = None
+    height: Optional[float] = None
+    unit: Optional[str] = None
+    rotation: int = 0
+    block_ids: List[str] = []
+    quality: Optional[Quality] = None
+    parser_extras: Dict[str, Any] = {}
+
+
+class Label(_Frozen):
+    name: str
+    confidence: Optional[float] = None
+    scope: Literal["document", "page", "block"] = "document"
+    scope_ref: Optional[Union[int, str]] = None
+    source: Literal["parser", "classifier", "human"] = "classifier"
