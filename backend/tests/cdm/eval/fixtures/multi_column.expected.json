@@ -1,0 +1,198 @@
+{
+  "blocks": [
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          72.0,
+          234.0,
+          18.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.11764705882352941,
+        "x1": 0.5,
+        "y0": 0.09090909090909091,
+        "y1": 0.11363636363636363
+      },
+      "children_ids": [],
+      "depth": 0,
+      "html": null,
+      "id": "src-eval:p0:b0",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "Left column text.",
+      "native_label": "text",
+      "native_type": "text",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {},
+      "quality": {
+        "confidence": 0.95,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "reading_order": 0,
+      "role": "paragraph",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "Left column text."
+    },
+    {
+      "bbox": {
+        "source_coords": [
+          320.0,
+          72.0,
+          220.0,
+          18.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.5228758169934641,
+        "x1": 0.8823529411764706,
+        "y0": 0.09090909090909091,
+        "y1": 0.11363636363636363
+      },
+      "children_ids": [],
+      "depth": 0,
+      "html": null,
+      "id": "src-eval:p0:b1",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "Right column text.",
+      "native_label": "text",
+      "native_type": "text",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {},
+      "quality": {
+        "confidence": 0.95,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "reading_order": 1,
+      "role": "paragraph",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "Right column text."
+    },
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          100.0,
+          234.0,
+          18.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.11764705882352941,
+        "x1": 0.5,
+        "y0": 0.12626262626262627,
+        "y1": 0.14898989898989898
+      },
+      "children_ids": [],
+      "depth": 0,
+      "html": null,
+      "id": "src-eval:p0:b2",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "More left.",
+      "native_label": "text",
+      "native_type": "text",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {},
+      "quality": {
+        "confidence": 0.93,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "reading_order": 2,
+      "role": "paragraph",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "More left."
+    },
+    {
+      "bbox": {
+        "source_coords": [
+          320.0,
+          100.0,
+          220.0,
+          18.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.5228758169934641,
+        "x1": 0.8823529411764706,
+        "y0": 0.12626262626262627,
+        "y1": 0.14898989898989898
+      },
+      "children_ids": [],
+      "depth": 0,
+      "html": null,
+      "id": "src-eval:p0:b3",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "More right.",
+      "native_label": "text",
+      "native_type": "text",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {},
+      "quality": {
+        "confidence": 0.93,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "reading_order": 3,
+      "role": "paragraph",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "More right."
+    }
+  ],
+  "derivation": null,
+  "derived_from": null,
+  "full_markdown": "Left column text.\n\nRight column text.\n\nMore left.\n\nMore right.",
+  "full_text": "Left column text.\n\nRight column text.\n\nMore left.\n\nMore right.",
+  "id": "<doc-id>",
+  "labels": [],
+  "page_count": 1,
+  "pages": [
+    {
+      "block_ids": [
+        "src-eval:p0:b0",
+        "src-eval:p0:b1",
+        "src-eval:p0:b2",
+        "src-eval:p0:b3"
+      ],
+      "height": 792.0,
+      "index": 0,
+      "parser_extras": {
+        "source_page_number": 1
+      },
+      "quality": {
+        "confidence": 0.94,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "rotation": 0,
+      "unit": "points",
+      "width": 612.0
+    }
+  ],
+  "parse_run_id": "run-eval",
+  "schema_version": "1.0",
+  "source_document_id": "src-eval",
+  "source_filename": null
+}
