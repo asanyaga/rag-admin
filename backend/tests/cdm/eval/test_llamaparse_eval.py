@@ -76,3 +76,18 @@ def test_snapshot(llamaparse_fixture):
         f"Snapshot mismatch for {name}. Re-run with UPDATE_SNAPSHOTS=1 "
         f"if intentional and commit the updated {snapshot_path.name}."
     )
+
+
+from tests.cdm.eval.recorder import record as _record_metrics
+
+
+def test_record_metrics(llamaparse_fixture):
+    name, raw = llamaparse_fixture
+    jm = raw.get("job_metadata") or {}
+    _record_metrics({
+        "fixture": name,
+        "parser": "llamaparse",
+        "input_tokens":  jm.get("pdf-inputTokens"),
+        "output_tokens": jm.get("pdf-outputTokens"),
+        "duration_ms":   jm.get("pdf-llmTime"),
+    })
