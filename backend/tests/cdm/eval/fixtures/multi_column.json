@@ -1,0 +1,25 @@
+{
+  "text": "Left column text.\n\nRight column text.\n\nMore left.\n\nMore right.",
+  "markdown": "Left column text.\n\nRight column text.\n\nMore left.\n\nMore right.",
+  "items": {
+    "pages": [
+      {
+        "page_number": 1,
+        "width": 612.0,
+        "height": 792.0,
+        "items": [
+          {"type": "text", "value": "Left column text.", "md": "Left column text.",
+           "bbox": [{"x": 72, "y": 72, "w": 234, "h": 18, "confidence": 0.95, "label": "text"}]},
+          {"type": "text", "value": "Right column text.", "md": "Right column text.",
+           "bbox": [{"x": 320, "y": 72, "w": 220, "h": 18, "confidence": 0.95, "label": "text"}]},
+          {"type": "text", "value": "More left.", "md": "More left.",
+           "bbox": [{"x": 72, "y": 100, "w": 234, "h": 18, "confidence": 0.93, "label": "text"}]},
+          {"type": "text", "value": "More right.", "md": "More right.",
+           "bbox": [{"x": 320, "y": 100, "w": 220, "h": 18, "confidence": 0.93, "label": "text"}]}
+        ]
+      }
+    ]
+  },
+  "metadata": {"pages": [{"page_number": 1, "confidence": 0.94, "original_orientation_angle": 0}]},
+  "job_metadata": {"job_id": "fixture-job-3", "pdf-inputTokens": 70, "pdf-outputTokens": 30, "pdf-llmTime": 480}
+}
