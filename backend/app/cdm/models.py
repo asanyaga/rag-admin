@@ -134,3 +134,20 @@ class Label(_Frozen):
     scope: Literal["document", "page", "block"] = "document"
     scope_ref: Optional[Union[int, str]] = None
     source: Literal["parser", "classifier", "human"] = "classifier"
+
+
+class ParsedDocument(_Frozen):
+    id: str
+    source_document_id: str
+    parse_run_id: str
+    source_filename: Optional[str] = None
+    page_count: int
+    pages: List[Page]
+    blocks: List[Block]
+    full_text: Optional[str] = None
+    full_markdown: Optional[str] = None
+    labels: List[Label] = []
+    # Lineage for future split() outputs — set when this is a derived document.
+    derived_from: Optional[str] = None
+    derivation: Optional[str] = None
+    schema_version: str = "1.0"

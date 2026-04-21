@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.cdm.models import BBox, Block, BlockRole, Cell, CoordSpace, Label, Page, ParserKind, Quality, Span, Style, Table
+from app.cdm.models import BBox, Block, BlockRole, Cell, CoordSpace, Label, Page, ParserKind, ParsedDocument, Quality, Span, Style, Table
 
 
 def test_parser_kind_values():
@@ -116,3 +116,36 @@ def test_label_scope_defaults_to_document():
     lbl = Label(name="annual_report")
     assert lbl.scope == "document"
     assert lbl.source == "classifier"
+
+
+def test_parsed_document_minimum_shape():
+    doc = ParsedDocument(
+        id="doc-1",
+        source_document_id="src-1",
+        parse_run_id="run-1",
+        page_count=1,
+        pages=[Page(index=0)],
+        blocks=[],
+    )
+    assert doc.schema_version == "1.0"
+    assert doc.labels == []
+    assert doc.derived_from is None
+
+
+def test_parsed_document_json_round_trip():
+    doc = ParsedDocument(
+        id="doc-1",
+        source_document_id="src-1",
+        parse_run_id="run-1",
+        page_count=1,
+        pages=[Page(index=0, block_ids=["b1"])],
+        blocks=[Block(
+            id="b1",
+            role=BlockRole.PARAGRAPH,
+            native_type="text",
+            text="hello",
+            page_index=0,
+        )],
+    )
+    restored = ParsedDocument.model_validate_json(doc.model_dump_json())
+    assert restored == doc
