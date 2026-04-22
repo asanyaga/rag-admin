@@ -23,6 +23,7 @@ from app.models.agent_definition import AgentDefinition
 from app.models.agent_run import AgentRun, AgentRunStatus
 from app.models.project_data_store import ProjectDataStore
 from app.models.source_document import SourceDocumentORM
+from app.models.parse_run import ParseRunORM
 
 __all__ = [
     "User",
@@ -67,4 +68,5 @@ __all__ = [
     "AgentRunStatus",
     "ProjectDataStore",
     "SourceDocumentORM",
+    "ParseRunORM",
 ]
