@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//**)",
+      "Read(C:\\**)",
+      "Bash(pip show:*)",
+      "Bash(alembic current:*)",
+      "Bash(alembic history:*)",
+      "Bash(alembic heads:*)",
+      "Bash(alembic show:*)",
+      "Bash(uv tree:*)",
+      "Bash(uv pip list:*)",
+      "Bash(uv pip show:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose config:*)",
+      "Bash(docker compose logs:*)"
+    ]
+  }
+}
