@@ -1,0 +1,136 @@
+[
+  {
+    "file": "2025-AGM-Notice-to-Unit-Holders-08.04.2025.pdf",
+    "elapsed_s": 19.0,
+    "pages": 2,
+    "text_chars": 5477,
+    "markdown_chars": 4512,
+    "items": 32,
+    "item_types": {
+      "header": 1,
+      "image": 3,
+      "heading": 1,
+      "text": 25,
+      "list": 2
+    }
+  },
+  {
+    "file": "ACPL-Acorn-IREIT-Info-Memo-August-2021-Final.pdf",
+    "elapsed_s": 25.9,
+    "pages": 3,
+    "text_chars": 10463,
+    "markdown_chars": 9988,
+    "items": 38,
+    "item_types": {
+      "header": 3,
+      "text": 25,
+      "image": 1,
+      "heading": 7,
+      "footer": 2
+    }
+  },
+  {
+    "file": "ASA-I-REIT-2023-Semi-Annual-Report.pdf",
+    "elapsed_s": 14.4,
+    "pages": 3,
+    "text_chars": 2418,
+    "markdown_chars": 2088,
+    "items": 23,
+    "item_types": {
+      "image": 7,
+      "heading": 3,
+      "text": 9,
+      "header": 2,
+      "footer": 2
+    }
+  },
+  {
+    "file": "ASA-I-REIT-2024-Annual-Report.pdf",
+    "elapsed_s": 25.2,
+    "pages": 3,
+    "text_chars": 5112,
+    "markdown_chars": 3045,
+    "items": 26,
+    "item_types": {
+      "header": 1,
+      "image": 7,
+      "text": 10,
+      "heading": 8
+    }
+  },
+  {
+    "file": "ASA-I-REIT-2024-Semi-Annual-Report.pdf",
+    "elapsed_s": 18.3,
+    "pages": 3,
+    "text_chars": 6175,
+    "markdown_chars": 4329,
+    "items": 54,
+    "item_types": {
+      "text": 38,
+      "heading": 4,
+      "image": 3,
+      "footer": 3,
+      "list": 6
+    }
+  },
+  {
+    "file": "ASA-I-REIT-2025-Semi-Annual-Report.pdf",
+    "elapsed_s": 19.1,
+    "pages": 3,
+    "text_chars": 4480,
+    "markdown_chars": 2212,
+    "items": 48,
+    "item_types": {
+      "header": 2,
+      "image": 4,
+      "text": 30,
+      "heading": 5,
+      "footer": 2,
+      "list": 5
+    }
+  },
+  {
+    "file": "ASA-IREIT-2023-Annual-Report.pdf",
+    "elapsed_s": 18.8,
+    "pages": 3,
+    "text_chars": 3593,
+    "markdown_chars": 2610,
+    "items": 65,
+    "item_types": {
+      "header": 1,
+      "image": 3,
+      "heading": 9,
+      "text": 46,
+      "list": 6
+    }
+  },
+  {
+    "file": "ASA-IREIT-2023-Financial-Statements.pdf",
+    "elapsed_s": 18.9,
+    "pages": 3,
+    "text_chars": 2878,
+    "markdown_chars": 3188,
+    "items": 31,
+    "item_types": {
+      "heading": 10,
+      "text": 18,
+      "table": 1,
+      "footer": 2
+    }
+  },
+  {
+    "file": "Acorn-I-REIT-OM.pdf",
+    "elapsed_s": 18.7,
+    "pages": 3,
+    "text_chars": 9044,
+    "markdown_chars": 8793,
+    "items": 39,
+    "item_types": {
+      "header": 3,
+      "text": 25,
+      "image": 1,
+      "heading": 8,
+      "footer": 2
+    }
+  }
+]

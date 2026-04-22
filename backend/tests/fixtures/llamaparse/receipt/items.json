@@ -1,0 +1,607 @@
+{
+  "pages": [
+    {
+      "items": [
+        {
+          "items": [
+            {
+              "md": "CLEANSHELF SUPERMARKETS LIMITED",
+              "value": "CLEANSHELF SUPERMARKETS LIMITED",
+              "bbox": [
+                {
+                  "h": 30.429675,
+                  "w": 96.87297196261682,
+                  "x": 57.82340186915888,
+                  "y": 26.297250000000002,
+                  "confidence": 0.83,
+                  "end_index": 30,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "level": 1,
+              "md": "# KIKUYU",
+              "value": "KIKUYU",
+              "bbox": [
+                {
+                  "h": 12.77,
+                  "w": 35.29,
+                  "x": 80.35,
+                  "y": 38.69,
+                  "confidence": 0.4,
+                  "end_index": 7,
+                  "label": "heading",
+                  "start_index": 0
+                }
+              ],
+              "type": "heading"
+            },
+            {
+              "md": "P.O. BOX 1208-00217, LIMURU",
+              "value": "P.O. BOX 1208-00217, LIMURU",
+              "bbox": [
+                {
+                  "h": 20.0,
+                  "w": 132.0,
+                  "x": 30.0,
+                  "y": 54.0,
+                  "confidence": 0.81,
+                  "end_index": 26,
+                  "label": "paragraph_title",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            }
+          ],
+          "md": "CLEANSHELF SUPERMARKETS LIMITED\n# KIKUYU\nP.O. BOX 1208-00217, LIMURU",
+          "bbox": [
+            {
+              "h": 47.7,
+              "w": 132.0,
+              "x": 30.0,
+              "y": 26.3,
+              "confidence": null,
+              "end_index": null,
+              "label": null,
+              "start_index": null
+            }
+          ],
+          "type": "header"
+        },
+        {
+          "caption": "barcode",
+          "md": "![barcode](image)",
+          "url": "image",
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.52,
+              "end_index": 16,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "image"
+        },
+        {
+          "md": "**SDN**: P0511471103 **VAT Reg**: 0125810H\n**Tel No.**: 0110090570 **Fax**:\\\n**Till No.**: 2 **Cash Sale #**: 186\n**Date**: 20-Feb-26 **Time**: 03:25:PM **Branch**: 13",
+          "value": "SDN: P0511471103 VAT Reg: 0125810H\nTel No.: 0110090570 Fax: Till No.: 2 Cash Sale #: 186\nDate: 20-Feb-26 Time: 03:25:PM Branch: 13",
+          "bbox": [
+            {
+              "h": 623.6205,
+              "w": 144.1830280373832,
+              "x": 20.27573831775701,
+              "y": 91.28902500000001,
+              "confidence": 0.54,
+              "end_index": 166,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "csv": "\"ITEM\",\"QTY\",\"PRICE\",\"AMOUNT\"\n\"PENTONIC GEL PEN BLACK A<br/>132084\",\"4 (PCS)\",\"45\",\"180\"\n\"PENTONIC GEL PEN RED A<br/>132085\",\"3 (PCS)\",\"45\",\"135\"\n\"MACCOFFEE CLASSIC 1.6GM A<br/>160278\",\"2 (PCS)\",\"10\",\"20\"\n\"BROOKSIDE COFFEE MILK 250ML A<br/>250075\",\"1 (PCS)\",\"69\",\"69\"\n\"SOSSI SOYA CLASSIC 70GM A<br/>260322\",\"2 (PCS)\",\"45\",\"90\"\n\"CLEANSHELF PRINTED 30 BAG 30C A<br/>390092\",\"1 (PCS)\",\"45\",\"45\"\n\"REXONA ROLL ON SHOWER CLEAN 2 A<br/>410473\",\"1 (PCS)\",\"199\",\"199\"\n\"ZOE ANTI-DRUFF SHAMPOO 500ML A<br/>413159\",\"1 (PCS)\",\"130\",\"130\"\n\"MOLPED ULTRA SOFT LONG 8*15 E<br/>413785\",\"1 (PCS)\",\"99\",\"99\"\n\"CADBURY LUNCH BAR 44GM A<br/>460029\",\"1 (PCS)\",\"179\",\"179\"\n\"CADBURY LUNCH BAR DREAM 44GM A<br/>460233\",\"1 (PCS)\",\"179\",\"179\"\n\"TROPICAL HEAT KENYAN CHEVDA 5 A<br/>460472\",\"1 (PCS)\",\"70\",\"70\"\n\"TROPICAL HEAT SALTED POTATO C A<br/>460485\",\"1 (PCS)\",\"60\",\"60\"\n\"TAMU TAMU TOMATO KETCHUP 25GM A<br/>460497\",\"1 (PCS)\",\"30\",\"30\"\n\"URBAN BITES NYAM CHOM 30GM A<br/>460570\",\"1 (PCS)\",\"58\",\"58\"\n\"URBAN BITES TRENDY TOMATO 30G A<br/>460575\",\"1 (PCS)\",\"58\",\"58\"\n\"KRACKLES PERFECTLY SALTED POT A<br/>460748\",\"1 (PCS)\",\"60\",\"60\"\n\"KRACKLES TOONS BARBEQUE POTAT A<br/>460751\",\"2 (PCS)\",\"60\",\"120\"\n\"KRACKLES CARAMEL POTATO CRISP A<br/>460752\",\"1 (PCS)\",\"60\",\"60\"\n\"KRACKLES TOON TANGY TOMATO CR A<br/>460756\",\"2 (PCS)\",\"60\",\"120\"\n\"PENNY FRYAMS 100GM A<br/>461020\",\"1 (PCS)\",\"90\",\"90\"\n\"TROPICAL HEAT CRISPS TOMATO 5 A<br/>461122\",\"1 (PCS)\",\"60\",\"60\"\n\"URBAN BITES CORN BARBEQUE SAU A<br/>461149\",\"1 (PCS)\",\"30\",\"30\"\n\"RINGOZ PAPRIKA 12GM A<br/>461342\",\"1 (PCS)\",\"13\",\"13\"\n\"JIMCY POPCORN CARAMEL 65GM A<br/>461410\",\"1 (PCS)\",\"100\",\"100\"\n\"DAIRYLAND MINT CHOCOLATE 37GM A<br/>461702\",\"2 (PCS)\",\"70\",\"140\"\n\"DAIRYLAND BERRY BLISS CHOCOLA A<br/>461704\",\"1 (PCS)\",\"180\",\"180\"\n\"DELMONTE MANGO BLEND 250ML A<br/>480026\",\"1 (PCS)\",\"79\",\"79\"\n\"RIBENA BLACK CURRANT & STRAW B A<br/>480653\",\"1 (PCS)\",\"90\",\"90\"",
+          "html": "<table>\n  <thead>\n    <tr>\n        <th>ITEM</th>\n        <th>QTY</th>\n        <th>PRICE</th>\n        <th>AMOUNT</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n        <td>PENTONIC GEL PEN BLACK A<br />132084</td>\n        <td>4 (PCS)</td>\n        <td>45</td>\n        <td>180</td>\n    </tr>\n    <tr>\n        <td>PENTONIC GEL PEN RED A<br />132085</td>\n        <td>3 (PCS)</td>\n        <td>45</td>\n        <td>135</td>\n    </tr>\n    <tr>\n        <td>MACCOFFEE CLASSIC 1.6GM A<br />160278</td>\n        <td>2 (PCS)</td>\n        <td>10</td>\n        <td>20</td>\n    </tr>\n    <tr>\n        <td>BROOKSIDE COFFEE MILK 250ML A<br />250075</td>\n        <td>1 (PCS)</td>\n        <td>69</td>\n        <td>69</td>\n    </tr>\n    <tr>\n        <td>SOSSI SOYA CLASSIC 70GM A<br />260322</td>\n        <td>2 (PCS)</td>\n        <td>45</td>\n        <td>90</td>\n    </tr>\n    <tr>\n        <td>CLEANSHELF PRINTED 30 BAG 30C A<br />390092</td>\n        <td>1 (PCS)</td>\n        <td>45</td>\n        <td>45</td>\n    </tr>\n    <tr>\n        <td>REXONA ROLL ON SHOWER CLEAN 2 A<br />410473</td>\n        <td>1 (PCS)</td>\n        <td>199</td>\n        <td>199</td>\n    </tr>\n    <tr>\n        <td>ZOE ANTI-DRUFF SHAMPOO 500ML A<br />413159</td>\n        <td>1 (PCS)</td>\n        <td>130</td>\n        <td>130</td>\n    </tr>\n    <tr>\n        <td>MOLPED ULTRA SOFT LONG 8*15 E<br />413785</td>\n        <td>1 (PCS)</td>\n        <td>99</td>\n        <td>99</td>\n    </tr>\n    <tr>\n        <td>CADBURY LUNCH BAR 44GM A<br />460029</td>\n        <td>1 (PCS)</td>\n        <td>179</td>\n        <td>179</td>\n    </tr>\n    <tr>\n        <td>CADBURY LUNCH BAR DREAM 44GM A<br />460233</td>\n        <td>1 (PCS)</td>\n        <td>179</td>\n        <td>179</td>\n    </tr>\n    <tr>\n        <td>TROPICAL HEAT KENYAN CHEVDA 5 A<br />460472</td>\n        <td>1 (PCS)</td>\n        <td>70</td>\n        <td>70</td>\n    </tr>\n    <tr>\n        <td>TROPICAL HEAT SALTED POTATO C A<br />460485</td>\n        <td>1 (PCS)</td>\n        <td>60</td>\n        <td>60</td>\n    </tr>\n    <tr>\n        <td>TAMU TAMU TOMATO KETCHUP 25GM A<br />460497</td>\n        <td>1 (PCS)</td>\n        <td>30</td>\n        <td>30</td>\n    </tr>\n    <tr>\n        <td>URBAN BITES NYAM CHOM 30GM A<br />460570</td>\n        <td>1 (PCS)</td>\n        <td>58</td>\n        <td>58</td>\n    </tr>\n    <tr>\n        <td>URBAN BITES TRENDY TOMATO 30G A<br />460575</td>\n        <td>1 (PCS)</td>\n        <td>58</td>\n        <td>58</td>\n    </tr>\n    <tr>\n        <td>KRACKLES PERFECTLY SALTED POT A<br />460748</td>\n        <td>1 (PCS)</td>\n        <td>60</td>\n        <td>60</td>\n    </tr>\n    <tr>\n        <td>KRACKLES TOONS BARBEQUE POTAT A<br />460751</td>\n        <td>2 (PCS)</td>\n        <td>60</td>\n        <td>120</td>\n    </tr>\n    <tr>\n        <td>KRACKLES CARAMEL POTATO CRISP A<br />460752</td>\n        <td>1 (PCS)</td>\n        <td>60</td>\n        <td>60</td>\n    </tr>\n    <tr>\n        <td>KRACKLES TOON TANGY TOMATO CR A<br />460756</td>\n        <td>2 (PCS)</td>\n        <td>60</td>\n        <td>120</td>\n    </tr>\n    <tr>\n        <td>PENNY FRYAMS 100GM A<br />461020</td>\n        <td>1 (PCS)</td>\n        <td>90</td>\n        <td>90</td>\n    </tr>\n    <tr>\n        <td>TROPICAL HEAT CRISPS TOMATO 5 A<br />461122</td>\n        <td>1 (PCS)</td>\n        <td>60</td>\n        <td>60</td>\n    </tr>\n    <tr>\n        <td>URBAN BITES CORN BARBEQUE SAU A<br />461149</td>\n        <td>1 (PCS)</td>\n        <td>30</td>\n        <td>30</td>\n    </tr>\n    <tr>\n        <td>RINGOZ PAPRIKA 12GM A<br />461342</td>\n        <td>1 (PCS)</td>\n        <td>13</td>\n        <td>13</td>\n    </tr>\n    <tr>\n        <td>JIMCY POPCORN CARAMEL 65GM A<br />461410</td>\n        <td>1 (PCS)</td>\n        <td>100</td>\n        <td>100</td>\n    </tr>\n    <tr>\n        <td>DAIRYLAND MINT CHOCOLATE 37GM A<br />461702</td>\n        <td>2 (PCS)</td>\n        <td>70</td>\n        <td>140</td>\n    </tr>\n    <tr>\n        <td>DAIRYLAND BERRY BLISS CHOCOLA A<br />461704</td>\n        <td>1 (PCS)</td>\n        <td>180</td>\n        <td>180</td>\n    </tr>\n    <tr>\n        <td>DELMONTE MANGO BLEND 250ML A<br />480026</td>\n        <td>1 (PCS)</td>\n        <td>79</td>\n        <td>79</td>\n    </tr>\n    <tr>\n        <td>RIBENA BLACK CURRANT &#x26; STRAW B A<br />480653</td>\n        <td>1 (PCS)</td>\n        <td>90</td>\n        <td>90</td>\n    </tr>\n  </tbody>\n</table>",
+          "md": "| ITEM                                        | QTY     | PRICE | AMOUNT |\n| ------------------------------------------- | ------- | ----- | ------ |\n| PENTONIC GEL PEN BLACK A<br/>132084         | 4 (PCS) | 45    | 180    |\n| PENTONIC GEL PEN RED A<br/>132085           | 3 (PCS) | 45    | 135    |\n| MACCOFFEE CLASSIC 1.6GM A<br/>160278        | 2 (PCS) | 10    | 20     |\n| BROOKSIDE COFFEE MILK 250ML A<br/>250075    | 1 (PCS) | 69    | 69     |\n| SOSSI SOYA CLASSIC 70GM A<br/>260322        | 2 (PCS) | 45    | 90     |\n| CLEANSHELF PRINTED 30 BAG 30C A<br/>390092  | 1 (PCS) | 45    | 45     |\n| REXONA ROLL ON SHOWER CLEAN 2 A<br/>410473  | 1 (PCS) | 199   | 199    |\n| ZOE ANTI-DRUFF SHAMPOO 500ML A<br/>413159   | 1 (PCS) | 130   | 130    |\n| MOLPED ULTRA SOFT LONG 8\\*15 E<br/>413785   | 1 (PCS) | 99    | 99     |\n| CADBURY LUNCH BAR 44GM A<br/>460029         | 1 (PCS) | 179   | 179    |\n| CADBURY LUNCH BAR DREAM 44GM A<br/>460233   | 1 (PCS) | 179   | 179    |\n| TROPICAL HEAT KENYAN CHEVDA 5 A<br/>460472  | 1 (PCS) | 70    | 70     |\n| TROPICAL HEAT SALTED POTATO C A<br/>460485  | 1 (PCS) | 60    | 60     |\n| TAMU TAMU TOMATO KETCHUP 25GM A<br/>460497  | 1 (PCS) | 30    | 30     |\n| URBAN BITES NYAM CHOM 30GM A<br/>460570     | 1 (PCS) | 58    | 58     |\n| URBAN BITES TRENDY TOMATO 30G A<br/>460575  | 1 (PCS) | 58    | 58     |\n| KRACKLES PERFECTLY SALTED POT A<br/>460748  | 1 (PCS) | 60    | 60     |\n| KRACKLES TOONS BARBEQUE POTAT A<br/>460751  | 2 (PCS) | 60    | 120    |\n| KRACKLES CARAMEL POTATO CRISP A<br/>460752  | 1 (PCS) | 60    | 60     |\n| KRACKLES TOON TANGY TOMATO CR A<br/>460756  | 2 (PCS) | 60    | 120    |\n| PENNY FRYAMS 100GM A<br/>461020             | 1 (PCS) | 90    | 90     |\n| TROPICAL HEAT CRISPS TOMATO 5 A<br/>461122  | 1 (PCS) | 60    | 60     |\n| URBAN BITES CORN BARBEQUE SAU A<br/>461149  | 1 (PCS) | 30    | 30     |\n| RINGOZ PAPRIKA 12GM A<br/>461342            | 1 (PCS) | 13    | 13     |\n| JIMCY POPCORN CARAMEL 65GM A<br/>461410     | 1 (PCS) | 100   | 100    |\n| DAIRYLAND MINT CHOCOLATE 37GM A<br/>461702  | 2 (PCS) | 70    | 140    |\n| DAIRYLAND BERRY BLISS CHOCOLA A<br/>461704  | 1 (PCS) | 180   | 180    |\n| DELMONTE MANGO BLEND 250ML A<br/>480026     | 1 (PCS) | 79    | 79     |\n| RIBENA BLACK CURRANT & STRAW B A<br/>480653 | 1 (PCS) | 90    | 90     |",
+          "rows": [
+            [
+              "ITEM",
+              "QTY",
+              "PRICE",
+              "AMOUNT"
+            ],
+            [
+              "PENTONIC GEL PEN BLACK A<br/>132084",
+              "4 (PCS)",
+              "45",
+              "180"
+            ],
+            [
+              "PENTONIC GEL PEN RED A<br/>132085",
+              "3 (PCS)",
+              "45",
+              "135"
+            ],
+            [
+              "MACCOFFEE CLASSIC 1.6GM A<br/>160278",
+              "2 (PCS)",
+              "10",
+              "20"
+            ],
+            [
+              "BROOKSIDE COFFEE MILK 250ML A<br/>250075",
+              "1 (PCS)",
+              "69",
+              "69"
+            ],
+            [
+              "SOSSI SOYA CLASSIC 70GM A<br/>260322",
+              "2 (PCS)",
+              "45",
+              "90"
+            ],
+            [
+              "CLEANSHELF PRINTED 30 BAG 30C A<br/>390092",
+              "1 (PCS)",
+              "45",
+              "45"
+            ],
+            [
+              "REXONA ROLL ON SHOWER CLEAN 2 A<br/>410473",
+              "1 (PCS)",
+              "199",
+              "199"
+            ],
+            [
+              "ZOE ANTI-DRUFF SHAMPOO 500ML A<br/>413159",
+              "1 (PCS)",
+              "130",
+              "130"
+            ],
+            [
+              "MOLPED ULTRA SOFT LONG 8*15 E<br/>413785",
+              "1 (PCS)",
+              "99",
+              "99"
+            ],
+            [
+              "CADBURY LUNCH BAR 44GM A<br/>460029",
+              "1 (PCS)",
+              "179",
+              "179"
+            ],
+            [
+              "CADBURY LUNCH BAR DREAM 44GM A<br/>460233",
+              "1 (PCS)",
+              "179",
+              "179"
+            ],
+            [
+              "TROPICAL HEAT KENYAN CHEVDA 5 A<br/>460472",
+              "1 (PCS)",
+              "70",
+              "70"
+            ],
+            [
+              "TROPICAL HEAT SALTED POTATO C A<br/>460485",
+              "1 (PCS)",
+              "60",
+              "60"
+            ],
+            [
+              "TAMU TAMU TOMATO KETCHUP 25GM A<br/>460497",
+              "1 (PCS)",
+              "30",
+              "30"
+            ],
+            [
+              "URBAN BITES NYAM CHOM 30GM A<br/>460570",
+              "1 (PCS)",
+              "58",
+              "58"
+            ],
+            [
+              "URBAN BITES TRENDY TOMATO 30G A<br/>460575",
+              "1 (PCS)",
+              "58",
+              "58"
+            ],
+            [
+              "KRACKLES PERFECTLY SALTED POT A<br/>460748",
+              "1 (PCS)",
+              "60",
+              "60"
+            ],
+            [
+              "KRACKLES TOONS BARBEQUE POTAT A<br/>460751",
+              "2 (PCS)",
+              "60",
+              "120"
+            ],
+            [
+              "KRACKLES CARAMEL POTATO CRISP A<br/>460752",
+              "1 (PCS)",
+              "60",
+              "60"
+            ],
+            [
+              "KRACKLES TOON TANGY TOMATO CR A<br/>460756",
+              "2 (PCS)",
+              "60",
+              "120"
+            ],
+            [
+              "PENNY FRYAMS 100GM A<br/>461020",
+              "1 (PCS)",
+              "90",
+              "90"
+            ],
+            [
+              "TROPICAL HEAT CRISPS TOMATO 5 A<br/>461122",
+              "1 (PCS)",
+              "60",
+              "60"
+            ],
+            [
+              "URBAN BITES CORN BARBEQUE SAU A<br/>461149",
+              "1 (PCS)",
+              "30",
+              "30"
+            ],
+            [
+              "RINGOZ PAPRIKA 12GM A<br/>461342",
+              "1 (PCS)",
+              "13",
+              "13"
+            ],
+            [
+              "JIMCY POPCORN CARAMEL 65GM A<br/>461410",
+              "1 (PCS)",
+              "100",
+              "100"
+            ],
+            [
+              "DAIRYLAND MINT CHOCOLATE 37GM A<br/>461702",
+              "2 (PCS)",
+              "70",
+              "140"
+            ],
+            [
+              "DAIRYLAND BERRY BLISS CHOCOLA A<br/>461704",
+              "1 (PCS)",
+              "180",
+              "180"
+            ],
+            [
+              "DELMONTE MANGO BLEND 250ML A<br/>480026",
+              "1 (PCS)",
+              "79",
+              "79"
+            ],
+            [
+              "RIBENA BLACK CURRANT & STRAW B A<br/>480653",
+              "1 (PCS)",
+              "90",
+              "90"
+            ]
+          ],
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.74,
+              "end_index": 2323,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "merged_from_pages": null,
+          "merged_into_page": null,
+          "parse_concerns": [
+            {
+              "details": "col 1 'QTY' expects numeric, got '4 (PCS)' in row 1",
+              "type": "header_value_type_mismatch"
+            },
+            {
+              "details": "layout detected [paragraph_title, code] but no table/form",
+              "type": "layout_lvm_disagreement"
+            },
+            {
+              "details": "2 tables on page",
+              "type": "multi_table_page"
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "md": "**TOTAL : 2,743.00**\n**DSCNT : 26.00**\n**M-PAY : 2,717.00**",
+          "value": "TOTAL : 2,743.00\nDSCNT : 26.00\nM-PAY : 2,717.00",
+          "bbox": [
+            {
+              "h": 108.94574999999998,
+              "w": 145.68493457943927,
+              "x": 18.773831775700934,
+              "y": 646.1610000000001,
+              "confidence": 0.53,
+              "end_index": 58,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "md": "\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\* MPESA DETAILS \\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*",
+          "value": "*********** MPESA DETAILS ***********",
+          "bbox": [
+            {
+              "h": 9.016200000000026,
+              "w": 136.6734953271028,
+              "x": 20.27573831775701,
+              "y": 763.7472750000001,
+              "confidence": 0.52,
+              "end_index": 58,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "md": "**Transaction No.**: UBS0G830VU\n**Mobile No**: 0722 ### 673",
+          "value": "Transaction No.: UBS0G830VU\nMobile No: 0722 ### 673",
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.53,
+              "end_index": 58,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "md": "**TOTAL ITEMS : ##39**",
+          "value": "TOTAL ITEMS : ##39",
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.52,
+              "end_index": 21,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "csv": "\"CODE\",\"RATE %\",\"VATABLE AMT\",\"VAT AMT\"\n\"A\",\"16\",\"2256.8479\",\"361.1521\"\n\"E\",\"0\",\"99\",\"0\"",
+          "html": "<table>\n  <thead>\n    <tr>\n        <th>CODE</th>\n        <th>RATE %</th>\n        <th>VATABLE AMT</th>\n        <th>VAT AMT</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n        <td>A</td>\n        <td>16</td>\n        <td>2256.8479</td>\n        <td>361.1521</td>\n    </tr>\n    <tr>\n        <td>E</td>\n        <td>0</td>\n        <td>99</td>\n        <td>0</td>\n    </tr>\n  </tbody>\n</table>",
+          "md": "| CODE | RATE % | VATABLE AMT | VAT AMT  |\n| ---- | ------ | ----------- | -------- |\n| A    | 16     | 2256.8479   | 361.1521 |\n| E    | 0      | 99          | 0        |",
+          "rows": [
+            [
+              "CODE",
+              "RATE %",
+              "VATABLE AMT",
+              "VAT AMT"
+            ],
+            [
+              "A",
+              "16",
+              "2256.8479",
+              "361.1521"
+            ],
+            [
+              "E",
+              "0",
+              "99",
+              "0"
+            ]
+          ],
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.53,
+              "end_index": 170,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "merged_from_pages": null,
+          "merged_into_page": null,
+          "parse_concerns": [
+            {
+              "details": "layout detected [paragraph_title, code] but no table/form",
+              "type": "layout_lvm_disagreement"
+            },
+            {
+              "details": "2 tables on page",
+              "type": "multi_table_page"
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "md": "PROMO DETAILS\nREXONA ROLL ON SHOWER -20.00\nURBAN BITES TRENDY T -6.00",
+          "value": "PROMO DETAILS\nREXONA ROLL ON SHOWER -20.00\nURBAN BITES TRENDY T -6.00",
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.53,
+              "end_index": 68,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "md": "**TSIN** : 13213202261521186\n**CUIN** : 0170495670001109256\n**CUSN** : KRAMU017202207049567\n**DATE** : 2026-02-28 15:28",
+          "value": "TSIN : 13213202261521186\nCUIN : 0170495670001109256\nCUSN : KRAMU017202207049567\nDATE : 2026-02-28 15:28",
+          "bbox": [
+            {
+              "h": 845.2687500000001,
+              "w": 115.64680373831777,
+              "x": 48.811962616822434,
+              "y": 110.07277500000001,
+              "confidence": 0.54,
+              "end_index": 118,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "caption": "QR Code",
+          "md": "![QR Code](image)",
+          "url": "image",
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.52,
+              "end_index": 16,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "image"
+        },
+        {
+          "md": "PRICES INCLUSIVE OF VAT WHERE APPLICABLE\nYOU WERE SERVED BY: GWANJA",
+          "value": "PRICES INCLUSIVE OF VAT WHERE APPLICABLE\nYOU WERE SERVED BY: GWANJA",
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.53,
+              "end_index": 66,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "md": "**Card No.** : 1342\\*\\*\\*\\*\\*69\n**Cust Name** : NYAGA ASA\n**OP.Bal** : 7,145.0\n**Pnts Awarded** : 23.0\n**CL.Bal** : 7,168.0",
+          "value": "Card No. : 1342*****69\nCust Name : NYAGA ASA\nOP.Bal : 7,145.0\nPnts Awarded : 23.0\nCL.Bal : 7,168.0",
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.53,
+              "end_index": 122,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "level": 1,
+          "md": "# Thank You For Shopping t",
+          "value": "Thank You For Shopping t",
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.53,
+              "end_index": 25,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "md": "Designed & Developed by COMPULYNX: +254203747060\nWait for your next shopping at Home!,\nCall: 0110090570 Shop online @",
+          "value": "Designed & Developed by COMPULYNX: +254203747060\nWait for your next shopping at Home!,\nCall: 0110090570 Shop online @\n",
+          "bbox": [
+            {
+              "h": 612.35025,
+              "w": 84.1067663551402,
+              "x": 48.811962616822434,
+              "y": 102.55927500000001,
+              "confidence": 0.54,
+              "end_index": 116,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "md": "http://www.cleanshelf.co.ke",
+          "text": "http://www.cleanshelf.co.ke",
+          "url": "http://www.cleanshelf.co.ke",
+          "bbox": [
+            {
+              "h": 1097.1921689923543,
+              "w": 158.70531810272962,
+              "x": 19.41041905428258,
+              "y": 92.1084786210223,
+              "confidence": 0.53,
+              "end_index": 26,
+              "label": "code",
+              "start_index": 0
+            }
+          ],
+          "type": "link"
+        },
+        {
+          "md": ". Delivery fee\nslashed to kshs. 150/=",
+          "value": ". Delivery fee\nslashed to kshs. 150/=",
+          "bbox": [
+            {
+              "h": 13.89997500000004,
+              "w": 71.71603738317756,
+              "x": 33.792897196261684,
+              "y": 1183.37625,
+              "confidence": 0.94,
+              "end_index": 36,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        }
+      ],
+      "page_height": 1202.16,
+      "page_number": 1,
+      "page_width": 200.88,
+      "success": true
+    }
+  ]
+}
