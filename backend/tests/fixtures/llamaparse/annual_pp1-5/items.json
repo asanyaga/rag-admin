@@ -1,0 +1,1922 @@
+{
+  "pages": [
+    {
+      "items": [
+        {
+          "items": [
+            {
+              "caption": "acorn i-reit Student Accommodation logo",
+              "md": "![acorn i-reit Student Accommodation logo](page_1_image_1_v2.jpg)",
+              "url": "page_1_image_1_v2.jpg",
+              "bbox": [
+                {
+                  "h": 62.0,
+                  "w": 111.0,
+                  "x": 20.0,
+                  "y": 19.0,
+                  "confidence": 1.0,
+                  "end_index": 64,
+                  "label": "image",
+                  "start_index": 0
+                }
+              ],
+              "type": "image"
+            }
+          ],
+          "md": "![acorn i-reit Student Accommodation logo](page_1_image_1_v2.jpg)",
+          "bbox": [
+            {
+              "h": 62.0,
+              "w": 111.0,
+              "x": 20.0,
+              "y": 19.0,
+              "confidence": null,
+              "end_index": null,
+              "label": null,
+              "start_index": null
+            }
+          ],
+          "type": "header"
+        },
+        {
+          "level": 2,
+          "md": "## 2023 Annual Report",
+          "value": "2023 Annual Report",
+          "bbox": [
+            {
+              "h": 26.453040448742353,
+              "w": 236.4455175671089,
+              "x": 46.92283380901058,
+              "y": 275.4580149679045,
+              "confidence": 0.83,
+              "end_index": 20,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "level": 1,
+          "md": "# POSITIONED FOR GROWTH",
+          "value": "POSITIONED FOR GROWTH",
+          "bbox": [
+            {
+              "h": 135.0,
+              "w": 338.85,
+              "x": 46.06,
+              "y": 293.65,
+              "confidence": 1.0,
+              "end_index": 22,
+              "label": "doc_title",
+              "start_index": 2
+            }
+          ],
+          "type": "heading"
+        }
+      ],
+      "page_height": 841.89,
+      "page_number": 1,
+      "page_width": 595.276,
+      "success": true
+    },
+    {
+      "items": [
+        {
+          "caption": "A group of young people in a modern common area, with two people playing table tennis in the foreground and others watching and smiling in the background.",
+          "md": "![A group of young people in a modern common area, with two people playing table tennis in the foreground and others watching and smiling in the background.](0)",
+          "url": "0",
+          "bbox": [
+            {
+              "h": 13.764882898806945,
+              "w": 42.04129687499999,
+              "x": 21.206671874999998,
+              "y": 654.0179496243925,
+              "confidence": 0.98,
+              "end_index": 159,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "image"
+        },
+        {
+          "md": "JPROJA",
+          "value": "JPROJA",
+          "bbox": [
+            {
+              "h": 13.764882898806945,
+              "w": 42.04129687499999,
+              "x": 21.206671874999998,
+              "y": 654.0179496243925,
+              "confidence": 1.0,
+              "end_index": 5,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "md": "**DISCLAIMER**",
+          "value": "DISCLAIMER",
+          "bbox": [
+            {
+              "h": 10.461913003167822,
+              "w": 63.638306039205524,
+              "x": 773.1667887379716,
+              "y": 667.52914472954,
+              "confidence": 0.92,
+              "end_index": 13,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "md": "This report contains forward-looking statements that involve assumptions, risks and uncertainties. Actual future performance, outcomes and results may differ materially from those expressed in the forward-looking statements resulting from factors which include, inter alia, general industry and economic conditions, cost of capital and capital availability, occupancy rates, stabilization period of occupancy, changes in operating expenses, and public policy. The value of the units in the ASA I-REIT and the realized capital gain may fall and rise as they are subject to investment risks.",
+          "value": "This report contains forward-looking statements that involve assumptions, risks and uncertainties. Actual future performance, outcomes and results may differ materially from those expressed in the forward-looking statements resulting from factors which include, inter alia, general industry and economic conditions, cost of capital and capital availability, occupancy rates, stabilization period of occupancy, changes in operating expenses, and public policy. The value of the units in the ASA I-REIT and the realized capital gain may fall and rise as they are subject to investment risks.",
+          "bbox": [
+            {
+              "h": 99.31445501560114,
+              "w": 344.7955048024247,
+              "x": 772.9185920707889,
+              "y": 683.630110505788,
+              "confidence": 0.96,
+              "end_index": 588,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        }
+      ],
+      "page_height": 841.89,
+      "page_number": 2,
+      "page_width": 1190.55,
+      "success": true
+    },
+    {
+      "items": [
+        {
+          "level": 1,
+          "md": "# Table of Contents",
+          "value": "Table of Contents",
+          "bbox": [
+            {
+              "h": 95.82945673470844,
+              "w": 265.3921067778424,
+              "x": 69.28943700669451,
+              "y": 247.37725167176785,
+              "confidence": 0.96,
+              "end_index": 18,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "level": 2,
+          "md": "## ![1](page_3_image_1_v2.jpg) ASA I-REIT AT A GLANCE",
+          "value": "1 ASA I-REIT AT A GLANCE",
+          "bbox": [
+            {
+              "h": 46.872000000000014,
+              "w": 124.09400000000002,
+              "x": 130.587,
+              "y": 402.928,
+              "confidence": 0.76,
+              "end_index": 52,
+              "label": "image",
+              "start_index": 0
+            },
+            {
+              "h": 91.498,
+              "w": 39.715,
+              "x": 71.826,
+              "y": 408.364,
+              "confidence": 1.0,
+              "end_index": 29,
+              "label": "image",
+              "start_index": 3
+            },
+            {
+              "h": 46.87,
+              "w": 124.09,
+              "x": 130.59,
+              "y": 402.93,
+              "confidence": 1.0,
+              "end_index": 52,
+              "label": "paragraph_title",
+              "start_index": 31
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "items": [
+            {
+              "md": "Who We Are 8",
+              "value": "Who We Are 8",
+              "bbox": [
+                {
+                  "h": 31.19999999999999,
+                  "w": 145.731,
+                  "x": 130.587,
+                  "y": 445.209,
+                  "confidence": 0.47,
+                  "end_index": 11,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Structure Of The Asa I-Reit 9",
+              "value": "Structure Of The Asa I-Reit 9",
+              "bbox": [
+                {
+                  "h": 20.099999999999966,
+                  "w": 88.607,
+                  "x": 130.587,
+                  "y": 456.309,
+                  "confidence": 0.51,
+                  "end_index": 28,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "ASA I-REIT At A Glance 10",
+              "value": "ASA I-REIT At A Glance 10",
+              "bbox": [
+                {
+                  "h": 32.626095001071846,
+                  "w": 123.35172313708796,
+                  "x": 128.5678054370415,
+                  "y": 407.7333688601611,
+                  "confidence": 0.69,
+                  "end_index": 24,
+                  "label": "paragraph_title",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Key Operational Highlights 11",
+              "value": "Key Operational Highlights 11",
+              "bbox": [
+                {
+                  "h": 8.914400712176064,
+                  "w": 90.57491096905963,
+                  "x": 129.1439180379728,
+                  "y": 478.6079178133337,
+                  "confidence": 0.74,
+                  "end_index": 28,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "What Qwetu Means To Our Residents 12",
+              "value": "What Qwetu Means To Our Residents 12",
+              "bbox": [
+                {
+                  "h": 8.651711139958058,
+                  "w": 123.43996729632123,
+                  "x": 129.56619265895938,
+                  "y": 489.7905226657775,
+                  "confidence": 0.74,
+                  "end_index": 35,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Key Financial Highlights 13",
+              "value": "Key Financial Highlights 13",
+              "bbox": [
+                {
+                  "h": 42.30000000000001,
+                  "w": 89.23100000000002,
+                  "x": 130.587,
+                  "y": 467.409,
+                  "confidence": 0.51,
+                  "end_index": 26,
+                  "label": "text",
+                  "start_index": 0
+                },
+                {
+                  "h": 9.0,
+                  "w": 34.0,
+                  "x": 185.82,
+                  "y": 478.51,
+                  "confidence": 1.0,
+                  "end_index": 23,
+                  "label": "text",
+                  "start_index": 11
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Investment Case 14",
+              "value": "Investment Case 14",
+              "bbox": [
+                {
+                  "h": 53.39999999999998,
+                  "w": 149.731,
+                  "x": 130.587,
+                  "y": 467.409,
+                  "confidence": 0.49,
+                  "end_index": 17,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            }
+          ],
+          "md": "* Who We Are 8\n* Structure Of The Asa I-Reit 9\n* ASA I-REIT At A Glance 10\n* Key Operational Highlights 11\n* What Qwetu Means To Our Residents 12\n* Key Financial Highlights 13\n* Investment Case 14",
+          "ordered": false,
+          "bbox": [
+            {
+              "h": 113.08,
+              "w": 151.75,
+              "x": 128.57,
+              "y": 407.73,
+              "confidence": 0.64,
+              "end_index": 195,
+              "label": "list",
+              "start_index": 0
+            }
+          ],
+          "type": "list"
+        },
+        {
+          "level": 2,
+          "md": "## 2 STRATEGIC REPORT",
+          "value": "2 STRATEGIC REPORT",
+          "bbox": [
+            {
+              "h": 31.36365604069407,
+              "w": 91.05634586390059,
+              "x": 407.718216109113,
+              "y": 407.1766324013315,
+              "confidence": 0.9,
+              "end_index": 20,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "items": [
+            {
+              "md": "Chairperson\u2019s Statement 18",
+              "value": "Chairperson\u2019s Statement 18",
+              "bbox": [
+                {
+                  "h": 20.100000000000023,
+                  "w": 102.90199999999999,
+                  "x": 409.363,
+                  "y": 445.209,
+                  "confidence": 0.48,
+                  "end_index": 25,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Executive Director\u2019s Statement 20",
+              "value": "Executive Director\u2019s Statement 20",
+              "bbox": [
+                {
+                  "h": 20.100000000000023,
+                  "w": 149.73100000000005,
+                  "x": 409.363,
+                  "y": 445.209,
+                  "confidence": 0.49,
+                  "end_index": 32,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Macroeconomic Review 26",
+              "value": "Macroeconomic Review 26",
+              "bbox": [
+                {
+                  "h": 9.0,
+                  "w": 80.47500000000002,
+                  "x": 409.363,
+                  "y": 467.409,
+                  "confidence": 0.47,
+                  "end_index": 22,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Our Business Model 30",
+              "value": "Our Business Model 30",
+              "bbox": [
+                {
+                  "h": 9.0,
+                  "w": 149.738,
+                  "x": 409.363,
+                  "y": 478.509,
+                  "confidence": 0.46,
+                  "end_index": 20,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "ASA I-REIT Returns 31",
+              "value": "ASA I-REIT Returns 31",
+              "bbox": [
+                {
+                  "h": 9.0,
+                  "w": 149.73100000000005,
+                  "x": 409.363,
+                  "y": 489.609,
+                  "confidence": 0.46,
+                  "end_index": 20,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Sustainability Report 34",
+              "value": "Sustainability Report 34",
+              "bbox": [
+                {
+                  "h": 9.0,
+                  "w": 70.476,
+                  "x": 409.363,
+                  "y": 500.709,
+                  "confidence": 0.48,
+                  "end_index": 23,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Highlights of 2023 36",
+              "value": "Highlights of 2023 36",
+              "bbox": [
+                {
+                  "h": 64.49999999999994,
+                  "w": 149.73100000000005,
+                  "x": 409.363,
+                  "y": 456.309,
+                  "confidence": 0.46,
+                  "end_index": 20,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            }
+          ],
+          "md": "* Chairperson\u2019s Statement 18\n* Executive Director\u2019s Statement 20\n* Macroeconomic Review 26\n* Our Business Model 30\n* ASA I-REIT Returns 31\n* Sustainability Report 34\n* Highlights of 2023 36",
+          "ordered": false,
+          "bbox": [
+            {
+              "h": 75.6,
+              "w": 149.74,
+              "x": 409.36,
+              "y": 445.21,
+              "confidence": 0.47,
+              "end_index": 188,
+              "label": "list",
+              "start_index": 0
+            }
+          ],
+          "type": "list"
+        },
+        {
+          "level": 2,
+          "md": "## 3 REPORTING",
+          "value": "3 REPORTING",
+          "bbox": [
+            {
+              "h": 93.44979000000001,
+              "w": 167.86755,
+              "x": 54.765299999999996,
+              "y": 629.73372,
+              "confidence": 0.91,
+              "end_index": 13,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "items": [
+            {
+              "md": "Environmental Performance Measures and Impact 40",
+              "value": "Environmental Performance Measures and Impact 40",
+              "bbox": [
+                {
+                  "h": 97.79999999999995,
+                  "w": 127.95399999999998,
+                  "x": 131.342,
+                  "y": 655.368,
+                  "confidence": 0.6,
+                  "end_index": 47,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Health And Safety Report 51",
+              "value": "Health And Safety Report 51",
+              "bbox": [
+                {
+                  "h": 42.30000000000007,
+                  "w": 84.56299999999999,
+                  "x": 131.342,
+                  "y": 666.468,
+                  "confidence": 0.57,
+                  "end_index": 26,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Risk Management 55",
+              "value": "Risk Management 55",
+              "bbox": [
+                {
+                  "h": 9.0,
+                  "w": 149.73799999999997,
+                  "x": 131.342,
+                  "y": 688.668,
+                  "confidence": 0.56,
+                  "end_index": 17,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Report Of The Reit Manager 59",
+              "value": "Report Of The Reit Manager 59",
+              "bbox": [
+                {
+                  "h": 31.200000000000045,
+                  "w": 91.81199999999998,
+                  "x": 131.342,
+                  "y": 677.568,
+                  "confidence": 0.57,
+                  "end_index": 28,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "ASA I-REIT Assets 61",
+              "value": "ASA I-REIT Assets 61",
+              "bbox": [
+                {
+                  "h": 75.60000000000002,
+                  "w": 148.73099999999997,
+                  "x": 131.342,
+                  "y": 699.768,
+                  "confidence": 0.56,
+                  "end_index": 19,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Property Highlights 64",
+              "value": "Property Highlights 64",
+              "bbox": [
+                {
+                  "h": 9.0,
+                  "w": 65.27099999999999,
+                  "x": 131.342,
+                  "y": 721.968,
+                  "confidence": 0.57,
+                  "end_index": 21,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Portfolio Update 65",
+              "value": "Portfolio Update 65",
+              "bbox": [
+                {
+                  "h": 9.0,
+                  "w": 149.73099999999997,
+                  "x": 131.342,
+                  "y": 733.068,
+                  "confidence": 0.56,
+                  "end_index": 18,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Financial Performance 73",
+              "value": "Financial Performance 73",
+              "bbox": [
+                {
+                  "h": 97.79999999999995,
+                  "w": 95.84799999999998,
+                  "x": 131.342,
+                  "y": 655.368,
+                  "confidence": 0.57,
+                  "end_index": 23,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Compliance With Regulatory Limits 82",
+              "value": "Compliance With Regulatory Limits 82",
+              "bbox": [
+                {
+                  "h": 20.100000000000023,
+                  "w": 149.73099999999997,
+                  "x": 131.342,
+                  "y": 755.268,
+                  "confidence": 0.58,
+                  "end_index": 35,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Asset Holdings Versus Prescribed Limits 83",
+              "value": "Asset Holdings Versus Prescribed Limits 83",
+              "bbox": [
+                {
+                  "h": 20.100000000000023,
+                  "w": 149.73099999999997,
+                  "x": 131.342,
+                  "y": 755.268,
+                  "confidence": 0.59,
+                  "end_index": 41,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            }
+          ],
+          "md": "* Environmental Performance Measures and Impact 40\n* Health And Safety Report 51\n* Risk Management 55\n* Report Of The Reit Manager 59\n* ASA I-REIT Assets 61\n* Property Highlights 64\n* Portfolio Update 65\n* Financial Performance 73\n* Compliance With Regulatory Limits 82\n* Asset Holdings Versus Prescribed Limits 83",
+          "ordered": false,
+          "bbox": [
+            {
+              "h": 120.0,
+              "w": 149.74,
+              "x": 131.34,
+              "y": 655.37,
+              "confidence": 0.57,
+              "end_index": 313,
+              "label": "list",
+              "start_index": 0
+            }
+          ],
+          "type": "list"
+        },
+        {
+          "level": 2,
+          "md": "## 4 GOVERNANCE",
+          "value": "4 GOVERNANCE",
+          "bbox": [
+            {
+              "h": 27.0,
+              "w": 112.0,
+              "x": 410.36,
+              "y": 629.5,
+              "confidence": 1.0,
+              "end_index": 14,
+              "label": "paragraph_title",
+              "start_index": 5
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "items": [
+            {
+              "md": "REIT Manager\u2019s Board Of Directors 88",
+              "value": "REIT Manager\u2019s Board Of Directors 88",
+              "bbox": [
+                {
+                  "h": 53.40000000000009,
+                  "w": 149.73000000000002,
+                  "x": 410.361,
+                  "y": 662.314,
+                  "confidence": 0.58,
+                  "end_index": 35,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "REIT Management Team 92",
+              "value": "REIT Management Team 92",
+              "bbox": [
+                {
+                  "h": 42.30000000000007,
+                  "w": 79.77699999999999,
+                  "x": 410.361,
+                  "y": 662.314,
+                  "confidence": 0.56,
+                  "end_index": 22,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Corporate Governance Report 98",
+              "value": "Corporate Governance Report 98",
+              "bbox": [
+                {
+                  "h": 31.200000000000045,
+                  "w": 109.457,
+                  "x": 410.361,
+                  "y": 684.514,
+                  "confidence": 0.58,
+                  "end_index": 29,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Reit Manager Compliance Report 105",
+              "value": "Reit Manager Compliance Report 105",
+              "bbox": [
+                {
+                  "h": 65.11793758336513,
+                  "w": 152.8645825329292,
+                  "x": 409.0585206477467,
+                  "y": 662.2133906303593,
+                  "confidence": 0.58,
+                  "end_index": 33,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Report Of The Trustee 106",
+              "value": "Report Of The Trustee 106",
+              "bbox": [
+                {
+                  "h": 53.40000000000009,
+                  "w": 153.731,
+                  "x": 410.361,
+                  "y": 662.314,
+                  "confidence": 0.56,
+                  "end_index": 24,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Shariah Compliance 108",
+              "value": "Shariah Compliance 108",
+              "bbox": [
+                {
+                  "h": 31.199999999999932,
+                  "w": 153.731,
+                  "x": 410.361,
+                  "y": 695.614,
+                  "confidence": 0.56,
+                  "end_index": 21,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            }
+          ],
+          "md": "* REIT Manager\u2019s Board Of Directors 88\n* REIT Management Team 92\n* Corporate Governance Report 98\n* Reit Manager Compliance Report 105\n* Report Of The Trustee 106\n* Shariah Compliance 108",
+          "ordered": false,
+          "bbox": [
+            {
+              "h": 65.12,
+              "w": 155.03,
+              "x": 409.06,
+              "y": 662.21,
+              "confidence": 0.57,
+              "end_index": 186,
+              "label": "list",
+              "start_index": 0
+            }
+          ],
+          "type": "list"
+        },
+        {
+          "level": 2,
+          "md": "## 5 FINANCIAL STATEMENTS",
+          "value": "5 FINANCIAL STATEMENTS",
+          "bbox": [
+            {
+              "h": 43.87,
+              "w": 104.0,
+              "x": 744.59,
+              "y": 382.48,
+              "confidence": 1.0,
+              "end_index": 24,
+              "label": "paragraph_title",
+              "start_index": 5
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "items": [
+            {
+              "md": "Report of the REIT Manager 114",
+              "value": "Report of the REIT Manager 114",
+              "bbox": [
+                {
+                  "h": 75.60000000000002,
+                  "w": 152.99799999999993,
+                  "x": 744.594,
+                  "y": 424.313,
+                  "confidence": 0.52,
+                  "end_index": 29,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Certification of the Financial Statements by the Trustee 118",
+              "value": "Certification of the Financial Statements by the Trustee 118",
+              "bbox": [
+                {
+                  "h": 75.60000000000002,
+                  "w": 152.99799999999993,
+                  "x": 744.594,
+                  "y": 424.313,
+                  "confidence": 0.57,
+                  "end_index": 59,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Statement of REIT Manager\u2019s responsibilities 119",
+              "value": "Statement of REIT Manager\u2019s responsibilities 119",
+              "bbox": [
+                {
+                  "h": 75.60000000000002,
+                  "w": 95.05799999999999,
+                  "x": 744.594,
+                  "y": 424.313,
+                  "confidence": 0.55,
+                  "end_index": 47,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Independent Auditor\u2019s Report 120",
+              "value": "Independent Auditor\u2019s Report 120",
+              "bbox": [
+                {
+                  "h": 75.60000000000002,
+                  "w": 152.99799999999993,
+                  "x": 744.594,
+                  "y": 424.313,
+                  "confidence": 0.53,
+                  "end_index": 31,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Consolidated Statement Of Profit or Loss and Other Comprehensive Income 125",
+              "value": "Consolidated Statement Of Profit or Loss and Other Comprehensive Income 125",
+              "bbox": [
+                {
+                  "h": 84.69999999999999,
+                  "w": 153.0,
+                  "x": 744.594,
+                  "y": 424.313,
+                  "confidence": 0.59,
+                  "end_index": 74,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "The ASA-IREIT Statement of Profit or Loss and Other Comprehensive Income 127",
+              "value": "The ASA-IREIT Statement of Profit or Loss and Other Comprehensive Income 127",
+              "bbox": [
+                {
+                  "h": 16.99,
+                  "w": 137.11,
+                  "x": 925.62,
+                  "y": 424.31,
+                  "confidence": 1.0,
+                  "end_index": 71,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "The ASA-IREIT Statement of Financial Position 128",
+              "value": "The ASA-IREIT Statement of Financial Position 128",
+              "bbox": [
+                {
+                  "h": 82.92949373809067,
+                  "w": 193.56908407667214,
+                  "x": 924.3501064721085,
+                  "y": 424.9047946431975,
+                  "confidence": 0.58,
+                  "end_index": 48,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Consolidated Statement of changes in Trust\u2019s Equity 129",
+              "value": "Consolidated Statement of changes in Trust\u2019s Equity 129",
+              "bbox": [
+                {
+                  "h": 82.92949373809067,
+                  "w": 193.56908407667214,
+                  "x": 924.3501064721085,
+                  "y": 424.9047946431975,
+                  "confidence": 0.59,
+                  "end_index": 54,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "The ASA-IREIT Statement of changes in Trust\u2019s Equity 130",
+              "value": "The ASA-IREIT Statement of changes in Trust\u2019s Equity 130",
+              "bbox": [
+                {
+                  "h": 82.92949373809067,
+                  "w": 193.56908407667214,
+                  "x": 924.3501064721085,
+                  "y": 424.9047946431975,
+                  "confidence": 0.59,
+                  "end_index": 55,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Consolidated Statement of Cash Flows 131",
+              "value": "Consolidated Statement of Cash Flows 131",
+              "bbox": [
+                {
+                  "h": 83.59199999999998,
+                  "w": 129.83299999999997,
+                  "x": 925.622,
+                  "y": 424.313,
+                  "confidence": 0.57,
+                  "end_index": 39,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "The ASA-IREIT Statement of Cash Flows 132",
+              "value": "The ASA-IREIT Statement of Cash Flows 132",
+              "bbox": [
+                {
+                  "h": 83.59199999999998,
+                  "w": 129.83299999999997,
+                  "x": 925.622,
+                  "y": 424.313,
+                  "confidence": 0.57,
+                  "end_index": 40,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Notes to the Financial Statements 133",
+              "value": "Notes to the Financial Statements 133",
+              "bbox": [
+                {
+                  "h": 83.59199999999998,
+                  "w": 129.98000000000013,
+                  "x": 925.622,
+                  "y": 424.313,
+                  "confidence": 0.57,
+                  "end_index": 36,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            }
+          ],
+          "md": "* Report of the REIT Manager 114\n\n* Certification of the Financial Statements by the Trustee 118\n\n* Statement of REIT Manager\u2019s responsibilities 119\n\n* Independent Auditor\u2019s Report 120\n\n* Consolidated Statement Of Profit or Loss and Other Comprehensive Income 125\n\n* The ASA-IREIT Statement of Profit or Loss and Other Comprehensive Income 127\n\n* The ASA-IREIT Statement of Financial Position 128\n\n* Consolidated Statement of changes in Trust\u2019s Equity 129\n\n* The ASA-IREIT Statement of changes in Trust\u2019s Equity 130\n\n* Consolidated Statement of Cash Flows 131\n\n* The ASA-IREIT Statement of Cash Flows 132\n\n* Notes to the Financial Statements 133",
+          "ordered": false,
+          "bbox": [
+            {
+              "h": 84.7,
+              "w": 153.0,
+              "x": 744.59,
+              "y": 424.31,
+              "confidence": 0.55,
+              "end_index": 343,
+              "label": "list",
+              "start_index": 0
+            },
+            {
+              "h": 83.59,
+              "w": 193.57,
+              "x": 924.35,
+              "y": 424.31,
+              "confidence": 0.64,
+              "end_index": 644,
+              "label": "list",
+              "start_index": 345
+            }
+          ],
+          "type": "list"
+        },
+        {
+          "level": 2,
+          "md": "## 6 OTHER INFORMATION",
+          "value": "6 OTHER INFORMATION",
+          "bbox": [
+            {
+              "h": 31.093171005025727,
+              "w": 114.40115298089741,
+              "x": 743.990175212581,
+              "y": 634.4993901033728,
+              "confidence": 0.87,
+              "end_index": 21,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "items": [
+            {
+              "md": "Glossary 180",
+              "value": "Glossary 180",
+              "bbox": [
+                {
+                  "h": 9.0,
+                  "w": 153.73800000000006,
+                  "x": 744.487,
+                  "y": 671.267,
+                  "confidence": 0.57,
+                  "end_index": 11,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "Our Information 183",
+              "value": "Our Information 183",
+              "bbox": [
+                {
+                  "h": 9.0,
+                  "w": 153.731,
+                  "x": 744.487,
+                  "y": 682.367,
+                  "confidence": 0.64,
+                  "end_index": 18,
+                  "label": "reference",
+                  "start_index": 0
+                },
+                {
+                  "h": 9.0,
+                  "w": 54.39,
+                  "x": 744.49,
+                  "y": 682.37,
+                  "confidence": 1.0,
+                  "end_index": 14,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            }
+          ],
+          "md": "* Glossary 180\n* Our Information 183",
+          "ordered": false,
+          "bbox": [
+            {
+              "h": 20.1,
+              "w": 153.74,
+              "x": 744.49,
+              "y": 671.27,
+              "confidence": 0.74,
+              "end_index": 35,
+              "label": "list",
+              "start_index": 0
+            }
+          ],
+          "type": "list"
+        }
+      ],
+      "page_height": 841.89,
+      "page_number": 3,
+      "page_width": 1190.55,
+      "success": true
+    },
+    {
+      "items": [
+        {
+          "caption": "A vibrant reception area of Qwetu Student Residences with staff and students at an orange desk, featuring colorful wall graphics and the text \"Karibu Qwetu\" and \"Comfort\".",
+          "md": "![A vibrant reception area of Qwetu Student Residences with staff and students at an orange desk, featuring colorful wall graphics and the text \"Karibu Qwetu\" and \"Comfort\".](page_4_image_1_v2.jpg)",
+          "url": "page_4_image_1_v2.jpg",
+          "bbox": [
+            {
+              "h": 841.7856662068815,
+              "w": 919.997694745058,
+              "x": -0.21586734652519227,
+              "y": 0.31849597871303564,
+              "confidence": 0.88,
+              "end_index": 196,
+              "label": "image",
+              "start_index": 0
+            }
+          ],
+          "type": "image"
+        },
+        {
+          "level": 1,
+          "md": "# 1 ASA I-REIT AT A GLANCE",
+          "value": "1 ASA I-REIT AT A GLANCE",
+          "bbox": [
+            {
+              "h": 60.358293298042184,
+              "w": 205.05950510313463,
+              "x": 860.6525338194313,
+              "y": 412.2153843571361,
+              "confidence": 0.82,
+              "end_index": 25,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "items": [
+            {
+              "md": "**Who We Are** 8",
+              "value": "Who We Are 8",
+              "bbox": [
+                {
+                  "h": 65.19999999999999,
+                  "w": 280.9559999999999,
+                  "x": 861.914,
+                  "y": 502.705,
+                  "confidence": 0.57,
+                  "end_index": 15,
+                  "label": "reference",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "**Structure Of The Asa I-Reit** 9",
+              "value": "Structure Of The Asa I-Reit 9",
+              "bbox": [
+                {
+                  "h": 15.0,
+                  "w": 141.68,
+                  "x": 861.91,
+                  "y": 527.8,
+                  "confidence": 1.0,
+                  "end_index": 30,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "**Asa I-Reit At A Glance** 10",
+              "value": "Asa I-Reit At A Glance 10",
+              "bbox": [
+                {
+                  "h": 40.10000000000002,
+                  "w": 286.9559999999999,
+                  "x": 861.914,
+                  "y": 527.805,
+                  "confidence": 0.59,
+                  "end_index": 28,
+                  "label": "reference",
+                  "start_index": 0
+                },
+                {
+                  "h": 15.0,
+                  "w": 114.06,
+                  "x": 861.91,
+                  "y": 552.91,
+                  "confidence": 1.0,
+                  "end_index": 25,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "**Key Operational Highlights** 11",
+              "value": "Key Operational Highlights 11",
+              "bbox": [
+                {
+                  "h": 15.0,
+                  "w": 142.46,
+                  "x": 861.91,
+                  "y": 578.01,
+                  "confidence": 1.0,
+                  "end_index": 29,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "**What Qwetu Means To Our Residents** 12",
+              "value": "What Qwetu Means To Our Residents 12",
+              "bbox": [
+                {
+                  "h": 15.0,
+                  "w": 197.9,
+                  "x": 861.91,
+                  "y": 603.11,
+                  "confidence": 1.0,
+                  "end_index": 36,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "**Key Financial Highlights** 13",
+              "value": "Key Financial Highlights 13",
+              "bbox": [
+                {
+                  "h": 15.0,
+                  "w": 125.97,
+                  "x": 861.91,
+                  "y": 628.21,
+                  "confidence": 1.0,
+                  "end_index": 27,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            },
+            {
+              "md": "**Investment Case** 14",
+              "value": "Investment Case 14",
+              "bbox": [
+                {
+                  "h": 15.0,
+                  "w": 286.9559999999999,
+                  "x": 861.914,
+                  "y": 653.305,
+                  "confidence": 0.59,
+                  "end_index": 21,
+                  "label": "reference",
+                  "start_index": 0
+                },
+                {
+                  "h": 15.0,
+                  "w": 88.49,
+                  "x": 861.91,
+                  "y": 653.3,
+                  "confidence": 1.0,
+                  "end_index": 18,
+                  "label": "text",
+                  "start_index": 0
+                }
+              ],
+              "type": "text"
+            }
+          ],
+          "md": "* **Who We Are** 8\n* **Structure Of The Asa I-Reit** 9\n* **Asa I-Reit At A Glance** 10\n* **Key Operational Highlights** 11\n* **What Qwetu Means To Our Residents** 12\n* **Key Financial Highlights** 13\n* **Investment Case** 14",
+          "ordered": false,
+          "bbox": [
+            {
+              "h": 165.6,
+              "w": 286.96,
+              "x": 861.91,
+              "y": 502.71,
+              "confidence": 0.86,
+              "end_index": 223,
+              "label": "list",
+              "start_index": 0
+            }
+          ],
+          "type": "list"
+        }
+      ],
+      "page_height": 841.89,
+      "page_number": 4,
+      "page_width": 1190.55,
+      "success": true
+    },
+    {
+      "items": [
+        {
+          "items": [
+            {
+              "md": "8 | 2023 Annual Report and Financial Statements\n2023 Annual Report and Financial Statements | 9",
+              "value": "8 | 2023 Annual Report and Financial Statements\n2023 Annual Report and Financial Statements | 9",
+              "bbox": [
+                {
+                  "h": 8.430959782484104,
+                  "w": 162.04872765889982,
+                  "x": 36.64961242005884,
+                  "y": 29.092657063851707,
+                  "confidence": 0.87,
+                  "end_index": 46,
+                  "label": "header",
+                  "start_index": 0
+                },
+                {
+                  "h": 8.312852871406374,
+                  "w": 159.15056544755151,
+                  "x": 995.1492514588891,
+                  "y": 29.19797415105308,
+                  "confidence": 0.87,
+                  "end_index": 94,
+                  "label": "header",
+                  "start_index": 48
+                }
+              ],
+              "type": "text"
+            }
+          ],
+          "md": "8 | 2023 Annual Report and Financial Statements\n2023 Annual Report and Financial Statements | 9",
+          "bbox": [
+            {
+              "h": 8.43,
+              "w": 1117.65,
+              "x": 36.65,
+              "y": 29.09,
+              "confidence": null,
+              "end_index": null,
+              "label": null,
+              "start_index": null
+            }
+          ],
+          "type": "header"
+        },
+        {
+          "level": 1,
+          "md": "# WHO WE ARE",
+          "value": "WHO WE ARE",
+          "bbox": [
+            {
+              "h": 27.1423373849264,
+              "w": 227.79034271537967,
+              "x": 75.56929210085985,
+              "y": 85.23499578708557,
+              "confidence": 0.97,
+              "end_index": 11,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "md": "We are Kenya\u2019s largest owner and operator of purpose-built student accommodation, (\u201cPBSA\u201d). We are also Africa\u2019s first Student Accommodation Income Real Estate Investment Trust (\u201cI-REIT\u201d).",
+          "value": "We are Kenya\u2019s largest owner and operator of purpose-built student accommodation, (\u201cPBSA\u201d). We are also Africa\u2019s first Student Accommodation Income Real Estate Investment Trust (\u201cI-REIT\u201d).",
+          "bbox": [
+            {
+              "h": 52.93716248809069,
+              "w": 452.2387679956948,
+              "x": 74.97402064551378,
+              "y": 164.19687435272965,
+              "confidence": 0.99,
+              "end_index": 187,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "caption": "Mission icon",
+          "md": "![Mission icon](page_5_image_3_v2.jpg)",
+          "url": "page_5_image_3_v2.jpg",
+          "bbox": [
+            {
+              "h": 49.79200630835559,
+              "w": 49.17898923250524,
+              "x": 70.91283089949445,
+              "y": 279.22658263147866,
+              "confidence": 0.89,
+              "end_index": 37,
+              "label": "image",
+              "start_index": 0
+            }
+          ],
+          "type": "image"
+        },
+        {
+          "level": 2,
+          "md": "## Mission",
+          "value": "Mission",
+          "bbox": [
+            {
+              "h": 14.80396107922068,
+              "w": 60.21148528122318,
+              "x": 138.57979562340714,
+              "y": 284.0756115555926,
+              "confidence": 0.85,
+              "end_index": 9,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "md": "Transform and improve the living conditions of the people of Urban Africa by creating sustainable and resilient communities using innovative and ground-breaking capital market products and financial instruments.",
+          "value": "Transform and improve the living conditions of the people of Urban Africa by creating sustainable and resilient communities using innovative and ground-breaking capital market products and financial instruments.",
+          "bbox": [
+            {
+              "h": 42.83737508128093,
+              "w": 385.8986381255359,
+              "x": 137.61282289681785,
+              "y": 302.7582292870499,
+              "confidence": 0.91,
+              "end_index": 210,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "caption": "Vision icon",
+          "md": "![Vision icon](page_5_image_4_v2.jpg)",
+          "url": "page_5_image_4_v2.jpg",
+          "bbox": [
+            {
+              "h": 51.14530878965801,
+              "w": 51.3345730334026,
+              "x": 69.75460637087939,
+              "y": 371.1309859202315,
+              "confidence": 0.86,
+              "end_index": 36,
+              "label": "image",
+              "start_index": 0
+            }
+          ],
+          "type": "image"
+        },
+        {
+          "level": 2,
+          "md": "## Vision",
+          "value": "Vision",
+          "bbox": [
+            {
+              "h": 15.317709692978294,
+              "w": 49.81320757275093,
+              "x": 137.96846688582258,
+              "y": 372.6110210806498,
+              "confidence": 0.86,
+              "end_index": 8,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "md": "To become the premier developer, owner, and manager of rental housing in sub-Saharan Africa conducting our activities in a sustainable, responsible, and environmentally conscious way.",
+          "value": "To become the premier developer, owner, and manager of rental housing in sub-Saharan Africa conducting our activities in a sustainable, responsible, and environmentally conscious way.",
+          "bbox": [
+            {
+              "h": 42.75054715397534,
+              "w": 386.06474946966404,
+              "x": 137.28858454150688,
+              "y": 392.2384189033323,
+              "confidence": 0.9,
+              "end_index": 182,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "caption": "Unique Value Proposition icon",
+          "md": "![Unique Value Proposition icon](page_5_image_2_v2.jpg)",
+          "url": "page_5_image_2_v2.jpg",
+          "bbox": [
+            {
+              "h": 50.321546375404985,
+              "w": 50.4632262078262,
+              "x": 73.96982019117402,
+              "y": 464.09817908131674,
+              "confidence": 0.91,
+              "end_index": 54,
+              "label": "image",
+              "start_index": 0
+            }
+          ],
+          "type": "image"
+        },
+        {
+          "level": 2,
+          "md": "## Unique Value Proposition",
+          "value": "Unique Value Proposition",
+          "bbox": [
+            {
+              "h": 19.045846222965885,
+              "w": 195.63768207047627,
+              "x": 138.92359160669838,
+              "y": 471.32304468607094,
+              "confidence": 0.91,
+              "end_index": 26,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "level": 3,
+          "md": "### Creating communities",
+          "value": "Creating communities",
+          "bbox": [
+            {
+              "h": 12.543126283822444,
+              "w": 115.9388770193705,
+              "x": 138.30890430952863,
+              "y": 505.3690670618569,
+              "confidence": 0.9,
+              "end_index": 23,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "md": "We create the places and residences that provide the common ground for like-minded young people to form homogenous communities that have shared lifestyles, interests, and values.",
+          "value": "We create the places and residences that provide the common ground for like-minded young people to form homogenous communities that have shared lifestyles, interests, and values.",
+          "bbox": [
+            {
+              "h": 42.08893539264962,
+              "w": 385.3796121759182,
+              "x": 138.13610243113447,
+              "y": 520.960194488972,
+              "confidence": 0.95,
+              "end_index": 177,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "level": 3,
+          "md": "### Creating wealth and financial freedom",
+          "value": "Creating wealth and financial freedom",
+          "bbox": [
+            {
+              "h": 12.522822986733093,
+              "w": 202.0435008723561,
+              "x": 138.5477608136433,
+              "y": 580.4843982636243,
+              "confidence": 0.94,
+              "end_index": 40,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "md": "We have created various investment products and capital market issuances for institutional and retail investors to accumulate wealth and achieve financial freedom.",
+          "value": "We have created various investment products and capital market issuances for institutional and retail investors to accumulate wealth and achieve financial freedom.",
+          "bbox": [
+            {
+              "h": 39.81657032976853,
+              "w": 385.3554287745778,
+              "x": 138.05830613931795,
+              "y": 595.8585561356708,
+              "confidence": 0.96,
+              "end_index": 162,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "level": 1,
+          "md": "# STRUCTURE OF THE ASA I-REIT",
+          "value": "STRUCTURE OF THE ASA I-REIT",
+          "bbox": [
+            {
+              "h": 26.97662112210902,
+              "w": 521.2249820139815,
+              "x": 631.5667973305307,
+              "y": 85.28275240039362,
+              "confidence": 0.98,
+              "end_index": 28,
+              "label": "paragraph_title",
+              "start_index": 0
+            }
+          ],
+          "type": "heading"
+        },
+        {
+          "md": "The ASA I-REIT is held in trust by the Trustee (Co-operative Bank of Kenya, \u201cCo-op Bank\u201d) and professionally managed by a REIT Manager (Acorn Investment Management Limited, \u201cAIML\u201d). The properties in the ASA I-REIT are professionally managed by a Property Manager (Acorn Management Services Limited, \u201cAMSL\u201d)",
+          "value": "The ASA I-REIT is held in trust by the Trustee (Co-operative Bank of Kenya, \u201cCo-op Bank\u201d) and professionally managed by a REIT Manager (Acorn Investment Management Limited, \u201cAIML\u201d). The properties in the ASA I-REIT are professionally managed by a Property Manager (Acorn Management Services Limited, \u201cAMSL\u201d)",
+          "bbox": [
+            {
+              "h": 72.24215147273368,
+              "w": 524.4258044999286,
+              "x": 630.1198696021103,
+              "y": 164.10785316802236,
+              "confidence": 0.98,
+              "end_index": 306,
+              "label": "text",
+              "start_index": 0
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "md": "```mermaid\ngraph TD\n    Trustee[Trustee<br/>CO-OP BANK] -->| | REIT_IREIT[acorn i-reit<br/>Student Accommodation]\n    \n    REIT_Manager[REIT Manager<br/>acorn<br/>Acorn Investment Management Ltd] -->|REIT Management| REIT_IREIT\n    \n    REIT_IREIT --> Properties\n    \n    subgraph Properties [ ]\n        direction LR\n        P1[Qwetu Jogoo Road]\n        P2[Qwetu Ruaraka]\n        P3[Qwetu Wilson View]\n        P4[Qwetu Hurlingham]\n        P5[Qwetu Parklands]\n        P6[Qwetu Aberdare Heights I]\n        P7[Qwetu Aberdare Heights II]\n    end\n    \n    Properties -->|Property Management| Property_Manager[Property Manager<br/>acorn<br/>Acorn Management Services Ltd]\n```",
+          "value": "graph TD\n    Trustee[Trustee<br/>CO-OP BANK] -->| | REIT_IREIT[acorn i-reit<br/>Student Accommodation]\n    \n    REIT_Manager[REIT Manager<br/>acorn<br/>Acorn Investment Management Ltd] -->|REIT Management| REIT_IREIT\n    \n    REIT_IREIT --> Properties\n    \n    subgraph Properties [ ]\n        direction LR\n        P1[Qwetu Jogoo Road]\n        P2[Qwetu Ruaraka]\n        P3[Qwetu Wilson View]\n        P4[Qwetu Hurlingham]\n        P5[Qwetu Parklands]\n        P6[Qwetu Aberdare Heights I]\n        P7[Qwetu Aberdare Heights II]\n    end\n    \n    Properties -->|Property Management| Property_Manager[Property Manager<br/>acorn<br/>Acorn Management Services Ltd]",
+          "bbox": [
+            {
+              "h": 532.07448,
+              "w": 428.59799999999996,
+              "x": 677.4229499999999,
+              "y": 263.51157,
+              "confidence": 0.93,
+              "end_index": 178,
+              "label": "image",
+              "start_index": 169
+            },
+            {
+              "h": 15.0,
+              "w": 3.0,
+              "x": 921.72,
+              "y": 579.57,
+              "confidence": 0.93,
+              "end_index": 18,
+              "label": "image",
+              "start_index": 11
+            },
+            {
+              "h": 530.29,
+              "w": 241.82,
+              "x": 682.9,
+              "y": 259.99,
+              "confidence": 0.93,
+              "end_index": 30,
+              "label": "image",
+              "start_index": 24
+            },
+            {
+              "h": 431.96,
+              "w": 292.3,
+              "x": 682.9,
+              "y": 366.24,
+              "confidence": 0.93,
+              "end_index": 178,
+              "label": "image",
+              "start_index": 169
+            },
+            {
+              "h": 228.33,
+              "w": 220.99,
+              "x": 703.73,
+              "y": 366.24,
+              "confidence": 0.93,
+              "end_index": 66,
+              "label": "image",
+              "start_index": 63
+            },
+            {
+              "h": 15.0,
+              "w": 3.0,
+              "x": 921.72,
+              "y": 579.57,
+              "confidence": 0.93,
+              "end_index": 65,
+              "label": "image",
+              "start_index": 65
+            },
+            {
+              "h": 15.0,
+              "w": 3.0,
+              "x": 921.72,
+              "y": 579.57,
+              "confidence": 0.93,
+              "end_index": 326,
+              "label": "image",
+              "start_index": 307
+            },
+            {
+              "h": 15.0,
+              "w": 52.47,
+              "x": 717.6,
+              "y": 552.09,
+              "confidence": 0.93,
+              "end_index": 338,
+              "label": "image",
+              "start_index": 334
+            },
+            {
+              "h": 15.0,
+              "w": 39.0,
+              "x": 837.12,
+              "y": 552.09,
+              "confidence": 0.93,
+              "end_index": 369,
+              "label": "image",
+              "start_index": 363
+            },
+            {
+              "h": 42.48,
+              "w": 68.21,
+              "x": 921.72,
+              "y": 552.09,
+              "confidence": 0.93,
+              "end_index": 394,
+              "label": "image",
+              "start_index": 389
+            },
+            {
+              "h": 42.48,
+              "w": 185.9,
+              "x": 921.72,
+              "y": 552.09,
+              "confidence": 0.93,
+              "end_index": 428,
+              "label": "image",
+              "start_index": 419
+            },
+            {
+              "h": 15.0,
+              "w": 46.0,
+              "x": 736.53,
+              "y": 579.57,
+              "confidence": 0.93,
+              "end_index": 456,
+              "label": "image",
+              "start_index": 448
+            },
+            {
+              "h": 15.0,
+              "w": 227.99,
+              "x": 841.13,
+              "y": 579.57,
+              "confidence": 0.93,
+              "end_index": 483,
+              "label": "image",
+              "start_index": 476
+            },
+            {
+              "h": 15.0,
+              "w": 232.27,
+              "x": 841.13,
+              "y": 579.57,
+              "confidence": 0.93,
+              "end_index": 483,
+              "label": "image",
+              "start_index": 476
+            },
+            {
+              "h": 414.93,
+              "w": 292.3,
+              "x": 682.9,
+              "y": 383.28,
+              "confidence": 0.93,
+              "end_index": 189,
+              "label": "image",
+              "start_index": 180
+            },
+            {
+              "h": 146.19,
+              "w": 116.15,
+              "x": 859.05,
+              "y": 644.09,
+              "confidence": 1.0,
+              "end_index": 576,
+              "label": "image",
+              "start_index": 566
+            },
+            {
+              "h": 42.04,
+              "w": 66.58,
+              "x": 859.05,
+              "y": 669.62,
+              "confidence": 1.0,
+              "end_index": 573,
+              "label": "paragraph_title",
+              "start_index": 566
+            }
+          ],
+          "language": "mermaid",
+          "type": "code"
+        }
+      ],
+      "page_height": 841.89,
+      "page_number": 5,
+      "page_width": 1190.55,
+      "success": true
+    }
+  ]
+}
