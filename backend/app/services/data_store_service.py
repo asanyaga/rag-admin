@@ -32,7 +32,8 @@ class DataStoreService:
             store = await self.repo.create(project_id, data)
         except IntegrityError as e:
             error_str = str(e).lower()
-            if 'uq_project_data_stores_project_name' in error_str:
+            if 'uq_project_data_stores_project_name' in error_str or \
+               ('project_data_stores.project_id' in error_str and 'project_data_stores.name' in error_str):
                 raise ConflictError(f"Data store with name '{data.name}' already exists in this project")
             raise
 
@@ -75,7 +76,8 @@ class DataStoreService:
             updated = await self.repo.update(store_id, project_id, data)
         except IntegrityError as e:
             error_str = str(e).lower()
-            if 'uq_project_data_stores_project_name' in error_str:
+            if 'uq_project_data_stores_project_name' in error_str or \
+               ('project_data_stores.project_id' in error_str and 'project_data_stores.name' in error_str):
                 raise ConflictError(f"Data store with name '{data.name}' already exists in this project")
             raise
 
