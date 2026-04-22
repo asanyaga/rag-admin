@@ -1,16 +1,16 @@
-"""Round-trip sanity test for SourceDocumentORM."""
+"""Round-trip sanity test for SourceDocument."""
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.source_document import SourceDocumentORM
+from app.models.source_document import SourceDocument
 
 
 @pytest.mark.asyncio
 async def test_source_document_round_trip(test_db: AsyncSession):
-    row = SourceDocumentORM(
+    row = SourceDocument(
         id=uuid4(),
         sha256="a" * 64,
         filename="test.pdf",
@@ -22,7 +22,7 @@ async def test_source_document_round_trip(test_db: AsyncSession):
     await test_db.commit()
 
     result = await test_db.execute(
-        select(SourceDocumentORM).where(SourceDocumentORM.sha256 == "a" * 64)
+        select(SourceDocument).where(SourceDocument.sha256 == "a" * 64)
     )
     fetched = result.scalar_one()
     assert fetched.filename == "test.pdf"

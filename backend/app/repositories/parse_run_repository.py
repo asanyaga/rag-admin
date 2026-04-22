@@ -1,4 +1,4 @@
-"""Repository for ParseRunORM — execution rows."""
+"""Repository for ParseRun — execution rows."""
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.parse_run import ParseRunORM
+from app.models.parse_run import ParseRun
 
 
 @dataclass
@@ -35,8 +35,8 @@ class ParseRunRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, dto: ParseRunCreate) -> ParseRunORM:
-        row = ParseRunORM(
+    async def create(self, dto: ParseRunCreate) -> ParseRun:
+        row = ParseRun(
             source_document_id=dto.source_document_id,
             parser=dto.parser,
             parser_version=dto.parser_version,
@@ -60,9 +60,9 @@ class ParseRunRepository:
         await self.session.refresh(row)
         return row
 
-    async def get(self, run_id: UUID) -> ParseRunORM | None:
+    async def get(self, run_id: UUID) -> ParseRun | None:
         result = await self.session.execute(
-            select(ParseRunORM).where(ParseRunORM.id == run_id)
+            select(ParseRun).where(ParseRun.id == run_id)
         )
         return result.scalar_one_or_none()
 
@@ -72,14 +72,14 @@ class ParseRunRepository:
         source_document_id: UUID,
         representation_kind: str,
         config_hash: str,
-    ) -> ParseRunORM | None:
+    ) -> ParseRun | None:
         """Point lookup on the unique index."""
         result = await self.session.execute(
-            select(ParseRunORM)
-            .where(ParseRunORM.source_document_id == source_document_id)
-            .where(ParseRunORM.representation_kind == representation_kind)
-            .where(ParseRunORM.config_hash == config_hash)
-            .order_by(ParseRunORM.created_at.desc())
+            select(ParseRun)
+            .where(ParseRun.source_document_id == source_document_id)
+            .where(ParseRun.representation_kind == representation_kind)
+            .where(ParseRun.config_hash == config_hash)
+            .order_by(ParseRun.created_at.desc())
             .limit(1)
         )
         return result.scalar_one_or_none()
@@ -98,7 +98,7 @@ class ParseRunRepository:
         failed_pages: list[int] | None = None,
         provider_refs: dict[str, Any] | None = None,
         error: str | None = None,
-    ) -> ParseRunORM:
+    ) -> ParseRun:
         run = await self.get(run_id)
         if run is None:
             raise ValueError(f"ParseRun {run_id} not found")

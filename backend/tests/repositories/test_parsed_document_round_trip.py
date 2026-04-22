@@ -17,8 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cdm.models import (
     Block, BlockRole, BBox, ParsedDocument, Page,
 )
-from app.models.parse_run import ParseRunORM
-from app.models.source_document import SourceDocumentORM
+from app.models.parse_run import ParseRun
+from app.models.source_document import SourceDocument
 from app.repositories.parsed_document_repository import (
     ParsedDocumentCreate,
     ParsedDocumentRepository,
@@ -27,11 +27,11 @@ from app.repositories.parsed_document_repository import (
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "llamaparse"
 
 
-async def _mk_source_and_run(test_db: AsyncSession) -> tuple[SourceDocumentORM, ParseRunORM]:
-    src = SourceDocumentORM(id=uuid4(), sha256=uuid4().hex + uuid4().hex, storage_uri="local://a.pdf")
+async def _mk_source_and_run(test_db: AsyncSession) -> tuple[SourceDocument, ParseRun]:
+    src = SourceDocument(id=uuid4(), sha256=uuid4().hex + uuid4().hex, storage_uri="local://a.pdf")
     test_db.add(src)
     await test_db.commit()
-    run = ParseRunORM(
+    run = ParseRun(
         id=uuid4(), source_document_id=src.id,
         parser="llamaparse", representation_kind="vector_light",
         config_hash="h" * 64, status="succeeded",

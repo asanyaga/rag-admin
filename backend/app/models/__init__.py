@@ -22,9 +22,9 @@ from app.models.extraction_eval import ExtractionEvalRun, ExtractionEvalRunStatu
 from app.models.agent_definition import AgentDefinition
 from app.models.agent_run import AgentRun, AgentRunStatus
 from app.models.project_data_store import ProjectDataStore
-from app.models.source_document import SourceDocumentORM
-from app.models.parse_run import ParseRunORM
-from app.models.parsed_document import ParsedDocumentORM
+from app.models.source_document import SourceDocument
+from app.models.parse_run import ParseRun
+from app.models.parsed_document import ParsedDocument
 
 __all__ = [
     "User",
@@ -68,7 +68,7 @@ __all__ = [
     "AgentRun",
     "AgentRunStatus",
     "ProjectDataStore",
-    "SourceDocumentORM",
-    "ParseRunORM",
-    "ParsedDocumentORM",
+    "SourceDocument",
+    "ParseRun",
+    "ParsedDocument",
 ]

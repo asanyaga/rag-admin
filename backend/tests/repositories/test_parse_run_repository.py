@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.source_document import SourceDocumentORM
+from app.models.source_document import SourceDocument
 from app.repositories.parse_run_repository import (
     ParseRunCreate,
     ParseRunRepository,
@@ -13,8 +13,8 @@ from app.repositories.parse_run_repository import (
 
 
 @pytest.fixture
-async def source_doc(test_db: AsyncSession) -> SourceDocumentORM:
-    sd = SourceDocumentORM(id=uuid4(), sha256="a" * 64, storage_uri="local://a.pdf")
+async def source_doc(test_db: AsyncSession) -> SourceDocument:
+    sd = SourceDocument(id=uuid4(), sha256="a" * 64, storage_uri="local://a.pdf")
     test_db.add(sd)
     await test_db.commit()
     await test_db.refresh(sd)

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
-class ParsedDocumentORM(Base):
+class ParsedDocument(Base):
     __tablename__ = "parsed_documents"
 
     parse_run_id: Mapped[UUID] = mapped_column(

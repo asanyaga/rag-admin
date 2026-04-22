@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.models.source_document import SourceDocumentORM
+from app.models.source_document import SourceDocument
 
 
 class DocumentStatus(str, enum.Enum):
@@ -122,7 +122,7 @@ class Document(Base):
     project: Mapped["Project"] = relationship(back_populates="documents")
     folder: Mapped["Folder | None"] = relationship(back_populates="documents")
     user: Mapped["User"] = relationship()
-    source_document: Mapped["SourceDocumentORM | None"] = relationship(lazy="select")
+    source_document: Mapped["SourceDocument | None"] = relationship(lazy="select")
     index_documents: Mapped[list["IndexDocument"]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan"

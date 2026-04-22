@@ -7,14 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import Document, DocumentStatus, Project, User
-from app.models.source_document import SourceDocumentORM
+from app.models.source_document import SourceDocument
 
 
 @pytest.mark.asyncio
 async def test_document_can_reference_source_document(test_db: AsyncSession):
     user = User(id=uuid4(), email="u@e.com", full_name="U", auth_provider="email", password_hash="x")
     project = Project(id=uuid4(), user_id=user.id, name="P")
-    src = SourceDocumentORM(id=uuid4(), sha256="1" * 64, storage_uri="local://1.pdf")
+    src = SourceDocument(id=uuid4(), sha256="1" * 64, storage_uri="local://1.pdf")
     test_db.add_all([user, project, src])
     await test_db.commit()
 

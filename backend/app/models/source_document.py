@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
-class SourceDocumentORM(Base):
+class SourceDocument(Base):
     __tablename__ = "source_documents"
 
     id: Mapped[UUID] = mapped_column(

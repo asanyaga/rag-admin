@@ -1,4 +1,4 @@
-"""Round-trip sanity test for ParseRunORM."""
+"""Round-trip sanity test for ParseRun."""
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -6,19 +6,19 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.parse_run import ParseRunORM
-from app.models.source_document import SourceDocumentORM
+from app.models.parse_run import ParseRun
+from app.models.source_document import SourceDocument
 
 
 @pytest.mark.asyncio
 async def test_parse_run_round_trip(test_db: AsyncSession):
-    src = SourceDocumentORM(
+    src = SourceDocument(
         id=uuid4(), sha256="b" * 64, storage_uri="local://b.pdf",
     )
     test_db.add(src)
     await test_db.commit()
 
-    run = ParseRunORM(
+    run = ParseRun(
         id=uuid4(),
         source_document_id=src.id,
         parser="llamaparse",
@@ -32,7 +32,7 @@ async def test_parse_run_round_trip(test_db: AsyncSession):
     await test_db.commit()
 
     fetched = (await test_db.execute(
-        select(ParseRunORM).where(ParseRunORM.id == run.id)
+        select(ParseRun).where(ParseRun.id == run.id)
     )).scalar_one()
     assert fetched.parser == "llamaparse"
     assert fetched.config == {"tier": "agentic"}
@@ -45,12 +45,12 @@ async def test_parse_run_unique_content_config(test_db: AsyncSession):
     """Unique index on (source_document_id, representation_kind, config_hash) enforced."""
     from sqlalchemy.exc import IntegrityError
 
-    src = SourceDocumentORM(id=uuid4(), sha256="d" * 64, storage_uri="local://d.pdf")
+    src = SourceDocument(id=uuid4(), sha256="d" * 64, storage_uri="local://d.pdf")
     test_db.add(src)
     await test_db.commit()
 
     def make_run(**kw):
-        return ParseRunORM(
+        return ParseRun(
             id=uuid4(),
             source_document_id=src.id,
             parser="llamaparse",

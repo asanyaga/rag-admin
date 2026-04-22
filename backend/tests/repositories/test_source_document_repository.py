@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.source_document import SourceDocumentORM
+from app.models.source_document import SourceDocument
 from app.repositories.source_document_repository import SourceDocumentRepository
 
 
