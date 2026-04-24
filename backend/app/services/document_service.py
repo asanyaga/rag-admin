@@ -1,8 +1,17 @@
 """Document service with business logic."""
+from __future__ import annotations
+
+import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 from pathlib import Path
 from sqlalchemy.exc import IntegrityError
+
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from app.services.parsing.parsing_service import ParsingService
 
 from app.config import settings
 from app.models import DocumentStatus
@@ -41,11 +50,13 @@ class DocumentService:
         project_repo: ProjectRepository,
         storage_service: StorageService,
         document_extractor: DocumentExtractor,
+        parsing_service: ParsingService | None = None,
     ):
         self.document_repo = document_repo
         self.project_repo = project_repo
         self.storage_service = storage_service
         self.document_extractor = document_extractor
+        self.parsing_service = parsing_service
 
     async def initiate_upload(
         self,
@@ -55,28 +66,21 @@ class DocumentService:
         filename: str,
         title: str,
         description: str | None = None,
-        folder_id: "UUID | None" = None,
+        folder_id: UUID | None = None,
+        use_cdm: bool = False,
     ) -> DocumentResponse:
         """Initiate document upload (validate, save file, create record).
 
-        This method performs synchronous operations and returns immediately.
-        Background text extraction should be triggered separately.
+        When use_cdm=True and parsing_service is set, calls
+        ParsingService.ensure_source_document and creates the Document with
+        source_document_id populated. Parsing is dispatched as a background task
+        by the caller (see process_cdm_parsing).
 
-        Args:
-            user_id: User UUID
-            project_id: Project UUID
-            file_content: File content as bytes
-            filename: Original filename
-            title: Document title
-            description: Optional description
+        When use_cdm=False (or parsing_service is None), falls back to the legacy
+        storage + extraction path.
 
-        Returns:
-            Created document with status='processing'
-
-        Raises:
-            NotFoundError: Project not found or user doesn't have access
-            ValidationError: File validation failed
-            ConflictError: Document with same content already exists
+        Returns immediately with status='processing'. Background parsing/extraction
+        is triggered separately by the router.
         """
         # 1. Verify project exists and user has access
         project = await self.project_repo.get_by_id(project_id, user_id)
@@ -117,46 +121,80 @@ class DocumentService:
                 f"Document with same content already exists: {existing.title}"
             )
 
-        # 6. Save file to storage
-        file_extension = Path(filename).suffix.lower()
-        relative_path = f"projects/{project_id}/uploads/{checksum}{file_extension}"
-
-        try:
-            file_path = await self.storage_service.save(file_content, relative_path)
-        except Exception as e:
-            raise ValidationError(f"Failed to save file: {e}")
-
-        # 7. Create document record
-        source_metadata = {
-            "filename": filename,
-            "file_path": file_path,
-            "file_size": len(file_content),
-            "mime_type": mime_type,
-            "checksum": checksum,
-        }
-
-        try:
-            document = await self.document_repo.create(
-                project_id=project_id,
-                user_id=user_id,
-                source_type="upload",
-                source_identifier=checksum,
-                title=title,
-                description=description,
-                source_metadata=source_metadata,
-                folder_id=folder_id,
+        if use_cdm and self.parsing_service is not None:
+            # CDM path: ensure_source_document handles storage + source dedup
+            source_doc = await self.parsing_service.ensure_source_document(
+                bytes_=file_content,
+                filename=filename,
+                mime_type=mime_type,
             )
-        except IntegrityError as e:
-            # Clean up file if database insert fails
+            source_metadata = {
+                "filename": filename,
+                "file_path": source_doc.storage_uri,
+                "file_size": len(file_content),
+                "mime_type": mime_type,
+                "checksum": checksum,
+            }
             try:
-                await self.storage_service.delete(file_path)
-            except Exception:
-                pass  # Log but don't raise
+                document = await self.document_repo.create(
+                    project_id=project_id,
+                    user_id=user_id,
+                    source_type="upload",
+                    source_identifier=checksum,
+                    title=title,
+                    description=description,
+                    source_metadata=source_metadata,
+                    folder_id=folder_id,
+                    source_document_id=UUID(source_doc.id),
+                )
+            except IntegrityError as e:
+                error_str = str(e).lower()
+                if 'uq_documents_project_source' in error_str:
+                    raise ConflictError("Document with same content already exists")
+                raise
+        else:
+            if use_cdm and self.parsing_service is None:
+                logger.warning(
+                    "use_cdm=True but parsing_service is None; falling back to legacy path for document upload"
+                )
+            # Legacy path (unchanged from original)
+            file_extension = Path(filename).suffix.lower()
+            relative_path = f"projects/{project_id}/uploads/{checksum}{file_extension}"
 
-            error_str = str(e).lower()
-            if 'uq_documents_project_source' in error_str:
-                raise ConflictError("Document with same content already exists")
-            raise
+            try:
+                file_path = await self.storage_service.save(file_content, relative_path)
+            except Exception as e:
+                raise ValidationError(f"Failed to save file: {e}")
+
+            source_metadata = {
+                "filename": filename,
+                "file_path": file_path,
+                "file_size": len(file_content),
+                "mime_type": mime_type,
+                "checksum": checksum,
+            }
+
+            try:
+                document = await self.document_repo.create(
+                    project_id=project_id,
+                    user_id=user_id,
+                    source_type="upload",
+                    source_identifier=checksum,
+                    title=title,
+                    description=description,
+                    source_metadata=source_metadata,
+                    folder_id=folder_id,
+                )
+            except IntegrityError as e:
+                # Clean up file if database insert fails
+                try:
+                    await self.storage_service.delete(file_path)
+                except Exception:
+                    pass
+                error_str = str(e).lower()
+                if 'uq_documents_project_source' in error_str:
+                    raise ConflictError("Document with same content already exists")
+                raise
 
         return DocumentResponse.model_validate(document)
 
@@ -165,7 +203,8 @@ class DocumentService:
         user_id: UUID,
         project_id: UUID,
         files: list[tuple[bytes, str]],
-    ) -> list["BulkUploadItemResult"]:
+        use_cdm: bool = False,
+    ) -> list[BulkUploadItemResult]:
         """Initiate upload for multiple files. Each file is processed independently.
 
         Args:
@@ -187,6 +226,7 @@ class DocumentService:
                     file_content=file_content,
                     filename=filename,
                     title=title,
+                    use_cdm=use_cdm,
                 )
                 results.append(BulkUploadItemResult(filename=filename, document=document, is_new=True))
             except ConflictError:
@@ -467,4 +507,100 @@ async def process_document_extraction(
             document_id=document_id,
             status=DocumentStatus.failed,
             status_message=str(e)
+        )
+
+
+async def process_cdm_parsing(
+    document_id: UUID,
+    source_document_id: UUID,
+    project_id: UUID,
+    representation_kind: str,
+    config: dict,
+    document_repo: DocumentRepository,
+    parse_run_repo: Any,
+    parsed_doc_repo: Any,
+    source_doc_repo: Any,
+    storage_service: StorageService,
+    llamaparse_client: Any,
+) -> None:
+    """Background task: CDM parse + persist for a newly uploaded document.
+
+    Creates a ParsingService from the provided repos and client, runs
+    parse_and_persist, and writes the extracted_text shim for downstream readers.
+    """
+    from app.cdm.source import SourceDocument as SourceDocumentCDM
+    from app.services.parsing.errors import ParseFailedError
+    from app.services.parsing.parsing_service import ParsingService
+
+    # Fetch source document ORM
+    source_orm = await source_doc_repo.get(source_document_id)
+    if source_orm is None:
+        await document_repo.update_status(
+            document_id=document_id,
+            status=DocumentStatus.failed,
+            status_message="SourceDocument not found",
+        )
+        return
+
+    # Fetch Document to get file_path
+    doc = await document_repo.get_by_id_unscoped(document_id)
+    if doc is None:
+        return  # Deleted before task ran
+
+    file_path = doc.source_metadata.get("file_path")
+    if not file_path:
+        await document_repo.update_status(
+            document_id=document_id,
+            status=DocumentStatus.failed,
+            status_message="Missing file_path in source_metadata",
+        )
+        return
+
+    source_cdm = SourceDocumentCDM(
+        id=str(source_orm.id),
+        sha256=source_orm.sha256,
+        filename=source_orm.filename,
+        mime_type=source_orm.mime_type,
+        byte_size=source_orm.byte_size,
+        storage_uri=source_orm.storage_uri,
+        created_at=source_orm.created_at,
+    )
+
+    service = ParsingService(
+        source_doc_repo=source_doc_repo,
+        parse_run_repo=parse_run_repo,
+        parsed_doc_repo=parsed_doc_repo,
+        storage=storage_service,
+        llamaparse_client=llamaparse_client,
+    )
+
+    try:
+        run, parsed_doc = await service.parse_and_persist(
+            source=source_cdm,
+            file_path=file_path,
+            representation_kind=representation_kind,
+            config=config,
+            project_id=project_id,
+        )
+    except ParseFailedError as e:
+        await document_repo.update_status(
+            document_id=document_id,
+            status=DocumentStatus.failed,
+            status_message=str(e),
+        )
+        return
+
+    if parsed_doc is not None:
+        # extracted_text shim: keeps downstream readers working until migration spec retires it
+        await document_repo.update_extraction(
+            document_id=document_id,
+            extracted_text=parsed_doc.full_text or "",
+            processing_metadata={},
+            status=DocumentStatus.ready,
+        )
+    else:
+        await document_repo.update_status(
+            document_id=document_id,
+            status=DocumentStatus.failed,
+            status_message=f"Parse run finished with status: {run.status.value}",
         )

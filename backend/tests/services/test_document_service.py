@@ -182,3 +182,96 @@ async def test_initiate_bulk_upload_title_uses_filename_stem(mock_service, proje
         )
 
     assert captured_title == "my document"
+
+
+# --- CDM path tests ---
+
+def _make_source_cdm(sha256: str = "a" * 64):
+    """Return a fake CDM SourceDocument."""
+    from app.cdm.source import SourceDocument as SourceDocumentCDM
+    from datetime import datetime, timezone
+    return SourceDocumentCDM(
+        id=str(uuid4()),
+        sha256=sha256,
+        filename="test.pdf",
+        mime_type="application/pdf",
+        byte_size=9,
+        storage_uri="uploads/aaa/test.pdf",
+        created_at=datetime.now(timezone.utc),
+    )
+
+
+def make_mock_document_with_source(title: str = "doc", source_document_id=None):
+    """Make a mock Document ORM that includes source_document_id."""
+    doc = make_mock_document(title=title)
+    sid = source_document_id or uuid4()
+    doc.source_document_id = sid
+    doc.sourceDocumentId = sid
+    return doc
+
+
+@pytest.fixture
+def mock_parsing_service():
+    svc = AsyncMock()
+    svc.ensure_source_document = AsyncMock(return_value=_make_source_cdm())
+    return svc
+
+
+@pytest.fixture
+def mock_service_with_cdm(project_id, user_id, mock_parsing_service):
+    doc_repo = AsyncMock()
+    proj_repo = AsyncMock()
+    storage = AsyncMock()
+    extractor = AsyncMock()
+
+    proj_repo.get_by_id.return_value = MagicMock(id=project_id)
+    doc_repo.get_by_source.return_value = None
+    storage.save.return_value = "projects/proj/uploads/hash.pdf"
+    doc_repo.create.return_value = make_mock_document_with_source()
+
+    service = DocumentService(doc_repo, proj_repo, storage, extractor, parsing_service=mock_parsing_service)
+    return service, doc_repo, proj_repo, storage, mock_parsing_service
+
+
+@pytest.mark.asyncio
+async def test_initiate_upload_cdm_calls_ensure_source_document(mock_service_with_cdm, project_id, user_id):
+    service, doc_repo, _proj, _storage, parsing_svc = mock_service_with_cdm
+    file_content = b"%PDF-1.4\n"
+
+    result = await service.initiate_upload(
+        user_id=user_id,
+        project_id=project_id,
+        file_content=file_content,
+        filename="test.pdf",
+        title="Test",
+        use_cdm=True,
+    )
+
+    parsing_svc.ensure_source_document.assert_awaited_once_with(
+        bytes_=file_content, filename="test.pdf", mime_type="application/pdf",
+    )
+    # source_document_id must be passed to document_repo.create
+    call_kwargs = doc_repo.create.call_args.kwargs
+    assert call_kwargs.get("source_document_id") is not None
+    assert result.source_document_id is not None
+
+
+@pytest.mark.asyncio
+async def test_initiate_upload_cdm_false_skips_ensure_source_document(mock_service_with_cdm, project_id, user_id):
+    service, doc_repo, _proj, storage, parsing_svc = mock_service_with_cdm
+    doc_repo.create.return_value = make_mock_document(title="no-cdm")
+    storage.save.return_value = "projects/proj/uploads/hash.pdf"
+    file_content = b"%PDF-1.4\n"
+
+    await service.initiate_upload(
+        user_id=user_id,
+        project_id=project_id,
+        file_content=file_content,
+        filename="test.pdf",
+        title="Test",
+        use_cdm=False,
+    )
+
+    parsing_svc.ensure_source_document.assert_not_awaited()
+    call_kwargs = doc_repo.create.call_args.kwargs
+    assert call_kwargs.get("source_document_id") is None
