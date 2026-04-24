@@ -19,7 +19,7 @@ class LlamaParseAdapter(DocumentParser):
     _semaphore = asyncio.Semaphore(5)  # shared across all instances
 
     def __init__(self, api_key: str | None = None):
-        self.client = AsyncLlamaCloud(api_key=api_key) if api_key else AsyncLlamaCloud()
+        self.client = AsyncLlamaCloud(api_key=api_key) if api_key else None
 
     @property
     def parser_type(self) -> ParserType:
