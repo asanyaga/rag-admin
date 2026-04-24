@@ -177,7 +177,7 @@ async def test_get_latest_for_project_returns_none_for_config_mismatch(repo, sou
     found = await repo.get_latest_for_project(
         source_document_id=sd.id,
         representation_kind="vector_light",
-        config_hash="different" + "x" * 56,
+        config_hash="different" + "x" * 55,
         project_id=project_id,
     )
     assert found is None
