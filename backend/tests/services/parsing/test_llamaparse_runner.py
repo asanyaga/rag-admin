@@ -6,6 +6,7 @@ import pytest
 
 from app.cdm.models import ParserKind
 from app.cdm.source import ParseRunStatus, SourceDocument
+from app.services.parsing.errors import LlamaParseRunError
 from app.services.parsing.llamaparse_runner import run_llamaparse
 
 
@@ -73,7 +74,6 @@ async def test_runner_raises_llama_parse_run_error_on_failure(tmp_path):
             self.parsing = SimpleNamespace(parse=AsyncMock(side_effect=RuntimeError("boom")))
     client = _BoomClient()
 
-    from app.services.parsing.errors import LlamaParseRunError
     with pytest.raises(LlamaParseRunError) as exc_info:
         await run_llamaparse(
             source=src,
@@ -87,3 +87,5 @@ async def test_runner_raises_llama_parse_run_error_on_failure(tmp_path):
     assert err.run.status.value == "failed"
     assert err.run.source_document_id == "src-1"
     assert "boom" in err.run.error
+    assert err.run.finished_at is not None
+    assert err.run.duration_ms is not None and err.run.duration_ms >= 0
