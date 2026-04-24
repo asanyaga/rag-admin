@@ -25,6 +25,7 @@ class DocumentResponse(BaseModel):
     id: UUID = Field(..., alias="id")
     project_id: UUID = Field(..., alias="projectId")
     folder_id: UUID | None = Field(None, alias="folderId")
+    source_document_id: UUID | None = Field(None, alias="sourceDocumentId")
     source_type: str = Field(..., alias="sourceType")
     source_identifier: str = Field(..., alias="sourceIdentifier")
     title: str

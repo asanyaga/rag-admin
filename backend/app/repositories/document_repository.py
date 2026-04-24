@@ -22,6 +22,7 @@ class DocumentRepository:
         description: str | None,
         source_metadata: dict,
         folder_id: "UUID | None" = None,
+        source_document_id: "UUID | None" = None,
     ) -> Document:
         """Create a new document.
 
@@ -47,6 +48,7 @@ class DocumentRepository:
             source_metadata=source_metadata,
             status=DocumentStatus.processing,
             folder_id=folder_id,
+            source_document_id=source_document_id,
         )
         self.session.add(document)
         await self.session.commit()

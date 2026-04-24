@@ -34,6 +34,7 @@ def make_mock_document(title: str = "doc", project_id=None, user_id=None):
     doc.created_at = _now
     doc.updated_at = _now
     doc.folder_id = None
+    doc.source_document_id = None
 
     # camelCase aliases — Pydantic v2 from_attributes uses the alias name for attribute access
     doc.projectId = _project_id
@@ -47,6 +48,7 @@ def make_mock_document(title: str = "doc", project_id=None, user_id=None):
     doc.createdAt = _now
     doc.updatedAt = _now
     doc.folderId = None
+    doc.sourceDocumentId = None
 
     return doc
 
