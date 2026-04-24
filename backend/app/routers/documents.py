@@ -1,5 +1,6 @@
 """Documents API router."""
 import json
+import logging
 from uuid import UUID
 from fastapi import (
     APIRouter,
@@ -39,6 +40,8 @@ from app.adapters.parsing.registry import get_parser
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
+logger = logging.getLogger(__name__)
+
 
 def get_document_service(
     db: AsyncSession = Depends(get_db),
@@ -46,13 +49,17 @@ def get_document_service(
     document_extractor: DocumentExtractor = Depends(get_document_extractor),
 ) -> DocumentService:
     """Dependency to create DocumentService with repositories."""
+    from app.config import settings
+    from app.dependencies.documents import get_parsing_service
     document_repo = DocumentRepository(db)
     project_repo = ProjectRepository(db)
+    parsing_service = get_parsing_service(db) if settings.USE_CDM_PARSER else None
     return DocumentService(
         document_repo=document_repo,
         project_repo=project_repo,
         storage_service=storage_service,
         document_extractor=document_extractor,
+        parsing_service=parsing_service,
     )
 
 
@@ -80,8 +87,14 @@ async def upload_document(
     document_extractor: DocumentExtractor = Depends(get_document_extractor),
 ):
     """Upload a document and initiate background processing."""
+    from app.config import settings
+    from app.dependencies.documents import get_llamaparse_client
+    from app.repositories.parse_run_repository import ParseRunRepository
+    from app.repositories.parsed_document_repository import ParsedDocumentRepository
+    from app.repositories.source_document_repository import SourceDocumentRepository
+    from app.services.document_service import process_cdm_parsing
+
     try:
-        # Parse config JSON if provided
         config_dict = None
         if parse_config:
             try:
@@ -89,7 +102,8 @@ async def upload_document(
             except json.JSONDecodeError:
                 raise ValidationError("Invalid JSON in parse_config")
 
-        # Initiate upload (synchronous: validate, save, create record)
+        use_cdm = settings.USE_CDM_PARSER and parser_type == "llamaparse"
+
         file_content = await file.read()
         filename = file.filename or "upload.pdf"
         document = await document_service.initiate_upload(
@@ -100,60 +114,74 @@ async def upload_document(
             title=title,
             description=description,
             folder_id=folder_id,
+            use_cdm=use_cdm,
         )
 
-        if parser_type != "simple":
-            # Intelligent parser flow: create parse_result, schedule parsing
-            parser = get_parser(parser_type)
-            if parser is None:
-                raise ValidationError(f"Unknown parser type: {parser_type}")
-
-            parse_result_repo = ParseResultRepository(db)
-            document_repo = DocumentRepository(db)
-            parse_service = ParseService(parse_result_repo, document_repo)
-            parse_result = await parse_service.create_parse_result(
-                document_id=document.id,
-                user_id=current_user.id,
-                parser_type=parser_type,
-                parser_config=config_dict,
-            )
-
+        if use_cdm and document.source_document_id is not None:
+            representation_kind = (config_dict or {}).get("representation_kind", "extract_rich")
+            parse_cfg = {k: v for k, v in (config_dict or {}).items() if k != "representation_kind"}
             background_tasks.add_task(
-                process_document_parsing,
-                parse_result_id=parse_result.id,
-                parse_result_repo=parse_result_repo,
-                document_repo=document_repo,
+                process_cdm_parsing,
+                document_id=document.id,
+                source_document_id=document.source_document_id,
+                project_id=project_id,
+                representation_kind=representation_kind,
+                config=parse_cfg,
+                document_repo=DocumentRepository(db),
+                parse_run_repo=ParseRunRepository(db),
+                parsed_doc_repo=ParsedDocumentRepository(db),
+                source_doc_repo=SourceDocumentRepository(db),
                 storage_service=storage_service,
-                parser=parser,
+                llamaparse_client=get_llamaparse_client(),
             )
         else:
-            # Simple flow: existing extractor
-            document_repo = DocumentRepository(db)
-            background_tasks.add_task(
-                process_document_extraction,
-                document_id=document.id,
-                document_repo=document_repo,
-                storage_service=storage_service,
-                document_extractor=document_extractor,
-            )
+            if use_cdm:
+                logger.warning(
+                    "CDM path requested (use_cdm=True) but document.source_document_id is None "
+                    "for document %s; falling back to legacy parser path",
+                    document.id,
+                )
+            if parser_type != "simple":
+                # Legacy non-CDM parser path
+                parser = get_parser(parser_type)
+                if parser is None:
+                    raise ValidationError(f"Unknown parser type: {parser_type}")
+
+                parse_result_repo = ParseResultRepository(db)
+                document_repo_bg = DocumentRepository(db)
+                parse_service = ParseService(parse_result_repo, document_repo_bg)
+                parse_result = await parse_service.create_parse_result(
+                    document_id=document.id,
+                    user_id=current_user.id,
+                    parser_type=parser_type,
+                    parser_config=config_dict,
+                )
+                background_tasks.add_task(
+                    process_document_parsing,
+                    parse_result_id=parse_result.id,
+                    parse_result_repo=parse_result_repo,
+                    document_repo=document_repo_bg,
+                    storage_service=storage_service,
+                    parser=parser,
+                )
+            else:
+                document_repo_bg = DocumentRepository(db)
+                background_tasks.add_task(
+                    process_document_extraction,
+                    document_id=document.id,
+                    document_repo=document_repo_bg,
+                    storage_service=storage_service,
+                    document_extractor=document_extractor,
+                )
 
         return document
 
     except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except ConflictError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 
 @router.post(
@@ -177,6 +205,13 @@ async def bulk_upload_documents(
     document_extractor: DocumentExtractor = Depends(get_document_extractor),
 ):
     """Bulk upload documents and initiate background processing for each."""
+    from app.config import settings
+    from app.dependencies.documents import get_llamaparse_client
+    from app.repositories.parse_run_repository import ParseRunRepository
+    from app.repositories.parsed_document_repository import ParsedDocumentRepository
+    from app.repositories.source_document_repository import SourceDocumentRepository
+    from app.services.document_service import process_cdm_parsing
+
     if len(files) > 20:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -193,6 +228,8 @@ async def bulk_upload_documents(
                 detail="Invalid JSON in parse_config",
             )
 
+    use_cdm = settings.USE_CDM_PARSER and parser_type == "llamaparse"
+
     # Validate parser type upfront
     parser = None
     if parser_type != "simple":
@@ -202,6 +239,8 @@ async def bulk_upload_documents(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Unknown parser type: {parser_type}",
             )
+    # parser is used as the legacy fallback when use_cdm is False.
+    # When use_cdm is True, process_cdm_parsing is dispatched instead and parser is unused.
 
     # Read all file contents
     file_data: list[tuple[bytes, str]] = []
@@ -213,6 +252,7 @@ async def bulk_upload_documents(
         user_id=current_user.id,
         project_id=project_id,
         files=file_data,
+        use_cdm=use_cdm,
     )
 
     # Register background tasks for newly created documents only
@@ -220,33 +260,58 @@ async def bulk_upload_documents(
         if item.document is None or not item.is_new:
             continue
         document_id = item.document.id
-        if parser is not None:
-            parse_result_repo = ParseResultRepository(db)
-            document_repo = DocumentRepository(db)
-            parse_service = ParseService(parse_result_repo, document_repo)
-            parse_result = await parse_service.create_parse_result(
-                document_id=document_id,
-                user_id=current_user.id,
-                parser_type=parser_type,
-                parser_config=config_dict,
-            )
+
+        if use_cdm and item.document.source_document_id is not None:
+            representation_kind = (config_dict or {}).get("representation_kind", "extract_rich")
+            parse_cfg = {k: v for k, v in (config_dict or {}).items() if k != "representation_kind"}
             background_tasks.add_task(
-                process_document_parsing,
-                parse_result_id=parse_result.id,
-                parse_result_repo=parse_result_repo,
-                document_repo=document_repo,
+                process_cdm_parsing,
+                document_id=document_id,
+                source_document_id=item.document.source_document_id,
+                project_id=project_id,
+                representation_kind=representation_kind,
+                config=parse_cfg,
+                document_repo=DocumentRepository(db),
+                parse_run_repo=ParseRunRepository(db),
+                parsed_doc_repo=ParsedDocumentRepository(db),
+                source_doc_repo=SourceDocumentRepository(db),
                 storage_service=storage_service,
-                parser=parser,
+                llamaparse_client=get_llamaparse_client(),
             )
         else:
-            document_repo = DocumentRepository(db)
-            background_tasks.add_task(
-                process_document_extraction,
-                document_id=document_id,
-                document_repo=document_repo,
-                storage_service=storage_service,
-                document_extractor=document_extractor,
-            )
+            if use_cdm:
+                logger.warning(
+                    "CDM path requested (use_cdm=True) but source_document_id is None "
+                    "for document %s; falling back to legacy parser path",
+                    document_id,
+                )
+            if parser is not None:
+                parse_result_repo = ParseResultRepository(db)
+                document_repo_bg = DocumentRepository(db)
+                parse_service = ParseService(parse_result_repo, document_repo_bg)
+                parse_result = await parse_service.create_parse_result(
+                    document_id=document_id,
+                    user_id=current_user.id,
+                    parser_type=parser_type,
+                    parser_config=config_dict,
+                )
+                background_tasks.add_task(
+                    process_document_parsing,
+                    parse_result_id=parse_result.id,
+                    parse_result_repo=parse_result_repo,
+                    document_repo=document_repo_bg,
+                    storage_service=storage_service,
+                    parser=parser,
+                )
+            else:
+                document_repo_bg = DocumentRepository(db)
+                background_tasks.add_task(
+                    process_document_extraction,
+                    document_id=document_id,
+                    document_repo=document_repo_bg,
+                    storage_service=storage_service,
+                    document_extractor=document_extractor,
+                )
 
     return BulkUploadResponse(
         results=[
