@@ -113,7 +113,9 @@ class ParsingService:
     ) -> tuple[ParseRunCDM, ParsedDocumentCDM | None]:
         """Run parse with same-project reuse. Persists success, partial, and failure runs.
 
-        Returns (run, parsed_doc-or-None). parsed_doc is None iff run.status == FAILED.
+        Returns (run, parsed_doc-or-None).
+          - parsed_doc is not None when run.status is SUCCEEDED or PARTIAL.
+          - parsed_doc is None when run.status is FAILED or still in progress (pending/running).
         Raises ParseFailedError on terminal failure after the failed ParseRun is persisted.
         """
         config_hash = _compute_config_hash(config)

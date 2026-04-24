@@ -335,6 +335,16 @@ async def test_parse_and_persist_does_not_reuse_across_projects(
     )
     assert client.parsing.parse.call_count == 1
 
+    # Verify isolation: project_b cannot see project_a's run
+    _, run_repo, _ = repos
+    found = await run_repo.get_latest_for_project(
+        source_document_id=UUID(source_cdm.id),
+        representation_kind="extract_rich",
+        config_hash=_config_hash(config),
+        project_id=project_b,
+    )
+    assert found is None  # project isolation confirmed
+
     # project_b call — no reuse, runner is invoked again
     # This will hit the unique constraint since same source+kind+config_hash already exists.
     # We test that the runner WAS called (not silently reused), and tolerate the DB error.
