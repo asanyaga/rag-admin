@@ -157,6 +157,33 @@ async def test_upload_cdm_writes_all_four_tables(client: AsyncClient, test_db: A
 
 
 @pytest.mark.asyncio
+async def test_upload_cdm_flag_off_skips_cdm_tables(client: AsyncClient, test_db: AsyncSession):
+    """With USE_CDM_PARSER=False, even parser_type=llamaparse must use the legacy path (AC#7)."""
+    token = await _signup_and_login(client)
+    project_id = await _create_project(client, token)
+
+    with patch("app.config.settings.USE_CDM_PARSER", False):
+        response = await client.post(
+            "/api/v1/documents",
+            headers={"Authorization": f"Bearer {token}"},
+            data={
+                "project_id": project_id,
+                "parser_type": "llamaparse",
+                "title": "Flag Off Test Doc",
+            },
+            files=[("file", ("test.pdf", MINIMAL_PDF, "application/pdf"))],
+        )
+
+    assert response.status_code == 202
+    data = response.json()
+    assert data["sourceDocumentId"] is None
+
+    # No source_documents rows — legacy path bypasses CDM tables
+    sd_result = await test_db.execute(select(SourceDocumentORM))
+    assert len(list(sd_result.scalars().all())) == 0
+
+
+@pytest.mark.asyncio
 async def test_upload_simple_parser_skips_cdm_tables(client: AsyncClient, test_db: AsyncSession):
     """With parser_type=simple, CDM tables should not be populated."""
     token = await _signup_and_login(client)
