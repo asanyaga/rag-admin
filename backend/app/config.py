@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # LlamaParse / LlamaCloud
     LLAMA_CLOUD_KEY: str = ""
 
+    # CDM Persistence
+    USE_CDM_PARSER: bool = True
+
     # -------------------------------------------------------------------------
     # Observability Configuration (OpenTelemetry)
     # -------------------------------------------------------------------------
