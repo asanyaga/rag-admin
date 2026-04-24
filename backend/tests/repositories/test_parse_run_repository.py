@@ -184,6 +184,44 @@ async def test_get_latest_for_project_returns_none_for_config_mismatch(repo, sou
 
 
 @pytest.mark.asyncio
+async def test_list_for_source_document_empty(repo):
+    assert await repo.list_for_source_document(uuid4()) == []
+
+
+@pytest.mark.asyncio
+async def test_list_for_source_document_orders_newest_first(
+    repo, source_doc, test_db
+):
+    r1 = await repo.create(make_dto(source_doc, config_hash="1" * 64))
+    r2 = await repo.create(make_dto(source_doc, config_hash="2" * 64))
+    r3 = await repo.create(make_dto(source_doc, config_hash="3" * 64))
+
+    # Bump created_at deterministically: r2 newest, r3 middle, r1 oldest.
+    r1.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    r3.created_at = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    r2.created_at = datetime(2026, 3, 1, tzinfo=timezone.utc)
+    await test_db.commit()
+
+    rows = await repo.list_for_source_document(source_doc.id)
+    assert [r.id for r in rows] == [r2.id, r3.id, r1.id]
+
+
+@pytest.mark.asyncio
+async def test_list_for_source_document_excludes_other_sources(
+    repo, source_doc, test_db
+):
+    await repo.create(make_dto(source_doc, config_hash="1" * 64))
+    other = SourceDocument(id=uuid4(), sha256="c" * 64, storage_uri="local://c.pdf")
+    test_db.add(other)
+    await test_db.commit()
+    await test_db.refresh(other)
+    other_run = await repo.create(make_dto(other, config_hash="2" * 64))
+
+    rows = await repo.list_for_source_document(other.id)
+    assert [r.id for r in rows] == [other_run.id]
+
+
+@pytest.mark.asyncio
 async def test_create_with_explicit_id(repo, source_doc):
     explicit_id = uuid4()
     run = await repo.create(make_dto(source_doc, id=explicit_id))
