@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.document import Document as DocumentORM
 from app.models.parse_run import ParseRun
 
 
@@ -19,6 +20,7 @@ class ParseRunCreate:
     config_hash: str
     status: str
     started_at: datetime
+    id: UUID | None = None
     parser_version: str | None = None
     finished_at: datetime | None = None
     duration_ms: int | None = None
@@ -36,7 +38,7 @@ class ParseRunRepository:
         self.session = session
 
     async def create(self, dto: ParseRunCreate) -> ParseRun:
-        row = ParseRun(
+        kwargs: dict[str, Any] = dict(
             source_document_id=dto.source_document_id,
             parser=dto.parser,
             parser_version=dto.parser_version,
@@ -55,6 +57,9 @@ class ParseRunRepository:
             provider_refs=dto.provider_refs,
             error=dto.error,
         )
+        if dto.id is not None:
+            kwargs["id"] = dto.id
+        row = ParseRun(**kwargs)
         self.session.add(row)
         await self.session.commit()
         await self.session.refresh(row)
@@ -73,12 +78,42 @@ class ParseRunRepository:
         representation_kind: str,
         config_hash: str,
     ) -> ParseRun | None:
-        """Point lookup on the unique index."""
+        """Point lookup on the unique index (no project-scope check)."""
         result = await self.session.execute(
             select(ParseRun)
             .where(ParseRun.source_document_id == source_document_id)
             .where(ParseRun.representation_kind == representation_kind)
             .where(ParseRun.config_hash == config_hash)
+            .order_by(ParseRun.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_latest_for_project(
+        self,
+        *,
+        source_document_id: UUID,
+        representation_kind: str,
+        config_hash: str,
+        project_id: UUID,
+    ) -> ParseRun | None:
+        """Same-project reuse lookup.
+
+        Only returns a run if source_document_id is referenced by a Document
+        row belonging to project_id — enforces the same-project isolation
+        policy from the spec (§2.3).
+        """
+        in_project = (
+            select(DocumentORM.source_document_id)
+            .where(DocumentORM.project_id == project_id)
+            .where(DocumentORM.source_document_id.isnot(None))
+        )
+        result = await self.session.execute(
+            select(ParseRun)
+            .where(ParseRun.source_document_id == source_document_id)
+            .where(ParseRun.representation_kind == representation_kind)
+            .where(ParseRun.config_hash == config_hash)
+            .where(ParseRun.source_document_id.in_(in_project))
             .order_by(ParseRun.created_at.desc())
             .limit(1)
         )

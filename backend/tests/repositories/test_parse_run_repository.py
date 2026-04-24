@@ -5,11 +5,28 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models import User
+from app.models.document import Document as DocumentORM
 from app.models.source_document import SourceDocument
 from app.repositories.parse_run_repository import (
     ParseRunCreate,
     ParseRunRepository,
 )
+
+
+@pytest.fixture
+async def user(test_db: AsyncSession) -> User:
+    user = User(
+        id=uuid4(),
+        email="test@example.com",
+        full_name="Test User",
+        auth_provider="email",
+        password_hash="hashed",
+    )
+    test_db.add(user)
+    await test_db.commit()
+    await test_db.refresh(user)
+    return user
 
 
 @pytest.fixture
@@ -100,3 +117,74 @@ async def test_update_status_transitions_pending_to_succeeded(repo, source_doc):
     assert updated.input_tokens == 100
     assert updated.output_tokens == 50
     assert updated.finished_at is not None
+
+
+@pytest.fixture
+async def source_and_doc(test_db: AsyncSession, user: User):
+    """Returns (SourceDocument ORM, project_id UUID) with a Document linking them."""
+    project_id = uuid4()
+    sd = SourceDocument(id=uuid4(), sha256="b" * 64, storage_uri="local://b.pdf")
+    test_db.add(sd)
+    await test_db.commit()
+    await test_db.refresh(sd)
+
+    doc = DocumentORM(
+        project_id=project_id,
+        source_document_id=sd.id,
+        source_type="upload",
+        source_identifier="b.pdf",
+        title="B",
+        status="ready",
+        created_by=user.id,
+    )
+    test_db.add(doc)
+    await test_db.commit()
+    return sd, project_id
+
+
+@pytest.mark.asyncio
+async def test_get_latest_for_project_finds_run_in_same_project(repo, source_and_doc):
+    sd, project_id = source_and_doc
+    run = await repo.create(make_dto(sd, config_hash="p" * 64))
+    found = await repo.get_latest_for_project(
+        source_document_id=sd.id,
+        representation_kind="vector_light",
+        config_hash="p" * 64,
+        project_id=project_id,
+    )
+    assert found is not None
+    assert found.id == run.id
+
+
+@pytest.mark.asyncio
+async def test_get_latest_for_project_returns_none_for_different_project(repo, source_and_doc):
+    sd, _project_id = source_and_doc
+    await repo.create(make_dto(sd, config_hash="p" * 64))
+    other_project_id = uuid4()
+    found = await repo.get_latest_for_project(
+        source_document_id=sd.id,
+        representation_kind="vector_light",
+        config_hash="p" * 64,
+        project_id=other_project_id,
+    )
+    assert found is None
+
+
+@pytest.mark.asyncio
+async def test_get_latest_for_project_returns_none_for_config_mismatch(repo, source_and_doc):
+    sd, project_id = source_and_doc
+    await repo.create(make_dto(sd, config_hash="p" * 64))
+    found = await repo.get_latest_for_project(
+        source_document_id=sd.id,
+        representation_kind="vector_light",
+        config_hash="different" + "x" * 56,
+        project_id=project_id,
+    )
+    assert found is None
+
+
+@pytest.mark.asyncio
+async def test_create_with_explicit_id(repo, source_doc):
+    explicit_id = uuid4()
+    run = await repo.create(make_dto(source_doc, id=explicit_id))
+    assert run.id == explicit_id
