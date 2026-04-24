@@ -31,7 +31,7 @@ def get_llamaparse_client() -> Any:
     from llama_cloud import AsyncLlamaCloud
     if settings.LLAMA_CLOUD_KEY:
         return AsyncLlamaCloud(api_key=settings.LLAMA_CLOUD_KEY)
-    return AsyncLlamaCloud()
+    return None
 
 
 def get_parsing_service(db: AsyncSession) -> ParsingService:
