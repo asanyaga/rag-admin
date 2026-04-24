@@ -21,6 +21,7 @@ from app.repositories.parsed_document_repository import ParsedDocumentCreate, Pa
 from app.repositories.source_document_repository import SourceDocumentRepository
 from app.services.parsing.errors import LlamaParseRunError, ParseFailedError
 from app.services.parsing.llamaparse_runner import run_llamaparse
+from app.utils.file_validation import compute_checksum
 
 
 def _compute_config_hash(config: dict[str, Any]) -> str:
@@ -90,7 +91,6 @@ class ParsingService:
         mime_type: str,
     ) -> SourceDocumentCDM:
         """Store bytes (idempotent on sha256) and return a CDM SourceDocument."""
-        from app.utils.file_validation import compute_checksum
         sha256 = compute_checksum(bytes_)
         storage_uri = await self._storage.save(bytes_, f"uploads/{sha256}/{filename}")
         orm, _ = await self._source_doc_repo.get_or_create_by_sha256(
@@ -132,6 +132,9 @@ class ParsingService:
             if existing.status in ("succeeded", "partial"):
                 doc_orm = await self._parsed_doc_repo.get_by_run(existing.id)
                 return cdm_run, _doc_orm_to_cdm(doc_orm) if doc_orm else None
+            # TODO(PR3): decide retry policy for previously failed runs.
+            # Currently returns (failed_run, None) silently — the spec §2.3 says "return it,
+            # do not re-parse" regardless of status. The caller should check run.status.
             return cdm_run, None
 
         try:
