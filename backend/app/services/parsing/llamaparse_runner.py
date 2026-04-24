@@ -10,6 +10,7 @@ from app.cdm.adapters.base import SourceMeta
 from app.cdm.adapters.llamaparse import LlamaParseAdapter
 from app.cdm.models import ParsedDocument, ParserKind
 from app.cdm.source import ParseRun, ParseRunStatus, SourceDocument
+from app.services.parsing.errors import LlamaParseRunError
 
 
 async def run_llamaparse(
@@ -53,7 +54,7 @@ async def run_llamaparse(
             duration_ms=duration_ms,
             error=f"{type(exc).__name__}: {exc}",
         )
-        raise RuntimeError(f"LlamaParse failed: {exc}") from exc
+        raise LlamaParseRunError(f"LlamaParse failed: {exc}", run=failed) from exc
 
     raw = result.model_dump()
     finished_at = datetime.now(timezone.utc)

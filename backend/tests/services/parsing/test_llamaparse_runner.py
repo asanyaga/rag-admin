@@ -60,7 +60,7 @@ async def test_runner_returns_run_and_doc_on_success(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_runner_records_failure(tmp_path):
+async def test_runner_raises_llama_parse_run_error_on_failure(tmp_path):
     src = SourceDocument(
         id="src-1", sha256="a" * 64,
         created_at=datetime.now(timezone.utc),
@@ -73,7 +73,8 @@ async def test_runner_records_failure(tmp_path):
             self.parsing = SimpleNamespace(parse=AsyncMock(side_effect=RuntimeError("boom")))
     client = _BoomClient()
 
-    with pytest.raises(RuntimeError):
+    from app.services.parsing.errors import LlamaParseRunError
+    with pytest.raises(LlamaParseRunError) as exc_info:
         await run_llamaparse(
             source=src,
             file_path=str(file_path),
@@ -81,3 +82,8 @@ async def test_runner_records_failure(tmp_path):
             config={},
             client=client,
         )
+
+    err = exc_info.value
+    assert err.run.status.value == "failed"
+    assert err.run.source_document_id == "src-1"
+    assert "boom" in err.run.error
