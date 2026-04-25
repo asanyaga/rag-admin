@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import DateTime, ForeignKey, Integer, JSON, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -48,7 +48,7 @@ class ParseRun(Base):
         JSON, nullable=False, default=dict, server_default=sa.text("'{}'")
     )
     raw_payload: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True, default=None
+        JSON, nullable=True, default=None
     )
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

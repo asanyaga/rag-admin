@@ -226,3 +226,23 @@ async def test_create_with_explicit_id(repo, source_doc):
     explicit_id = uuid4()
     run = await repo.create(make_dto(source_doc, id=explicit_id))
     assert run.id == explicit_id
+
+
+@pytest.mark.asyncio
+async def test_create_persists_raw_payload(repo, source_doc):
+    payload = {
+        "job_metadata": {"job_id": "abc", "pdf-inputTokens": 10},
+        "pages": [{"text": "hello", "markdown": "# hello"}],
+    }
+    run = await repo.create(make_dto(source_doc, raw_payload=payload))
+    fetched = await repo.get(run.id)
+    assert fetched is not None
+    assert fetched.raw_payload == payload
+
+
+@pytest.mark.asyncio
+async def test_create_defaults_raw_payload_to_none(repo, source_doc):
+    run = await repo.create(make_dto(source_doc))
+    fetched = await repo.get(run.id)
+    assert fetched is not None
+    assert fetched.raw_payload is None
