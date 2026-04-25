@@ -31,6 +31,7 @@ import AgentRunDetailPage from './pages/AgentRunDetailPage'
 import DataStoresPage from './pages/DataStoresPage'
 import DataStoreDetailPage from './pages/DataStoreDetailPage'
 import ExportPlaygroundPage from './pages/ExportPlaygroundPage'
+import { ParseRunDetailPage } from './pages/ParseRunDetailPage'
 
 const router = createBrowserRouter([
   {
@@ -75,6 +76,11 @@ const router = createBrowserRouter([
             path: 'documents',
             element: <DocumentsPage />,
             handle: { breadcrumb: 'Documents' },
+          },
+          {
+            path: 'documents/:documentId/runs/:runId',
+            element: <ParseRunDetailPage />,
+            handle: { breadcrumb: 'Parse Run' },
           },
           {
             path: 'index',
