@@ -239,6 +239,7 @@ async def test_parse_and_persist_failure_path(repos, source_cdm, source_orm, tes
     db_run = result.scalar_one_or_none()
     assert db_run is not None
     assert "SDK exploded" in (db_run.error or "")
+    assert db_run.raw_payload is None
 
     db_doc = await doc_repo.get_by_run(db_run.id)
     assert db_doc is None

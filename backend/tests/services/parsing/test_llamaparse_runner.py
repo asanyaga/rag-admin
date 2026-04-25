@@ -111,3 +111,4 @@ async def test_runner_raises_llama_parse_run_error_on_failure(tmp_path):
     assert "boom" in err.run.error
     assert err.run.finished_at is not None
     assert err.run.duration_ms is not None and err.run.duration_ms >= 0
+    assert err.run.raw_payload is None
