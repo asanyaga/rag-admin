@@ -26,6 +26,7 @@
       "Bash(python -m pytest:*)",
       "Bash(python -m py_compile:*)",
       "Bash(python -m pip:*)",
+      "Bash(python -m alembic:*)",
       "Bash(python -c:*)",
       "Bash(python3 -c:*)",
       "Bash(python /tmp/*)",
@@ -56,7 +57,26 @@
       "Bash(ps -W*)",
       "Bash(taskkill:*)",
       "Read(//tmp/**)",
-      "Bash(python -m alembic --config /c/Repos/rag-admin/backend/alembic.ini heads)"
+      "Bash(python -m alembic --config /c/Repos/rag-admin/backend/alembic.ini heads)",
+      "Bash(cp /c/Repos/doc_processing_research/demos/llamaparse_outputs/annual_pp1-5_items.json /c/Repos/rag-admin/backend/tests/fixtures/llamaparse/annual_pp1-5/items.json)",
+      "Bash(cp /c/Repos/doc_processing_research/demos/llamaparse_outputs/annual_pp1-5_markdown.md /c/Repos/rag-admin/backend/tests/fixtures/llamaparse/annual_pp1-5/markdown.md)",
+      "Bash(cp /c/Repos/doc_processing_research/demos/llamaparse_outputs/receipt_items.json /c/Repos/rag-admin/backend/tests/fixtures/llamaparse/receipt/items.json)",
+      "Bash(cp /c/Repos/doc_processing_research/demos/llamaparse_outputs/receipt_markdown.md /c/Repos/rag-admin/backend/tests/fixtures/llamaparse/receipt/markdown.md)",
+      "Bash(cp /c/Repos/doc_processing_research/demos/llamaparse_outputs/batch_summary.json /c/Repos/rag-admin/backend/tests/fixtures/llamaparse/batch_summary.json)",
+      "Bash(docker port *)",
+      "Bash(docker exec *)",
+      "Bash(netstat -ano)",
+      "Bash(DATABASE_URL=\"postgresql+asyncpg://ragadmin:ragadmin_local@localhost:5432/ragadmin\" uv run --directory /c/Repos/rag-admin/backend alembic current)",
+      "Bash(tasklist /FI \"PID eq 7488\" /FO LIST)",
+      "Bash(tasklist /FI \"PID eq 20828\" /FO LIST)",
+      "Bash(gh pr create --base main --head feat/cdm-persistence-schema --title 'feat\\(cdm\\): persistence layer — schema + models + repositories \\(PR 1/3\\)' --body ' *)",
+      "Bash(gh pr *)",
+      "Bash(npm --prefix /c/Repos/rag-admin/frontend run lint)",
+      "Bash(npx --prefix /c/Repos/rag-admin/frontend vitest run src/hooks/useParseRuns.test.ts)",
+      "Bash(npx --prefix /c/Repos/rag-admin/frontend vitest run --config vitest.config.ts src/hooks/useParseRuns.test.ts)",
+      "Bash(npm --prefix /c/Repos/rag-admin/frontend run build)",
+      "Bash(curl -s http://localhost:8000/docs -o /dev/null -w \"docs: %{http_code}\\\\n\")",
+      "Bash(grep -rn \"/parse\\\\\"\\\\|/parse$\\\\|documents.*parse\\\\|@router.post\" /c/Repos/rag-admin/backend/app/routers/)"
     ]
   }
 }
