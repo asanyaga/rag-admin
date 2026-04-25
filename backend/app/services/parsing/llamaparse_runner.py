@@ -74,6 +74,7 @@ async def run_llamaparse(
         input_tokens=jm.get("pdf-inputTokens"),
         output_tokens=jm.get("pdf-outputTokens"),
         provider_refs={"llamaparse_job_id": jm.get("job_id")} if jm.get("job_id") else {},
+        raw_payload=raw,
     )
 
     adapter = LlamaParseAdapter()

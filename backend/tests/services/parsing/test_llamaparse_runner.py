@@ -61,6 +61,28 @@ async def test_runner_returns_run_and_doc_on_success(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_runner_sets_raw_payload_on_success(tmp_path):
+    src = SourceDocument(
+        id="src-1", sha256="a" * 64,
+        filename="hello.pdf",
+        created_at=datetime.now(timezone.utc),
+    )
+    file_path = tmp_path / "hello.pdf"
+    file_path.write_bytes(b"%PDF-1.4\n")
+
+    client = _FakeClient(MINIMAL_RAW)
+
+    run, doc = await run_llamaparse(
+        source=src,
+        file_path=str(file_path),
+        representation_kind="extract_rich",
+        config={"tier": "agentic"},
+        client=client,
+    )
+    assert run.raw_payload == MINIMAL_RAW
+
+
+@pytest.mark.asyncio
 async def test_runner_raises_llama_parse_run_error_on_failure(tmp_path):
     src = SourceDocument(
         id="src-1", sha256="a" * 64,
