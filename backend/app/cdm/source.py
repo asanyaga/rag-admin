@@ -55,4 +55,5 @@ class ParseRun(_Frozen):
     warnings: List[str] = []
     failed_pages: List[int] = []
     provider_refs: Dict[str, Any] = {}
+    raw_payload: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
