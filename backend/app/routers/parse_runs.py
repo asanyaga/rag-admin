@@ -12,7 +12,7 @@ from app.models.document import Document as DocumentORM
 from app.models.project import Project
 from app.repositories.parse_run_repository import ParseRunRepository
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
-from app.schemas.parse_run import ParsedDocumentResponse
+from app.schemas.parse_run import ParsedDocumentResponse, RawPayloadResponse
 
 router = APIRouter(prefix="/parse-runs", tags=["parse-runs"])
 
@@ -71,3 +71,35 @@ async def get_parsed_document_for_run(
             detail=f"No ParsedDocument for ParseRun {parse_run_id}",
         )
     return ParsedDocumentResponse.from_orm_row(parsed)
+
+
+@router.get(
+    "/{parse_run_id}/raw-payload",
+    response_model=RawPayloadResponse,
+    summary="Get the verbatim parser SDK payload for a ParseRun",
+    description=(
+        "Return the raw parser-SDK response that produced this ParseRun, as "
+        "captured at run time. Returns rawPayload: null for legacy runs or "
+        "runs where no payload was captured (e.g. the parser SDK call failed)."
+    ),
+)
+async def get_raw_payload_for_run(
+    parse_run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    run = await ParseRunRepository(db).get(parse_run_id)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ParseRun {parse_run_id} not found",
+        )
+    owns = await _user_owns_source(
+        db, source_document_id=run.source_document_id, user_id=current_user.id
+    )
+    if not owns:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this ParseRun",
+        )
+    return RawPayloadResponse(raw_payload=run.raw_payload)
