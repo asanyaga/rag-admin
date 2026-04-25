@@ -18,6 +18,8 @@ import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialo
 import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
 import { ParsedDocumentViewer } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
+import { RunTimeline } from '@/components/parse-runs/RunTimeline'
+import { useParseRuns } from '@/hooks/useParseRuns'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Plus, RotateCw, Files } from 'lucide-react'
 import type { BulkDocumentUpload, BulkUploadResponse } from '@/types/document'
@@ -60,6 +62,7 @@ export default function DocumentsPage(): JSX.Element {
   const [reparseDialogOpen, setReparseDialogOpen] = useState(false)
 
   const { parseResults, reparseDocument } = useParseResults(viewDocumentId)
+  const { parseRuns } = useParseRuns(viewDocumentId)
 
   if (!currentProject) {
     return (
@@ -365,6 +368,16 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           </SheetHeader>
           <div className="mt-6 space-y-6">
+            {viewDocumentId && (
+              <section>
+                <h3 className="text-sm font-medium mb-2">Parse runs</h3>
+                <RunTimeline
+                  documentId={viewDocumentId}
+                  runs={parseRuns}
+                  onReparse={() => setReparseDialogOpen(true)}
+                />
+              </section>
+            )}
             {viewDocumentId && (
               <ParsedDocumentViewer documentId={viewDocumentId} />
             )}

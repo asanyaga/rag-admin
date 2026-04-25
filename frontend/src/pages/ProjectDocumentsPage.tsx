@@ -15,6 +15,8 @@ import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialo
 import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
 import { ParsedDocumentViewer } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
+import { RunTimeline } from '@/components/parse-runs/RunTimeline'
+import { useParseRuns } from '@/hooks/useParseRuns'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -44,6 +46,7 @@ export default function ProjectDocumentsPage(): JSX.Element {
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
 
   const { parseResults, reparseDocument } = useParseResults(viewDocumentId)
+  const { parseRuns } = useParseRuns(viewDocumentId)
 
   if (!projectId) {
     return (
@@ -250,6 +253,17 @@ export default function ProjectDocumentsPage(): JSX.Element {
             </div>
           </SheetHeader>
           <div className="mt-6 space-y-6">
+            {viewDocumentId && (
+              <section>
+                <h3 className="text-sm font-medium mb-2">Parse runs</h3>
+                <RunTimeline
+                  documentId={viewDocumentId}
+                  runs={parseRuns}
+                  onReparse={() => setReparseDialogOpen(true)}
+                />
+              </section>
+            )}
+
             {/* CDM Parse (renders nothing if no CDM runs exist) */}
             {viewDocumentId && (
               <ParsedDocumentViewer documentId={viewDocumentId} />
