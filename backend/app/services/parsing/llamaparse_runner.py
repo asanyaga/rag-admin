@@ -32,11 +32,13 @@ async def run_llamaparse(
 
     tier = config.get("tier", "agentic")
     expand = config.get("expand", ["markdown", "text", "items", "metadata"])
+    version = config.get("version", "latest")
 
     try:
         result = await client.parsing.parse(
             upload_file=file_path,
             tier=tier,
+            version=version,
             expand=expand,
         )
     except Exception as exc:

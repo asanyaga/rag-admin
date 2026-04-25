@@ -81,6 +81,21 @@ def _mint_block_id(source_document_id: str, page_index: int, reading_order: int)
     return f"{source_document_id}:p{page_index}:b{reading_order}"
 
 
+def _flatten_pages(value: Any, *, key: str) -> Optional[str]:
+    """LlamaParse returns either a string (legacy) or a dict ``{"pages": [{key: ...}]}``
+    (current SDK). Normalize both into a single string, joining pages on blank lines.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value or None
+    if isinstance(value, dict):
+        pages = value.get("pages") or []
+        parts = [str(p.get(key)) for p in pages if p.get(key)]
+        return "\n\n".join(parts) or None
+    return None
+
+
 class LlamaParseAdapter:
     parser: ClassVar[ParserKind] = ParserKind.LLAMAPARSE
 
@@ -188,10 +203,10 @@ class LlamaParseAdapter:
                 parser_extras={"source_page_number": source_page_number},
             ))
 
-        full_text = raw.get("text") or "\n\n".join(
+        full_text = _flatten_pages(raw.get("text"), key="text") or "\n\n".join(
             b.text for b in all_blocks if b.text
         ) or None
-        full_markdown = raw.get("markdown") or "\n\n".join(
+        full_markdown = _flatten_pages(raw.get("markdown"), key="markdown") or "\n\n".join(
             b.markdown for b in all_blocks if b.markdown
         ) or None
 
