@@ -181,6 +181,34 @@ async def test_parse_and_persist_happy_path(repos, source_cdm, source_orm, test_
 
 
 @pytest.mark.asyncio
+async def test_parse_and_persist_persists_raw_payload(repos, source_cdm, source_orm, test_db, tmp_path):
+    project_id = uuid4()
+    await _link_source_to_project(test_db, source_orm, project_id)
+
+    file_path = tmp_path / "c.pdf"
+    file_path.write_bytes(b"%PDF-1.4\n")
+
+    service = _make_service(repos, _fake_client(MINIMAL_RAW))
+    config = {"tier": "agentic"}
+
+    run, doc = await service.parse_and_persist(
+        source=source_cdm,
+        file_path=str(file_path),
+        representation_kind="extract_rich",
+        config=config,
+        project_id=project_id,
+    )
+
+    assert run.status == ParseRunStatus.SUCCEEDED
+
+    _, run_repo, _ = repos
+    persisted = await run_repo.get(UUID(run.id))
+    assert persisted is not None
+    assert persisted.raw_payload is not None
+    assert persisted.raw_payload == MINIMAL_RAW
+
+
+@pytest.mark.asyncio
 async def test_parse_and_persist_failure_path(repos, source_cdm, source_orm, test_db, tmp_path):
     project_id = uuid4()
     await _link_source_to_project(test_db, source_orm, project_id)
@@ -211,6 +239,7 @@ async def test_parse_and_persist_failure_path(repos, source_cdm, source_orm, tes
     db_run = result.scalar_one_or_none()
     assert db_run is not None
     assert "SDK exploded" in (db_run.error or "")
+    assert db_run.raw_payload is None
 
     db_doc = await doc_repo.get_by_run(db_run.id)
     assert db_doc is None

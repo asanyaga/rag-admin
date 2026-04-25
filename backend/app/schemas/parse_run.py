@@ -54,3 +54,11 @@ class ParsedDocumentResponse(BaseModel):
     @classmethod
     def from_orm_row(cls, row: ParsedDocumentORM) -> "ParsedDocumentResponse":
         return cls.model_validate(row)
+
+
+class RawPayloadResponse(BaseModel):
+    """Verbatim parser SDK payload captured at run time. Null for legacy runs."""
+
+    raw_payload: dict[str, Any] | None = Field(None, alias="rawPayload")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

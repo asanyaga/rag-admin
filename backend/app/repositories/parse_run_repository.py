@@ -30,6 +30,7 @@ class ParseRunCreate:
     warnings: list[str] = field(default_factory=list)
     failed_pages: list[int] = field(default_factory=list)
     provider_refs: dict[str, Any] = field(default_factory=dict)
+    raw_payload: dict[str, Any] | None = None
     error: str | None = None
 
 
@@ -55,6 +56,7 @@ class ParseRunRepository:
             warnings=dto.warnings,
             failed_pages=dto.failed_pages,
             provider_refs=dto.provider_refs,
+            raw_payload=dto.raw_payload,
             error=dto.error,
         )
         if dto.id is not None:

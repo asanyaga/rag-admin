@@ -158,3 +158,78 @@ async def test_403_when_user_does_not_own_source(
         headers={"Authorization": f"Bearer {token_b}"},
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_raw_payload_200_returns_dict(
+    client: AsyncClient, test_db: AsyncSession
+):
+    token = await _signup_and_login(client, "rp1@example.com")
+    user = await _user_by_email(test_db, "rp1@example.com")
+    run = await _seed(test_db, user)
+    run.raw_payload = {"job_metadata": {"job_id": "j1"}, "pages": []}
+    await test_db.commit()
+
+    resp = await client.get(
+        f"/api/v1/parse-runs/{run.id}/raw-payload",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["rawPayload"] == {"job_metadata": {"job_id": "j1"}, "pages": []}
+
+
+@pytest.mark.asyncio
+async def test_raw_payload_200_returns_null_when_absent(
+    client: AsyncClient, test_db: AsyncSession
+):
+    token = await _signup_and_login(client, "rp2@example.com")
+    user = await _user_by_email(test_db, "rp2@example.com")
+    run = await _seed(test_db, user)  # raw_payload defaults to NULL
+
+    resp = await client.get(
+        f"/api/v1/parse-runs/{run.id}/raw-payload",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["rawPayload"] is None
+
+
+@pytest.mark.asyncio
+async def test_raw_payload_404_when_run_does_not_exist(
+    client: AsyncClient,
+):
+    token = await _signup_and_login(client, "rp3@example.com")
+    resp = await client.get(
+        f"/api/v1/parse-runs/{uuid4()}/raw-payload",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_raw_payload_403_when_user_does_not_own_source(
+    client: AsyncClient, test_db: AsyncSession
+):
+    await _signup_and_login(client, "rpA@example.com")
+    user_a = await _user_by_email(test_db, "rpA@example.com")
+    run = await _seed(test_db, user_a)
+
+    token_b = await _signup_and_login(client, "rpB@example.com")
+    resp = await client.get(
+        f"/api/v1/parse-runs/{run.id}/raw-payload",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_raw_payload_401_when_unauthenticated(
+    client: AsyncClient, test_db: AsyncSession
+):
+    await _signup_and_login(client, "rpC@example.com")
+    user = await _user_by_email(test_db, "rpC@example.com")
+    run = await _seed(test_db, user)
+
+    resp = await client.get(f"/api/v1/parse-runs/{run.id}/raw-payload")
+    assert resp.status_code == 401

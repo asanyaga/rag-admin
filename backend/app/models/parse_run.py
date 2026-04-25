@@ -47,6 +47,9 @@ class ParseRun(Base):
     provider_refs: Mapped[dict] = mapped_column(
         JSON, nullable=False, default=dict, server_default=sa.text("'{}'")
     )
+    raw_payload: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True, default=None
+    )
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False,
