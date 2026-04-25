@@ -22,6 +22,7 @@ from app.dependencies.documents import get_storage_service, get_document_extract
 from app.models import User, DocumentStatus
 from app.ports import StorageService, DocumentExtractor
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.parse_run_repository import ParseRunRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.parse_result_repository import ParseResultRepository
 from app.schemas.document import (
@@ -33,6 +34,7 @@ from app.schemas.document import (
     BulkMoveRequest,
     BulkMoveResponse,
 )
+from app.schemas.parse_run import ParseRunResponse
 from app.services.document_service import DocumentService, process_document_extraction, BulkUploadItemResult
 from app.services.parse_service import ParseService, process_document_parsing
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
@@ -434,6 +436,36 @@ async def download_document_file(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+
+@router.get(
+    "/{document_id}/parse-runs",
+    response_model=list[ParseRunResponse],
+    summary="List CDM ParseRuns for a document",
+    description=(
+        "Return every CDM ParseRun associated with this document's source, "
+        "newest first. Returns [] if the document has no CDM runs."
+    ),
+)
+async def list_document_parse_runs(
+    document_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List CDM ParseRuns for a document."""
+    document_repo = DocumentRepository(db)
+    document = await document_repo.get_by_id(document_id, current_user.id)
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document {document_id} not found",
+        )
+    if document.source_document_id is None:
+        return []
+    runs = await ParseRunRepository(db).list_for_source_document(
+        document.source_document_id
+    )
+    return [ParseRunResponse.from_orm_row(r) for r in runs]
 
 
 @router.get(

@@ -71,6 +71,17 @@ class ParseRunRepository:
         )
         return result.scalar_one_or_none()
 
+    async def list_for_source_document(
+        self, source_document_id: UUID
+    ) -> list[ParseRun]:
+        """Return all runs for a source, newest first."""
+        result = await self.session.execute(
+            select(ParseRun)
+            .where(ParseRun.source_document_id == source_document_id)
+            .order_by(ParseRun.created_at.desc())
+        )
+        return list(result.scalars().all())
+
     async def get_latest_for_content(
         self,
         *,

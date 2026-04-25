@@ -1,0 +1,73 @@
+"""Parse-runs API router — CDM read endpoints."""
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.dependencies.auth import get_current_active_user
+from app.models import User
+from app.models.document import Document as DocumentORM
+from app.models.project import Project
+from app.repositories.parse_run_repository import ParseRunRepository
+from app.repositories.parsed_document_repository import ParsedDocumentRepository
+from app.schemas.parse_run import ParsedDocumentResponse
+
+router = APIRouter(prefix="/parse-runs", tags=["parse-runs"])
+
+
+async def _user_owns_source(
+    db: AsyncSession, *, source_document_id: UUID, user_id: UUID
+) -> bool:
+    """True iff the user owns any Document pointing at this source_document_id."""
+    result = await db.execute(
+        select(DocumentORM.id)
+        .join(DocumentORM.project)
+        .where(
+            and_(
+                DocumentORM.source_document_id == source_document_id,
+                Project.user_id == user_id,
+            )
+        )
+        .limit(1)
+    )
+    return result.scalar_one_or_none() is not None
+
+
+@router.get(
+    "/{parse_run_id}/parsed-document",
+    response_model=ParsedDocumentResponse,
+    summary="Get the ParsedDocument content for a ParseRun",
+    description=(
+        "Return the full CDM content blob produced by a ParseRun. "
+        "Returns 404 if the run has no associated ParsedDocument "
+        "(e.g. the run failed)."
+    ),
+)
+async def get_parsed_document_for_run(
+    parse_run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    run = await ParseRunRepository(db).get(parse_run_id)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ParseRun {parse_run_id} not found",
+        )
+    owns = await _user_owns_source(
+        db, source_document_id=run.source_document_id, user_id=current_user.id
+    )
+    if not owns:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this ParseRun",
+        )
+    parsed = await ParsedDocumentRepository(db).get_by_run(parse_run_id)
+    if parsed is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No ParsedDocument for ParseRun {parse_run_id}",
+        )
+    return ParsedDocumentResponse.from_orm_row(parsed)
