@@ -185,5 +185,6 @@ class ParsingService:
             warnings=list(cdm_run.warnings),
             failed_pages=list(cdm_run.failed_pages),
             provider_refs=dict(cdm_run.provider_refs),
+            raw_payload=cdm_run.raw_payload,
             error=cdm_run.error,
         ))
