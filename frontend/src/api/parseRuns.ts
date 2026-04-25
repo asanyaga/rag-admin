@@ -1,5 +1,9 @@
 import apiClient from './client'
-import type { ParseRunListItem, ParsedDocumentDetail } from '@/types/cdm'
+import type {
+  ParseRunListItem,
+  ParsedDocumentDetail,
+  RawPayloadResponse,
+} from '@/types/cdm'
 
 export async function listParseRuns(
   documentId: string
@@ -10,11 +14,29 @@ export async function listParseRuns(
   return response.data
 }
 
+export async function getParseRun(
+  parseRunId: string
+): Promise<ParseRunListItem> {
+  const response = await apiClient.get<ParseRunListItem>(
+    `/parse-runs/${parseRunId}`
+  )
+  return response.data
+}
+
 export async function getParsedDocument(
   parseRunId: string
 ): Promise<ParsedDocumentDetail> {
   const response = await apiClient.get<ParsedDocumentDetail>(
     `/parse-runs/${parseRunId}/parsed-document`
+  )
+  return response.data
+}
+
+export async function getRawPayload(
+  parseRunId: string
+): Promise<RawPayloadResponse> {
+  const response = await apiClient.get<RawPayloadResponse>(
+    `/parse-runs/${parseRunId}/raw-payload`
   )
   return response.data
 }

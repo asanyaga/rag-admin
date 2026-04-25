@@ -233,3 +233,62 @@ async def test_raw_payload_401_when_unauthenticated(
 
     resp = await client.get(f"/api/v1/parse-runs/{run.id}/raw-payload")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_get_run_200_returns_run_with_camel_case(
+    client: AsyncClient, test_db: AsyncSession
+):
+    token = await _signup_and_login(client, "gr1@example.com")
+    user = await _user_by_email(test_db, "gr1@example.com")
+    run = await _seed(test_db, user)
+
+    resp = await client.get(
+        f"/api/v1/parse-runs/{run.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["id"] == str(run.id)
+    assert body["sourceDocumentId"] == str(run.source_document_id)
+    assert body["parser"] == "llamaparse"
+    assert body["status"] == "succeeded"
+    assert body["representationKind"] == "vector_light"
+
+
+@pytest.mark.asyncio
+async def test_get_run_404_when_missing(client: AsyncClient):
+    token = await _signup_and_login(client, "gr2@example.com")
+    resp = await client.get(
+        f"/api/v1/parse-runs/{uuid4()}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_run_403_when_user_does_not_own_source(
+    client: AsyncClient, test_db: AsyncSession
+):
+    await _signup_and_login(client, "grA@example.com")
+    user_a = await _user_by_email(test_db, "grA@example.com")
+    run = await _seed(test_db, user_a)
+
+    token_b = await _signup_and_login(client, "grB@example.com")
+    resp = await client.get(
+        f"/api/v1/parse-runs/{run.id}",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_get_run_401_when_unauthenticated(
+    client: AsyncClient, test_db: AsyncSession
+):
+    await _signup_and_login(client, "grC@example.com")
+    user = await _user_by_email(test_db, "grC@example.com")
+    run = await _seed(test_db, user)
+
+    resp = await client.get(f"/api/v1/parse-runs/{run.id}")
+    assert resp.status_code == 401

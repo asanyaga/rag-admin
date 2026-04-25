@@ -12,7 +12,11 @@ from app.models.document import Document as DocumentORM
 from app.models.project import Project
 from app.repositories.parse_run_repository import ParseRunRepository
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
-from app.schemas.parse_run import ParsedDocumentResponse, RawPayloadResponse
+from app.schemas.parse_run import (
+    ParsedDocumentResponse,
+    ParseRunResponse,
+    RawPayloadResponse,
+)
 
 router = APIRouter(prefix="/parse-runs", tags=["parse-runs"])
 
@@ -33,6 +37,37 @@ async def _user_owns_source(
         .limit(1)
     )
     return result.scalar_one_or_none() is not None
+
+
+@router.get(
+    "/{parse_run_id}",
+    response_model=ParseRunResponse,
+    summary="Get a single ParseRun by id",
+    description=(
+        "Return the execution row for one ParseRun. Used by the dedicated "
+        "viewer route, which only has the run id (not its document id)."
+    ),
+)
+async def get_parse_run(
+    parse_run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    run = await ParseRunRepository(db).get(parse_run_id)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ParseRun {parse_run_id} not found",
+        )
+    owns = await _user_owns_source(
+        db, source_document_id=run.source_document_id, user_id=current_user.id
+    )
+    if not owns:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this ParseRun",
+        )
+    return ParseRunResponse.from_orm_row(run)
 
 
 @router.get(

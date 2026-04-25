@@ -84,3 +84,7 @@ export interface Bbox {
   source_space?: string | null
   source_coords?: Record<string, unknown> | null
 }
+
+export interface RawPayloadResponse {
+  rawPayload: Record<string, unknown> | null
+}
