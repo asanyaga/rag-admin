@@ -16,6 +16,7 @@ import { DocumentEditDialog } from '@/components/documents/DocumentEditDialog'
 import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialog'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
+import { ParsedDocumentViewer } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Plus, RotateCw, Files } from 'lucide-react'
@@ -364,6 +365,9 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           </SheetHeader>
           <div className="mt-6 space-y-6">
+            {viewDocumentId && (
+              <ParsedDocumentViewer documentId={viewDocumentId} />
+            )}
             {viewDocumentId && parseResults.length > 0 && (
               <ParseResultViewer documentId={viewDocumentId} />
             )}

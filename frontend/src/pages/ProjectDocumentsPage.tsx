@@ -13,6 +13,7 @@ import { DocumentTextViewer } from '@/components/documents/DocumentTextViewer'
 import { DocumentEditDialog } from '@/components/documents/DocumentEditDialog'
 import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialog'
 import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
+import { ParsedDocumentViewer } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { RotateCw } from 'lucide-react'
@@ -249,6 +250,11 @@ export default function ProjectDocumentsPage(): JSX.Element {
             </div>
           </SheetHeader>
           <div className="mt-6 space-y-6">
+            {/* CDM Parse (renders nothing if no CDM runs exist) */}
+            {viewDocumentId && (
+              <ParsedDocumentViewer documentId={viewDocumentId} />
+            )}
+
             {/* Parse Results (if any) */}
             {viewDocumentId && parseResults.length > 0 && (
               <ParseResultViewer documentId={viewDocumentId} />
