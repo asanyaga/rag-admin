@@ -80,7 +80,7 @@ export function ParseRunDetailPage() {
       // The new CDM ParseRun is created asynchronously by a background task,
       // so we route the user back to the document where the timeline will
       // surface the pending run as it transitions through statuses.
-      navigate(`/documents/${documentId}`)
+      navigate('/documents')
     },
     [documentId, navigate, reparseDocument]
   )
@@ -93,8 +93,8 @@ export function ParseRunDetailPage() {
     <div className="flex flex-col h-[calc(100vh-3.5rem)]">
       <div className="px-4 py-2 border-b">
         <Button variant="ghost" size="sm" asChild>
-          <Link to={`/documents/${documentId ?? ''}`}>
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back to document
+          <Link to="/documents">
+            <ChevronLeft className="h-4 w-4 mr-1" /> Back to documents
           </Link>
         </Button>
       </div>
