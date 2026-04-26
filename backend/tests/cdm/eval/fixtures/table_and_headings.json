@@ -5,8 +5,8 @@
     "pages": [
       {
         "page_number": 1,
-        "width": 612.0,
-        "height": 792.0,
+        "page_width": 612.0,
+        "page_height": 792.0,
         "items": [
           {"type": "heading", "level": 1, "value": "Results", "md": "# Results",
            "bbox": [{"x": 72, "y": 72, "w": 100, "h": 24, "confidence": 0.99, "label": "paragraph_title"}]},

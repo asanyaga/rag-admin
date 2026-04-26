@@ -51,7 +51,7 @@ MINIMAL_RAW = {
 def _fake_client(raw: dict = MINIMAL_RAW) -> Any:
     return SimpleNamespace(
         parsing=SimpleNamespace(
-            parse=AsyncMock(return_value=SimpleNamespace(model_dump=lambda: raw))
+            parse=AsyncMock(return_value=SimpleNamespace(model_dump=lambda **_: raw))
         )
     )
 

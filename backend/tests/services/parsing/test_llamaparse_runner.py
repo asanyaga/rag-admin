@@ -27,7 +27,7 @@ MINIMAL_RAW = {
 class _FakeClient:
     def __init__(self, response: dict):
         self.parsing = SimpleNamespace(
-            parse=AsyncMock(return_value=SimpleNamespace(model_dump=lambda: response))
+            parse=AsyncMock(return_value=SimpleNamespace(model_dump=lambda **_: response))
         )
 
 

@@ -5,8 +5,8 @@
     "pages": [
       {
         "page_number": 1,
-        "width": 612.0,
-        "height": 792.0,
+        "page_width": 612.0,
+        "page_height": 792.0,
         "items": [
           {"type": "text", "value": "Left column text.", "md": "Left column text.",
            "bbox": [{"x": 72, "y": 72, "w": 234, "h": 18, "confidence": 0.95, "label": "text"}]},

@@ -58,7 +58,7 @@ async def run_llamaparse(
         )
         raise LlamaParseRunError(f"LlamaParse failed: {exc}", run=failed) from exc
 
-    raw = result.model_dump()
+    raw = result.model_dump(mode="json")
     finished_at = datetime.now(timezone.utc)
     duration_ms = int((time.perf_counter() - t0) * 1000)
 

@@ -110,8 +110,8 @@ class LlamaParseAdapter:
         for page_raw in pages_raw:
             source_page_number: int = page_raw.get("page_number", 1)
             page_index = source_page_number - 1
-            page_width = float(page_raw.get("width") or 1.0)
-            page_height = float(page_raw.get("height") or 1.0)
+            page_width = float(page_raw.get("page_width") or 1.0)
+            page_height = float(page_raw.get("page_height") or 1.0)
             page_items = page_raw.get("items") or []
 
             page_blocks: List[Block] = []

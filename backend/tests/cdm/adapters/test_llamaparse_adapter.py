@@ -75,8 +75,8 @@ MINIMAL_RAW = {
         "pages": [
             {
                 "page_number": 1,
-                "width": 100.0,
-                "height": 200.0,
+                "page_width": 100.0,
+                "page_height": 200.0,
                 "items": [
                     {
                         "type": "heading",
