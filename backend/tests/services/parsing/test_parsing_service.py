@@ -136,7 +136,7 @@ def _make_service(repos, client) -> ParsingService:
         parse_run_repo=run_repo,
         parsed_doc_repo=doc_repo,
         storage=storage,
-        llamaparse_client=client,
+        clients={ParserKind.LLAMAPARSE: client},
     )
 
 
@@ -279,9 +279,9 @@ async def test_parse_and_persist_partial_path(repos, source_cdm, source_orm, tes
 
     service = _make_service(repos, _fake_client())
 
-    with patch(
-        "app.services.parsing.parsing_service.run_llamaparse",
-        new=AsyncMock(return_value=(partial_run, partial_doc)),
+    with patch.dict(
+        "app.services.parsing.parsing_service._RUNNERS",
+        {ParserKind.LLAMAPARSE: AsyncMock(return_value=(partial_run, partial_doc))},
     ):
         run, doc = await service.parse_and_persist(
             source=source_cdm,

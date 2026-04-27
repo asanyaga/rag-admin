@@ -98,9 +98,9 @@ async def test_upload_cdm_writes_all_four_tables(client: AsyncClient, test_db: A
         return _make_fake_parse_result(source.id)
 
     with (
-        patch(
-            "app.services.parsing.parsing_service.run_llamaparse",
-            new=AsyncMock(side_effect=fake_run_llamaparse),
+        patch.dict(
+            "app.services.parsing.parsing_service._RUNNERS",
+            {ParserKind.LLAMAPARSE: AsyncMock(side_effect=fake_run_llamaparse)},
         ),
         patch(
             "app.dependencies.documents.get_llamaparse_client",

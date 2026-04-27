@@ -528,6 +528,7 @@ async def process_cdm_parsing(
     Creates a ParsingService from the provided repos and client, runs
     parse_and_persist, and writes the extracted_text shim for downstream readers.
     """
+    from app.cdm.models import ParserKind
     from app.cdm.source import SourceDocument as SourceDocumentCDM
     from app.services.parsing.errors import ParseFailedError
     from app.services.parsing.parsing_service import ParsingService
@@ -571,7 +572,9 @@ async def process_cdm_parsing(
         parse_run_repo=parse_run_repo,
         parsed_doc_repo=parsed_doc_repo,
         storage=storage_service,
-        llamaparse_client=llamaparse_client,
+        clients={
+            ParserKind.LLAMAPARSE: llamaparse_client,
+        },
     )
 
     try:

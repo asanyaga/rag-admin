@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+from typing import Any, Callable, Dict
 from uuid import UUID
 
 from app.cdm.models import ParsedDocument as ParsedDocumentCDM, ParserKind
@@ -19,9 +19,13 @@ from app.ports.storage import StorageService
 from app.repositories.parse_run_repository import ParseRunCreate, ParseRunRepository
 from app.repositories.parsed_document_repository import ParsedDocumentCreate, ParsedDocumentRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
-from app.services.parsing.errors import LlamaParseRunError, ParseFailedError
+from app.services.parsing.errors import ParseFailedError, ParseRunError
 from app.services.parsing.llamaparse_runner import run_llamaparse
-from app.utils.file_validation import compute_checksum
+
+
+_RUNNERS: Dict[ParserKind, Callable] = {
+    ParserKind.LLAMAPARSE: run_llamaparse,
+}
 
 
 def _compute_config_hash(config: dict[str, Any]) -> str:
@@ -75,13 +79,13 @@ class ParsingService:
         parse_run_repo: ParseRunRepository,
         parsed_doc_repo: ParsedDocumentRepository,
         storage: StorageService,
-        llamaparse_client: Any,
+        clients: Dict[ParserKind, Any],
     ) -> None:
         self._source_doc_repo = source_doc_repo
         self._parse_run_repo = parse_run_repo
         self._parsed_doc_repo = parsed_doc_repo
         self._storage = storage
-        self._client = llamaparse_client
+        self._clients = clients
 
     async def ensure_source_document(
         self,
@@ -91,6 +95,7 @@ class ParsingService:
         mime_type: str,
     ) -> SourceDocumentCDM:
         """Store bytes (idempotent on sha256) and return a CDM SourceDocument."""
+        from app.utils.file_validation import compute_checksum
         sha256 = compute_checksum(bytes_)
         storage_uri = await self._storage.save(bytes_, f"uploads/{sha256}/{filename}")
         orm, _ = await self._source_doc_repo.get_or_create_by_sha256(
@@ -113,11 +118,13 @@ class ParsingService:
     ) -> tuple[ParseRunCDM, ParsedDocumentCDM | None]:
         """Run parse with same-project reuse. Persists success, partial, and failure runs.
 
+        The parser is read from ``config["parser"]`` (default: ``"llamaparse"``).
         Returns (run, parsed_doc-or-None).
           - parsed_doc is not None when run.status is SUCCEEDED or PARTIAL.
-          - parsed_doc is None when run.status is FAILED or still in progress (pending/running).
+          - parsed_doc is None when run.status is FAILED.
         Raises ParseFailedError on terminal failure after the failed ParseRun is persisted.
         """
+        parser = ParserKind(config.get("parser", ParserKind.LLAMAPARSE.value))
         config_hash = _compute_config_hash(config)
         source_uuid = UUID(source.id)
 
@@ -132,20 +139,22 @@ class ParsingService:
             if existing.status in ("succeeded", "partial"):
                 doc_orm = await self._parsed_doc_repo.get_by_run(existing.id)
                 return cdm_run, _doc_orm_to_cdm(doc_orm) if doc_orm else None
-            # TODO(PR3): decide retry policy for previously failed runs.
-            # Currently returns (failed_run, None) silently — the spec §2.3 says "return it,
-            # do not re-parse" regardless of status. The caller should check run.status.
             return cdm_run, None
 
+        runner = _RUNNERS.get(parser)
+        if runner is None:
+            raise ValueError(f"No runner registered for parser: {parser}")
+        client = self._clients.get(parser)
+
         try:
-            cdm_run, cdm_doc = await run_llamaparse(
+            cdm_run, cdm_doc = await runner(
                 source=source,
                 file_path=file_path,
                 representation_kind=representation_kind,
                 config=config,
-                client=self._client,
+                client=client,
             )
-        except LlamaParseRunError as err:
+        except ParseRunError as err:
             await self._persist_run(err.run, config_hash, source_uuid)
             raise ParseFailedError(str(err)) from err
 
