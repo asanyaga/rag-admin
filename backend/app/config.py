@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # LlamaParse / LlamaCloud
     LLAMA_CLOUD_KEY: str = ""
 
+    # Landing AI ADE
+    VISION_AGENT_API_KEY: str = ""
+
     # CDM Persistence
     USE_CDM_PARSER: bool = True
 
