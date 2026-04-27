@@ -150,4 +150,5 @@ class ParsedDocument(_Frozen):
     # Lineage for future split() outputs — set when this is a derived document.
     derived_from: Optional[str] = None
     derivation: Optional[str] = None
+    parser_extras: Dict[str, Any] = {}
     schema_version: str = "1.0"

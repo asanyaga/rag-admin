@@ -110,6 +110,7 @@
     }
   ],
   "parse_run_id": "run-eval",
+  "parser_extras": {},
   "schema_version": "1.0",
   "source_document_id": "src-eval",
   "source_filename": null
