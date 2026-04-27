@@ -93,6 +93,7 @@ class _TableHTMLParser(HTMLParser):
 def _parse_table(
     html_str: str,
     grounding_dict: Dict[str, Any],
+    markdown_str: Optional[str] = None,
 ) -> Optional[Table]:
     if not html_str or "<table" not in html_str.lower():
         return None
@@ -144,6 +145,7 @@ def _parse_table(
         cols=max_col + 1,
         cells=cells,
         html=html_str,
+        markdown=markdown_str,
     )
 
 
@@ -187,7 +189,7 @@ class LandingAIAdapter:
             table: Optional[Table] = None
             text = ""
             if role == BlockRole.TABLE and chunk_md:
-                table = _parse_table(chunk_md, grounding_dict)
+                table = _parse_table(chunk_md, grounding_dict, markdown_str=chunk_md)
                 if table:
                     text = " | ".join(c.text for c in table.cells if c.text)
             else:
