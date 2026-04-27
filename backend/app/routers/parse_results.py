@@ -58,7 +58,7 @@ async def reparse_document(
 ):
     """Trigger a re-parse of an existing document."""
     from app.config import settings
-    from app.dependencies.documents import get_llamaparse_client
+    from app.dependencies.documents import get_llamaparse_client, get_landingai_client
     from app.repositories.parse_run_repository import ParseRunRepository
     from app.repositories.parsed_document_repository import ParsedDocumentRepository
     from app.repositories.source_document_repository import SourceDocumentRepository
@@ -123,6 +123,7 @@ async def reparse_document(
                 source_doc_repo=SourceDocumentRepository(db),
                 storage_service=storage_service,
                 llamaparse_client=get_llamaparse_client(),
+                landingai_client=get_landingai_client(),
             )
             return ParseResultResponse.from_orm_model(parse_result)
 

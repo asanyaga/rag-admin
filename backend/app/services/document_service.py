@@ -522,6 +522,7 @@ async def process_cdm_parsing(
     source_doc_repo: Any,
     storage_service: StorageService,
     llamaparse_client: Any,
+    landingai_client: Any = None,
 ) -> None:
     """Background task: CDM parse + persist for a newly uploaded document.
 
@@ -574,6 +575,7 @@ async def process_cdm_parsing(
         storage=storage_service,
         clients={
             ParserKind.LLAMAPARSE: llamaparse_client,
+            ParserKind.LANDING_AI: landingai_client,
         },
     )
 

@@ -90,7 +90,7 @@ async def upload_document(
 ):
     """Upload a document and initiate background processing."""
     from app.config import settings
-    from app.dependencies.documents import get_llamaparse_client
+    from app.dependencies.documents import get_llamaparse_client, get_landingai_client
     from app.repositories.parse_run_repository import ParseRunRepository
     from app.repositories.parsed_document_repository import ParsedDocumentRepository
     from app.repositories.source_document_repository import SourceDocumentRepository
@@ -135,6 +135,7 @@ async def upload_document(
                 source_doc_repo=SourceDocumentRepository(db),
                 storage_service=storage_service,
                 llamaparse_client=get_llamaparse_client(),
+                landingai_client=get_landingai_client(),
             )
         else:
             if use_cdm:
@@ -208,7 +209,7 @@ async def bulk_upload_documents(
 ):
     """Bulk upload documents and initiate background processing for each."""
     from app.config import settings
-    from app.dependencies.documents import get_llamaparse_client
+    from app.dependencies.documents import get_llamaparse_client, get_landingai_client
     from app.repositories.parse_run_repository import ParseRunRepository
     from app.repositories.parsed_document_repository import ParsedDocumentRepository
     from app.repositories.source_document_repository import SourceDocumentRepository
@@ -279,6 +280,7 @@ async def bulk_upload_documents(
                 source_doc_repo=SourceDocumentRepository(db),
                 storage_service=storage_service,
                 llamaparse_client=get_llamaparse_client(),
+                landingai_client=get_landingai_client(),
             )
         else:
             if use_cdm:
