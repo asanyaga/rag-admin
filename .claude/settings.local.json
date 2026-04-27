@@ -81,7 +81,13 @@
       "Bash(npm --prefix frontend exec -- tsc --noEmit -p frontend/tsconfig.json)",
       "Bash(npm --prefix frontend run lint)",
       "Bash(npm --prefix frontend run build)",
-      "Bash(grep -nA 20 \"backend:\" docker-compose.local.yml)"
+      "Bash(grep -nA 20 \"backend:\" docker-compose.local.yml)",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(xargs ls *)",
+      "Bash(python3 *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "shadcn"
+  ]
 }
