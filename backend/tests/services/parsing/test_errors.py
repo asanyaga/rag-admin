@@ -3,7 +3,7 @@ from app.cdm.source import ParseRun, ParseRunStatus
 from app.cdm.models import ParserKind
 from datetime import datetime, timezone
 
-from app.services.parsing.errors import LlamaParseRunError, ParseFailedError
+from app.services.parsing.errors import LlamaParseRunError, LandingAIRunError, ParseRunError, ParseFailedError
 
 
 def _make_failed_run() -> ParseRun:
@@ -30,3 +30,15 @@ def test_parse_failed_error_is_runtime_error():
     err = ParseFailedError("parse failed")
     assert isinstance(err, RuntimeError)
     assert str(err) == "parse failed"
+
+
+def test_llamaparse_error_is_parse_run_error():
+    err = LlamaParseRunError("boom", run=_make_failed_run())
+    assert isinstance(err, ParseRunError)
+    assert err.run.status == ParseRunStatus.FAILED
+
+
+def test_landingai_error_is_parse_run_error():
+    err = LandingAIRunError("boom", run=_make_failed_run())
+    assert isinstance(err, ParseRunError)
+    assert err.run.status == ParseRunStatus.FAILED
