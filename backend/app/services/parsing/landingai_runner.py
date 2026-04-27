@@ -92,7 +92,8 @@ async def run_landingai(
     raw = response.data.model_dump(mode="json")
     meta: Dict[str, Any] = raw.get("metadata") or {}
 
-    api_duration_ms = meta.get("duration_ms") or duration_ms
+    raw_duration = meta.get("duration_ms")
+    api_duration_ms = raw_duration if raw_duration is not None else duration_ms
 
     run = ParseRun(
         id=run_id,
@@ -107,7 +108,7 @@ async def run_landingai(
         duration_ms=api_duration_ms,
         cost={"credits": meta["credit_usage"]} if meta.get("credit_usage") is not None else {},
         failed_pages=list(meta.get("failed_pages") or []),
-        provider_refs={"landingai_job_id": job_id},
+        provider_refs={"landingai_job_id": meta.get("job_id") or job_id},
         raw_payload=raw,
     )
 

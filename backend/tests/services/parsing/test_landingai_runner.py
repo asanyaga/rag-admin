@@ -138,3 +138,4 @@ async def test_run_landingai_timeout_raises_error(tmp_path):
         )
 
     assert exc_info.value.run.status == ParseRunStatus.FAILED
+    assert exc_info.value.run.provider_refs.get("landingai_job_id") == "job-xyz"
