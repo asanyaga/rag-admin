@@ -181,7 +181,10 @@ class LandingAIAdapter:
                 if conf is not None or lcs:
                     quality = Quality(
                         confidence=float(conf) if conf is not None else None,
-                        low_confidence_spans=[(s[0], s[1]) for s in lcs] if lcs else [],
+                        low_confidence_spans=[
+                            (s["span"][0], s["span"][1]) if isinstance(s, dict) else (s[0], s[1])
+                            for s in lcs
+                        ] if lcs else [],
                     )
 
             chunk_md: Optional[str] = chunk.get("markdown") or None

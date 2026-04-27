@@ -1,0 +1,3123 @@
+{
+  "id": "a343b40d-feef-4181-a256-beddbeda437d",
+  "source_document_id": "structural-test-src",
+  "parse_run_id": "structural-test-run",
+  "source_filename": "cleanshelf-12-4-26.jpg",
+  "page_count": 1,
+  "pages": [
+    {
+      "index": 0,
+      "width": null,
+      "height": null,
+      "unit": null,
+      "rotation": 0,
+      "block_ids": [
+        "structural-test-src:p0:b0",
+        "structural-test-src:p0:b1",
+        "structural-test-src:p0:b2",
+        "structural-test-src:p0:b3",
+        "structural-test-src:p0:b4",
+        "structural-test-src:p0:b5",
+        "structural-test-src:p0:b6",
+        "structural-test-src:p0:b7",
+        "structural-test-src:p0:b8",
+        "structural-test-src:p0:b9"
+      ],
+      "quality": null,
+      "parser_extras": {}
+    }
+  ],
+  "blocks": [
+    {
+      "id": "structural-test-src:p0:b0",
+      "role": "paragraph",
+      "native_type": "text",
+      "native_label": null,
+      "text": "<a id='b821b0d0-8cf9-4fca-b136-2ca4ac18767d'></a>\n\nCLEANSHELF SUPERMARKETS LIMITED\nKIKUYU\nP.O Box 1/08 0021/,1 IMURU",
+      "markdown": "<a id='b821b0d0-8cf9-4fca-b136-2ca4ac18767d'></a>\n\nCLEANSHELF SUPERMARKETS LIMITED\nKIKUYU\nP.O Box 1/08 0021/,1 IMURU",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.31817591190338135,
+        "y0": 0.057465359568595886,
+        "x1": 0.774741530418396,
+        "y1": 0.10245390236377716,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.31817591190338135,
+          0.057465359568595886,
+          0.774741530418396,
+          0.10245390236377716
+        ]
+      },
+      "reading_order": 0,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": null,
+      "image_ref": null,
+      "style": null,
+      "quality": {
+        "confidence": 0.977,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "b821b0d0-8cf9-4fca-b136-2ca4ac18767d"
+      }
+    },
+    {
+      "id": "structural-test-src:p0:b1",
+      "role": "figure",
+      "native_type": "scan_code",
+      "native_label": null,
+      "text": "<a id='cbfd5fc3-4018-4b9b-9274-b8f246d1497e'></a>\n\n<::scan_code: Barcode\n\nThis is a linear barcode with varying bar widths and spacing, appearing somewhat pixelated and blurry in areas, suggesting a low-resolution scan or print quality issue.::>",
+      "markdown": "<a id='cbfd5fc3-4018-4b9b-9274-b8f246d1497e'></a>\n\n<::scan_code: Barcode\n\nThis is a linear barcode with varying bar widths and spacing, appearing somewhat pixelated and blurry in areas, suggesting a low-resolution scan or print quality issue.::>",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.16488203406333923,
+        "y0": 0.10325708985328674,
+        "x1": 0.8207595348358154,
+        "y1": 0.13104651868343353,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.16488203406333923,
+          0.10325708985328674,
+          0.8207595348358154,
+          0.13104651868343353
+        ]
+      },
+      "reading_order": 1,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": null,
+      "image_ref": null,
+      "style": null,
+      "quality": null,
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "cbfd5fc3-4018-4b9b-9274-b8f246d1497e"
+      }
+    },
+    {
+      "id": "structural-test-src:p0:b2",
+      "role": "paragraph",
+      "native_type": "text",
+      "native_label": null,
+      "text": "<a id='11a45a0b-7b25-4990-848a-b5435d27870b'></a>\n\nSBN . P051147119.. VAT Reg 0125810H\nTel No. : 0110090570 Tax\nTill No. : 1 Cash Sale $ 103\nDate : 12-Apr 26 Time : 12:45:PM Branch : 13",
+      "markdown": "<a id='11a45a0b-7b25-4990-848a-b5435d27870b'></a>\n\nSBN . P051147119.. VAT Reg 0125810H\nTel No. : 0110090570 Tax\nTill No. : 1 Cash Sale $ 103\nDate : 12-Apr 26 Time : 12:45:PM Branch : 13",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.12179169058799744,
+        "y0": 0.1507098525762558,
+        "x1": 0.8302100896835327,
+        "y1": 0.21036092936992645,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.12179169058799744,
+          0.1507098525762558,
+          0.8302100896835327,
+          0.21036092936992645
+        ]
+      },
+      "reading_order": 2,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": null,
+      "image_ref": null,
+      "style": null,
+      "quality": {
+        "confidence": 0.51,
+        "low_confidence_spans": [
+          [
+            14,
+            26
+          ],
+          [
+            86,
+            90
+          ]
+        ],
+        "notes": null
+      },
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "11a45a0b-7b25-4990-848a-b5435d27870b"
+      }
+    },
+    {
+      "id": "structural-test-src:p0:b3",
+      "role": "table",
+      "native_type": "table",
+      "native_label": null,
+      "text": "ITEM OTY | PRICE | AMOUNT | HEINZ TOMATO KETCHUP SQUEEZE | A | 220417 1 (PCS) | 299 | 299 | BROOKSIDE DAIRY BEST 500ML | 250076 4 (PCS) | 61 | 244 | KCC RINDLESS CHEESE 250GM | A | 250497 I (PCS) | 500 | 500 | CLEANSHELF OATS BREAD 400GM | Z | 290261 I (PCS) | 90 | 90 | CLEANSHELF BERLIN DOUGHNUT | A | 291146                                        1 (PCS) | 140 | 140 | 8X10 POLYTHENE ROPE | A | 330210                                        I (PCS) | 195 | 195 | LG HARRIS 6MM 10MTR HANK COLO | A | 332074                                        2 (PCS) | 115 | 230 | CLEANSHELF PRINTED 3D BAG 30C | A | 390092 1 (PCS) | 45 | 45 | ISINYA EGGS 6PK | E | 400412 1 (PCS) | 125 | 125 | CADBURY RUM & RAISIN 80GM | A | 460027 1 (PCS) | 290 | 290 | NUVITA DAT DIGESTIVE 200GM | A | 460944 1 (PCS) | 200 | 200 | NUVITA VITAMILK BISCUITS 75GM | A | 460963 4 (PCS) | 30 | 120 | COLGATE PLAX COMPLETE CARE 55 | A | 520026 2 (PCS) | 120 | 240",
+      "markdown": "<a id='8af1fff3-3285-4286-a338-2c151b28cd7d'></a>\n\n<table id=\"0-1\">\n<tr><td id=\"0-2\">ITEM OTY</td><td id=\"0-3\">PRICE</td><td id=\"0-4\">AMOUNT</td></tr>\n<tr><td id=\"0-5\">HEINZ TOMATO KETCHUP SQUEEZE</td><td id=\"0-6\"></td><td id=\"0-7\">A</td></tr>\n<tr><td id=\"0-8\">220417 1 (PCS)</td><td id=\"0-9\">299</td><td id=\"0-a\">299</td></tr>\n<tr><td id=\"0-b\">BROOKSIDE DAIRY BEST 500ML</td><td id=\"0-c\"></td><td id=\"0-d\"></td></tr>\n<tr><td id=\"0-e\">250076 4 (PCS)</td><td id=\"0-f\">61</td><td id=\"0-g\">244</td></tr>\n<tr><td id=\"0-h\">KCC RINDLESS CHEESE 250GM</td><td id=\"0-i\"></td><td id=\"0-j\">A</td></tr>\n<tr><td id=\"0-k\">250497 I (PCS)</td><td id=\"0-l\">500</td><td id=\"0-m\">500</td></tr>\n<tr><td id=\"0-n\">CLEANSHELF OATS BREAD 400GM</td><td id=\"0-o\"></td><td id=\"0-p\">Z</td></tr>\n<tr><td id=\"0-q\">290261 I (PCS)</td><td id=\"0-r\">90</td><td id=\"0-s\">90</td></tr>\n<tr><td id=\"0-t\">CLEANSHELF BERLIN DOUGHNUT</td><td id=\"0-u\"></td><td id=\"0-v\">A</td></tr>\n<tr><td id=\"0-w\">291146                                        1 (PCS)</td><td id=\"0-x\">140</td><td id=\"0-y\">140</td></tr>\n<tr><td id=\"0-z\">8X10 POLYTHENE ROPE</td><td id=\"0-A\"></td><td id=\"0-B\">A</td></tr>\n<tr><td id=\"0-C\">330210                                        I (PCS)</td><td id=\"0-D\">195</td><td id=\"0-E\">195</td></tr>\n<tr><td id=\"0-F\">LG HARRIS 6MM 10MTR HANK COLO</td><td id=\"0-G\"></td><td id=\"0-H\">A</td></tr>\n<tr><td id=\"0-I\">332074                                        2 (PCS)</td><td id=\"0-J\">115</td><td id=\"0-K\">230</td></tr>\n<tr><td id=\"0-L\">CLEANSHELF PRINTED 3D BAG 30C</td><td id=\"0-M\"></td><td id=\"0-N\">A</td></tr>\n<tr><td id=\"0-O\">390092 1 (PCS)</td><td id=\"0-P\">45</td><td id=\"0-Q\">45</td></tr>\n<tr><td id=\"0-R\">ISINYA EGGS 6PK</td><td id=\"0-S\"></td><td id=\"0-T\">E</td></tr>\n<tr><td id=\"0-U\">400412 1 (PCS)</td><td id=\"0-V\">125</td><td id=\"0-W\">125</td></tr>\n<tr><td id=\"0-X\">CADBURY RUM &amp; RAISIN 80GM</td><td id=\"0-Y\"></td><td id=\"0-Z\">A</td></tr>\n<tr><td id=\"0-10\">460027 1 (PCS)</td><td id=\"0-11\">290</td><td id=\"0-12\">290</td></tr>\n<tr><td id=\"0-13\">NUVITA DAT DIGESTIVE 200GM</td><td id=\"0-14\"></td><td id=\"0-15\">A</td></tr>\n<tr><td id=\"0-16\">460944 1 (PCS)</td><td id=\"0-17\">200</td><td id=\"0-18\">200</td></tr>\n<tr><td id=\"0-19\">NUVITA VITAMILK BISCUITS 75GM</td><td id=\"0-1a\"></td><td id=\"0-1b\">A</td></tr>\n<tr><td id=\"0-1c\">460963 4 (PCS)</td><td id=\"0-1d\">30</td><td id=\"0-1e\">120</td></tr>\n<tr><td id=\"0-1f\">COLGATE PLAX COMPLETE CARE 55</td><td id=\"0-1g\"></td><td id=\"0-1h\">A</td></tr>\n<tr><td id=\"0-1i\">520026 2 (PCS)</td><td id=\"0-1j\">120</td><td id=\"0-1k\">240</td></tr>\n</table>",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.11784237623214722,
+        "y0": 0.21687819063663483,
+        "x1": 0.8349178433418274,
+        "y1": 0.6150397658348083,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.11784237623214722,
+          0.21687819063663483,
+          0.8349178433418274,
+          0.6150397658348083
+        ]
+      },
+      "reading_order": 3,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": {
+        "rows": 27,
+        "cols": 3,
+        "cells": [
+          {
+            "row": 0,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "ITEM OTY",
+            "bbox": {
+              "x0": 0.12469883592559006,
+              "y0": 0.2192965407473252,
+              "x1": 0.553503346574248,
+              "y1": 0.24316685734718535,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12469883592559006,
+                0.2192965407473252,
+                0.553503346574248,
+                0.24316685734718535
+              ]
+            },
+            "quality": {
+              "confidence": 0.989,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 0,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "PRICE",
+            "bbox": {
+              "x0": 0.5534702575391097,
+              "y0": 0.21927096491142062,
+              "x1": 0.6754261480115265,
+              "y1": 0.24320400075857615,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5534702575391097,
+                0.21927096491142062,
+                0.6754261480115265,
+                0.24320400075857615
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 0,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "AMOUNT",
+            "bbox": {
+              "x0": 0.6753370274986088,
+              "y0": 0.21923858607355226,
+              "x1": 0.8297852439594837,
+              "y1": 0.243251074572418,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6753370274986088,
+                0.21923858607355226,
+                0.8297852439594837,
+                0.243251074572418
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 1,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "HEINZ TOMATO KETCHUP SQUEEZE",
+            "bbox": {
+              "x0": 0.12470684194945092,
+              "y0": 0.24303617581734857,
+              "x1": 0.5534702575391097,
+              "y1": 0.2614030927830595,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12470684194945092,
+                0.24303617581734857,
+                0.5534702575391097,
+                0.2614030927830595
+              ]
+            },
+            "quality": {
+              "confidence": 0.414,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 1,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5534449784678159,
+              "y0": 0.24316685734718535,
+              "x1": 0.6753370274986088,
+              "y1": 0.26147901852336203,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5534449784678159,
+                0.24316685734718535,
+                0.6753370274986088,
+                0.26147901852336203
+              ]
+            },
+            "quality": {
+              "confidence": 0.986,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 1,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.6752689759999531,
+              "y0": 0.24320400075857615,
+              "x1": 0.8297895491246895,
+              "y1": 0.26157532211825407,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6752689759999531,
+                0.24320400075857615,
+                0.8297895491246895,
+                0.26157532211825407
+              ]
+            },
+            "quality": {
+              "confidence": 0.995,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 2,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "220417 1 (PCS)",
+            "bbox": {
+              "x0": 0.12471296916601136,
+              "y0": 0.26113588931036896,
+              "x1": 0.5534449784678159,
+              "y1": 0.27472530074908985,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12471296916601136,
+                0.26113588931036896,
+                0.5534449784678159,
+                0.27472530074908985
+              ]
+            },
+            "quality": {
+              "confidence": 0.97,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 2,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "299",
+            "bbox": {
+              "x0": 0.5534265112218678,
+              "y0": 0.2614030927830595,
+              "x1": 0.6752689759999531,
+              "y1": 0.27479561968563304,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5534265112218678,
+                0.2614030927830595,
+                0.6752689759999531,
+                0.27479561968563304
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 2,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "299",
+            "bbox": {
+              "x0": 0.6752193883783291,
+              "y0": 0.26147901852336203,
+              "x1": 0.8297926761169585,
+              "y1": 0.2748848648817852,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6752193883783291,
+                0.26147901852336203,
+                0.8297926761169585,
+                0.2748848648817852
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 3,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "BROOKSIDE DAIRY BEST 500ML",
+            "bbox": {
+              "x0": 0.12471748573742857,
+              "y0": 0.2744777791906673,
+              "x1": 0.5534265112218678,
+              "y1": 0.2884733653506401,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12471748573742857,
+                0.2744777791906673,
+                0.5534265112218678,
+                0.2884733653506401
+              ]
+            },
+            "quality": {
+              "confidence": 0.98,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 3,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.553407453653411,
+              "y0": 0.27472530074908985,
+              "x1": 0.6752193883783291,
+              "y1": 0.2885495921191099,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.553407453653411,
+                0.27472530074908985,
+                0.6752193883783291,
+                0.2885495921191099
+              ]
+            },
+            "quality": {
+              "confidence": 0.982,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 3,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.6751681720977971,
+              "y0": 0.27479561968563304,
+              "x1": 0.8297959093007465,
+              "y1": 0.28864639487186433,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6751681720977971,
+                0.27479561968563304,
+                0.8297959093007465,
+                0.28864639487186433
+              ]
+            },
+            "quality": {
+              "confidence": 0.979,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 4,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "250076 4 (PCS)",
+            "bbox": {
+              "x0": 0.12472213275062367,
+              "y0": 0.28820499228976837,
+              "x1": 0.553407453653411,
+              "y1": 0.30270645260836926,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12472213275062367,
+                0.28820499228976837,
+                0.553407453653411,
+                0.30270645260836926
+              ]
+            },
+            "quality": {
+              "confidence": 0.971,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 4,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "61",
+            "bbox": {
+              "x0": 0.5533877237465022,
+              "y0": 0.2884733653506401,
+              "x1": 0.6751681720977971,
+              "y1": 0.302810143080123,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5533877237465022,
+                0.2884733653506401,
+                0.6751681720977971,
+                0.302810143080123
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 4,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "244",
+            "bbox": {
+              "x0": 0.6751150694482104,
+              "y0": 0.2885495921191099,
+              "x1": 0.8297992679402457,
+              "y1": 0.30294190704344626,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6751150694482104,
+                0.2885495921191099,
+                0.8297992679402457,
+                0.30294190704344626
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 5,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "KCC RINDLESS CHEESE 250GM",
+            "bbox": {
+              "x0": 0.12472691825564908,
+              "y0": 0.30234130835185535,
+              "x1": 0.5533877237465022,
+              "y1": 0.31656251945723457,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12472691825564908,
+                0.30234130835185535,
+                0.5533877237465022,
+                0.31656251945723457
+              ]
+            },
+            "quality": {
+              "confidence": 0.993,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 5,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5533685164653201,
+              "y0": 0.30270645260836926,
+              "x1": 0.6751150694482104,
+              "y1": 0.3166824177043788,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5533685164653201,
+                0.30270645260836926,
+                0.6751150694482104,
+                0.3166824177043788
+              ]
+            },
+            "quality": {
+              "confidence": 0.966,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 5,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.6750634126405349,
+              "y0": 0.302810143080123,
+              "x1": 0.8298025320039177,
+              "y1": 0.3168348723245759,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6750634126405349,
+                0.302810143080123,
+                0.8298025320039177,
+                0.3168348723245759
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 6,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "250497 I (PCS)",
+            "bbox": {
+              "x0": 0.12473158953750256,
+              "y0": 0.3161402107342298,
+              "x1": 0.5533685164653201,
+              "y1": 0.33055332213045974,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12473158953750256,
+                0.3161402107342298,
+                0.5533685164653201,
+                0.33055332213045974
+              ]
+            },
+            "quality": {
+              "confidence": 0.983,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 6,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "500",
+            "bbox": {
+              "x0": 0.5533491224133253,
+              "y0": 0.31656251945723457,
+              "x1": 0.6750634126405349,
+              "y1": 0.33066886707057397,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5533491224133253,
+                0.31656251945723457,
+                0.6750634126405349,
+                0.33066886707057397
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 6,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "500",
+            "bbox": {
+              "x0": 0.675011330675281,
+              "y0": 0.3166824177043788,
+              "x1": 0.8298058167522072,
+              "y1": 0.3308158783724342,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.675011330675281,
+                0.3166824177043788,
+                0.8298058167522072,
+                0.3308158783724342
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 7,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "CLEANSHELF OATS BREAD 400GM",
+            "bbox": {
+              "x0": 0.12473633094398798,
+              "y0": 0.33014626031537325,
+              "x1": 0.5533491224133253,
+              "y1": 0.3443793529697341,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12473633094398798,
+                0.33014626031537325,
+                0.5533491224133253,
+                0.3443793529697341
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 7,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5533299567680624,
+              "y0": 0.33055332213045974,
+              "x1": 0.675011330675281,
+              "y1": 0.34449932785506276,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5533299567680624,
+                0.33055332213045974,
+                0.675011330675281,
+                0.34449932785506276
+              ]
+            },
+            "quality": {
+              "confidence": 0.999,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 7,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "Z",
+            "bbox": {
+              "x0": 0.6749598295716651,
+              "y0": 0.33066886707057397,
+              "x1": 0.8298090674772941,
+              "y1": 0.3446520700978418,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6749598295716651,
+                0.33066886707057397,
+                0.8298090674772941,
+                0.3446520700978418
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 8,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "290261 I (PCS)",
+            "bbox": {
+              "x0": 0.12474100609621314,
+              "y0": 0.3439565957224829,
+              "x1": 0.5533299567680624,
+              "y1": 0.3585329380374136,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12474100609621314,
+                0.3439565957224829,
+                0.5533299567680624,
+                0.3585329380374136
+              ]
+            },
+            "quality": {
+              "confidence": 0.981,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 8,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "90",
+            "bbox": {
+              "x0": 0.553310337067097,
+              "y0": 0.3443793529697341,
+              "x1": 0.6749598295716651,
+              "y1": 0.3586516711027107,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.553310337067097,
+                0.3443793529697341,
+                0.6749598295716651,
+                0.3586516711027107
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 8,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "90",
+            "bbox": {
+              "x0": 0.6749071298599665,
+              "y0": 0.34449932785506276,
+              "x1": 0.8298123921312388,
+              "y1": 0.35880292818933013,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6749071298599665,
+                0.34449932785506276,
+                0.8298123921312388,
+                0.35880292818933013
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 9,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "CLEANSHELF BERLIN DOUGHNUT",
+            "bbox": {
+              "x0": 0.12474579889810498,
+              "y0": 0.3581144666277185,
+              "x1": 0.553310337067097,
+              "y1": 0.37292098995105116,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12474579889810498,
+                0.3581144666277185,
+                0.553310337067097,
+                0.37292098995105116
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 9,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5532903923481675,
+              "y0": 0.3585329380374136,
+              "x1": 0.6749071298599665,
+              "y1": 0.37306442101908643,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5532903923481675,
+                0.3585329380374136,
+                0.6749071298599665,
+                0.37306442101908643
+              ]
+            },
+            "quality": {
+              "confidence": 0.998,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 9,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.6748534604603422,
+              "y0": 0.3586516711027107,
+              "x1": 0.8298157857348565,
+              "y1": 0.37324725954204024,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6748534604603422,
+                0.3586516711027107,
+                0.8298157857348565,
+                0.37324725954204024
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 10,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "291146                                        1 (PCS)",
+            "bbox": {
+              "x0": 0.12475064011680329,
+              "y0": 0.3724153601136946,
+              "x1": 0.5532903923481675,
+              "y1": 0.38644290844939133,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12475064011680329,
+                0.3724153601136946,
+                0.5532903923481675,
+                0.38644290844939133
+              ]
+            },
+            "quality": {
+              "confidence": 0.996,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 10,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "140",
+            "bbox": {
+              "x0": 0.5532716482634605,
+              "y0": 0.37292098995105116,
+              "x1": 0.6748534604603422,
+              "y1": 0.3865856070920589,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5532716482634605,
+                0.37292098995105116,
+                0.6748534604603422,
+                0.3865856070920589
+              ]
+            },
+            "quality": {
+              "confidence": 0.999,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 10,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "140",
+            "bbox": {
+              "x0": 0.6748031110167624,
+              "y0": 0.37306442101908643,
+              "x1": 0.8298189622578956,
+              "y1": 0.3867676221115685,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6748031110167624,
+                0.37306442101908643,
+                0.8298189622578956,
+                0.3867676221115685
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 11,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "8X10 POLYTHENE ROPE",
+            "bbox": {
+              "x0": 0.12475521847156833,
+              "y0": 0.3859397571541899,
+              "x1": 0.5532716482634605,
+              "y1": 0.40065808377609474,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12475521847156833,
+                0.3859397571541899,
+                0.5532716482634605,
+                0.40065808377609474
+              ]
+            },
+            "quality": {
+              "confidence": 0.979,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 11,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5532519431860722,
+              "y0": 0.38644290844939133,
+              "x1": 0.6748031110167624,
+              "y1": 0.40076309897210194,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5532519431860722,
+                0.38644290844939133,
+                0.6748031110167624,
+                0.40076309897210194
+              ]
+            },
+            "quality": {
+              "confidence": 0.987,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 11,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.6747503176579798,
+              "y0": 0.3865856070920589,
+              "x1": 0.8298222818964437,
+              "y1": 0.4008971329687748,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6747503176579798,
+                0.3865856070920589,
+                0.8298222818964437,
+                0.4008971329687748
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 12,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "330210                                        I (PCS)",
+            "bbox": {
+              "x0": 0.12476007562567441,
+              "y0": 0.4002877236156816,
+              "x1": 0.5532519431860722,
+              "y1": 0.4146629163231184,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12476007562567441,
+                0.4002877236156816,
+                0.5532519431860722,
+                0.4146629163231184
+              ]
+            },
+            "quality": {
+              "confidence": 0.973,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 12,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "195",
+            "bbox": {
+              "x0": 0.553232529685865,
+              "y0": 0.40065808377609474,
+              "x1": 0.6747503176579798,
+              "y1": 0.41477698809530017,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.553232529685865,
+                0.40065808377609474,
+                0.6747503176579798,
+                0.41477698809530017
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 12,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "195",
+            "bbox": {
+              "x0": 0.6746981335140789,
+              "y0": 0.40076309897210194,
+              "x1": 0.8298255771076264,
+              "y1": 0.4149226726499974,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6746981335140789,
+                0.40076309897210194,
+                0.8298255771076264,
+                0.4149226726499974
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 13,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "LG HARRIS 6MM 10MTR HANK COLO",
+            "bbox": {
+              "x0": 0.12476480577855634,
+              "y0": 0.41426053020681564,
+              "x1": 0.553232529685865,
+              "y1": 0.4284307047057477,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12476480577855634,
+                0.41426053020681564,
+                0.553232529685865,
+                0.4284307047057477
+              ]
+            },
+            "quality": {
+              "confidence": 0.985,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 13,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5532134447763011,
+              "y0": 0.4146629163231184,
+              "x1": 0.6746981335140789,
+              "y1": 0.42856180536475913,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5532134447763011,
+                0.4146629163231184,
+                0.6746981335140789,
+                0.42856180536475913
+              ]
+            },
+            "quality": {
+              "confidence": 0.981,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 13,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.6746468023752555,
+              "y0": 0.41477698809530017,
+              "x1": 0.8298288208964816,
+              "y1": 0.42872934141331387,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6746468023752555,
+                0.41477698809530017,
+                0.8298288208964816,
+                0.42872934141331387
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 14,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "332074                                        2 (PCS)",
+            "bbox": {
+              "x0": 0.12476944615969734,
+              "y0": 0.4279681523092831,
+              "x1": 0.5532134447763011,
+              "y1": 0.4420555783934443,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12476944615969734,
+                0.4279681523092831,
+                0.5532134447763011,
+                0.4420555783934443
+              ]
+            },
+            "quality": {
+              "confidence": 0.992,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 14,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "115",
+            "bbox": {
+              "x0": 0.5531945579751008,
+              "y0": 0.4284307047057477,
+              "x1": 0.6746468023752555,
+              "y1": 0.4421860483210445,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5531945579751008,
+                0.4284307047057477,
+                0.6746468023752555,
+                0.4421860483210445
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 14,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "230",
+            "bbox": {
+              "x0": 0.6745960691741634,
+              "y0": 0.42856180536475913,
+              "x1": 0.8298320216600793,
+              "y1": 0.44235288004563966,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6745960691741634,
+                0.42856180536475913,
+                0.8298320216600793,
+                0.44235288004563966
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 15,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "CLEANSHELF PRINTED 3D BAG 30C",
+            "bbox": {
+              "x0": 0.12477405924939361,
+              "y0": 0.4415951558591682,
+              "x1": 0.5531945579751008,
+              "y1": 0.456626030731212,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12477405924939361,
+                0.4415951558591682,
+                0.5531945579751008,
+                0.456626030731212
+              ]
+            },
+            "quality": {
+              "confidence": 0.968,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 15,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.553174360412686,
+              "y0": 0.4420555783934443,
+              "x1": 0.6745960691741634,
+              "y1": 0.45677060328312835,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.553174360412686,
+                0.4420555783934443,
+                0.6745960691741634,
+                0.45677060328312835
+              ]
+            },
+            "quality": {
+              "confidence": 0.998,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 15,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.6745417600164285,
+              "y0": 0.4421860483210445,
+              "x1": 0.8298354524734471,
+              "y1": 0.45695558875277115,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6745417600164285,
+                0.4421860483210445,
+                0.8298354524734471,
+                0.45695558875277115
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 16,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "390092 1 (PCS)",
+            "bbox": {
+              "x0": 0.12477897483466757,
+              "y0": 0.45611572718739035,
+              "x1": 0.553174360412686,
+              "y1": 0.4700332727644339,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12477897483466757,
+                0.45611572718739035,
+                0.553174360412686,
+                0.4700332727644339
+              ]
+            },
+            "quality": {
+              "confidence": 0.997,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 16,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "45",
+            "bbox": {
+              "x0": 0.5531557752925058,
+              "y0": 0.456626030731212,
+              "x1": 0.6745417600164285,
+              "y1": 0.4701725723631144,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5531557752925058,
+                0.456626030731212,
+                0.6745417600164285,
+                0.4701725723631144
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 16,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "45",
+            "bbox": {
+              "x0": 0.6744918545064822,
+              "y0": 0.45677060328312835,
+              "x1": 0.8298385996206632,
+              "y1": 0.470350917826318,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6744918545064822,
+                0.45677060328312835,
+                0.8298385996206632,
+                0.470350917826318
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 17,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "ISINYA EGGS 6PK",
+            "bbox": {
+              "x0": 0.12478351979617705,
+              "y0": 0.46954148100996945,
+              "x1": 0.5531557752925058,
+              "y1": 0.48405001687731286,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12478351979617705,
+                0.46954148100996945,
+                0.5531557752925058,
+                0.48405001687731286
+              ]
+            },
+            "quality": {
+              "confidence": 0.996,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 17,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.553136345280485,
+              "y0": 0.4700332727644339,
+              "x1": 0.6744918545064822,
+              "y1": 0.48416659353337543,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.553136345280485,
+                0.4700332727644339,
+                0.6744918545064822,
+                0.48416659353337543
+              ]
+            },
+            "quality": {
+              "confidence": 0.983,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 17,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "E",
+            "bbox": {
+              "x0": 0.6744397443457637,
+              "y0": 0.4701725723631144,
+              "x1": 0.8298418806136959,
+              "y1": 0.4843159402254773,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6744397443457637,
+                0.4701725723631144,
+                0.8298418806136959,
+                0.4843159402254773
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 18,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "400412 1 (PCS)",
+            "bbox": {
+              "x0": 0.12478829195072899,
+              "y0": 0.4836383599569552,
+              "x1": 0.553136345280485,
+              "y1": 0.49792852574122676,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12478829195072899,
+                0.4836383599569552,
+                0.553136345280485,
+                0.49792852574122676
+              ]
+            },
+            "quality": {
+              "confidence": 0.972,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 18,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "125",
+            "bbox": {
+              "x0": 0.5531171068901792,
+              "y0": 0.48405001687731286,
+              "x1": 0.6744397443457637,
+              "y1": 0.4980571092828706,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5531171068901792,
+                0.48405001687731286,
+                0.6744397443457637,
+                0.4980571092828706
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 18,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "125",
+            "bbox": {
+              "x0": 0.6743880196127966,
+              "y0": 0.48416659353337543,
+              "x1": 0.829845147739849,
+              "y1": 0.49822194046670176,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6743880196127966,
+                0.48416659353337543,
+                0.829845147739849,
+                0.49822194046670176
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 19,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "CADBURY RUM & RAISIN 80GM",
+            "bbox": {
+              "x0": 0.12479297579572517,
+              "y0": 0.49747437369016057,
+              "x1": 0.5531171068901792,
+              "y1": 0.5121147441332499,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12479297579572517,
+                0.49747437369016057,
+                0.5531171068901792,
+                0.5121147441332499
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 19,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5530974419528967,
+              "y0": 0.49792852574122676,
+              "x1": 0.6743880196127966,
+              "y1": 0.5122312378209662,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5530974419528967,
+                0.49792852574122676,
+                0.6743880196127966,
+                0.5122312378209662
+              ]
+            },
+            "quality": {
+              "confidence": 0.969,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 19,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.6743352387782402,
+              "y0": 0.4980571092828706,
+              "x1": 0.8298484742421353,
+              "y1": 0.512380665728453,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6743352387782402,
+                0.4980571092828706,
+                0.8298484742421353,
+                0.512380665728453
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 20,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "460027 1 (PCS)",
+            "bbox": {
+              "x0": 0.12479779261923037,
+              "y0": 0.5117032041110368,
+              "x1": 0.5530974419528967,
+              "y1": 0.5258301803466328,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12479779261923037,
+                0.5117032041110368,
+                0.5530974419528967,
+                0.5258301803466328
+              ]
+            },
+            "quality": {
+              "confidence": 0.982,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 20,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "290",
+            "bbox": {
+              "x0": 0.5530784296139146,
+              "y0": 0.5121147441332499,
+              "x1": 0.6743352387782402,
+              "y1": 0.5259330372444033,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5530784296139146,
+                0.5121147441332499,
+                0.6743352387782402,
+                0.5259330372444033
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 20,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "290",
+            "bbox": {
+              "x0": 0.6742842167766726,
+              "y0": 0.5122312378209662,
+              "x1": 0.829851689301954,
+              "y1": 0.5260650539409035,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6742842167766726,
+                0.5122312378209662,
+                0.829851689301954,
+                0.5260650539409035
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 21,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "NUVITA DAT DIGESTIVE 200GM",
+            "bbox": {
+              "x0": 0.1248024519284381,
+              "y0": 0.5254667394624509,
+              "x1": 0.5530784296139146,
+              "y1": 0.5400202504795673,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.1248024519284381,
+                0.5254667394624509,
+                0.5530784296139146,
+                0.5400202504795673
+              ]
+            },
+            "quality": {
+              "confidence": 0.989,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 21,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5530587593373484,
+              "y0": 0.5258301803466328,
+              "x1": 0.6742842167766726,
+              "y1": 0.540100621992263,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5530587593373484,
+                0.5258301803466328,
+                0.6742842167766726,
+                0.540100621992263
+              ]
+            },
+            "quality": {
+              "confidence": 0.965,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 21,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.67423146030952,
+              "y0": 0.5259330372444033,
+              "x1": 0.8298550111206121,
+              "y1": 0.5402038440884072,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.67423146030952,
+                0.5259330372444033,
+                0.8298550111206121,
+                0.5402038440884072
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 22,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "460944 1 (PCS)",
+            "bbox": {
+              "x0": 0.12480728250612418,
+              "y0": 0.5397361995445711,
+              "x1": 0.5530587593373484,
+              "y1": 0.5537737342065255,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12480728250612418,
+                0.5397361995445711,
+                0.5530587593373484,
+                0.5537737342065255
+              ]
+            },
+            "quality": {
+              "confidence": 0.996,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 22,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "200",
+            "bbox": {
+              "x0": 0.5530396942568994,
+              "y0": 0.5400202504795673,
+              "x1": 0.67423146030952,
+              "y1": 0.5538494931275062,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5530396942568994,
+                0.5400202504795673,
+                0.67423146030952,
+                0.5538494931275062
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 22,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "200",
+            "bbox": {
+              "x0": 0.6741802630249196,
+              "y0": 0.540100621992263,
+              "x1": 0.8298582399525355,
+              "y1": 0.5539468510619492,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6741802630249196,
+                0.540100621992263,
+                0.8298582399525355,
+                0.5539468510619492
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 23,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "NUVITA VITAMILK BISCUITS 75GM",
+            "bbox": {
+              "x0": 0.1248119439122024,
+              "y0": 0.5535059290225971,
+              "x1": 0.5530396942568994,
+              "y1": 0.5680946978605701,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.1248119439122024,
+                0.5535059290225971,
+                0.5530396942568994,
+                0.5680946978605701
+              ]
+            },
+            "quality": {
+              "confidence": 0.965,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 23,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5530198425357218,
+              "y0": 0.5537737342065255,
+              "x1": 0.6741802630249196,
+              "y1": 0.5681256918830695,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5530198425357218,
+                0.5537737342065255,
+                0.6741802630249196,
+                0.5681256918830695
+              ]
+            },
+            "quality": {
+              "confidence": 0.97,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 23,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.6741271021069426,
+              "y0": 0.5538494931275062,
+              "x1": 0.8298615805447322,
+              "y1": 0.5681655477756535,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6741271021069426,
+                0.5538494931275062,
+                0.8298615805447322,
+                0.5681655477756535
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 24,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "460963 4 (PCS)",
+            "bbox": {
+              "x0": 0.1248168454862079,
+              "y0": 0.567985111256333,
+              "x1": 0.5530198425357218,
+              "y1": 0.5819178304992733,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.1248168454862079,
+                0.567985111256333,
+                0.5530198425357218,
+                0.5819178304992733
+              ]
+            },
+            "quality": {
+              "confidence": 0.989,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 24,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "30",
+            "bbox": {
+              "x0": 0.5530006809079447,
+              "y0": 0.5680946978605701,
+              "x1": 0.6741271021069426,
+              "y1": 0.581957113963979,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5530006809079447,
+                0.5680946978605701,
+                0.6741271021069426,
+                0.581957113963979
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 24,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "120",
+            "bbox": {
+              "x0": 0.6740755974237045,
+              "y0": 0.5681256918830695,
+              "x1": 0.8298648326609654,
+              "y1": 0.5820076606924023,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6740755974237045,
+                0.5681256918830695,
+                0.8298648326609654,
+                0.5820076606924023
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 25,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "COLGATE PLAX COMPLETE CARE 55",
+            "bbox": {
+              "x0": 0.12482151503874603,
+              "y0": 0.5817789052649289,
+              "x1": 0.5530006809079447,
+              "y1": 0.5959441687200719,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12482151503874603,
+                0.5817789052649289,
+                0.5530006809079447,
+                0.5959441687200719
+              ]
+            },
+            "quality": {
+              "confidence": 0.997,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 25,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "",
+            "bbox": {
+              "x0": 0.5529812375965706,
+              "y0": 0.5819178304992733,
+              "x1": 0.6740755974237045,
+              "y1": 0.5959801739846172,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5529812375965706,
+                0.5819178304992733,
+                0.6740755974237045,
+                0.5959801739846172
+              ]
+            },
+            "quality": {
+              "confidence": 0.991,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 25,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.6740233791297239,
+              "y0": 0.581957113963979,
+              "x1": 0.8298681263053747,
+              "y1": 0.5960265316521122,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6740233791297239,
+                0.581957113963979,
+                0.8298681263053747,
+                0.5960265316521122
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 26,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "520026 2 (PCS)",
+            "bbox": {
+              "x0": 0.12482626722884696,
+              "y0": 0.5958168094980751,
+              "x1": 0.5529812375965706,
+              "y1": 0.6114027510635288,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12482626722884696,
+                0.5958168094980751,
+                0.5529812375965706,
+                0.6114027510635288
+              ]
+            },
+            "quality": {
+              "confidence": 0.992,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 26,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "120",
+            "bbox": {
+              "x0": 0.5529598089082575,
+              "y0": 0.5959441687200719,
+              "x1": 0.6740233791297239,
+              "y1": 0.6114272756252568,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5529598089082575,
+                0.5959441687200719,
+                0.6740233791297239,
+                0.6114272756252568
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 26,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "240",
+            "bbox": {
+              "x0": 0.6739658580684553,
+              "y0": 0.5959801739846172,
+              "x1": 0.8298717520357428,
+              "y1": 0.6114588734151765,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.6739658580684553,
+                0.5959801739846172,
+                0.8298717520357428,
+                0.6114588734151765
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          }
+        ],
+        "html": "<a id='8af1fff3-3285-4286-a338-2c151b28cd7d'></a>\n\n<table id=\"0-1\">\n<tr><td id=\"0-2\">ITEM OTY</td><td id=\"0-3\">PRICE</td><td id=\"0-4\">AMOUNT</td></tr>\n<tr><td id=\"0-5\">HEINZ TOMATO KETCHUP SQUEEZE</td><td id=\"0-6\"></td><td id=\"0-7\">A</td></tr>\n<tr><td id=\"0-8\">220417 1 (PCS)</td><td id=\"0-9\">299</td><td id=\"0-a\">299</td></tr>\n<tr><td id=\"0-b\">BROOKSIDE DAIRY BEST 500ML</td><td id=\"0-c\"></td><td id=\"0-d\"></td></tr>\n<tr><td id=\"0-e\">250076 4 (PCS)</td><td id=\"0-f\">61</td><td id=\"0-g\">244</td></tr>\n<tr><td id=\"0-h\">KCC RINDLESS CHEESE 250GM</td><td id=\"0-i\"></td><td id=\"0-j\">A</td></tr>\n<tr><td id=\"0-k\">250497 I (PCS)</td><td id=\"0-l\">500</td><td id=\"0-m\">500</td></tr>\n<tr><td id=\"0-n\">CLEANSHELF OATS BREAD 400GM</td><td id=\"0-o\"></td><td id=\"0-p\">Z</td></tr>\n<tr><td id=\"0-q\">290261 I (PCS)</td><td id=\"0-r\">90</td><td id=\"0-s\">90</td></tr>\n<tr><td id=\"0-t\">CLEANSHELF BERLIN DOUGHNUT</td><td id=\"0-u\"></td><td id=\"0-v\">A</td></tr>\n<tr><td id=\"0-w\">291146                                        1 (PCS)</td><td id=\"0-x\">140</td><td id=\"0-y\">140</td></tr>\n<tr><td id=\"0-z\">8X10 POLYTHENE ROPE</td><td id=\"0-A\"></td><td id=\"0-B\">A</td></tr>\n<tr><td id=\"0-C\">330210                                        I (PCS)</td><td id=\"0-D\">195</td><td id=\"0-E\">195</td></tr>\n<tr><td id=\"0-F\">LG HARRIS 6MM 10MTR HANK COLO</td><td id=\"0-G\"></td><td id=\"0-H\">A</td></tr>\n<tr><td id=\"0-I\">332074                                        2 (PCS)</td><td id=\"0-J\">115</td><td id=\"0-K\">230</td></tr>\n<tr><td id=\"0-L\">CLEANSHELF PRINTED 3D BAG 30C</td><td id=\"0-M\"></td><td id=\"0-N\">A</td></tr>\n<tr><td id=\"0-O\">390092 1 (PCS)</td><td id=\"0-P\">45</td><td id=\"0-Q\">45</td></tr>\n<tr><td id=\"0-R\">ISINYA EGGS 6PK</td><td id=\"0-S\"></td><td id=\"0-T\">E</td></tr>\n<tr><td id=\"0-U\">400412 1 (PCS)</td><td id=\"0-V\">125</td><td id=\"0-W\">125</td></tr>\n<tr><td id=\"0-X\">CADBURY RUM &amp; RAISIN 80GM</td><td id=\"0-Y\"></td><td id=\"0-Z\">A</td></tr>\n<tr><td id=\"0-10\">460027 1 (PCS)</td><td id=\"0-11\">290</td><td id=\"0-12\">290</td></tr>\n<tr><td id=\"0-13\">NUVITA DAT DIGESTIVE 200GM</td><td id=\"0-14\"></td><td id=\"0-15\">A</td></tr>\n<tr><td id=\"0-16\">460944 1 (PCS)</td><td id=\"0-17\">200</td><td id=\"0-18\">200</td></tr>\n<tr><td id=\"0-19\">NUVITA VITAMILK BISCUITS 75GM</td><td id=\"0-1a\"></td><td id=\"0-1b\">A</td></tr>\n<tr><td id=\"0-1c\">460963 4 (PCS)</td><td id=\"0-1d\">30</td><td id=\"0-1e\">120</td></tr>\n<tr><td id=\"0-1f\">COLGATE PLAX COMPLETE CARE 55</td><td id=\"0-1g\"></td><td id=\"0-1h\">A</td></tr>\n<tr><td id=\"0-1i\">520026 2 (PCS)</td><td id=\"0-1j\">120</td><td id=\"0-1k\">240</td></tr>\n</table>",
+        "markdown": "<a id='8af1fff3-3285-4286-a338-2c151b28cd7d'></a>\n\n<table id=\"0-1\">\n<tr><td id=\"0-2\">ITEM OTY</td><td id=\"0-3\">PRICE</td><td id=\"0-4\">AMOUNT</td></tr>\n<tr><td id=\"0-5\">HEINZ TOMATO KETCHUP SQUEEZE</td><td id=\"0-6\"></td><td id=\"0-7\">A</td></tr>\n<tr><td id=\"0-8\">220417 1 (PCS)</td><td id=\"0-9\">299</td><td id=\"0-a\">299</td></tr>\n<tr><td id=\"0-b\">BROOKSIDE DAIRY BEST 500ML</td><td id=\"0-c\"></td><td id=\"0-d\"></td></tr>\n<tr><td id=\"0-e\">250076 4 (PCS)</td><td id=\"0-f\">61</td><td id=\"0-g\">244</td></tr>\n<tr><td id=\"0-h\">KCC RINDLESS CHEESE 250GM</td><td id=\"0-i\"></td><td id=\"0-j\">A</td></tr>\n<tr><td id=\"0-k\">250497 I (PCS)</td><td id=\"0-l\">500</td><td id=\"0-m\">500</td></tr>\n<tr><td id=\"0-n\">CLEANSHELF OATS BREAD 400GM</td><td id=\"0-o\"></td><td id=\"0-p\">Z</td></tr>\n<tr><td id=\"0-q\">290261 I (PCS)</td><td id=\"0-r\">90</td><td id=\"0-s\">90</td></tr>\n<tr><td id=\"0-t\">CLEANSHELF BERLIN DOUGHNUT</td><td id=\"0-u\"></td><td id=\"0-v\">A</td></tr>\n<tr><td id=\"0-w\">291146                                        1 (PCS)</td><td id=\"0-x\">140</td><td id=\"0-y\">140</td></tr>\n<tr><td id=\"0-z\">8X10 POLYTHENE ROPE</td><td id=\"0-A\"></td><td id=\"0-B\">A</td></tr>\n<tr><td id=\"0-C\">330210                                        I (PCS)</td><td id=\"0-D\">195</td><td id=\"0-E\">195</td></tr>\n<tr><td id=\"0-F\">LG HARRIS 6MM 10MTR HANK COLO</td><td id=\"0-G\"></td><td id=\"0-H\">A</td></tr>\n<tr><td id=\"0-I\">332074                                        2 (PCS)</td><td id=\"0-J\">115</td><td id=\"0-K\">230</td></tr>\n<tr><td id=\"0-L\">CLEANSHELF PRINTED 3D BAG 30C</td><td id=\"0-M\"></td><td id=\"0-N\">A</td></tr>\n<tr><td id=\"0-O\">390092 1 (PCS)</td><td id=\"0-P\">45</td><td id=\"0-Q\">45</td></tr>\n<tr><td id=\"0-R\">ISINYA EGGS 6PK</td><td id=\"0-S\"></td><td id=\"0-T\">E</td></tr>\n<tr><td id=\"0-U\">400412 1 (PCS)</td><td id=\"0-V\">125</td><td id=\"0-W\">125</td></tr>\n<tr><td id=\"0-X\">CADBURY RUM &amp; RAISIN 80GM</td><td id=\"0-Y\"></td><td id=\"0-Z\">A</td></tr>\n<tr><td id=\"0-10\">460027 1 (PCS)</td><td id=\"0-11\">290</td><td id=\"0-12\">290</td></tr>\n<tr><td id=\"0-13\">NUVITA DAT DIGESTIVE 200GM</td><td id=\"0-14\"></td><td id=\"0-15\">A</td></tr>\n<tr><td id=\"0-16\">460944 1 (PCS)</td><td id=\"0-17\">200</td><td id=\"0-18\">200</td></tr>\n<tr><td id=\"0-19\">NUVITA VITAMILK BISCUITS 75GM</td><td id=\"0-1a\"></td><td id=\"0-1b\">A</td></tr>\n<tr><td id=\"0-1c\">460963 4 (PCS)</td><td id=\"0-1d\">30</td><td id=\"0-1e\">120</td></tr>\n<tr><td id=\"0-1f\">COLGATE PLAX COMPLETE CARE 55</td><td id=\"0-1g\"></td><td id=\"0-1h\">A</td></tr>\n<tr><td id=\"0-1i\">520026 2 (PCS)</td><td id=\"0-1j\">120</td><td id=\"0-1k\">240</td></tr>\n</table>",
+        "caption": null
+      },
+      "image_ref": null,
+      "style": null,
+      "quality": {
+        "confidence": 0.414,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "8af1fff3-3285-4286-a338-2c151b28cd7d"
+      }
+    },
+    {
+      "id": "structural-test-src:p0:b4",
+      "role": "paragraph",
+      "native_type": "text",
+      "native_label": null,
+      "text": "<a id='80d828c4-2a69-4339-bfb9-64c3057fd310'></a>\n\nTOTAL : 2,718.00\nM-PAY : 2,718.00",
+      "markdown": "<a id='80d828c4-2a69-4339-bfb9-64c3057fd310'></a>\n\nTOTAL : 2,718.00\nM-PAY : 2,718.00",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.1197080910205841,
+        "y0": 0.6217626929283142,
+        "x1": 0.832656741142273,
+        "y1": 0.6525265574455261,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.1197080910205841,
+          0.6217626929283142,
+          0.832656741142273,
+          0.6525265574455261
+        ]
+      },
+      "reading_order": 4,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": null,
+      "image_ref": null,
+      "style": null,
+      "quality": {
+        "confidence": 0.98,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "80d828c4-2a69-4339-bfb9-64c3057fd310"
+      }
+    },
+    {
+      "id": "structural-test-src:p0:b5",
+      "role": "paragraph",
+      "native_type": "text",
+      "native_label": null,
+      "text": "<a id='a91a4fdd-c701-4e4a-aca0-83d3f35e6d0b'></a>\n\n***\n*** MPESA DETAILS ***\n***\nTransaction No.: UDOOGORZCH\nMobile No : 0722 ### 673\n***",
+      "markdown": "<a id='a91a4fdd-c701-4e4a-aca0-83d3f35e6d0b'></a>\n\n***\n*** MPESA DETAILS ***\n***\nTransaction No.: UDOOGORZCH\nMobile No : 0722 ### 673\n***",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.12006008625030518,
+        "y0": 0.6533181667327881,
+        "x1": 0.8326901793479919,
+        "y1": 0.7312309741973877,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.12006008625030518,
+          0.6533181667327881,
+          0.8326901793479919,
+          0.7312309741973877
+        ]
+      },
+      "reading_order": 5,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": null,
+      "image_ref": null,
+      "style": null,
+      "quality": {
+        "confidence": 0.936,
+        "low_confidence_spans": [
+          [
+            44,
+            54
+          ]
+        ],
+        "notes": null
+      },
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "a91a4fdd-c701-4e4a-aca0-83d3f35e6d0b"
+      }
+    },
+    {
+      "id": "structural-test-src:p0:b6",
+      "role": "table",
+      "native_type": "table",
+      "native_label": null,
+      "text": "CODE | RATE % | VATABLE AMT | VAT AMT | A | 16 | 1947.4138 | 311.5862 | E | 0 | 369 | 0 | Z | 0 | 90 | 0",
+      "markdown": "<a id='be235c90-114e-4af2-a18b-20ea4e3c6e7c'></a>\n\nTOTAL ITEMS :##21\n<table id=\"0-1l\">\n<tr><td id=\"0-1m\">CODE</td><td id=\"0-1n\">RATE %</td><td id=\"0-1o\">VATABLE AMT</td><td id=\"0-1p\">VAT AMT</td></tr>\n<tr><td id=\"0-1q\">A</td><td id=\"0-1r\">16</td><td id=\"0-1s\">1947.4138</td><td id=\"0-1t\">311.5862</td></tr>\n<tr><td id=\"0-1u\">E</td><td id=\"0-1v\">0</td><td id=\"0-1w\">369</td><td id=\"0-1x\">0</td></tr>\n<tr><td id=\"0-1y\">Z</td><td id=\"0-1z\">0</td><td id=\"0-1A\">90</td><td id=\"0-1B\">0</td></tr>\n</table>",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.11794939637184143,
+        "y0": 0.7343874573707581,
+        "x1": 0.8321870565414429,
+        "y1": 0.8219498991966248,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.11794939637184143,
+          0.7343874573707581,
+          0.8321870565414429,
+          0.8219498991966248
+        ]
+      },
+      "reading_order": 6,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": {
+        "rows": 4,
+        "cols": 4,
+        "cells": [
+          {
+            "row": 0,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "CODE",
+            "bbox": {
+              "x0": 0.12328140834646809,
+              "y0": 0.7488903266050513,
+              "x1": 0.19086436069310575,
+              "y1": 0.7702659795773522,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12328140834646809,
+                0.7488903266050513,
+                0.19086436069310575,
+                0.7702659795773522
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 0,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "RATE %",
+            "bbox": {
+              "x0": 0.19065619773040984,
+              "y0": 0.7488751057502354,
+              "x1": 0.3599485573146313,
+              "y1": 0.7702680810692192,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.19065619773040984,
+                0.7488751057502354,
+                0.3599485573146313,
+                0.7702680810692192
+              ]
+            },
+            "quality": {
+              "confidence": 0.989,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 0,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "VATABLE AMT",
+            "bbox": {
+              "x0": 0.3595016308016379,
+              "y0": 0.748853543197734,
+              "x1": 0.5994808904800832,
+              "y1": 0.7702710648016482,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.3595016308016379,
+                0.748853543197734,
+                0.5994808904800832,
+                0.7702710648016482
+              ]
+            },
+            "quality": {
+              "confidence": 0.962,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 0,
+            "col": 3,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "VAT AMT",
+            "bbox": {
+              "x0": 0.5992311306234772,
+              "y0": 0.7488330518501023,
+              "x1": 0.8271327101383303,
+              "y1": 0.7702739013208664,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5992311306234772,
+                0.7488330518501023,
+                0.8271327101383303,
+                0.7702739013208664
+              ]
+            },
+            "quality": {
+              "confidence": 0.999,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 1,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "A",
+            "bbox": {
+              "x0": 0.12321660496132458,
+              "y0": 0.770265141014121,
+              "x1": 0.19065619773040984,
+              "y1": 0.7905665063133257,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12321660496132458,
+                0.770265141014121,
+                0.19065619773040984,
+                0.7905665063133257
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 1,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "16",
+            "bbox": {
+              "x0": 0.19045850469173997,
+              "y0": 0.7702659795773522,
+              "x1": 0.3595016308016379,
+              "y1": 0.7905839725386217,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.19045850469173997,
+                0.7702659795773522,
+                0.3595016308016379,
+                0.7905839725386217
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 1,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "1947.4138",
+            "bbox": {
+              "x0": 0.3590772059426648,
+              "y0": 0.7702680810692192,
+              "x1": 0.5992311306234772,
+              "y1": 0.7906088241125528,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.3590772059426648,
+                0.7702680810692192,
+                0.5992311306234772,
+                0.7906088241125528
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 1,
+            "col": 3,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "311.5862",
+            "bbox": {
+              "x0": 0.5989939623860348,
+              "y0": 0.7702710648016482,
+              "x1": 0.8271509411568452,
+              "y1": 0.790632457559878,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5989939623860348,
+                0.7702710648016482,
+                0.8271509411568452,
+                0.790632457559878
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 2,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "E",
+            "bbox": {
+              "x0": 0.12317160046507322,
+              "y0": 0.7905595411181172,
+              "x1": 0.19045850469173997,
+              "y1": 0.8046665340783317,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12317160046507322,
+                0.7905595411181172,
+                0.19045850469173997,
+                0.8046665340783317
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 2,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "0",
+            "bbox": {
+              "x0": 0.1903211941002244,
+              "y0": 0.7905665063133257,
+              "x1": 0.3590772059426648,
+              "y1": 0.8046991168010321,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.1903211941002244,
+                0.7905665063133257,
+                0.3590772059426648,
+                0.8046991168010321
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 2,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "369",
+            "bbox": {
+              "x0": 0.35878232259373655,
+              "y0": 0.7905839725386217,
+              "x1": 0.5989939623860348,
+              "y1": 0.8047455451842095,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.35878232259373655,
+                0.7905839725386217,
+                0.5989939623860348,
+                0.8047455451842095
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 2,
+            "col": 3,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "0",
+            "bbox": {
+              "x0": 0.5988291073905299,
+              "y0": 0.7906088241125528,
+              "x1": 0.8271636189271369,
+              "y1": 0.8047897082510183,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5988291073905299,
+                0.7906088241125528,
+                0.8271636189271369,
+                0.8047897082510183
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 3,
+            "col": 0,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "Z",
+            "bbox": {
+              "x0": 0.12312447392869243,
+              "y0": 0.8046535464140055,
+              "x1": 0.1903211941002244,
+              "y1": 0.8194138035147832,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.12312447392869243,
+                0.8046535464140055,
+                0.1903211941002244,
+                0.8194138035147832
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 3,
+            "col": 1,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "0",
+            "bbox": {
+              "x0": 0.19017758046177585,
+              "y0": 0.8046665340783317,
+              "x1": 0.35878232259373655,
+              "y1": 0.8194180577790025,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.19017758046177585,
+                0.8046665340783317,
+                0.35878232259373655,
+                0.8194180577790025
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 3,
+            "col": 2,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "90",
+            "bbox": {
+              "x0": 0.3584748251620724,
+              "y0": 0.8046991168010321,
+              "x1": 0.5988291073905299,
+              "y1": 0.8194241291939304,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.3584748251620724,
+                0.8046991168010321,
+                0.5988291073905299,
+                0.8194241291939304
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          },
+          {
+            "row": 3,
+            "col": 3,
+            "rowspan": 1,
+            "colspan": 1,
+            "text": "0",
+            "bbox": {
+              "x0": 0.5986579334748336,
+              "y0": 0.8047455451842095,
+              "x1": 0.8271767291746724,
+              "y1": 0.8194299057551433,
+              "space": "normalized",
+              "source_space": "fraction",
+              "source_coords": [
+                0.5986579334748336,
+                0.8047455451842095,
+                0.8271767291746724,
+                0.8194299057551433
+              ]
+            },
+            "quality": {
+              "confidence": 1.0,
+              "low_confidence_spans": [],
+              "notes": null
+            },
+            "is_header": false
+          }
+        ],
+        "html": "<a id='be235c90-114e-4af2-a18b-20ea4e3c6e7c'></a>\n\nTOTAL ITEMS :##21\n<table id=\"0-1l\">\n<tr><td id=\"0-1m\">CODE</td><td id=\"0-1n\">RATE %</td><td id=\"0-1o\">VATABLE AMT</td><td id=\"0-1p\">VAT AMT</td></tr>\n<tr><td id=\"0-1q\">A</td><td id=\"0-1r\">16</td><td id=\"0-1s\">1947.4138</td><td id=\"0-1t\">311.5862</td></tr>\n<tr><td id=\"0-1u\">E</td><td id=\"0-1v\">0</td><td id=\"0-1w\">369</td><td id=\"0-1x\">0</td></tr>\n<tr><td id=\"0-1y\">Z</td><td id=\"0-1z\">0</td><td id=\"0-1A\">90</td><td id=\"0-1B\">0</td></tr>\n</table>",
+        "markdown": "<a id='be235c90-114e-4af2-a18b-20ea4e3c6e7c'></a>\n\nTOTAL ITEMS :##21\n<table id=\"0-1l\">\n<tr><td id=\"0-1m\">CODE</td><td id=\"0-1n\">RATE %</td><td id=\"0-1o\">VATABLE AMT</td><td id=\"0-1p\">VAT AMT</td></tr>\n<tr><td id=\"0-1q\">A</td><td id=\"0-1r\">16</td><td id=\"0-1s\">1947.4138</td><td id=\"0-1t\">311.5862</td></tr>\n<tr><td id=\"0-1u\">E</td><td id=\"0-1v\">0</td><td id=\"0-1w\">369</td><td id=\"0-1x\">0</td></tr>\n<tr><td id=\"0-1y\">Z</td><td id=\"0-1z\">0</td><td id=\"0-1A\">90</td><td id=\"0-1B\">0</td></tr>\n</table>",
+        "caption": null
+      },
+      "image_ref": null,
+      "style": null,
+      "quality": {
+        "confidence": 0.958,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "be235c90-114e-4af2-a18b-20ea4e3c6e7c"
+      }
+    },
+    {
+      "id": "structural-test-src:p0:b7",
+      "role": "paragraph",
+      "native_type": "text",
+      "native_label": null,
+      "text": "<a id='760eb065-4575-4cca-bf2d-61b2a0cc555d'></a>\n\nTSIN : 131131204261243189\n\nCUIN : 0170495670001143165\n\nCUSN : KRAMW017202207049567\n\nDATE : 2026-04-12 12:46",
+      "markdown": "<a id='760eb065-4575-4cca-bf2d-61b2a0cc555d'></a>\n\nTSIN : 131131204261243189\n\nCUIN : 0170495670001143165\n\nCUSN : KRAMW017202207049567\n\nDATE : 2026-04-12 12:46",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.26629695296287537,
+        "y0": 0.8413981199264526,
+        "x1": 0.6708041429519653,
+        "y1": 0.8995239734649658,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.26629695296287537,
+          0.8413981199264526,
+          0.6708041429519653,
+          0.8995239734649658
+        ]
+      },
+      "reading_order": 7,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": null,
+      "image_ref": null,
+      "style": null,
+      "quality": {
+        "confidence": 1.0,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "760eb065-4575-4cca-bf2d-61b2a0cc555d"
+      }
+    },
+    {
+      "id": "structural-test-src:p0:b8",
+      "role": "figure",
+      "native_type": "scan_code",
+      "native_label": null,
+      "text": "<a id='70a82235-369a-4103-9b2e-cbaec9e766ef'></a>\n\n<::scan_code: QR code\nThis QR code is black and white, appearing somewhat blurry with some pixelation, but it is likely scannable.::>",
+      "markdown": "<a id='70a82235-369a-4103-9b2e-cbaec9e766ef'></a>\n\n<::scan_code: QR code\nThis QR code is black and white, appearing somewhat blurry with some pixelation, but it is likely scannable.::>",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.396865576505661,
+        "y0": 0.9000952839851379,
+        "x1": 0.6126623749732971,
+        "y1": 0.9661144614219666,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.396865576505661,
+          0.9000952839851379,
+          0.6126623749732971,
+          0.9661144614219666
+        ]
+      },
+      "reading_order": 8,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": null,
+      "image_ref": null,
+      "style": null,
+      "quality": null,
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "70a82235-369a-4103-9b2e-cbaec9e766ef"
+      }
+    },
+    {
+      "id": "structural-test-src:p0:b9",
+      "role": "paragraph",
+      "native_type": "text",
+      "native_label": null,
+      "text": "<a id='ea12bc31-3b53-4942-bbf9-09b4479c7137'></a>\n\nPRICES INCLUSIVE OF VAT WHERE APPLICABLE",
+      "markdown": "<a id='ea12bc31-3b53-4942-bbf9-09b4479c7137'></a>\n\nPRICES INCLUSIVE OF VAT WHERE APPLICABLE",
+      "html": null,
+      "page_index": 0,
+      "bbox": {
+        "x0": 0.19129952788352966,
+        "y0": 0.9707459211349487,
+        "x1": 0.7903794050216675,
+        "y1": 0.9896558523178101,
+        "space": "normalized",
+        "source_space": "fraction",
+        "source_coords": [
+          0.19129952788352966,
+          0.9707459211349487,
+          0.7903794050216675,
+          0.9896558523178101
+        ]
+      },
+      "reading_order": 9,
+      "depth": null,
+      "parent_id": null,
+      "children_ids": [],
+      "spans": [],
+      "table": null,
+      "image_ref": null,
+      "style": null,
+      "quality": {
+        "confidence": 0.999,
+        "low_confidence_spans": [],
+        "notes": null
+      },
+      "language": null,
+      "is_continuation": false,
+      "parser_extras": {
+        "landing_ai_chunk_id": "ea12bc31-3b53-4942-bbf9-09b4479c7137"
+      }
+    }
+  ],
+  "full_text": "<a id='b821b0d0-8cf9-4fca-b136-2ca4ac18767d'></a>\n\nCLEANSHELF SUPERMARKETS LIMITED\nKIKUYU\nP.O Box 1/08 0021/,1 IMURU\n\n<a id='cbfd5fc3-4018-4b9b-9274-b8f246d1497e'></a>\n\n<::scan_code: Barcode\n\nThis is a linear barcode with varying bar widths and spacing, appearing somewhat pixelated and blurry in areas, suggesting a low-resolution scan or print quality issue.::>\n\n<a id='11a45a0b-7b25-4990-848a-b5435d27870b'></a>\n\nSBN . P051147119.. VAT Reg 0125810H\nTel No. : 0110090570 Tax\nTill No. : 1 Cash Sale $ 103\nDate : 12-Apr 26 Time : 12:45:PM Branch : 13\n\nITEM OTY | PRICE | AMOUNT | HEINZ TOMATO KETCHUP SQUEEZE | A | 220417 1 (PCS) | 299 | 299 | BROOKSIDE DAIRY BEST 500ML | 250076 4 (PCS) | 61 | 244 | KCC RINDLESS CHEESE 250GM | A | 250497 I (PCS) | 500 | 500 | CLEANSHELF OATS BREAD 400GM | Z | 290261 I (PCS) | 90 | 90 | CLEANSHELF BERLIN DOUGHNUT | A | 291146                                        1 (PCS) | 140 | 140 | 8X10 POLYTHENE ROPE | A | 330210                                        I (PCS) | 195 | 195 | LG HARRIS 6MM 10MTR HANK COLO | A | 332074                                        2 (PCS) | 115 | 230 | CLEANSHELF PRINTED 3D BAG 30C | A | 390092 1 (PCS) | 45 | 45 | ISINYA EGGS 6PK | E | 400412 1 (PCS) | 125 | 125 | CADBURY RUM & RAISIN 80GM | A | 460027 1 (PCS) | 290 | 290 | NUVITA DAT DIGESTIVE 200GM | A | 460944 1 (PCS) | 200 | 200 | NUVITA VITAMILK BISCUITS 75GM | A | 460963 4 (PCS) | 30 | 120 | COLGATE PLAX COMPLETE CARE 55 | A | 520026 2 (PCS) | 120 | 240\n\n<a id='80d828c4-2a69-4339-bfb9-64c3057fd310'></a>\n\nTOTAL : 2,718.00\nM-PAY : 2,718.00\n\n<a id='a91a4fdd-c701-4e4a-aca0-83d3f35e6d0b'></a>\n\n***\n*** MPESA DETAILS ***\n***\nTransaction No.: UDOOGORZCH\nMobile No : 0722 ### 673\n***\n\nCODE | RATE % | VATABLE AMT | VAT AMT | A | 16 | 1947.4138 | 311.5862 | E | 0 | 369 | 0 | Z | 0 | 90 | 0\n\n<a id='760eb065-4575-4cca-bf2d-61b2a0cc555d'></a>\n\nTSIN : 131131204261243189\n\nCUIN : 0170495670001143165\n\nCUSN : KRAMW017202207049567\n\nDATE : 2026-04-12 12:46\n\n<a id='70a82235-369a-4103-9b2e-cbaec9e766ef'></a>\n\n<::scan_code: QR code\nThis QR code is black and white, appearing somewhat blurry with some pixelation, but it is likely scannable.::>\n\n<a id='ea12bc31-3b53-4942-bbf9-09b4479c7137'></a>\n\nPRICES INCLUSIVE OF VAT WHERE APPLICABLE",
+  "full_markdown": "<a id='b821b0d0-8cf9-4fca-b136-2ca4ac18767d'></a>\n\nCLEANSHELF SUPERMARKETS LIMITED\nKIKUYU\nP.O Box 1/08 0021/,1 IMURU\n\n<a id='cbfd5fc3-4018-4b9b-9274-b8f246d1497e'></a>\n\n<::scan_code: Barcode\n\nThis is a linear barcode with varying bar widths and spacing, appearing somewhat pixelated and blurry in areas, suggesting a low-resolution scan or print quality issue.::>\n\n<a id='11a45a0b-7b25-4990-848a-b5435d27870b'></a>\n\nSBN . P051147119.. VAT Reg 0125810H\nTel No. : 0110090570 Tax\nTill No. : 1 Cash Sale $ 103\nDate : 12-Apr 26 Time : 12:45:PM Branch : 13\n\n<a id='8af1fff3-3285-4286-a338-2c151b28cd7d'></a>\n\n<table id=\"0-1\">\n<tr><td id=\"0-2\">ITEM OTY</td><td id=\"0-3\">PRICE</td><td id=\"0-4\">AMOUNT</td></tr>\n<tr><td id=\"0-5\">HEINZ TOMATO KETCHUP SQUEEZE</td><td id=\"0-6\"></td><td id=\"0-7\">A</td></tr>\n<tr><td id=\"0-8\">220417 1 (PCS)</td><td id=\"0-9\">299</td><td id=\"0-a\">299</td></tr>\n<tr><td id=\"0-b\">BROOKSIDE DAIRY BEST 500ML</td><td id=\"0-c\"></td><td id=\"0-d\"></td></tr>\n<tr><td id=\"0-e\">250076 4 (PCS)</td><td id=\"0-f\">61</td><td id=\"0-g\">244</td></tr>\n<tr><td id=\"0-h\">KCC RINDLESS CHEESE 250GM</td><td id=\"0-i\"></td><td id=\"0-j\">A</td></tr>\n<tr><td id=\"0-k\">250497 I (PCS)</td><td id=\"0-l\">500</td><td id=\"0-m\">500</td></tr>\n<tr><td id=\"0-n\">CLEANSHELF OATS BREAD 400GM</td><td id=\"0-o\"></td><td id=\"0-p\">Z</td></tr>\n<tr><td id=\"0-q\">290261 I (PCS)</td><td id=\"0-r\">90</td><td id=\"0-s\">90</td></tr>\n<tr><td id=\"0-t\">CLEANSHELF BERLIN DOUGHNUT</td><td id=\"0-u\"></td><td id=\"0-v\">A</td></tr>\n<tr><td id=\"0-w\">291146                                        1 (PCS)</td><td id=\"0-x\">140</td><td id=\"0-y\">140</td></tr>\n<tr><td id=\"0-z\">8X10 POLYTHENE ROPE</td><td id=\"0-A\"></td><td id=\"0-B\">A</td></tr>\n<tr><td id=\"0-C\">330210                                        I (PCS)</td><td id=\"0-D\">195</td><td id=\"0-E\">195</td></tr>\n<tr><td id=\"0-F\">LG HARRIS 6MM 10MTR HANK COLO</td><td id=\"0-G\"></td><td id=\"0-H\">A</td></tr>\n<tr><td id=\"0-I\">332074                                        2 (PCS)</td><td id=\"0-J\">115</td><td id=\"0-K\">230</td></tr>\n<tr><td id=\"0-L\">CLEANSHELF PRINTED 3D BAG 30C</td><td id=\"0-M\"></td><td id=\"0-N\">A</td></tr>\n<tr><td id=\"0-O\">390092 1 (PCS)</td><td id=\"0-P\">45</td><td id=\"0-Q\">45</td></tr>\n<tr><td id=\"0-R\">ISINYA EGGS 6PK</td><td id=\"0-S\"></td><td id=\"0-T\">E</td></tr>\n<tr><td id=\"0-U\">400412 1 (PCS)</td><td id=\"0-V\">125</td><td id=\"0-W\">125</td></tr>\n<tr><td id=\"0-X\">CADBURY RUM &amp; RAISIN 80GM</td><td id=\"0-Y\"></td><td id=\"0-Z\">A</td></tr>\n<tr><td id=\"0-10\">460027 1 (PCS)</td><td id=\"0-11\">290</td><td id=\"0-12\">290</td></tr>\n<tr><td id=\"0-13\">NUVITA DAT DIGESTIVE 200GM</td><td id=\"0-14\"></td><td id=\"0-15\">A</td></tr>\n<tr><td id=\"0-16\">460944 1 (PCS)</td><td id=\"0-17\">200</td><td id=\"0-18\">200</td></tr>\n<tr><td id=\"0-19\">NUVITA VITAMILK BISCUITS 75GM</td><td id=\"0-1a\"></td><td id=\"0-1b\">A</td></tr>\n<tr><td id=\"0-1c\">460963 4 (PCS)</td><td id=\"0-1d\">30</td><td id=\"0-1e\">120</td></tr>\n<tr><td id=\"0-1f\">COLGATE PLAX COMPLETE CARE 55</td><td id=\"0-1g\"></td><td id=\"0-1h\">A</td></tr>\n<tr><td id=\"0-1i\">520026 2 (PCS)</td><td id=\"0-1j\">120</td><td id=\"0-1k\">240</td></tr>\n</table>\n\n<a id='80d828c4-2a69-4339-bfb9-64c3057fd310'></a>\n\nTOTAL : 2,718.00\nM-PAY : 2,718.00\n\n<a id='a91a4fdd-c701-4e4a-aca0-83d3f35e6d0b'></a>\n\n***\n*** MPESA DETAILS ***\n***\nTransaction No.: UDOOGORZCH\nMobile No : 0722 ### 673\n***\n\n<a id='be235c90-114e-4af2-a18b-20ea4e3c6e7c'></a>\n\nTOTAL ITEMS :##21\n<table id=\"0-1l\">\n<tr><td id=\"0-1m\">CODE</td><td id=\"0-1n\">RATE %</td><td id=\"0-1o\">VATABLE AMT</td><td id=\"0-1p\">VAT AMT</td></tr>\n<tr><td id=\"0-1q\">A</td><td id=\"0-1r\">16</td><td id=\"0-1s\">1947.4138</td><td id=\"0-1t\">311.5862</td></tr>\n<tr><td id=\"0-1u\">E</td><td id=\"0-1v\">0</td><td id=\"0-1w\">369</td><td id=\"0-1x\">0</td></tr>\n<tr><td id=\"0-1y\">Z</td><td id=\"0-1z\">0</td><td id=\"0-1A\">90</td><td id=\"0-1B\">0</td></tr>\n</table>\n\n<a id='760eb065-4575-4cca-bf2d-61b2a0cc555d'></a>\n\nTSIN : 131131204261243189\n\nCUIN : 0170495670001143165\n\nCUSN : KRAMW017202207049567\n\nDATE : 2026-04-12 12:46\n\n<a id='70a82235-369a-4103-9b2e-cbaec9e766ef'></a>\n\n<::scan_code: QR code\nThis QR code is black and white, appearing somewhat blurry with some pixelation, but it is likely scannable.::>\n\n<a id='ea12bc31-3b53-4942-bbf9-09b4479c7137'></a>\n\nPRICES INCLUSIVE OF VAT WHERE APPLICABLE",
+  "labels": [],
+  "derived_from": null,
+  "derivation": null,
+  "parser_extras": {
+    "landing_ai_splits": [
+      {
+        "chunks": [
+          "b821b0d0-8cf9-4fca-b136-2ca4ac18767d",
+          "cbfd5fc3-4018-4b9b-9274-b8f246d1497e",
+          "11a45a0b-7b25-4990-848a-b5435d27870b",
+          "8af1fff3-3285-4286-a338-2c151b28cd7d",
+          "80d828c4-2a69-4339-bfb9-64c3057fd310",
+          "a91a4fdd-c701-4e4a-aca0-83d3f35e6d0b",
+          "be235c90-114e-4af2-a18b-20ea4e3c6e7c",
+          "760eb065-4575-4cca-bf2d-61b2a0cc555d",
+          "70a82235-369a-4103-9b2e-cbaec9e766ef",
+          "ea12bc31-3b53-4942-bbf9-09b4479c7137"
+        ],
+        "class_": "full",
+        "identifier": "full",
+        "markdown": "<a id='b821b0d0-8cf9-4fca-b136-2ca4ac18767d'></a>\n\nCLEANSHELF SUPERMARKETS LIMITED\nKIKUYU\nP.O Box 1/08 0021/,1 IMURU\n\n<a id='cbfd5fc3-4018-4b9b-9274-b8f246d1497e'></a>\n\n<::scan_code: Barcode\n\nThis is a linear barcode with varying bar widths and spacing, appearing somewhat pixelated and blurry in areas, suggesting a low-resolution scan or print quality issue.::>\n\n<a id='11a45a0b-7b25-4990-848a-b5435d27870b'></a>\n\nSBN . P051147119.. VAT Reg 0125810H\nTel No. : 0110090570 Tax\nTill No. : 1 Cash Sale $ 103\nDate : 12-Apr 26 Time : 12:45:PM Branch : 13\n\n<a id='8af1fff3-3285-4286-a338-2c151b28cd7d'></a>\n\n<table id=\"0-1\">\n<tr><td id=\"0-2\">ITEM OTY</td><td id=\"0-3\">PRICE</td><td id=\"0-4\">AMOUNT</td></tr>\n<tr><td id=\"0-5\">HEINZ TOMATO KETCHUP SQUEEZE</td><td id=\"0-6\"></td><td id=\"0-7\">A</td></tr>\n<tr><td id=\"0-8\">220417 1 (PCS)</td><td id=\"0-9\">299</td><td id=\"0-a\">299</td></tr>\n<tr><td id=\"0-b\">BROOKSIDE DAIRY BEST 500ML</td><td id=\"0-c\"></td><td id=\"0-d\"></td></tr>\n<tr><td id=\"0-e\">250076 4 (PCS)</td><td id=\"0-f\">61</td><td id=\"0-g\">244</td></tr>\n<tr><td id=\"0-h\">KCC RINDLESS CHEESE 250GM</td><td id=\"0-i\"></td><td id=\"0-j\">A</td></tr>\n<tr><td id=\"0-k\">250497 I (PCS)</td><td id=\"0-l\">500</td><td id=\"0-m\">500</td></tr>\n<tr><td id=\"0-n\">CLEANSHELF OATS BREAD 400GM</td><td id=\"0-o\"></td><td id=\"0-p\">Z</td></tr>\n<tr><td id=\"0-q\">290261 I (PCS)</td><td id=\"0-r\">90</td><td id=\"0-s\">90</td></tr>\n<tr><td id=\"0-t\">CLEANSHELF BERLIN DOUGHNUT</td><td id=\"0-u\"></td><td id=\"0-v\">A</td></tr>\n<tr><td id=\"0-w\">291146                                        1 (PCS)</td><td id=\"0-x\">140</td><td id=\"0-y\">140</td></tr>\n<tr><td id=\"0-z\">8X10 POLYTHENE ROPE</td><td id=\"0-A\"></td><td id=\"0-B\">A</td></tr>\n<tr><td id=\"0-C\">330210                                        I (PCS)</td><td id=\"0-D\">195</td><td id=\"0-E\">195</td></tr>\n<tr><td id=\"0-F\">LG HARRIS 6MM 10MTR HANK COLO</td><td id=\"0-G\"></td><td id=\"0-H\">A</td></tr>\n<tr><td id=\"0-I\">332074                                        2 (PCS)</td><td id=\"0-J\">115</td><td id=\"0-K\">230</td></tr>\n<tr><td id=\"0-L\">CLEANSHELF PRINTED 3D BAG 30C</td><td id=\"0-M\"></td><td id=\"0-N\">A</td></tr>\n<tr><td id=\"0-O\">390092 1 (PCS)</td><td id=\"0-P\">45</td><td id=\"0-Q\">45</td></tr>\n<tr><td id=\"0-R\">ISINYA EGGS 6PK</td><td id=\"0-S\"></td><td id=\"0-T\">E</td></tr>\n<tr><td id=\"0-U\">400412 1 (PCS)</td><td id=\"0-V\">125</td><td id=\"0-W\">125</td></tr>\n<tr><td id=\"0-X\">CADBURY RUM &amp; RAISIN 80GM</td><td id=\"0-Y\"></td><td id=\"0-Z\">A</td></tr>\n<tr><td id=\"0-10\">460027 1 (PCS)</td><td id=\"0-11\">290</td><td id=\"0-12\">290</td></tr>\n<tr><td id=\"0-13\">NUVITA DAT DIGESTIVE 200GM</td><td id=\"0-14\"></td><td id=\"0-15\">A</td></tr>\n<tr><td id=\"0-16\">460944 1 (PCS)</td><td id=\"0-17\">200</td><td id=\"0-18\">200</td></tr>\n<tr><td id=\"0-19\">NUVITA VITAMILK BISCUITS 75GM</td><td id=\"0-1a\"></td><td id=\"0-1b\">A</td></tr>\n<tr><td id=\"0-1c\">460963 4 (PCS)</td><td id=\"0-1d\">30</td><td id=\"0-1e\">120</td></tr>\n<tr><td id=\"0-1f\">COLGATE PLAX COMPLETE CARE 55</td><td id=\"0-1g\"></td><td id=\"0-1h\">A</td></tr>\n<tr><td id=\"0-1i\">520026 2 (PCS)</td><td id=\"0-1j\">120</td><td id=\"0-1k\">240</td></tr>\n</table>\n\n<a id='80d828c4-2a69-4339-bfb9-64c3057fd310'></a>\n\nTOTAL : 2,718.00\nM-PAY : 2,718.00\n\n<a id='a91a4fdd-c701-4e4a-aca0-83d3f35e6d0b'></a>\n\n***\n*** MPESA DETAILS ***\n***\nTransaction No.: UDOOGORZCH\nMobile No : 0722 ### 673\n***\n\n<a id='be235c90-114e-4af2-a18b-20ea4e3c6e7c'></a>\n\nTOTAL ITEMS :##21\n<table id=\"0-1l\">\n<tr><td id=\"0-1m\">CODE</td><td id=\"0-1n\">RATE %</td><td id=\"0-1o\">VATABLE AMT</td><td id=\"0-1p\">VAT AMT</td></tr>\n<tr><td id=\"0-1q\">A</td><td id=\"0-1r\">16</td><td id=\"0-1s\">1947.4138</td><td id=\"0-1t\">311.5862</td></tr>\n<tr><td id=\"0-1u\">E</td><td id=\"0-1v\">0</td><td id=\"0-1w\">369</td><td id=\"0-1x\">0</td></tr>\n<tr><td id=\"0-1y\">Z</td><td id=\"0-1z\">0</td><td id=\"0-1A\">90</td><td id=\"0-1B\">0</td></tr>\n</table>\n\n<a id='760eb065-4575-4cca-bf2d-61b2a0cc555d'></a>\n\nTSIN : 131131204261243189\n\nCUIN : 0170495670001143165\n\nCUSN : KRAMW017202207049567\n\nDATE : 2026-04-12 12:46\n\n<a id='70a82235-369a-4103-9b2e-cbaec9e766ef'></a>\n\n<::scan_code: QR code\nThis QR code is black and white, appearing somewhat blurry with some pixelation, but it is likely scannable.::>\n\n<a id='ea12bc31-3b53-4942-bbf9-09b4479c7137'></a>\n\nPRICES INCLUSIVE OF VAT WHERE APPLICABLE",
+        "pages": [
+          0
+        ]
+      }
+    ]
+  },
+  "schema_version": "1.0"
+}
