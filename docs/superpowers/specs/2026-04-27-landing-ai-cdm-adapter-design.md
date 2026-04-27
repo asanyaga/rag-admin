@@ -58,7 +58,7 @@ Landing AI is already 0-indexed. No conversion required.
 
 ### 3.4 Block IDs
 
-Reuse the chunk UUID directly (`chunk["id"]`). Stable and unique within a response.
+Mint deterministically as `{source_document_id}:p{page_index}:b{reading_order}` — same scheme as LlamaParse. This guarantees cross-document uniqueness, deterministic eval snapshots, and consistent ID format across all adapters. Store Landing AI's original chunk UUID in `parser_extras["landing_ai_chunk_id"]` for cross-referencing back to the provider's grounding dict if needed.
 
 ### 3.5 Grounding dict
 
