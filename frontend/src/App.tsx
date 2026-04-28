@@ -9,7 +9,6 @@ import SignUpPage from './pages/SignUpPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import ProjectsPage from './pages/ProjectsPage'
-import ProjectDocumentsPage from './pages/ProjectDocumentsPage'
 import DocumentsPage from './pages/DocumentsPage'
 import IndexPage from './pages/IndexPage'
 import CreateIndexPage from './pages/CreateIndexPage'
@@ -66,11 +65,6 @@ const router = createBrowserRouter([
             path: 'projects',
             element: <ProjectsPage />,
             handle: { breadcrumb: 'Projects' },
-          },
-          {
-            path: 'projects/:projectId/documents',
-            element: <ProjectDocumentsPage />,
-            handle: { breadcrumb: 'Documents' },
           },
           {
             path: 'documents',
