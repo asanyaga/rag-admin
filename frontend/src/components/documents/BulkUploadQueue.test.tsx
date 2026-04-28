@@ -3,6 +3,29 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BulkUploadQueue } from './BulkUploadQueue'
 
+vi.mock('./ParseMethodSelector', () => ({
+  ParseMethodSelector: ({
+    onParserTypeChange,
+    onConfigChange,
+  }: {
+    parserType: string
+    config: object
+    onParserTypeChange: (t: string) => void
+    onConfigChange: (c: object) => void
+    disabled?: boolean
+  }) => (
+    <button
+      data-testid="switch-to-llamaparse"
+      onClick={() => {
+        onParserTypeChange('llamaparse')
+        onConfigChange({ tier: 'agentic', expand: ['markdown', 'text', 'items'] })
+      }}
+    >
+      switch parser
+    </button>
+  ),
+}))
+
 const makeFile = (name: string, sizeBytes: number, type = 'application/pdf') => {
   const file = new File(['x'], name, { type })
   Object.defineProperty(file, 'size', { value: sizeBytes })
@@ -62,6 +85,31 @@ describe('BulkUploadQueue', () => {
     await userEvent.click(screen.getByRole('button', { name: /upload 1 file/i }))
     expect(onBulkUpload).toHaveBeenCalledWith(
       expect.objectContaining({ files: [files[0]] })
+    )
+  })
+
+  it('omits parseConfig when simple parser is selected', async () => {
+    const onBulkUpload = vi.fn().mockResolvedValue({ results: [] })
+    const files = [makeFile('ok.pdf', 100)]
+    render(
+      <BulkUploadQueue {...defaultProps} initialFiles={files} onBulkUpload={onBulkUpload} />
+    )
+    await userEvent.click(screen.getByRole('button', { name: /upload 1 file/i }))
+    expect(onBulkUpload).toHaveBeenCalledWith(
+      expect.objectContaining({ parseConfig: undefined })
+    )
+  })
+
+  it('forwards parseConfig when non-simple parser is selected', async () => {
+    const onBulkUpload = vi.fn().mockResolvedValue({ results: [] })
+    const files = [makeFile('ok.pdf', 100)]
+    render(
+      <BulkUploadQueue {...defaultProps} initialFiles={files} onBulkUpload={onBulkUpload} />
+    )
+    await userEvent.click(screen.getByTestId('switch-to-llamaparse'))
+    await userEvent.click(screen.getByRole('button', { name: /upload 1 file/i }))
+    expect(onBulkUpload).toHaveBeenCalledWith(
+      expect.objectContaining({ parseConfig: expect.objectContaining({ tier: 'agentic' }) })
     )
   })
 })

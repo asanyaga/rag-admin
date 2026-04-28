@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,6 +26,14 @@ export function ReParseDialog({
   const [config, setConfig] = useState<ParseConfig>({ tier: 'agentic', expand: ['markdown', 'text', 'items'] })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setParserType('llamaparse')
+      setConfig({ tier: 'agentic', expand: ['markdown', 'text', 'items'] })
+      setError(null)
+    }
+  }, [open])
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
