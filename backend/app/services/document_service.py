@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 from app.config import settings
 from app.models import DocumentStatus
-from app.ports import DocumentExtractor, StorageService
+from app.ports import StorageService
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.project_repository import ProjectRepository
 from app.schemas.document import (
@@ -49,13 +49,11 @@ class DocumentService:
         document_repo: DocumentRepository,
         project_repo: ProjectRepository,
         storage_service: StorageService,
-        document_extractor: DocumentExtractor,
         parsing_service: ParsingService | None = None,
-    ):
+    ) -> None:
         self.document_repo = document_repo
         self.project_repo = project_repo
         self.storage_service = storage_service
-        self.document_extractor = document_extractor
         self.parsing_service = parsing_service
 
     async def initiate_upload(

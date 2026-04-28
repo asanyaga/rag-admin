@@ -157,35 +157,35 @@ async def test_upload_cdm_writes_all_four_tables(client: AsyncClient, test_db: A
 
 
 @pytest.mark.asyncio
-async def test_upload_cdm_flag_off_skips_cdm_tables(client: AsyncClient, test_db: AsyncSession):
-    """With USE_CDM_PARSER=False, even parser_type=llamaparse must use the legacy path (AC#7)."""
+async def test_upload_always_uses_cdm_regardless_of_flag(client: AsyncClient, test_db: AsyncSession):
+    """All uploads always route through CDM — USE_CDM_PARSER flag no longer gates the path."""
     token = await _signup_and_login(client)
     project_id = await _create_project(client, token)
 
-    with patch("app.config.settings.USE_CDM_PARSER", False):
-        response = await client.post(
-            "/api/v1/documents",
-            headers={"Authorization": f"Bearer {token}"},
-            data={
-                "project_id": project_id,
-                "parser_type": "llamaparse",
-                "title": "Flag Off Test Doc",
-            },
-            files=[("file", ("test.pdf", MINIMAL_PDF, "application/pdf"))],
-        )
+    response = await client.post(
+        "/api/v1/documents",
+        headers={"Authorization": f"Bearer {token}"},
+        data={
+            "project_id": project_id,
+            "parser_type": "llamaparse",
+            "title": "Always CDM Test Doc",
+        },
+        files=[("file", ("test.pdf", MINIMAL_PDF, "application/pdf"))],
+    )
 
     assert response.status_code == 202
     data = response.json()
-    assert data["sourceDocumentId"] is None
+    # CDM path always populates source_document_id
+    assert data["sourceDocumentId"] is not None
 
-    # No source_documents rows — legacy path bypasses CDM tables
+    # source_documents row created for all uploads
     sd_result = await test_db.execute(select(SourceDocumentORM))
-    assert len(list(sd_result.scalars().all())) == 0
+    assert len(list(sd_result.scalars().all())) == 1
 
 
 @pytest.mark.asyncio
-async def test_upload_simple_parser_skips_cdm_tables(client: AsyncClient, test_db: AsyncSession):
-    """With parser_type=simple, CDM tables should not be populated."""
+async def test_upload_simple_parser_uses_cdm_tables(client: AsyncClient, test_db: AsyncSession):
+    """With parser_type=simple, CDM tables are now always populated (no legacy fallback)."""
     token = await _signup_and_login(client)
     project_id = await _create_project(client, token)
 
@@ -202,9 +202,9 @@ async def test_upload_simple_parser_skips_cdm_tables(client: AsyncClient, test_d
 
     assert response.status_code == 202
     data = response.json()
-    # Simple path does not populate source_document_id
-    assert data["sourceDocumentId"] is None
+    # All uploads now populate source_document_id via CDM path
+    assert data["sourceDocumentId"] is not None
 
-    # No source_documents row for simple parser
+    # source_documents row created even for simple parser
     sd_result = await test_db.execute(select(SourceDocumentORM))
-    assert len(list(sd_result.scalars().all())) == 0
+    assert len(list(sd_result.scalars().all())) == 1
