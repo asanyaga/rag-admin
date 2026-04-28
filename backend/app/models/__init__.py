@@ -14,7 +14,6 @@ from app.models.golden_set import (
 )
 from app.models.eval_run import EvalRun, EvalRunStatus, EvalRunResult
 from app.models.experiment import Experiment, ExperimentStatus
-from app.models.parse_result import ParseResult, ParseResultStatus
 from app.models.extraction_schema import ExtractionSchema
 from app.models.extraction_result import ExtractionResult, ExtractionResultStatus
 from app.models.extraction_ground_truth import ExtractionGroundTruthSet, ExtractionGroundTruthItem
@@ -54,8 +53,6 @@ __all__ = [
     "EvalRunResult",
     "Experiment",
     "ExperimentStatus",
-    "ParseResult",
-    "ParseResultStatus",
     "ExtractionSchema",
     "ExtractionResult",
     "ExtractionResultStatus",
