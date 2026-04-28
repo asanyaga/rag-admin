@@ -77,3 +77,4 @@ def test_empty_raw_produces_single_empty_page():
     doc = SimpleTextAdapter().adapt({}, SOURCE_META)
     assert doc.page_count == 1
     assert len(doc.pages) == 1
+    assert len(doc.blocks) == 1
