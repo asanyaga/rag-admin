@@ -1171,6 +1171,23 @@ wheels = [
 ]
 
 [[package]]
+name = "landingai-ade"
+version = "1.12.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/58/8b/fba829b86d62b2f4b8b48a60dda0206acf664779604a5ce0b64d90b83b8d/landingai_ade-1.12.0.tar.gz", hash = "sha256:c8ba80d062d934c03a26c5ef6bb1d8c0f5dd9f0aa11d88d802bf9e931476949b", size = 131460, upload-time = "2026-04-23T16:34:07.042Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/76/24b21714157f23191100b9331348d3c42be737d6b1993a80701fcb0a930d/landingai_ade-1.12.0-py3-none-any.whl", hash = "sha256:fe75d98faea41e0ebbaaf133611f82a667134ef421d95afcbb8eea075f4dc3e0", size = 103261, upload-time = "2026-04-23T16:34:05.645Z" },
+]
+
+[[package]]
 name = "langchain-core"
 version = "1.2.9"
 source = { registry = "https://pypi.org/simple" }
@@ -2765,6 +2782,7 @@ dependencies = [
     { name = "filetype" },
     { name = "httpx" },
     { name = "itsdangerous" },
+    { name = "landingai-ade" },
     { name = "langchain-text-splitters" },
     { name = "langgraph" },
     { name = "langgraph-checkpoint-postgres" },
@@ -2819,6 +2837,7 @@ requires-dist = [
     { name = "filetype", specifier = ">=1.2.0" },
     { name = "httpx", specifier = ">=0.26.0" },
     { name = "itsdangerous", specifier = ">=2.2.0" },
+    { name = "landingai-ade", specifier = ">=0.3.3" },
     { name = "langchain-text-splitters", specifier = ">=0.0.1" },
     { name = "langgraph", specifier = ">=0.4.0" },
     { name = "langgraph-checkpoint-postgres", specifier = ">=2.0.0" },

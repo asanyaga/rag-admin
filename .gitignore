@@ -97,3 +97,6 @@ backend/data/
 # Git worktrees
 .worktrees/
 worktrees/
+
+# Scratch files
+_scratch/
