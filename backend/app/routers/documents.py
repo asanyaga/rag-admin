@@ -39,8 +39,14 @@ from app.services.document_service import DocumentService, process_document_extr
 from app.services.parse_service import ParseService, process_document_parsing
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 from app.adapters.parsing.registry import get_parser
+from pydantic import BaseModel as PydanticBaseModel
 
 _CDM_PARSER_TYPES = frozenset({"llamaparse", "landing_ai"})
+
+
+class _ParseRunCreateRequest(PydanticBaseModel):
+    parser_type: str = "simple"
+    config: dict | None = None
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -473,6 +479,62 @@ async def list_document_parse_runs(
         document.source_document_id
     )
     return [ParseRunResponse.from_orm_row(r) for r in runs]
+
+
+@router.post(
+    "/{document_id}/parse-runs",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Trigger a new CDM parse run for a document",
+)
+async def create_document_parse_run(
+    document_id: UUID,
+    body: _ParseRunCreateRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+    storage_service: StorageService = Depends(get_storage_service),
+):
+    """Dispatch a new CDM parse run for an existing document."""
+    from app.dependencies.documents import get_llamaparse_client, get_landingai_client
+    from app.repositories.parse_run_repository import ParseRunRepository
+    from app.repositories.parsed_document_repository import ParsedDocumentRepository
+    from app.repositories.source_document_repository import SourceDocumentRepository
+    from app.services.document_service import process_cdm_parsing
+
+    document_repo = DocumentRepository(db)
+    document = await document_repo.get_by_id(document_id, current_user.id)
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document {document_id} not found",
+        )
+    if document.source_document_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Document has no source_document_id; upload must be re-done via CDM path",
+        )
+
+    cfg = body.config or {}
+    representation_kind = cfg.get("representation_kind", "extract_rich")
+    parse_cfg = {k: v for k, v in cfg.items() if k != "representation_kind"}
+    parse_cfg["parser"] = body.parser_type
+
+    background_tasks.add_task(
+        process_cdm_parsing,
+        document_id=document_id,
+        source_document_id=document.source_document_id,
+        project_id=document.project_id,
+        representation_kind=representation_kind,
+        config=parse_cfg,
+        document_repo=DocumentRepository(db),
+        parse_run_repo=ParseRunRepository(db),
+        parsed_doc_repo=ParsedDocumentRepository(db),
+        source_doc_repo=SourceDocumentRepository(db),
+        storage_service=storage_service,
+        llamaparse_client=get_llamaparse_client(),
+        landingai_client=get_landingai_client(),
+    )
+    return {"status": "accepted"}
 
 
 @router.get(
