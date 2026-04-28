@@ -228,7 +228,7 @@ Show `version` on the index detail page header (e.g. *"v1"* next to the index na
 
 1. Create a document → run a LlamaParse parse → confirm `ParsedDocument.full_text` is populated
 2. Create an index with `source_representation = "full_text"`, `parser = "llamaparse"`, add document with parse run
-3. Trigger processing → verify chunks reference `source_type = "full_text"` and `parse_run_id` matches
+3. Trigger processing → verify chunks have `source_type = "full_text"`, `parse_run_id`, and `index_version = 1` set (provenance fields in `chunk_metadata` and columns — full `ChunkCitation` response schema is Slice 3)
 4. Verify chunk text differs from `document.extracted_text` when `full_text` is richer/cleaner
 5. Reprocess → verify `index.version` incremented to 2 → verify `index_events` has two rows
 6. Verify `index_events` row for v2 has correct `config_snapshot` and `document_bindings`

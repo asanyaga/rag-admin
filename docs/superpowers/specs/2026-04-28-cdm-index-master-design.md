@@ -66,18 +66,16 @@ This is designed for migration toward full `IndexVersion` entities if A/B versio
 | `parse_run_id` | `UUID | NULL` | Snapshot of the parse run that fed this chunk |
 | `source_type` | `varchar NOT NULL` | `"raw_text"` \| `"full_text"` \| `"full_markdown"` \| `"block"` |
 
-Block/text provenance is stored in the existing `chunk_metadata` JSON:
+Block/text provenance is stored in the existing `chunk_metadata` JSON. The keys present depend on `source_type` — they do not coexist on the same chunk:
 
 ```json
-// Text-based chunks
-{
-  "start_char": 1200,
-  "end_char": 1850,
-  "page_numbers": [3],
-  "heading_path": ["Financials", "Q3 Results"]   // markdown only
-}
+// source_type = "raw_text" or "full_text"
+{ "start_char": 1200, "end_char": 1850, "page_numbers": [3] }
 
-// Block-based chunks
+// source_type = "full_markdown"
+{ "start_char": 1200, "end_char": 1850, "heading_path": ["Financials", "Q3 Results"], "split_level": 2 }
+
+// source_type = "block"
 {
   "block_ids": ["uuid1", "uuid2"],
   "page_indices": [3, 4],
@@ -155,6 +153,16 @@ Allowed combinations:
 | `full_markdown` | `markdown_heading` |
 | `block` | `block`, `classified_block` |
 
+### Existing embedding config (retained unchanged)
+
+```python
+embedding_provider: str = "openai"
+embedding_model: str = "text-embedding-3-small"
+embedding_dimensions: int | None = None
+```
+
+These fields are present in the existing `IndexConfig` and are not modified by this feature. Changes to any of them are chunk-invalidating (existing chunks are incompatible with a different embedding model).
+
 ### Text-based config (unchanged, conditional)
 
 ```python
@@ -163,7 +171,16 @@ chunk_overlap: int = 50         # 0–chunk_size/2
 chunk_unit: Literal["tokens", "characters"] = "characters"
 ```
 
-Ignored silently when strategy is not text-based.
+Relevant only when `chunking_strategy` is `fixed_size` or `recursive_character`. Ignored silently otherwise.
+
+### Markdown-based config (new, conditional)
+
+```python
+split_heading_level: int = 2    # 1=h1 only, 2=h1+h2, 3=h1+h2+h3
+max_section_chars: int = 4000   # sections larger than this are recursively split
+```
+
+Relevant only when `chunking_strategy = "markdown_heading"`. Ignored silently otherwise.
 
 ### Block-based config (new, conditional)
 

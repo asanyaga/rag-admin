@@ -146,6 +146,10 @@ async def resolve_citation(chunk: Chunk, session: AsyncSession) -> ChunkCitation
 
     if chunk.source_type == "block" and meta.get("block_ids") and chunk.parse_run_id:
         parsed_doc_row = await parse_run_repo.get_parsed_document(chunk.parse_run_id)
+        if not parsed_doc_row:
+            # Parse run deleted — degrade gracefully. block_ids intentionally left null
+            # so the caller knows resolution failed rather than showing stale block references.
+            return base
         if parsed_doc_row:
             cdm = ParsedDocument.model_validate(parsed_doc_row.content)
             block_map = {b.id: b for b in cdm.blocks}
