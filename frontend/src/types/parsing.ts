@@ -42,5 +42,6 @@ export interface ParserInfo {
 export type ParseConfig = {
   tier?: string
   expand?: string[]
+  model?: string
   [key: string]: unknown
 }
