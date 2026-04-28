@@ -8,7 +8,6 @@ import { ParsedDocumentPane } from '@/components/parse-runs/ParsedDocumentPane'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { useParseRunDetail } from '@/hooks/useParseRunDetail'
 import { useParseRunRawPayload } from '@/hooks/useParseRunRawPayload'
-import { useParseResults } from '@/hooks/useParseResults'
 import * as parseRunsApi from '@/api/parseRuns'
 import type { ParsedDocumentDetail } from '@/types/cdm'
 import type { ParseConfig } from '@/types/parsing'
@@ -72,17 +71,16 @@ export function ParseRunDetailPage() {
     }
   }, [runId, run])
 
-  const { reparseDocument } = useParseResults(documentId ?? null)
   const handleReparse = useCallback(
     async (parserType: string, config?: ParseConfig) => {
       if (!documentId) return
-      await reparseDocument(parserType, config)
+      await parseRunsApi.createParseRun(documentId, parserType, config)
       // The new CDM ParseRun is created asynchronously by a background task,
       // so we route the user back to the document where the timeline will
       // surface the pending run as it transitions through statuses.
       navigate('/documents')
     },
-    [documentId, navigate, reparseDocument]
+    [documentId, navigate]
   )
 
   if (runLoading) return <div className="p-6">Loading run…</div>
