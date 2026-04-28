@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any
@@ -139,3 +140,90 @@ async def test_run_landingai_timeout_raises_error(tmp_path):
 
     assert exc_info.value.run.status == ParseRunStatus.FAILED
     assert exc_info.value.run.provider_refs.get("landingai_job_id") == "job-xyz"
+
+
+_LARGE_DOC_RAW = {
+    "chunks": [
+        {
+            "id": "chunk-1",
+            "type": "text",
+            "markdown": "Annual Report",
+            "grounding": {"page": 0, "box": {"left": 0.0, "top": 0.0, "right": 1.0, "bottom": 0.1}},
+        }
+    ],
+    "markdown": "Annual Report",
+    "metadata": {
+        "filename": "annual-report.pdf",
+        "page_count": 120,
+        "duration_ms": 300000,
+        "credit_usage": 12.0,
+        "job_id": "job-large",
+        "version": "dpt-2-latest",
+        "failed_pages": [],
+    },
+    "splits": [],
+    "grounding": {},
+}
+
+
+@pytest.mark.asyncio
+async def test_run_landingai_large_doc_fetches_output_url(tmp_path):
+    """When data is None (result > 1 MB), runner must fetch from output_url."""
+    src = _source()
+    f = tmp_path / "annual-report.pdf"
+    f.write_bytes(b"%PDF-1.4")
+
+    poll_response = SimpleNamespace(
+        status="completed",
+        data=None,
+        output_url="https://s3.example.com/presigned/result.json",
+    )
+    job = SimpleNamespace(job_id="job-large")
+    client = MagicMock()
+    client.parse_jobs.create.return_value = job
+    client.parse_jobs.get.return_value = poll_response
+
+    mock_http_response = MagicMock()
+    mock_http_response.json.return_value = _LARGE_DOC_RAW
+    mock_http_response.raise_for_status = MagicMock()
+
+    with patch("httpx.get", return_value=mock_http_response) as mock_get:
+        run, doc = await run_landingai(
+            source=src,
+            file_path=str(f),
+            representation_kind="extract_rich",
+            config={"model": "dpt-2-latest"},
+            client=client,
+        )
+
+    mock_get.assert_called_once_with("https://s3.example.com/presigned/result.json")
+    assert run.status == ParseRunStatus.SUCCEEDED
+    assert run.provider_refs.get("landingai_job_id") == "job-large"
+    assert doc is not None
+    assert doc.full_markdown == "Annual Report"
+
+
+@pytest.mark.asyncio
+async def test_run_landingai_completed_with_no_data_and_no_url_raises_error(tmp_path):
+    """When data is None and output_url is None, runner raises LandingAIRunError."""
+    src = _source()
+    f = tmp_path / "test.pdf"
+    f.write_bytes(b"%PDF-1.4")
+
+    poll_response = SimpleNamespace(status="completed", data=None, output_url=None)
+    job = SimpleNamespace(job_id="job-broken")
+    client = MagicMock()
+    client.parse_jobs.create.return_value = job
+    client.parse_jobs.get.return_value = poll_response
+
+    with pytest.raises(LandingAIRunError) as exc_info:
+        await run_landingai(
+            source=src,
+            file_path=str(f),
+            representation_kind="extract_rich",
+            config={"model": "dpt-2-latest"},
+            client=client,
+        )
+
+    assert exc_info.value.run.status == ParseRunStatus.FAILED
+    assert exc_info.value.run.provider_refs.get("landingai_job_id") == "job-broken"

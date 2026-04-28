@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+import httpx
+
 from app.cdm.adapters.base import SourceMeta
 from app.cdm.adapters.landing_ai import LandingAIAdapter
 from app.cdm.models import ParsedDocument, ParserKind
@@ -67,6 +69,18 @@ async def run_landingai(
                 f"Landing AI job {job_id} did not complete within {poll_timeout}s"
             )
 
+        if response.data is not None:
+            raw = response.data.model_dump(mode="json")
+        elif response.output_url:
+            # Result exceeds 1 MB — fetch from presigned S3 URL
+            http_response = await asyncio.to_thread(httpx.get, response.output_url)
+            http_response.raise_for_status()
+            raw = http_response.json()
+        else:
+            raise RuntimeError(
+                f"Landing AI job {job_id} completed but returned neither data nor output_url"
+            )
+
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((time.perf_counter() - t0) * 1000)
@@ -88,8 +102,6 @@ async def run_landingai(
 
     finished_at = datetime.now(timezone.utc)
     duration_ms = int((time.perf_counter() - t0) * 1000)
-
-    raw = response.data.model_dump(mode="json")
     meta: Dict[str, Any] = raw.get("metadata") or {}
 
     raw_duration = meta.get("duration_ms")
