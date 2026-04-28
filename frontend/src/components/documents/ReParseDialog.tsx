@@ -23,10 +23,7 @@ export function ReParseDialog({
   onReparse,
 }: ReParseDialogProps) {
   const [parserType, setParserType] = useState('llamaparse')
-  const [config, setConfig] = useState<ParseConfig>({
-    tier: 'agentic',
-    expand: ['markdown', 'text'],
-  })
+  const [config, setConfig] = useState<ParseConfig>({ tier: 'agentic', expand: ['markdown', 'text', 'items'] })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,7 +33,7 @@ export function ReParseDialog({
     try {
       await onReparse(
         parserType,
-        parserType === 'llamaparse' ? config : undefined
+        parserType !== 'simple' ? config : undefined
       )
       onOpenChange(false)
     } catch (err) {

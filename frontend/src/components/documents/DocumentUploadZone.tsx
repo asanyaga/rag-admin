@@ -37,10 +37,7 @@ export function DocumentUploadZone({
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [parserType, setParserType] = useState('simple')
-  const [parseConfig, setParseConfig] = useState<ParseConfig>({
-    tier: 'agentic',
-    expand: ['markdown', 'text'],
-  })
+  const [parseConfig, setParseConfig] = useState<ParseConfig>({})
 
   const allowedTypes = [...ALLOWED_PDF_TYPES, ...ALLOWED_IMAGE_TYPES]
 
@@ -137,7 +134,7 @@ export function DocumentUploadZone({
         title.trim(),
         description.trim() || undefined,
         parserType,
-        parserType === 'llamaparse' ? parseConfig : undefined,
+        parserType !== 'simple' ? parseConfig : undefined,
       )
 
       // Reset form
@@ -145,7 +142,7 @@ export function DocumentUploadZone({
       setTitle('')
       setDescription('')
       setParserType('simple')
-      setParseConfig({ tier: 'agentic', expand: ['markdown', 'text'] })
+      setParseConfig({})
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {

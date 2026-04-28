@@ -78,10 +78,7 @@ export function BulkUploadQueue({
     })
   )
   const [parserType, setParserType] = useState('simple')
-  const [parseConfig, setParseConfig] = useState<ParseConfig>({
-    tier: 'agentic',
-    expand: ['markdown', 'text'],
-  })
+  const [parseConfig, setParseConfig] = useState<ParseConfig>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadStarted, setUploadStarted] = useState(false)
   const [networkError, setNetworkError] = useState<string | null>(null)
@@ -120,7 +117,7 @@ export function BulkUploadQueue({
         projectId,
         files: validItems.map((item) => item.file),
         parserType,
-        parseConfig: parserType === 'llamaparse' ? parseConfig : undefined,
+        parseConfig: parserType !== 'simple' ? parseConfig : undefined,
       })
 
       const responseMap = new Map(response.results.map((r) => [r.filename, r]))
