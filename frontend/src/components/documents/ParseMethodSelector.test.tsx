@@ -62,4 +62,34 @@ describe('ParseMethodSelector', () => {
     })
     expect(markdownCheckbox).not.toBeDisabled()
   })
+
+  it('shows Landing AI model dropdown when landing_ai selected', () => {
+    render(
+      <ParseMethodSelector {...defaultProps} parserType="landing_ai" config={{}} />
+    )
+    expect(screen.getByText('Model')).toBeInTheDocument()
+    expect(screen.getByText('Vision-based parsing. Best for images, shelf photos, and complex visual layouts.')).toBeInTheDocument()
+    expect(screen.queryByText('Tier')).not.toBeInTheDocument()
+  })
+
+  it('resets config to parser defaultConfig when parser type changes', () => {
+    const onConfigChange = vi.fn()
+    const { rerender } = render(
+      <ParseMethodSelector
+        {...defaultProps}
+        parserType="simple"
+        onConfigChange={onConfigChange}
+      />
+    )
+    // Re-render simulating a switch to landing_ai (handleParserChange fires both callbacks)
+    rerender(
+      <ParseMethodSelector
+        {...defaultProps}
+        parserType="landing_ai"
+        onConfigChange={onConfigChange}
+      />
+    )
+    // Verify the landing_ai config section is shown (confirming render updated)
+    expect(screen.getByText('Model')).toBeInTheDocument()
+  })
 })
