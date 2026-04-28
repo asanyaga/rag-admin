@@ -2,33 +2,35 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Retire the legacy `parse_results` path and route all three parsers (liteparse, llamaparse, landing_ai) exclusively through the CDM pipeline.
+**Goal:** Retire the legacy `parse_results` path and route all three parsers (simple, llamaparse, landing_ai) exclusively through the CDM pipeline.
 
-**Architecture:** Add a `LiteParseAdapter` + `run_liteparse` runner that wraps the existing `LlamaIndexExtractor`, wire it into `ParsingService`, then remove the `_CDM_PARSER_TYPES` gate so every upload and re-parse uses `process_cdm_parsing`. Delete the legacy `ParseService`, `ParseResultRepository`, `ParseResult` model, and `parse_results` router, then drop the `parse_results` table in a migration. Mirror the rename on the frontend (`simple` → `liteparse`) and replace the legacy `useParseResults`/`ParseResultViewer` pair with the CDM hooks already in place.
+**Architecture:** Add a `SimpleTextAdapter` + `run_simple` runner that wraps the existing `LlamaIndexExtractor` (SimpleDirectoryReader + pytesseract), add `ParserKind.SIMPLE = "simple"` to the enum, wire it into `ParsingService`, then remove the `_CDM_PARSER_TYPES` gate so every upload and re-parse uses `process_cdm_parsing`. Delete the legacy `ParseService`, `ParseResultRepository`, `ParseResult` model, and `parse_results` router, then drop the `parse_results` table in a migration. Remove the legacy `useParseResults`/`ParseResultViewer` pair from the frontend and wire reparse to the new CDM endpoint. The parser type string stays `"simple"` throughout — no rename. `ParserKind.LITEPARSE` is reserved in the enum for the forthcoming LlamaIndex LiteParse cloud product (separate iteration).
 
 **Tech Stack:** Python 3.12, FastAPI, SQLAlchemy 2.0, Alembic, Pydantic v2, React 18, TypeScript, Vitest, Pytest
+
+**File type support note:** The existing `LlamaIndexExtractor` already handles `application/pdf`, `image/jpeg`, and `image/png` (pytesseract OCR for images). The CDM migration carries this support forward unchanged — `run_simple` passes `source.mime_type` to `client.extract()`.
 
 ---
 
 ## File Map
 
 ### Create
-- `backend/app/cdm/adapters/liteparse.py` — `LiteParseAdapter`
-- `backend/app/services/parsing/liteparse_runner.py` — `run_liteparse`
-- `backend/tests/cdm/adapters/test_liteparse_adapter.py`
-- `backend/tests/services/parsing/test_liteparse_runner.py`
+- `backend/app/cdm/adapters/simple_text.py` — `SimpleTextAdapter`
+- `backend/app/services/parsing/simple_runner.py` — `run_simple`
+- `backend/tests/cdm/adapters/test_simple_text_adapter.py`
+- `backend/tests/services/parsing/test_simple_runner.py`
 - `backend/alembic/versions/<hash>_drop_parse_results_table.py`
 
 ### Modify
-- `backend/app/services/parsing/errors.py` — add `LiteParseRunError`
-- `backend/app/services/parsing/parsing_service.py` — add `LITEPARSE` to `_RUNNERS`
-- `backend/app/dependencies/documents.py` — add `LITEPARSE` client to `get_parsing_service`, remove `USE_CDM_PARSER` guard
-- `backend/app/services/document_service.py` — delete `process_document_extraction`; remove `document_extractor` from `DocumentService.__init__`; add `get_document_extractor()` inline in `process_cdm_parsing` clients dict
-- `backend/app/routers/documents.py` — remove `_CDM_PARSER_TYPES` gate; always CDM; rename `simple` → `liteparse`; add `POST /{document_id}/parse-runs` reparse endpoint; strip legacy imports
+- `backend/app/cdm/models.py` — add `SIMPLE = "simple"` to `ParserKind` enum
+- `backend/app/services/parsing/errors.py` — add `SimpleRunError`
+- `backend/app/services/parsing/parsing_service.py` — add `SIMPLE` to `_RUNNERS`
+- `backend/app/dependencies/documents.py` — add `SIMPLE` client to `get_parsing_service`
+- `backend/app/services/document_service.py` — remove `document_extractor` from `DocumentService.__init__`; delete `process_document_extraction`; add `get_document_extractor()` inline in `process_cdm_parsing` clients dict
+- `backend/app/routers/documents.py` — remove `_CDM_PARSER_TYPES` gate; always CDM; add `POST /{document_id}/parse-runs` reparse endpoint; strip legacy imports
 - `backend/app/main.py` — remove `parse_results` router import and `include_router`
 - `backend/app/models/__init__.py` — remove `ParseResult`, `ParseResultStatus`
 - `backend/app/config.py` — remove `USE_CDM_PARSER`
-- `frontend/src/components/documents/ParseMethodSelector.tsx` — rename `simple` → `liteparse`
 - `frontend/src/api/parseRuns.ts` — add `createParseRun`
 - `frontend/src/api/parsing.ts` — remove `listParseResults`, `getParseResult`, `reparseDocument`
 - `frontend/src/types/parsing.ts` — remove `ParseResult`, `ParseResultListItem`
@@ -55,51 +57,65 @@
 
 ---
 
-## Task 1: Add `LiteParseRunError` to errors module
+## Task 1: Add `ParserKind.SIMPLE` to enum and `SimpleRunError` to errors module
 
 **Files:**
+- Modify: `backend/app/cdm/models.py`
 - Modify: `backend/app/services/parsing/errors.py`
 
-- [ ] **Step 1: Add error class**
+- [ ] **Step 1: Add `SIMPLE` to `ParserKind` enum in `models.py`**
+
+In `backend/app/cdm/models.py`, update the `ParserKind` enum (around line 14):
+
+```python
+class ParserKind(str, Enum):
+    SIMPLE       = "simple"      # local text extraction via LlamaIndexExtractor
+    LITEPARSE    = "liteparse"   # reserved — LlamaIndex LiteParse cloud product (future)
+    UNSTRUCTURED = "unstructured"
+    LLAMAPARSE   = "llamaparse"
+    LANDING_AI   = "landing_ai"
+```
+
+- [ ] **Step 2: Add `SimpleRunError` to `errors.py`**
 
 Open `backend/app/services/parsing/errors.py` and add after `LandingAIRunError`:
 
 ```python
-class LiteParseRunError(ParseRunError):
-    """Raised by liteparse_runner when local extraction fails."""
+class SimpleRunError(ParseRunError):
+    """Raised by simple_runner when local extraction fails."""
 ```
 
-- [ ] **Step 2: Run existing error tests to verify no regression**
+- [ ] **Step 3: Run existing CDM model and error tests to verify no regression**
 
 ```bash
-uv run --directory backend python -m pytest tests/services/parsing/test_errors.py -v -o "addopts="
+uv run --directory backend python -m pytest tests/cdm/test_models.py tests/services/parsing/test_errors.py -v -o "addopts="
 ```
 
 Expected: all PASS.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add backend/app/services/parsing/errors.py
-git commit -m "feat(cdm): add LiteParseRunError to parsing errors"
+git add backend/app/cdm/models.py backend/app/services/parsing/errors.py
+git commit -m "feat(cdm): add ParserKind.SIMPLE enum entry and SimpleRunError"
 ```
 
 ---
 
-## Task 2: LiteParseAdapter — TDD
+## Task 2: SimpleTextAdapter — TDD
 
 **Files:**
-- Create: `backend/app/cdm/adapters/liteparse.py`
-- Create: `backend/tests/cdm/adapters/test_liteparse_adapter.py`
+- Create: `backend/app/cdm/adapters/simple_text.py`
+- Create: `backend/tests/cdm/adapters/test_simple_text_adapter.py`
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/cdm/adapters/test_liteparse_adapter.py`:
+Create `backend/tests/cdm/adapters/test_simple_text_adapter.py`:
 
 ```python
 import pytest
 from app.cdm.adapters.base import SourceMeta
-from app.cdm.adapters.liteparse import LiteParseAdapter
+from app.cdm.adapters.simple_text import SimpleTextAdapter
 from app.cdm.models import BlockRole, ParserKind
 
 
@@ -121,23 +137,23 @@ TWO_PAGE_RAW = {
 
 
 def test_adapter_parser_kind():
-    assert LiteParseAdapter.parser == ParserKind.LITEPARSE
+    assert SimpleTextAdapter.parser == ParserKind.SIMPLE
 
 
 def test_two_pages_produces_two_pages_and_two_blocks():
-    doc = LiteParseAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
+    doc = SimpleTextAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
     assert doc.page_count == 2
     assert len(doc.pages) == 2
     assert len(doc.blocks) == 2
 
 
 def test_block_role_is_paragraph():
-    doc = LiteParseAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
+    doc = SimpleTextAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
     assert all(b.role == BlockRole.PARAGRAPH for b in doc.blocks)
 
 
 def test_block_ids_are_unique_and_referenced_by_pages():
-    doc = LiteParseAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
+    doc = SimpleTextAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
     block_ids = {b.id for b in doc.blocks}
     assert len(block_ids) == 2
     for page in doc.pages:
@@ -146,18 +162,18 @@ def test_block_ids_are_unique_and_referenced_by_pages():
 
 
 def test_page_indices_are_zero_based():
-    doc = LiteParseAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
+    doc = SimpleTextAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
     assert doc.pages[0].index == 0
     assert doc.pages[1].index == 1
 
 
 def test_full_text_preserved():
-    doc = LiteParseAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
+    doc = SimpleTextAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
     assert doc.full_text == TWO_PAGE_RAW["text"]
 
 
 def test_source_and_run_ids_wired():
-    doc = LiteParseAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
+    doc = SimpleTextAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
     assert doc.source_document_id == "src-1"
     assert doc.parse_run_id == "run-1"
     assert doc.source_filename == "test.pdf"
@@ -165,7 +181,7 @@ def test_source_and_run_ids_wired():
 
 def test_fallback_when_no_page_boundaries():
     raw = {"text": "some text", "page_count": 1, "page_boundaries": []}
-    doc = LiteParseAdapter().adapt(raw, SOURCE_META)
+    doc = SimpleTextAdapter().adapt(raw, SOURCE_META)
     assert doc.page_count == 1
     assert len(doc.pages) == 1
     assert len(doc.blocks) == 1
@@ -173,7 +189,7 @@ def test_fallback_when_no_page_boundaries():
 
 
 def test_empty_raw_produces_single_empty_page():
-    doc = LiteParseAdapter().adapt({}, SOURCE_META)
+    doc = SimpleTextAdapter().adapt({}, SOURCE_META)
     assert doc.page_count == 1
     assert len(doc.pages) == 1
 ```
@@ -181,28 +197,28 @@ def test_empty_raw_produces_single_empty_page():
 - [ ] **Step 2: Run tests to confirm they fail**
 
 ```bash
-uv run --directory backend python -m pytest tests/cdm/adapters/test_liteparse_adapter.py -v -o "addopts="
+uv run --directory backend python -m pytest tests/cdm/adapters/test_simple_text_adapter.py -v -o "addopts="
 ```
 
 Expected: `ModuleNotFoundError` or `ImportError` — the module does not exist yet.
 
-- [ ] **Step 3: Implement LiteParseAdapter**
+- [ ] **Step 3: Implement SimpleTextAdapter**
 
-Create `backend/app/cdm/adapters/liteparse.py`:
+Create `backend/app/cdm/adapters/simple_text.py`:
 
 ```python
-"""LiteParseAdapter — maps LlamaIndexExtractor output to CDM."""
+"""SimpleTextAdapter — maps LlamaIndexExtractor output to CDM."""
 from __future__ import annotations
 
 import uuid
 from typing import Any, ClassVar, Dict
 
-from app.cdm.adapters.base import ParserAdapter, SourceMeta
+from app.cdm.adapters.base import SourceMeta
 from app.cdm.models import Block, BlockRole, Page, ParsedDocument, ParserKind
 
 
-class LiteParseAdapter:
-    parser: ClassVar[ParserKind] = ParserKind.LITEPARSE
+class SimpleTextAdapter:
+    parser: ClassVar[ParserKind] = ParserKind.SIMPLE
 
     def adapt(self, raw: Dict[str, Any], source_meta: SourceMeta) -> ParsedDocument:
         """Convert LlamaIndexExtractor result dict to CDM ParsedDocument.
@@ -261,7 +277,7 @@ class LiteParseAdapter:
 - [ ] **Step 4: Run tests to confirm they pass**
 
 ```bash
-uv run --directory backend python -m pytest tests/cdm/adapters/test_liteparse_adapter.py -v -o "addopts="
+uv run --directory backend python -m pytest tests/cdm/adapters/test_simple_text_adapter.py -v -o "addopts="
 ```
 
 Expected: all PASS.
@@ -269,21 +285,21 @@ Expected: all PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/app/cdm/adapters/liteparse.py backend/tests/cdm/adapters/test_liteparse_adapter.py
-git commit -m "feat(cdm): add LiteParseAdapter for local text extraction"
+git add backend/app/cdm/adapters/simple_text.py backend/tests/cdm/adapters/test_simple_text_adapter.py
+git commit -m "feat(cdm): add SimpleTextAdapter for local text extraction"
 ```
 
 ---
 
-## Task 3: LiteParse runner — TDD
+## Task 3: Simple runner — TDD
 
 **Files:**
-- Create: `backend/app/services/parsing/liteparse_runner.py`
-- Create: `backend/tests/services/parsing/test_liteparse_runner.py`
+- Create: `backend/app/services/parsing/simple_runner.py`
+- Create: `backend/tests/services/parsing/test_simple_runner.py`
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `backend/tests/services/parsing/test_liteparse_runner.py`:
+Create `backend/tests/services/parsing/test_simple_runner.py`:
 
 ```python
 from datetime import datetime, timezone
@@ -294,8 +310,8 @@ import pytest
 from app.cdm.models import ParserKind
 from app.cdm.source import ParseRunStatus, SourceDocument
 from app.ports.document_processing import ExtractionResult
-from app.services.parsing.errors import LiteParseRunError
-from app.services.parsing.liteparse_runner import run_liteparse
+from app.services.parsing.errors import SimpleRunError
+from app.services.parsing.simple_runner import run_simple
 
 
 def _make_source() -> SourceDocument:
@@ -323,15 +339,15 @@ def _make_extractor(text: str = "hello", page_count: int = 1) -> AsyncMock:
 @pytest.mark.asyncio
 async def test_success_returns_run_and_doc():
     client = _make_extractor("hello world")
-    run, doc = await run_liteparse(
+    run, doc = await run_simple(
         source=_make_source(),
         file_path="/tmp/test.pdf",
         representation_kind="extract_rich",
-        config={"parser": "liteparse"},
+        config={"parser": "simple"},
         client=client,
     )
     assert run.status == ParseRunStatus.SUCCEEDED
-    assert run.parser == ParserKind.LITEPARSE
+    assert run.parser == ParserKind.SIMPLE
     assert doc.full_text == "hello world"
     assert doc.page_count == 1
 
@@ -340,26 +356,26 @@ async def test_success_returns_run_and_doc():
 async def test_extractor_called_with_file_path_and_mime_type():
     client = _make_extractor()
     source = _make_source()
-    await run_liteparse(
+    await run_simple(
         source=source,
         file_path="/tmp/doc.pdf",
         representation_kind="extract_rich",
-        config={"parser": "liteparse"},
+        config={"parser": "simple"},
         client=client,
     )
     client.extract.assert_awaited_once_with("/tmp/doc.pdf", "application/pdf")
 
 
 @pytest.mark.asyncio
-async def test_extractor_failure_raises_liteparse_run_error():
+async def test_extractor_failure_raises_simple_run_error():
     client = AsyncMock()
     client.extract = AsyncMock(side_effect=IOError("file not found"))
-    with pytest.raises(LiteParseRunError) as exc_info:
-        await run_liteparse(
+    with pytest.raises(SimpleRunError) as exc_info:
+        await run_simple(
             source=_make_source(),
             file_path="/tmp/missing.pdf",
             representation_kind="extract_rich",
-            config={"parser": "liteparse"},
+            config={"parser": "simple"},
             client=client,
         )
     assert exc_info.value.run.status == ParseRunStatus.FAILED
@@ -369,11 +385,11 @@ async def test_extractor_failure_raises_liteparse_run_error():
 @pytest.mark.asyncio
 async def test_run_id_propagated_when_provided():
     client = _make_extractor()
-    run, _ = await run_liteparse(
+    run, _ = await run_simple(
         source=_make_source(),
         file_path="/tmp/test.pdf",
         representation_kind="extract_rich",
-        config={"parser": "liteparse"},
+        config={"parser": "simple"},
         client=client,
         parse_run_id="fixed-run-id",
     )
@@ -383,17 +399,17 @@ async def test_run_id_propagated_when_provided():
 - [ ] **Step 2: Run tests to confirm they fail**
 
 ```bash
-uv run --directory backend python -m pytest tests/services/parsing/test_liteparse_runner.py -v -o "addopts="
+uv run --directory backend python -m pytest tests/services/parsing/test_simple_runner.py -v -o "addopts="
 ```
 
 Expected: `ModuleNotFoundError` — the runner does not exist yet.
 
 - [ ] **Step 3: Implement the runner**
 
-Create `backend/app/services/parsing/liteparse_runner.py`:
+Create `backend/app/services/parsing/simple_runner.py`:
 
 ```python
-"""Drives LiteParse end-to-end: LlamaIndexExtractor → ParseRun + ParsedDocument."""
+"""Drives simple local parse: LlamaIndexExtractor → ParseRun + ParsedDocument."""
 from __future__ import annotations
 
 import time
@@ -402,13 +418,13 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 from app.cdm.adapters.base import SourceMeta
-from app.cdm.adapters.liteparse import LiteParseAdapter
+from app.cdm.adapters.simple_text import SimpleTextAdapter
 from app.cdm.models import ParsedDocument, ParserKind
 from app.cdm.source import ParseRun, ParseRunStatus, SourceDocument
-from app.services.parsing.errors import LiteParseRunError
+from app.services.parsing.errors import SimpleRunError
 
 
-async def run_liteparse(
+async def run_simple(
     *,
     source: SourceDocument,
     file_path: str,
@@ -419,7 +435,8 @@ async def run_liteparse(
 ) -> Tuple[ParseRun, ParsedDocument]:
     """Extract text locally via LlamaIndexExtractor and adapt to CDM.
 
-    Raises LiteParseRunError (carries failed ParseRun) on extraction failure.
+    Raises SimpleRunError (carries failed ParseRun) on extraction failure.
+    Supports PDF, JPEG, and PNG via the underlying LlamaIndexExtractor.
     """
     run_id = parse_run_id or str(uuid.uuid4())
     started_at = datetime.now(timezone.utc)
@@ -433,7 +450,7 @@ async def run_liteparse(
         failed = ParseRun(
             id=run_id,
             source_document_id=source.id,
-            parser=ParserKind.LITEPARSE,
+            parser=ParserKind.SIMPLE,
             representation_kind=representation_kind,
             config=config,
             status=ParseRunStatus.FAILED,
@@ -442,7 +459,7 @@ async def run_liteparse(
             duration_ms=duration_ms,
             error=f"{type(exc).__name__}: {exc}",
         )
-        raise LiteParseRunError(f"LiteParse failed: {exc}", run=failed) from exc
+        raise SimpleRunError(f"Simple extraction failed: {exc}", run=failed) from exc
 
     finished_at = datetime.now(timezone.utc)
     duration_ms = int((time.perf_counter() - t0) * 1000)
@@ -450,7 +467,7 @@ async def run_liteparse(
     run = ParseRun(
         id=run_id,
         source_document_id=source.id,
-        parser=ParserKind.LITEPARSE,
+        parser=ParserKind.SIMPLE,
         representation_kind=representation_kind,
         config=config,
         status=ParseRunStatus.SUCCEEDED,
@@ -464,7 +481,7 @@ async def run_liteparse(
         "page_count": extraction.page_count,
         "page_boundaries": extraction.page_boundaries,
     }
-    adapter = LiteParseAdapter()
+    adapter = SimpleTextAdapter()
     doc = adapter.adapt(raw, SourceMeta(
         source_document_id=source.id,
         parse_run_id=run.id,
@@ -477,7 +494,7 @@ async def run_liteparse(
 - [ ] **Step 4: Run tests to confirm they pass**
 
 ```bash
-uv run --directory backend python -m pytest tests/services/parsing/test_liteparse_runner.py -v -o "addopts="
+uv run --directory backend python -m pytest tests/services/parsing/test_simple_runner.py -v -o "addopts="
 ```
 
 Expected: all PASS.
@@ -485,38 +502,38 @@ Expected: all PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/app/services/parsing/liteparse_runner.py backend/tests/services/parsing/test_liteparse_runner.py backend/app/services/parsing/errors.py
-git commit -m "feat(cdm): add liteparse runner and LiteParseRunError"
+git add backend/app/services/parsing/simple_runner.py backend/tests/services/parsing/test_simple_runner.py
+git commit -m "feat(cdm): add simple runner wrapping LlamaIndexExtractor"
 ```
 
 ---
 
-## Task 4: Wire liteparse into ParsingService and dependencies
+## Task 4: Wire simple parser into ParsingService and dependencies
 
 **Files:**
 - Modify: `backend/app/services/parsing/parsing_service.py`
 - Modify: `backend/app/dependencies/documents.py`
 - Modify: `backend/app/services/document_service.py`
 
-- [ ] **Step 1: Add liteparse to `_RUNNERS` in `parsing_service.py`**
+- [ ] **Step 1: Add `SIMPLE` to `_RUNNERS` in `parsing_service.py`**
 
-In `backend/app/services/parsing/parsing_service.py`, update the imports and `_RUNNERS` dict:
+In `backend/app/services/parsing/parsing_service.py`, add the import and update `_RUNNERS`:
 
 ```python
 # Add to imports (after existing runner imports on line 24):
-from app.services.parsing.liteparse_runner import run_liteparse
+from app.services.parsing.simple_runner import run_simple
 
 # Update _RUNNERS dict (lines 27-30):
 _RUNNERS: Dict[ParserKind, Callable] = {
     ParserKind.LLAMAPARSE: run_llamaparse,
     ParserKind.LANDING_AI: run_landingai,
-    ParserKind.LITEPARSE: run_liteparse,
+    ParserKind.SIMPLE: run_simple,
 }
 ```
 
-- [ ] **Step 2: Add liteparse client to `get_parsing_service` in `dependencies/documents.py`**
+- [ ] **Step 2: Add `SIMPLE` client to `get_parsing_service` in `dependencies/documents.py`**
 
-In `backend/app/dependencies/documents.py`, update `get_parsing_service` to include the liteparse client (the local extractor, no API key needed):
+In `backend/app/dependencies/documents.py`, update `get_parsing_service`:
 
 ```python
 def get_parsing_service(db: AsyncSession) -> ParsingService:
@@ -528,14 +545,14 @@ def get_parsing_service(db: AsyncSession) -> ParsingService:
         clients={
             ParserKind.LLAMAPARSE: get_llamaparse_client(),
             ParserKind.LANDING_AI: get_landingai_client(),
-            ParserKind.LITEPARSE: get_document_extractor(),
+            ParserKind.SIMPLE: get_document_extractor(),
         },
     )
 ```
 
-- [ ] **Step 3: Add liteparse client to `process_cdm_parsing` in `document_service.py`**
+- [ ] **Step 3: Add `SIMPLE` client to `process_cdm_parsing` in `document_service.py`**
 
-In `backend/app/services/document_service.py`, update the `service = ParsingService(...)` block inside `process_cdm_parsing` (around line 571). Add `LITEPARSE` to the clients dict:
+In `backend/app/services/document_service.py`, update the `service = ParsingService(...)` block inside `process_cdm_parsing`. Add the import and `SIMPLE` to the clients dict:
 
 ```python
     from app.cdm.models import ParserKind
@@ -543,8 +560,6 @@ In `backend/app/services/document_service.py`, update the `service = ParsingServ
     from app.services.parsing.errors import ParseFailedError
     from app.services.parsing.parsing_service import ParsingService
     from app.dependencies.documents import get_document_extractor  # add this import
-
-    # ... existing source_orm and doc fetching code ...
 
     service = ParsingService(
         source_doc_repo=source_doc_repo,
@@ -554,7 +569,7 @@ In `backend/app/services/document_service.py`, update the `service = ParsingServ
         clients={
             ParserKind.LLAMAPARSE: llamaparse_client,
             ParserKind.LANDING_AI: landingai_client,
-            ParserKind.LITEPARSE: get_document_extractor(),
+            ParserKind.SIMPLE: get_document_extractor(),
         },
     )
 ```
@@ -571,7 +586,7 @@ Expected: all PASS.
 
 ```bash
 git add backend/app/services/parsing/parsing_service.py backend/app/dependencies/documents.py backend/app/services/document_service.py
-git commit -m "feat(cdm): wire liteparse runner into ParsingService and process_cdm_parsing"
+git commit -m "feat(cdm): wire simple runner into ParsingService and process_cdm_parsing"
 ```
 
 ---
@@ -581,19 +596,19 @@ git commit -m "feat(cdm): wire liteparse runner into ParsingService and process_
 **Files:**
 - Modify: `backend/app/routers/documents.py`
 
-This adds `POST /documents/{document_id}/parse-runs` so all parsers can be triggered via CDM. The legacy `POST /documents/{id}/parse` endpoint (in `parse_results.py`) will be deleted in Task 7.
+This adds `POST /documents/{document_id}/parse-runs` so all parsers can be triggered via CDM. The legacy `POST /documents/{id}/parse` endpoint (in `parse_results.py`) is deleted in Task 7.
 
 - [ ] **Step 1: Add the request schema and endpoint to `documents.py`**
 
-Near the top of `backend/app/routers/documents.py`, after the existing imports, add the schema. Then at the end of the file (after `list_document_parse_runs`), add the endpoint:
+Near the top of `backend/app/routers/documents.py`, after the existing imports, add the Pydantic schema. Then at the end of the file (after `list_document_parse_runs`), add the endpoint:
 
 ```python
-# Add to imports section (near top of file, after other pydantic imports):
+# Add to imports section:
 from pydantic import BaseModel as PydanticBaseModel
 
-# Add schema near top of file (after imports):
+# Add schema after imports:
 class _ParseRunCreateRequest(PydanticBaseModel):
-    parser_type: str = "liteparse"
+    parser_type: str = "simple"
     config: dict | None = None
 
 
@@ -671,16 +686,17 @@ git commit -m "feat(cdm): add POST /documents/{id}/parse-runs reparse endpoint"
 
 ---
 
-## Task 6: Simplify upload router — always CDM, rename simple → liteparse
+## Task 6: Simplify upload router — always CDM
 
 **Files:**
+- Modify: `backend/app/services/document_service.py`
 - Modify: `backend/app/routers/documents.py`
 
-Remove the `_CDM_PARSER_TYPES` gate, always route through CDM, and rename `simple` → `liteparse` in the parser type string throughout the router. Also remove the legacy path code blocks in both `upload_document` and `bulk_upload_documents`.
+Remove the `_CDM_PARSER_TYPES` gate and always route through CDM. The parser type string `"simple"` is unchanged throughout — no rename needed.
 
-- [ ] **Step 1: Remove `document_extractor` from `DocumentService.__init__` first**
+- [ ] **Step 1: Remove `document_extractor` from `DocumentService.__init__`**
 
-`get_document_service` (updated in Step 4) will no longer pass `document_extractor` to `DocumentService`. Make the constructor match before touching the router.
+`get_document_service` (updated in Step 4) will no longer pass `document_extractor` to `DocumentService`. Update the constructor first to avoid a TypeError.
 
 In `backend/app/services/document_service.py`, change `__init__` (around line 51) to:
 
@@ -698,11 +714,11 @@ def __init__(
     self.parsing_service = parsing_service
 ```
 
-Remove the `DocumentExtractor` import from `app.ports` in `document_service.py` at the same time (line 18 — keep `StorageService`). Do **not** yet delete `process_document_extraction`; that goes in Task 7.
+Remove the `DocumentExtractor` import from `app.ports` in `document_service.py` (keep `StorageService`). Do **not** yet delete `process_document_extraction`; that goes in Task 7.
 
 - [ ] **Step 2: Update `upload_document` in `documents.py`**
 
-Replace the entire routing block (lines ~100–182 in `upload_document`) with the CDM-only path. The new version:
+Replace the entire routing block (lines ~100–182 in `upload_document`) with the CDM-only path. The `parser_type` Form default stays `"simple"`:
 
 ```python
     try:
@@ -761,16 +777,13 @@ Replace the entire routing block (lines ~100–182 in `upload_document`) with th
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 ```
 
-Also update the Form default in the function signature: `parser_type: str = Form("liteparse", ...)`.
-
 - [ ] **Step 3: Update `bulk_upload_documents` in `documents.py`**
 
-Replace the per-document background task dispatch block (lines ~265–323) with the CDM-only path:
+Replace the per-document background task dispatch block (lines ~265–323) with the CDM-only path. The `parser_type` Form default stays `"simple"`:
 
 ```python
     use_cdm = True
 
-    # Read all file contents
     file_data: list[tuple[bytes, str]] = []
     for f in files:
         content = await f.read()
@@ -814,14 +827,12 @@ Replace the per-document background task dispatch block (lines ~265–323) with 
             )
 ```
 
-Also update the Form default: `parser_type: str = Form("liteparse", ...)`.
+- [ ] **Step 4: Remove legacy imports and simplify `get_document_service` in `documents.py`**
 
-- [ ] **Step 4: Remove legacy imports from `documents.py`**
-
-Remove these lines from the imports at the top of `documents.py`:
+Remove these imports from the top of `documents.py`:
 
 ```python
-# Remove these imports:
+# Remove:
 from app.repositories.parse_result_repository import ParseResultRepository
 from app.services.parse_service import ParseService, process_document_parsing
 from app.adapters.parsing.registry import get_parser
@@ -829,9 +840,9 @@ from app.adapters.parsing.registry import get_parser
 
 Remove `_CDM_PARSER_TYPES = frozenset(...)` constant (line 43).
 
-Remove `from app.services.document_service import ... BulkUploadItemResult` — keep `BulkUploadItemResult` import but remove `process_document_extraction` if it was in that import.
+Remove `process_document_extraction` from the `document_service` import line (keep `process_cdm_parsing`, `BulkUploadItemResult`).
 
-Also remove the `settings.USE_CDM_PARSER` guard in `get_document_service` — always create `parsing_service`:
+Update `get_document_service` to always create `parsing_service` and drop `document_extractor`:
 
 ```python
 def get_document_service(
@@ -862,12 +873,12 @@ Expected: all PASS.
 
 ```bash
 git add backend/app/routers/documents.py backend/app/services/document_service.py
-git commit -m "refactor(router): remove _CDM_PARSER_TYPES gate, always CDM, simple→liteparse"
+git commit -m "refactor(router): remove _CDM_PARSER_TYPES gate, always CDM"
 ```
 
 ---
 
-## Task 7: Delete legacy backend code and clean up DocumentService
+## Task 7: Delete legacy backend code
 
 **Files:**
 - Modify: `backend/app/services/document_service.py`
@@ -878,13 +889,13 @@ git commit -m "refactor(router): remove _CDM_PARSER_TYPES gate, always CDM, simp
 - Delete: `backend/app/repositories/parse_result_repository.py`
 - Delete: `backend/app/models/parse_result.py`
 - Delete: `backend/app/schemas/parse_result.py`
-- Delete: `backend/app/adapters/parsing/llamaparse.py`
+- Delete: `backend/app/adapters/parsing/llamaparse.py` (legacy adapter in `adapters/parsing/`, not `cdm/adapters/`)
 - Delete: `backend/app/adapters/parsing/registry.py`
 - Delete: `backend/app/routers/parse_results.py`
 - Delete: `backend/tests/repositories/test_parse_result_repository.py`
 - Delete: `backend/tests/services/test_parse_service.py`
 - Delete: `backend/tests/routers/test_parse_results.py`
-- Delete: `backend/tests/adapters/test_llamaparse_adapter.py`
+- Delete: `backend/tests/adapters/test_llamaparse_adapter.py` (tests the legacy adapter, not the CDM one)
 
 - [ ] **Step 1: Delete `process_document_extraction` from `document_service.py`**
 
@@ -892,22 +903,27 @@ In `backend/app/services/document_service.py`, delete the entire `process_docume
 
 - [ ] **Step 2: Remove `parse_results` router from `main.py`**
 
-In `backend/app/main.py`, remove `parse_results` from the import line (line 7) and remove `app.include_router(parse_results.router, ...)` (line 164).
+In `backend/app/main.py`, remove `parse_results` from the import on line 7 and remove `app.include_router(parse_results.router, ...)` on line 164.
 
 - [ ] **Step 3: Remove `ParseResult` from `models/__init__.py`**
 
 In `backend/app/models/__init__.py`:
-- Remove line: `from app.models.parse_result import ParseResult, ParseResultStatus`
+- Remove: `from app.models.parse_result import ParseResult, ParseResultStatus`
 - Remove `"ParseResult"` and `"ParseResultStatus"` from `__all__`
 
 - [ ] **Step 4: Remove `USE_CDM_PARSER` from `config.py`**
 
-In `backend/app/config.py`, remove the line:
+In `backend/app/config.py`, remove:
 ```python
 USE_CDM_PARSER: bool = True
 ```
 
-Also remove any `settings.USE_CDM_PARSER` references that remain (check with `grep -rn USE_CDM_PARSER backend/`).
+Check for any remaining references:
+```bash
+grep -rn "USE_CDM_PARSER" /home/asa/rag-admin/.worktrees/legacy-parse-to-cdm/backend/
+```
+
+Remove any found.
 
 - [ ] **Step 5: Delete legacy files**
 
@@ -925,15 +941,13 @@ rm backend/tests/routers/test_parse_results.py
 rm backend/tests/adapters/test_llamaparse_adapter.py
 ```
 
-- [ ] **Step 6: Run full backend test suite to verify**
+- [ ] **Step 6: Run full backend test suite**
 
 ```bash
-uv run --directory backend python -m pytest -v -o "addopts=" --ignore=tests/services/parsing/test_parsing_service.py
+uv run --directory backend python -m pytest -v -o "addopts="
 ```
 
-(The parsing_service test may exercise CDM reuse paths; if it needs updating, fix import errors.)
-
-Expected: no `ImportError` from deleted modules; existing CDM tests PASS.
+Expected: no `ImportError` from deleted modules; all CDM tests PASS.
 
 - [ ] **Step 7: Commit**
 
@@ -955,11 +969,9 @@ git commit -m "refactor(backend): delete legacy parse path (ParseService, parse_
 uv run --directory backend alembic revision --autogenerate -m "drop_parse_results_table"
 ```
 
-This will create a new file in `backend/alembic/versions/`. The autogenerate output may not be perfect; verify and edit it in the next step.
-
 - [ ] **Step 2: Verify and fix the migration file**
 
-Open the generated file. Ensure the `upgrade` function drops the table and the `downgrade` function recreates it. The final content should match this structure:
+Open the generated file and confirm it matches this structure. The `down_revision` must be `"adec07f4ba7c"` (current head):
 
 ```python
 """drop parse_results table
@@ -971,7 +983,6 @@ Create Date: ...
 from __future__ import annotations
 from typing import Union
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "<generated_hash>"
@@ -1023,7 +1034,7 @@ Expected: migration completes without error.
 uv run --directory backend python -c "
 import asyncio
 from app.database import get_engine
-from sqlalchemy import text, inspect
+from sqlalchemy import text
 
 async def check():
     engine = get_engine()
@@ -1046,71 +1057,14 @@ git commit -m "feat(db): drop parse_results table"
 
 ---
 
-## Task 9: Frontend — rename simple → liteparse in ParseMethodSelector
-
-**Files:**
-- Modify: `frontend/src/components/documents/ParseMethodSelector.tsx`
-- Test: `frontend/src/components/documents/ParseMethodSelector.test.tsx`
-
-- [ ] **Step 1: Run existing ParseMethodSelector tests first**
-
-```bash
-npx --prefix frontend vitest run src/components/documents/ParseMethodSelector.test.tsx
-```
-
-Expected: all PASS (baseline).
-
-- [ ] **Step 2: Update `PARSER_REGISTRY` in `ParseMethodSelector.tsx`**
-
-Replace the `simple` entry key with `liteparse`:
-
-```tsx
-const PARSER_REGISTRY: Record<string, ParserMeta> = {
-  liteparse: {
-    label: 'LiteParse (local)',
-    description: 'Fast local text extraction. Works best on clean text-based PDFs.',
-    defaultConfig: {},
-  },
-  llamaparse: {
-    label: 'LlamaParse',
-    description: 'Intelligent parsing. Handles complex layouts, tables, scanned documents.',
-    defaultConfig: { tier: 'agentic', expand: ['markdown', 'text', 'items'] },
-  },
-  landing_ai: {
-    label: 'Landing AI',
-    description: 'Vision-based parsing. Best for images, shelf photos, and complex visual layouts.',
-    defaultConfig: { model: 'dpt-2-latest' },
-  },
-}
-```
-
-- [ ] **Step 3: Update tests in `ParseMethodSelector.test.tsx`**
-
-Find any test that references `'simple'` as a parser type value and change it to `'liteparse'`. Also update any label checks from `'Simple (local)'` to `'LiteParse (local)'`.
-
-- [ ] **Step 4: Run tests**
-
-```bash
-npx --prefix frontend vitest run src/components/documents/ParseMethodSelector.test.tsx
-```
-
-Expected: all PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add frontend/src/components/documents/ParseMethodSelector.tsx frontend/src/components/documents/ParseMethodSelector.test.tsx
-git commit -m "feat(ui): rename simple parser to liteparse in ParseMethodSelector"
-```
-
----
-
-## Task 10: Frontend — wire reparse to CDM API
+## Task 9: Frontend — wire reparse to CDM API
 
 **Files:**
 - Modify: `frontend/src/api/parseRuns.ts`
 - Modify: `frontend/src/pages/DocumentsPage.tsx`
 - Modify: `frontend/src/pages/ProjectDocumentsPage.tsx`
+
+Note: The parser type string `"simple"` is unchanged in the frontend — `ParseMethodSelector` already uses `"simple"` and needs no update.
 
 - [ ] **Step 1: Add `createParseRun` to `api/parseRuns.ts`**
 
@@ -1135,14 +1089,14 @@ export async function createParseRun(
 
 In `frontend/src/pages/DocumentsPage.tsx`:
 
-1. Remove the `useParseResults` import (line 28) and the call (line 64): `const { parseResults, reparseDocument } = useParseResults(viewDocumentId)`.
+1. Remove the `useParseResults` import (line 28) and the call on line 64: `const { parseResults, reparseDocument } = useParseResults(viewDocumentId)`.
 
-2. Add an import for `createParseRun`:
+2. Add import:
 ```tsx
 import { createParseRun } from '@/api/parseRuns'
 ```
 
-3. Replace the `handleReparse` function to call the CDM API directly:
+3. Replace `handleReparse`:
 ```tsx
 const handleReparse = async (parserType: string, config?: ParseConfig) => {
   if (!viewDocumentId) return
@@ -1160,11 +1114,11 @@ const handleReparse = async (parserType: string, config?: ParseConfig) => {
 }
 ```
 
-4. Remove the `ParseResultViewer` import (line 18) and its usage (lines 384–386):
+4. Remove the `ParseResultViewer` import and its conditional render block:
 ```tsx
-// Remove:
+// Remove import:
 import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
-// Remove:
+// Remove render:
 {viewDocumentId && parseResults.length > 0 && (
   <ParseResultViewer documentId={viewDocumentId} />
 )}
@@ -1172,19 +1126,15 @@ import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
 
 - [ ] **Step 3: Apply the same changes to `ProjectDocumentsPage.tsx`**
 
-Same four changes as Step 2 applied to `frontend/src/pages/ProjectDocumentsPage.tsx`:
-- Remove `useParseResults` import and call
-- Add `createParseRun` import
-- Replace `handleReparse` to use `createParseRun`
-- Remove `ParseResultViewer` import and usage
+Same four changes as Step 2 applied to `frontend/src/pages/ProjectDocumentsPage.tsx`.
 
 - [ ] **Step 4: Run frontend build to catch type errors**
 
 ```bash
-npm --prefix frontend run build 2>&1 | grep -E "error|Error" | head -20
+npm --prefix frontend run build 2>&1 | grep -E "error TS|Error" | head -20
 ```
 
-Expected: no TypeScript errors relating to the changed files.
+Expected: no TypeScript errors.
 
 - [ ] **Step 5: Commit**
 
@@ -1195,7 +1145,7 @@ git commit -m "feat(ui): wire document reparse to CDM parse-runs endpoint"
 
 ---
 
-## Task 11: Frontend — delete legacy parse UI and clean up types
+## Task 10: Frontend — delete legacy parse UI and clean up types
 
 **Files:**
 - Delete: `frontend/src/hooks/useParseResults.ts`
@@ -1217,7 +1167,7 @@ rm frontend/src/components/documents/ParseResultViewer.test.tsx
 
 - [ ] **Step 2: Trim `api/parsing.ts`**
 
-Replace the contents of `frontend/src/api/parsing.ts` with only the parsers list endpoint (the only one still used):
+Replace the contents of `frontend/src/api/parsing.ts` with only the parsers list function (the only one still used):
 
 ```typescript
 import apiClient from './client'
@@ -1253,19 +1203,18 @@ export type ParseConfig = {
 - [ ] **Step 4: Remove legacy builders from `test/builders.ts`**
 
 In `frontend/src/test/builders.ts`, remove:
-- The `ParseResult` import from `@/types/parsing`
-- The `ParseResultListItem` import from `@/types/parsing`
+- The `ParseResult` and `ParseResultListItem` imports from `@/types/parsing`
 - The `buildParseResult(...)` function
 - The `buildParseResultListItem(...)` function
-- The `buildParserInfo(...)` function (the `/parsers` endpoint is not tested via mock currently)
+- The `buildParserInfo(...)` function
 
-Check for any test files importing `buildParseResult` or `buildParseResultListItem`:
+Check for usages first:
 
 ```bash
 grep -rn "buildParseResult\|buildParserInfo" frontend/src --include="*.ts" --include="*.tsx"
 ```
 
-Remove those usages from any test files found.
+Remove any usages found in test files.
 
 - [ ] **Step 5: Run full frontend test suite**
 
@@ -1292,7 +1241,7 @@ git commit -m "refactor(ui): delete legacy ParseResultViewer and useParseResults
 
 ---
 
-## Task 12: Final verification
+## Task 11: Final verification
 
 - [ ] **Step 1: Run full backend test suite**
 
@@ -1319,8 +1268,6 @@ npm --prefix frontend run lint
 Expected: no errors.
 
 - [ ] **Step 4: Verify `parse_results` endpoint returns 404**
-
-The legacy endpoint is gone; confirm it returns 404:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}" \

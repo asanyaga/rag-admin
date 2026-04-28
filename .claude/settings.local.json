@@ -1,8 +1,10 @@
 {
   "permissions": {
+    "additionalDirectories": ["/.claude/.worktree"],
     "allow": [
       "WebSearch",
       "WebFetch(domain:developers.llamaindex.ai)",
+      "Bash(cd /.claude/.worktree*)",
       "Bash(claude plugin:*)",
       "Bash(git *)",
       "Bash(git pull:*)",
@@ -84,7 +86,10 @@
       "Bash(grep -nA 20 \"backend:\" docker-compose.local.yml)",
       "Bash(grep -E \"\\\\.py$\")",
       "Bash(xargs ls *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(/home/asa/rag-admin/frontend/node_modules/.bin/vitest run *)",
+      "Bash(npx *)",
+      "WebFetch(domain:docs.landing.ai)"
     ]
   },
   "enabledMcpjsonServers": [
