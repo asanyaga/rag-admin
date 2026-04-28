@@ -45,7 +45,7 @@ export function LlamaParseConfig({ config, onChange, disabled = false }: LlamaPa
     } else {
       newExpand = newExpand.filter((e) => e !== option)
     }
-    if (!newExpand.includes('text')) newExpand.push('text')
+    if (!newExpand.includes('text')) newExpand.push('text') // text is always included
     onChange({ ...config, expand: newExpand })
   }
 
