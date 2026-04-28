@@ -180,6 +180,33 @@ class TestReparse:
         )
         assert response.status_code == 400
 
+    async def test_reparse_unknown_parser_returns_400(self, client: AsyncClient, test_db: AsyncSession):
+        _, token = await create_user_and_login(client, test_db)
+        project_id = await create_project(client, token)
+        document_id = await create_document(client, token, project_id)
+
+        response = await client.post(
+            f"/api/v1/documents/{document_id}/parse",
+            json={"parserType": "bogus_parser"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 400
+        assert "bogus_parser" in response.json()["detail"]
+
+    async def test_reparse_landing_ai_accepted(self, client: AsyncClient, test_db: AsyncSession):
+        """landing_ai is a CDM parser type and must not be rejected as unknown."""
+        _, token = await create_user_and_login(client, test_db)
+        project_id = await create_project(client, token)
+        document_id = await create_document(client, token, project_id)
+
+        response = await client.post(
+            f"/api/v1/documents/{document_id}/parse",
+            json={"parserType": "landing_ai", "config": {"model": "dpt-2-latest"}},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        # 202 = accepted (CDM or legacy path dispatched); 400 = bug
+        assert response.status_code == 202
+
 
 class TestUploadWithParser:
 

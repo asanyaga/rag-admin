@@ -67,13 +67,11 @@ async def reparse_document(
     from app.services.document_service import process_cdm_parsing
 
     try:
-        # Validate parser type
-        parser = get_parser(body.parser_type)
-        if parser is None and body.parser_type not in ("simple", *_CDM_PARSER_TYPES):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unknown parser type: {body.parser_type}",
-            )
+        # Only consult the legacy registry for non-CDM, non-simple parsers.
+        # get_parser raises ValueError for unknown types, caught below → 400.
+        parser = None
+        if body.parser_type not in ("simple", *_CDM_PARSER_TYPES):
+            parser = get_parser(body.parser_type)
 
         if body.parser_type == "simple":
             raise HTTPException(
