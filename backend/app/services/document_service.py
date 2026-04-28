@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 from app.config import settings
 from app.models import DocumentStatus
-from app.ports import DocumentExtractor, StorageService
+from app.ports import StorageService
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.project_repository import ProjectRepository
 from app.schemas.document import (
@@ -49,13 +49,11 @@ class DocumentService:
         document_repo: DocumentRepository,
         project_repo: ProjectRepository,
         storage_service: StorageService,
-        document_extractor: DocumentExtractor,
         parsing_service: ParsingService | None = None,
-    ):
+    ) -> None:
         self.document_repo = document_repo
         self.project_repo = project_repo
         self.storage_service = storage_service
-        self.document_extractor = document_extractor
         self.parsing_service = parsing_service
 
     async def initiate_upload(
@@ -443,73 +441,6 @@ class DocumentService:
         return document.extracted_text
 
 
-async def process_document_extraction(
-    document_id: UUID,
-    document_repo: DocumentRepository,
-    storage_service: StorageService,
-    document_extractor: DocumentExtractor,
-) -> None:
-    """Background task to extract text from a document.
-
-    This function is designed to be called from FastAPI BackgroundTasks.
-
-    Args:
-        document_id: Document UUID
-        document_repo: Document repository instance
-        storage_service: Storage service instance
-        document_extractor: Document extractor instance
-    """
-    try:
-        # Get document (no user scoping for background task)
-        from sqlalchemy import select
-        from app.models import Document
-
-        result = await document_repo.session.execute(
-            select(Document).where(Document.id == document_id)
-        )
-        document = result.scalar_one_or_none()
-
-        if not document:
-            return  # Document deleted before processing
-
-        # Get file path and MIME type
-        file_path = document.source_metadata.get("file_path")
-        mime_type = document.source_metadata.get("mime_type")
-
-        if not file_path or not mime_type:
-            await document_repo.update_status(
-                document_id=document_id,
-                status=DocumentStatus.failed,
-                status_message="Missing file path or MIME type"
-            )
-            return
-
-        # Extract text
-        extraction_result = await document_extractor.extract(file_path, mime_type)
-
-        # Update source_metadata with page_count
-        document.source_metadata["page_count"] = extraction_result.page_count
-
-        # Store page boundaries in processing metadata for chunking
-        extraction_result.metadata["page_boundaries"] = extraction_result.page_boundaries
-
-        # Update document with extraction results
-        await document_repo.update_extraction(
-            document_id=document_id,
-            extracted_text=extraction_result.text,
-            processing_metadata=extraction_result.metadata,
-            status=DocumentStatus.ready
-        )
-
-    except Exception as e:
-        # Update status to failed
-        await document_repo.update_status(
-            document_id=document_id,
-            status=DocumentStatus.failed,
-            status_message=str(e)
-        )
-
-
 async def process_cdm_parsing(
     document_id: UUID,
     source_document_id: UUID,
@@ -568,6 +499,7 @@ async def process_cdm_parsing(
         created_at=source_orm.created_at,
     )
 
+    from app.dependencies.documents import get_document_extractor
     service = ParsingService(
         source_doc_repo=source_doc_repo,
         parse_run_repo=parse_run_repo,
@@ -576,6 +508,7 @@ async def process_cdm_parsing(
         clients={
             ParserKind.LLAMAPARSE: llamaparse_client,
             ParserKind.LANDING_AI: landingai_client,
+            ParserKind.SIMPLE: get_document_extractor(),
         },
     )
 

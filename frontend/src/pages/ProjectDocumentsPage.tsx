@@ -12,7 +12,6 @@ import type { BulkDocumentUpload, BulkUploadResponse } from '@/types/document'
 import { DocumentTextViewer } from '@/components/documents/DocumentTextViewer'
 import { DocumentEditDialog } from '@/components/documents/DocumentEditDialog'
 import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialog'
-import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
 import { ParsedDocumentViewer } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { RunTimeline } from '@/components/parse-runs/RunTimeline'
@@ -20,7 +19,7 @@ import { useParseRuns } from '@/hooks/useParseRuns'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
-import { useParseResults } from '@/hooks/useParseResults'
+import { createParseRun } from '@/api/parseRuns'
 import type { ParseConfig } from '@/types/parsing'
 
 export default function ProjectDocumentsPage(): JSX.Element {
@@ -45,7 +44,6 @@ export default function ProjectDocumentsPage(): JSX.Element {
   const [reparseDialogOpen, setReparseDialogOpen] = useState(false)
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
 
-  const { parseResults, reparseDocument } = useParseResults(viewDocumentId)
   const { parseRuns } = useParseRuns(viewDocumentId)
 
   if (!projectId) {
@@ -269,11 +267,6 @@ export default function ProjectDocumentsPage(): JSX.Element {
               <ParsedDocumentViewer documentId={viewDocumentId} />
             )}
 
-            {/* Parse Results (if any) */}
-            {viewDocumentId && parseResults.length > 0 && (
-              <ParseResultViewer documentId={viewDocumentId} />
-            )}
-
             {/* Extracted Text — always shown as baseline */}
             {viewDocumentId && viewedDocument && (
               <DocumentTextViewer
@@ -307,7 +300,8 @@ export default function ProjectDocumentsPage(): JSX.Element {
         open={reparseDialogOpen}
         onOpenChange={setReparseDialogOpen}
         onReparse={async (parserType, config) => {
-          await reparseDocument(parserType, config)
+          if (!viewDocumentId) return
+          await createParseRun(viewDocumentId, parserType, config)
           toast.success('Re-parse started')
         }}
       />

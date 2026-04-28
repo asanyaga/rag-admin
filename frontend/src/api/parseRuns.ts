@@ -4,6 +4,7 @@ import type {
   ParsedDocumentDetail,
   RawPayloadResponse,
 } from '@/types/cdm'
+import type { ParseConfig } from '@/types/parsing'
 
 export async function listParseRuns(
   documentId: string
@@ -39,4 +40,15 @@ export async function getRawPayload(
     `/parse-runs/${parseRunId}/raw-payload`
   )
   return response.data
+}
+
+export async function createParseRun(
+  documentId: string,
+  parserType: string,
+  config?: ParseConfig
+): Promise<void> {
+  await apiClient.post(
+    `/documents/${documentId}/parse-runs`,
+    { parser_type: parserType, config: config ?? null }
+  )
 }

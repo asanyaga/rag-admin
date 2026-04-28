@@ -12,7 +12,8 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ParserKind(str, Enum):
-    LITEPARSE    = "liteparse"
+    SIMPLE       = "simple"      # local text extraction via LlamaIndexExtractor
+    LITEPARSE    = "liteparse"   # reserved — LlamaIndex LiteParse cloud product (future)
     UNSTRUCTURED = "unstructured"
     LLAMAPARSE   = "llamaparse"
     LANDING_AI   = "landing_ai"

@@ -48,5 +48,6 @@ def get_parsing_service(db: AsyncSession) -> ParsingService:
         clients={
             ParserKind.LLAMAPARSE: get_llamaparse_client(),
             ParserKind.LANDING_AI: get_landingai_client(),
+            ParserKind.SIMPLE: get_document_extractor(),
         },
     )

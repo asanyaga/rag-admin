@@ -3,8 +3,6 @@
  */
 import type { Experiment, ExperimentDetail } from '@/types/experiment'
 import type { EvalRun, EvalRunMetrics } from '@/types/eval-run'
-import type { ParseResult, ParseResultListItem, ParserInfo } from '@/types/parsing'
-
 export function buildEvalRunMetrics(
   overrides?: Partial<EvalRunMetrics>
 ): EvalRunMetrics {
@@ -75,70 +73,3 @@ export function buildExperimentDetail(
   }
 }
 
-export function buildParseResult(
-  overrides?: Partial<ParseResult>
-): ParseResult {
-  return {
-    id: 'pr-1',
-    documentId: 'doc-1',
-    parserType: 'llamaparse',
-    fidelity: 'markdown',
-    parserConfig: { tier: 'agentic', expand: ['markdown', 'text'] },
-    rawText: 'Extracted text content from document',
-    markdown: '# Heading\n\nParagraph content',
-    pages: null,
-    documentStructure: null,
-    diagnostics: {
-      non_empty: true,
-      char_count: 35,
-      printable_ratio: 1.0,
-      suspected_cid: false,
-      token_count: 5,
-      has_table_markers: false,
-      has_heading_markers: true,
-      empty_pages: 0,
-    },
-    metadata: { page_count: 1, credits_used: 10 },
-    status: 'completed',
-    statusMessage: null,
-    startedAt: '2026-01-01T00:00:00Z',
-    createdBy: 'user-1',
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  }
-}
-
-export function buildParseResultListItem(
-  overrides?: Partial<ParseResultListItem>
-): ParseResultListItem {
-  return {
-    id: 'pr-1',
-    documentId: 'doc-1',
-    parserType: 'llamaparse',
-    fidelity: 'markdown',
-    status: 'completed',
-    statusMessage: null,
-    diagnostics: { non_empty: true, char_count: 100 },
-    createdAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  }
-}
-
-export function buildParserInfo(
-  overrides?: Partial<ParserInfo>
-): ParserInfo {
-  return {
-    parserType: 'llamaparse',
-    name: 'LlamaParse',
-    description: 'Intelligent document parsing',
-    supportedFileTypes: ['application/pdf', 'image/jpeg', 'image/png'],
-    configSchema: {
-      type: 'object',
-      properties: {
-        tier: { type: 'string', enum: ['fast', 'agentic'] },
-      },
-    },
-    ...overrides,
-  }
-}

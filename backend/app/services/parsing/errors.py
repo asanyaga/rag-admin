@@ -18,6 +18,10 @@ class LandingAIRunError(ParseRunError):
     """Raised by landingai_runner when the SDK call or polling fails."""
 
 
+class SimpleRunError(ParseRunError):
+    """Raised by simple_runner when local extraction fails."""
+
+
 class ParseFailedError(RuntimeError):
     """Domain error raised by ParsingService to callers (routers) after
     a failed ParseRun has been persisted."""
