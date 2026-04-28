@@ -74,7 +74,7 @@ def mock_service(project_id, user_id):
     doc_repo.get_by_source.return_value = None
     storage.save.return_value = "projects/proj/uploads/hash.pdf"
 
-    service = DocumentService(doc_repo, proj_repo, storage, extractor)
+    service = DocumentService(doc_repo, proj_repo, storage)
     return service, doc_repo, proj_repo, storage
 
 
@@ -229,7 +229,7 @@ def mock_service_with_cdm(project_id, user_id, mock_parsing_service):
     storage.save.return_value = "projects/proj/uploads/hash.pdf"
     doc_repo.create.return_value = make_mock_document_with_source()
 
-    service = DocumentService(doc_repo, proj_repo, storage, extractor, parsing_service=mock_parsing_service)
+    service = DocumentService(doc_repo, proj_repo, storage, parsing_service=mock_parsing_service)
     return service, doc_repo, proj_repo, storage, mock_parsing_service
 
 
