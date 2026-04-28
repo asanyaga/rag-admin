@@ -24,10 +24,12 @@ class SimpleTextAdapter:
         if boundaries:
             blocks: List[Block] = []
             pages: List[Page] = []
-            for page_index, boundary in enumerate(boundaries):
-                start = boundary.get("start_char", 0)
-                end = boundary.get("end_char", len(full_text))
-                page_text = full_text[start:end]
+            for pb in boundaries:
+                page_number: int = pb.get("page", 1)
+                page_index = page_number - 1
+                start_char: int = pb.get("start_char", 0)
+                end_char: int = pb.get("end_char", len(full_text))
+                page_text = full_text[start_char:end_char].strip()
                 block_id = f"{source_meta.source_document_id}:p{page_index}:b0"
                 block = Block(
                     id=block_id,
@@ -48,7 +50,7 @@ class SimpleTextAdapter:
                 id=block_id,
                 role=BlockRole.PARAGRAPH,
                 native_type="text",
-                text=full_text,
+                text=full_text.strip(),
                 page_index=0,
             )]
             pages = [Page(
