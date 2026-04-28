@@ -15,7 +15,6 @@ import { DocumentTextViewer } from '@/components/documents/DocumentTextViewer'
 import { DocumentEditDialog } from '@/components/documents/DocumentEditDialog'
 import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialog'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
-import { ParseResultViewer } from '@/components/documents/ParseResultViewer'
 import { ParsedDocumentViewer } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { RunTimeline } from '@/components/parse-runs/RunTimeline'
@@ -25,7 +24,7 @@ import { Plus, RotateCw, Files } from 'lucide-react'
 import type { BulkDocumentUpload, BulkUploadResponse } from '@/types/document'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
-import { useParseResults } from '@/hooks/useParseResults'
+import { createParseRun } from '@/api/parseRuns'
 
 export default function DocumentsPage(): JSX.Element {
   const navigate = useNavigate()
@@ -61,7 +60,6 @@ export default function DocumentsPage(): JSX.Element {
   const [selectedDocument, setSelectedDocument] = useState<DocumentListItem | null>(null)
   const [reparseDialogOpen, setReparseDialogOpen] = useState(false)
 
-  const { parseResults, reparseDocument } = useParseResults(viewDocumentId)
   const { parseRuns } = useParseRuns(viewDocumentId)
 
   if (!currentProject) {
@@ -191,8 +189,9 @@ export default function DocumentsPage(): JSX.Element {
   }
 
   const handleReparse = async (parserType: string, config?: ParseConfig) => {
+    if (!viewDocumentId) return
     try {
-      await reparseDocument(parserType, config)
+      await createParseRun(viewDocumentId, parserType, config)
       toast.success('Re-parse started', {
         description: 'Parsing is in progress',
       })
@@ -380,9 +379,6 @@ export default function DocumentsPage(): JSX.Element {
             )}
             {viewDocumentId && (
               <ParsedDocumentViewer documentId={viewDocumentId} />
-            )}
-            {viewDocumentId && parseResults.length > 0 && (
-              <ParseResultViewer documentId={viewDocumentId} />
             )}
             {viewDocumentId && viewedDocument && (
               <DocumentTextViewer
