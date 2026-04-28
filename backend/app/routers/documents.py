@@ -40,6 +40,8 @@ from app.services.parse_service import ParseService, process_document_parsing
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 from app.adapters.parsing.registry import get_parser
 
+_CDM_PARSER_TYPES = frozenset({"llamaparse", "landing_ai"})
+
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 logger = logging.getLogger(__name__)
@@ -104,7 +106,7 @@ async def upload_document(
             except json.JSONDecodeError:
                 raise ValidationError("Invalid JSON in parse_config")
 
-        use_cdm = settings.USE_CDM_PARSER and parser_type == "llamaparse"
+        use_cdm = settings.USE_CDM_PARSER and parser_type in _CDM_PARSER_TYPES
 
         file_content = await file.read()
         filename = file.filename or "upload.pdf"
@@ -122,6 +124,7 @@ async def upload_document(
         if use_cdm and document.source_document_id is not None:
             representation_kind = (config_dict or {}).get("representation_kind", "extract_rich")
             parse_cfg = {k: v for k, v in (config_dict or {}).items() if k != "representation_kind"}
+            parse_cfg["parser"] = parser_type
             background_tasks.add_task(
                 process_cdm_parsing,
                 document_id=document.id,
@@ -231,11 +234,12 @@ async def bulk_upload_documents(
                 detail="Invalid JSON in parse_config",
             )
 
-    use_cdm = settings.USE_CDM_PARSER and parser_type == "llamaparse"
+    use_cdm = settings.USE_CDM_PARSER and parser_type in _CDM_PARSER_TYPES
 
     # Validate parser type upfront
+    # CDM parser types bypass the legacy registry — they are handled by process_cdm_parsing.
     parser = None
-    if parser_type != "simple":
+    if parser_type != "simple" and parser_type not in _CDM_PARSER_TYPES:
         parser = get_parser(parser_type)
         if parser is None:
             raise HTTPException(
@@ -267,6 +271,7 @@ async def bulk_upload_documents(
         if use_cdm and item.document.source_document_id is not None:
             representation_kind = (config_dict or {}).get("representation_kind", "extract_rich")
             parse_cfg = {k: v for k, v in (config_dict or {}).items() if k != "representation_kind"}
+            parse_cfg["parser"] = parser_type
             background_tasks.add_task(
                 process_cdm_parsing,
                 document_id=document_id,
