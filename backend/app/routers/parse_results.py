@@ -28,6 +28,8 @@ from app.adapters.parsing.registry import get_parser
 from app.models.parse_result import ParseResultStatus
 
 
+_CDM_PARSER_TYPES = frozenset({"llamaparse", "landing_ai"})
+
 router = APIRouter(tags=["parse-results"])
 
 
@@ -67,7 +69,7 @@ async def reparse_document(
     try:
         # Validate parser type
         parser = get_parser(body.parser_type)
-        if parser is None and body.parser_type != "simple":
+        if parser is None and body.parser_type not in ("simple", *_CDM_PARSER_TYPES):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Unknown parser type: {body.parser_type}",
@@ -93,7 +95,7 @@ async def reparse_document(
         document = await document_repo.get_by_id_unscoped(document_id)
         use_cdm = (
             settings.USE_CDM_PARSER
-            and body.parser_type == "llamaparse"
+            and body.parser_type in _CDM_PARSER_TYPES
             and document is not None
             and document.source_document_id is not None
         )
@@ -110,6 +112,7 @@ async def reparse_document(
             cfg = body.config or {}
             representation_kind = cfg.get("representation_kind", "extract_rich")
             parse_cfg = {k: v for k, v in cfg.items() if k != "representation_kind"}
+            parse_cfg["parser"] = body.parser_type
             background_tasks.add_task(
                 process_cdm_parsing,
                 document_id=document_id,
