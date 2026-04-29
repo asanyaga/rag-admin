@@ -81,6 +81,28 @@ class Index(Base):
         nullable=True
     )
 
+    # CDM pipeline binding and versioning
+    version: Mapped[int] = mapped_column(
+        sa.Integer,
+        nullable=False,
+        default=1,
+        server_default='1'
+    )
+    parser: Mapped[str | None] = mapped_column(
+        sa.String(100),
+        nullable=True
+    )
+    parse_config_hash: Mapped[str | None] = mapped_column(
+        sa.String(64),
+        nullable=True
+    )
+    config_dirty: Mapped[bool] = mapped_column(
+        sa.Boolean,
+        nullable=False,
+        default=False,
+        server_default='false'
+    )
+
     # Audit
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -111,6 +133,12 @@ class Index(Base):
     chunks: Mapped[list["Chunk"]] = relationship(
         back_populates="index",
         cascade="all, delete-orphan"
+    )
+    index_events: Mapped[list["IndexEvent"]] = relationship(
+        "IndexEvent",
+        back_populates="index",
+        cascade="all, delete-orphan",
+        order_by="IndexEvent.version"
     )
 
     __table_args__ = (

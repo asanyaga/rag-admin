@@ -428,7 +428,7 @@ async def add_documents(
     await verify_project_access(project_id, current_user, project_repo)
 
     try:
-        return await service.add_documents(index_id, project_id, data.document_ids)
+        return await service.add_documents(index_id, project_id, data)
     except NotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

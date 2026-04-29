@@ -166,7 +166,8 @@ class IndexRepository:
     async def add_documents(
         self,
         index_id: UUID,
-        document_ids: list[UUID]
+        document_ids: list[UUID],
+        parse_run_ids: dict[UUID, UUID] | None = None,
     ) -> list[IndexDocument]:
         """Add documents to an index."""
         index_docs = []
@@ -174,7 +175,8 @@ class IndexRepository:
             index_doc = IndexDocument(
                 index_id=index_id,
                 document_id=doc_id,
-                processing_status=IndexDocumentStatus.pending
+                processing_status=IndexDocumentStatus.pending,
+                parse_run_id=(parse_run_ids or {}).get(doc_id),
             )
             self.session.add(index_doc)
             index_docs.append(index_doc)
@@ -330,3 +332,37 @@ class IndexRepository:
             "failed": failed_docs,
             "pending": total_docs - completed_docs - failed_docs
         }
+
+    # CDM versioning and event methods
+
+    async def increment_version(self, index_id: UUID) -> None:
+        """Increment the version counter on an index."""
+        result = await self.session.execute(
+            select(Index).where(Index.id == index_id)
+        )
+        index = result.scalar_one_or_none()
+        if index:
+            index.version += 1
+            await self.session.commit()
+
+    async def write_index_event(
+        self,
+        index_id: UUID,
+        version: int,
+        config_snapshot: dict,
+        document_bindings: dict,
+        triggered_by: UUID,
+    ) -> "IndexEvent":
+        """Write an immutable audit event recording the index state at trigger time."""
+        from app.models.index_event import IndexEvent
+        event = IndexEvent(
+            index_id=index_id,
+            version=version,
+            config_snapshot=config_snapshot,
+            document_bindings=document_bindings,
+            triggered_by=triggered_by,
+        )
+        self.session.add(event)
+        await self.session.commit()
+        await self.session.refresh(event)
+        return event

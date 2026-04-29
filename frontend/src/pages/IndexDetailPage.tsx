@@ -308,6 +308,9 @@ export default function IndexDetailPage() {
             ) : (
               <div className="flex items-center gap-2 group">
                 <h1 className="text-xl font-semibold">{index.name}</h1>
+                <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+                  v{index.version ?? 1}
+                </span>
                 {canEdit && (
                   <button
                     onClick={() => setEditingName(true)}
@@ -468,6 +471,16 @@ export default function IndexDetailPage() {
                   )}
                 </div>
               </div>
+              {indexDocuments.length > 0 && (
+                <div className="px-4 py-2 flex items-center gap-3 bg-muted/50 border-b text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span className="w-4" />
+                  <span className="flex-1">Document</span>
+                  <span className="text-xs">Source type</span>
+                  <span className="text-xs">Added</span>
+                  <span className="text-xs">Parse run</span>
+                  {canManageDocs && <span className="p-1 w-8" />}
+                </div>
+              )}
               {indexDocuments.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No documents in this index
@@ -498,6 +511,7 @@ export default function IndexDetailPage() {
                         <span className="text-xs text-muted-foreground">
                           {new Date(doc.createdAt).toLocaleDateString()}
                         </span>
+                        <span className="text-muted-foreground text-sm">—</span>
                         {canManageDocs && (
                           <button
                             className="p-1 rounded text-muted-foreground/40 hover:text-red-500 transition-colors"

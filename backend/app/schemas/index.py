@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # -----------------------------------------------------------------------------
@@ -15,73 +15,75 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 # -----------------------------------------------------------------------------
 
 class IndexConfig(BaseModel):
-    """Configuration for how documents are chunked and embedded.
+    """Configuration for how documents are chunked and embedded."""
 
-    This schema is stored as JSON in the index.config column.
-    Config becomes immutable once processing begins.
-    """
-    # Chunking configuration
-    chunking_strategy: Literal["fixed_size", "recursive_character"] = Field(
+    # Parse source binding
+    parser: str | None = Field(default=None)
+    parse_config_hash: str | None = Field(default=None, alias="parseConfigHash")
+    source_representation: Literal["raw_text", "full_text", "full_markdown", "block"] = Field(
+        default="raw_text", alias="sourceRepresentation"
+    )
+
+    # Chunking strategy
+    chunking_strategy: Literal[
+        "fixed_size",
+        "recursive_character",
+        "markdown_heading",
+        "block",
+        "classified_block",
+    ] = Field(
         default="recursive_character",
         alias="chunkingStrategy",
-        description="How documents are split into chunks"
-    )
-    chunk_size: int = Field(
-        default=512,
-        ge=100,
-        le=8000,
-        alias="chunkSize",
-        description="Target size per chunk (in specified unit)"
-    )
-    chunk_overlap: int = Field(
-        default=50,
-        ge=0,
-        alias="chunkOverlap",
-        description="Overlap between consecutive chunks"
-    )
-    chunk_unit: Literal["tokens", "characters"] = Field(
-        default="characters",
-        alias="chunkUnit",
-        description="Whether size is measured in tokens or characters"
+        description="How documents are split into chunks",
     )
 
-    # Embedding configuration
-    embedding_provider: str = Field(
-        default="openai",
-        alias="embeddingProvider",
-        description="Which embedding provider to use"
-    )
-    embedding_model: str = Field(
-        default="text-embedding-3-small",
-        alias="embeddingModel",
-        description="Specific model from the provider"
-    )
-    embedding_dimensions: int | None = Field(
-        default=None,
-        alias="embeddingDimensions",
-        description="Vector dimensionality (None = model default)"
-    )
+    # Text-based config (fixed_size, recursive_character)
+    chunk_size: int = Field(default=512, ge=100, le=8000, alias="chunkSize")
+    chunk_overlap: int = Field(default=50, ge=0, alias="chunkOverlap")
+    chunk_unit: Literal["tokens", "characters"] = Field(default="characters", alias="chunkUnit")
 
-    # Reserved for future phases
-    parsing_strategy: Literal["static"] = Field(
-        default="static",
-        alias="parsingStrategy",
-        description="Document parsing strategy (static for Phase 1)"
-    )
+    # Embedding config (unchanged)
+    embedding_provider: str = Field(default="openai", alias="embeddingProvider")
+    embedding_model: str = Field(default="text-embedding-3-small", alias="embeddingModel")
+    embedding_dimensions: int | None = Field(default=None, alias="embeddingDimensions")
 
     model_config = ConfigDict(populate_by_name=True)
 
     @field_validator("chunk_overlap")
     @classmethod
     def validate_overlap(cls, v: int, info) -> int:
-        """Ensure overlap is at most half of chunk_size."""
-        # Access chunk_size from the data being validated
-        data = info.data
-        chunk_size = data.get("chunk_size", 512)
+        chunk_size = info.data.get("chunk_size", 512)
         max_overlap = chunk_size // 2
         if v > max_overlap:
-            raise ValueError(f"chunk_overlap must be at most {max_overlap} (half of chunk_size)")
+            raise ValueError(f"chunk_overlap must be at most {max_overlap}")
         return v
+
+    @model_validator(mode="after")
+    def validate_representation_and_strategy(self) -> "IndexConfig":
+        rep = self.source_representation
+        strategy = self.chunking_strategy
+
+        # CDM representations require parser to be set
+        if rep != "raw_text" and not self.parser:
+            raise ValueError(
+                f"source_representation='{rep}' requires 'parser' to be set"
+            )
+
+        # Validate strategy is compatible with representation
+        text_strategies = {"fixed_size", "recursive_character"}
+        allowed: dict[str, set[str]] = {
+            "raw_text": text_strategies,
+            "full_text": text_strategies,
+            "full_markdown": {"markdown_heading"},
+            "block": {"block", "classified_block"},
+        }
+        if strategy not in allowed.get(rep, set()):
+            raise ValueError(
+                f"chunking_strategy='{strategy}' is not compatible with "
+                f"source_representation='{rep}'. "
+                f"Allowed: {sorted(allowed[rep])}"
+            )
+        return self
 
 
 # -----------------------------------------------------------------------------
@@ -173,6 +175,9 @@ class IndexResponse(BaseModel):
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
 
+    version: int = Field(default=1)
+    config_dirty: bool = Field(default=False, alias="configDirty")
+
     # Computed fields for convenience
     document_count: int = Field(0, alias="documentCount")
     chunk_count: int = Field(0, alias="chunkCount")
@@ -226,6 +231,11 @@ class IndexProcessingStatusResponse(BaseModel):
 class AddDocumentsRequest(BaseModel):
     """Schema for adding documents to an existing index."""
     document_ids: list[UUID] = Field(..., alias="documentIds", min_length=1)
+    parse_run_ids: dict[UUID, UUID] | None = Field(
+        default=None,
+        alias="parseRunIds",
+        description="Map of document_id → parse_run_id. Required per document when source_representation != raw_text.",
+    )
 
     model_config = ConfigDict(populate_by_name=True)
 
