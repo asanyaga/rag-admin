@@ -47,8 +47,7 @@ class IndexEvent(Base):
         server_default=sa.text('NOW()')
     )
 
-    # Relationship to Index — back_populates added in Task 3 when Index gains index_events
-    index: Mapped["Index"] = relationship(foreign_keys=[index_id])
+    index: Mapped["Index"] = relationship("Index", back_populates="index_events", foreign_keys=[index_id])
 
     __table_args__ = (
         sa.Index('ix_index_events_index_id', 'index_id'),

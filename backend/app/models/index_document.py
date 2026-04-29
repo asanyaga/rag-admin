@@ -62,12 +62,21 @@ class IndexDocument(Base):
         nullable=True
     )
 
+    # CDM parse run binding for this document
+    parse_run_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("parse_runs.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
     # Relationships
     index: Mapped["Index"] = relationship(back_populates="index_documents")
     document: Mapped["Document"] = relationship(back_populates="index_documents")
+    parse_run: Mapped["ParseRun | None"] = relationship("ParseRun", foreign_keys=[parse_run_id])
 
     __table_args__ = (
         sa.Index('ix_index_documents_index_id', 'index_id'),
         sa.Index('ix_index_documents_document_id', 'document_id'),
         sa.Index('ix_index_documents_status', 'processing_status'),
+        sa.Index('ix_index_documents_parse_run_id', 'parse_run_id'),
     )

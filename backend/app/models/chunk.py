@@ -135,6 +135,24 @@ class Chunk(Base):
         server_default='{}'
     )
 
+    # CDM provenance — which version and parse run created this chunk
+    index_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default='1'
+    )
+    parse_run_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        nullable=True
+    )
+    source_type: Mapped[str] = mapped_column(
+        sa.String(30),
+        nullable=False,
+        default='raw_text',
+        server_default='raw_text'
+    )
+
     # Audit
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -152,4 +170,5 @@ class Chunk(Base):
         sa.Index('ix_chunks_document_id', 'document_id'),
         sa.Index('ix_chunks_index_document', 'index_id', 'document_id'),
         sa.Index('ix_chunks_chunk_index', 'chunk_index'),
+        sa.Index('ix_chunks_source_type', 'source_type'),
     )
