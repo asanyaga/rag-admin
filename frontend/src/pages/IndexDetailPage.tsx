@@ -308,6 +308,9 @@ export default function IndexDetailPage() {
             ) : (
               <div className="flex items-center gap-2 group">
                 <h1 className="text-xl font-semibold">{index.name}</h1>
+                <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+                  v{index.version ?? 1}
+                </span>
                 {canEdit && (
                   <button
                     onClick={() => setEditingName(true)}
@@ -498,6 +501,7 @@ export default function IndexDetailPage() {
                         <span className="text-xs text-muted-foreground">
                           {new Date(doc.createdAt).toLocaleDateString()}
                         </span>
+                        <span className="text-muted-foreground text-sm">—</span>
                         {canManageDocs && (
                           <button
                             className="p-1 rounded text-muted-foreground/40 hover:text-red-500 transition-colors"
