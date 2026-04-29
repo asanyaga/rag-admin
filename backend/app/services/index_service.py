@@ -7,6 +7,7 @@ from app.models import IndexStatus, IndexDocumentStatus
 from app.repositories.index_repository import IndexRepository
 from app.repositories.chunk_repository import ChunkRepository
 from app.schemas.index import (
+    AddDocumentsRequest,
     IndexConfig,
     IndexStats,
     IndexCreate,
@@ -47,6 +48,8 @@ class IndexService:
             "updated_at": index.updated_at,
             "document_count": 0,
             "chunk_count": 0,
+            "version": getattr(index, "version", 1),
+            "config_dirty": getattr(index, "config_dirty", False),
         }
 
         return IndexResponse.model_validate(response_data)
@@ -203,7 +206,7 @@ class IndexService:
         self,
         index_id: UUID,
         project_id: UUID,
-        document_ids: list[UUID]
+        request: AddDocumentsRequest,
     ) -> IndexResponse:
         """Add documents to an index.
 
@@ -218,7 +221,11 @@ class IndexService:
         if index.status == IndexStatus.processing:
             raise ValidationError("Cannot add documents while index is processing")
 
-        await self.index_repo.add_documents(index_id, document_ids)
+        await self.index_repo.add_documents(
+            index_id=index_id,
+            document_ids=request.document_ids,
+            parse_run_ids=request.parse_run_ids,
+        )
         return await self.get_index(index_id, project_id)
 
     async def remove_document(

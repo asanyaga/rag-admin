@@ -228,3 +228,92 @@ async def test_process_index_raw_text_still_works():
     assert call_args[0]["source_type"] == "raw_text"
     assert call_args[0]["parse_run_id"] is None
     index_repo.increment_version.assert_called_once()
+
+
+from app.services.index_service import IndexService
+from app.schemas.index import AddDocumentsRequest
+
+
+@pytest.mark.asyncio
+async def test_add_documents_passes_parse_run_ids_to_repo():
+    doc_id = uuid4()
+    run_id = uuid4()
+
+    _index_id = uuid4()
+    _project_id = uuid4()
+    _mock_index = MagicMock()
+    _mock_index.id = _index_id
+    _mock_index.project_id = _project_id
+    _mock_index.status = IndexStatus.created
+    _mock_index.index_documents = []
+    _mock_index.name = "test"
+    _mock_index.description = None
+    _mock_index.config = {
+        "chunking_strategy": "recursive_character",
+        "source_representation": "raw_text",
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "chunk_unit": "characters",
+        "embedding_provider": "openai",
+        "embedding_model": "text-embedding-3-small",
+        "embedding_dimensions": None,
+    }
+    _mock_index.stats = None
+    _mock_index.error_message = None
+    _mock_index.created_by = uuid4()
+    _mock_index.created_at = MagicMock()
+    _mock_index.updated_at = MagicMock()
+    _mock_index.version = 1
+    _mock_index.config_dirty = False
+
+    index_repo = AsyncMock()
+    index_repo.get_by_id = AsyncMock(return_value=_mock_index)
+    index_repo.add_documents = AsyncMock(return_value=[])
+    index_repo.get_document_ids = AsyncMock(return_value=[doc_id])
+    index_repo.count_documents = AsyncMock(return_value=1)
+    index_repo.count_chunks = AsyncMock(return_value=0)
+
+    service = IndexService(index_repo=index_repo, chunk_repo=AsyncMock())
+    request = AddDocumentsRequest(
+        document_ids=[doc_id],
+        parse_run_ids={doc_id: run_id},
+    )
+
+    await service.add_documents(_index_id, _project_id, request)
+
+    index_repo.add_documents.assert_called_once()
+    call_kwargs = index_repo.add_documents.call_args
+    assert call_kwargs.kwargs.get("parse_run_ids") == {doc_id: run_id} or \
+           (len(call_kwargs.args) > 2 and call_kwargs.args[2] == {doc_id: run_id})
+
+
+def test_index_response_includes_version_and_config_dirty():
+    index = MagicMock()
+    index.id = uuid4()
+    index.project_id = uuid4()
+    index.name = "my-index"
+    index.description = None
+    index.config = {
+        "chunking_strategy": "recursive_character",
+        "source_representation": "raw_text",
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "chunk_unit": "characters",
+        "embedding_provider": "openai",
+        "embedding_model": "text-embedding-3-small",
+        "embedding_dimensions": None,
+    }
+    index.stats = None
+    index.status = IndexStatus.created
+    index.error_message = None
+    index.created_by = uuid4()
+    index.created_at = MagicMock()
+    index.updated_at = MagicMock()
+    index.version = 3
+    index.config_dirty = True
+
+    service = IndexService(index_repo=MagicMock(), chunk_repo=MagicMock())
+    response = service._to_response(index)
+
+    assert response.version == 3
+    assert response.config_dirty is True
