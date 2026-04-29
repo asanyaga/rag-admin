@@ -8,16 +8,32 @@ export type IndexStatus = 'created' | 'processing' | 'ready' | 'failed'
 // Index document processing status
 export type IndexDocumentStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
+// CDM source representation
+export type SourceRepresentation = 'raw_text' | 'full_text' | 'full_markdown' | 'block'
+
+// Chunking strategy
+export type ChunkingStrategy =
+  | 'fixed_size'
+  | 'recursive_character'
+  | 'markdown_heading'
+  | 'block'
+  | 'classified_block'
+
 // Index configuration
 export interface IndexConfig {
-  chunkingStrategy: 'fixed_size' | 'recursive_character'
+  // CDM binding
+  sourceRepresentation: SourceRepresentation
+  parser: string | null
+  parseConfigHash: string | null
+  // Chunking
+  chunkingStrategy: ChunkingStrategy
   chunkSize: number
   chunkOverlap: number
   chunkUnit: 'tokens' | 'characters'
+  // Embedding
   embeddingProvider: string
   embeddingModel: string
   embeddingDimensions: number | null
-  parsingStrategy: 'static'
 }
 
 // Index statistics
@@ -42,6 +58,8 @@ export interface Index {
   config: IndexConfig
   stats: IndexStats | null
   status: IndexStatus
+  version: number
+  configDirty: boolean
   errorMessage: string | null
   createdBy: string
   createdAt: string
@@ -103,6 +121,7 @@ export interface IndexUpdate {
 // Add documents request
 export interface AddDocumentsRequest {
   documentIds: string[]
+  parseRunIds?: Record<string, string>  // document_id → parse_run_id
 }
 
 // Chunk preview types

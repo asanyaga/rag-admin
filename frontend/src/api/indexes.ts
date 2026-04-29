@@ -48,6 +48,9 @@ export async function createIndex(
       description: data.description,
       documentIds: data.documentIds,
       config: {
+        source_representation: data.config.sourceRepresentation ?? 'raw_text',
+        parser: data.config.parser ?? null,
+        parse_config_hash: data.config.parseConfigHash ?? null,
         chunking_strategy: data.config.chunkingStrategy,
         chunk_size: data.config.chunkSize,
         chunk_overlap: data.config.chunkOverlap,
@@ -124,7 +127,10 @@ export async function addDocuments(
 ): Promise<Index> {
   const response = await apiClient.post<Index>(
     `/projects/${projectId}/indexes/${indexId}/documents`,
-    { documentIds: data.documentIds }
+    {
+      documentIds: data.documentIds,
+      parseRunIds: data.parseRunIds ?? null,
+    }
   )
   return response.data
 }
