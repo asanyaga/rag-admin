@@ -3,7 +3,7 @@
  */
 import { useState, useCallback } from 'react'
 import { AxiosError } from 'axios'
-import { IndexCreate, IndexConfig, ChunkPreviewResponse } from '@/types/index'
+import { IndexCreate, IndexConfig, ChunkPreviewResponse, SourceRepresentation } from '@/types/index'
 import { DocumentListItem } from '@/types/document'
 import {
   Dialog,
@@ -26,7 +26,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Slider } from '@/components/ui/slider'
-import { SourceRepresentation } from '@/types/index'
 import { DocumentSelector } from './DocumentSelector'
 import { ChunkPreviewPanel } from './ChunkPreviewPanel'
 import { toast } from 'sonner'
@@ -225,6 +224,7 @@ export function IndexCreateDialog({
                       v && handleSourceRepresentationChange(v as SourceRepresentation)
                     }
                     className="justify-start"
+                    disabled={isLoading}
                   >
                     <ToggleGroupItem value="raw_text" aria-label="Raw text">
                       Raw text
@@ -250,6 +250,7 @@ export function IndexCreateDialog({
                           v && updateConfig('splitHeadingLevel', parseInt(v))
                         }
                         className="justify-start"
+                        disabled={isLoading}
                       >
                         <ToggleGroupItem value="1">H1 only</ToggleGroupItem>
                         <ToggleGroupItem value="2">H1 + H2</ToggleGroupItem>
