@@ -288,9 +288,6 @@ async def test_add_documents_passes_parse_run_ids_to_repo():
            (len(call_kwargs.args) > 2 and call_kwargs.args[2] == {doc_id: run_id})
 
 
-from app.services.markdown_chunking_service import MarkdownChunkingService
-
-
 @pytest.mark.asyncio
 async def test_process_index_full_markdown():
     """full_markdown: chunks sourced from ParsedDocument.full_markdown,
