@@ -20,6 +20,7 @@ from app.services.chunking_service import ChunkingService, get_chunking_service
 from app.services.embedding_provider import EmbeddingProviderRegistry
 from app.services.provider_key_service import ProviderKeyService
 from app.repositories.provider_key_repository import ProviderKeyRepository
+from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.services.exceptions import NotFoundError, ValidationError
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,17 @@ class IndexProcessingService:
                     "Please add your API key in settings."
                 )
 
+        # Validate CDM mode: all pending documents must have parse_run_id set
+        if config.source_representation != "raw_text":
+            for index_doc in index.index_documents:
+                if index_doc.processing_status == IndexDocumentStatus.pending:
+                    if not index_doc.parse_run_id:
+                        raise ValidationError(
+                            f"Document {index_doc.document_id} has no parse run set. "
+                            "All documents require a parse run when source_representation "
+                            "is not 'raw_text'."
+                        )
+
         # Update status to processing
         await self.index_repo.update_status(index_id, IndexStatus.processing)
 
@@ -159,10 +171,28 @@ class IndexProcessingService:
 
                     logger.info(f"Processing document {doc_id} ({document.title})")
 
-                    # Get document text
-                    text = document.extracted_text
-                    if not text:
-                        raise ValueError("Document has no extracted text")
+                    # Get document text based on source_representation
+                    if config.source_representation == "raw_text":
+                        text = document.extracted_text
+                        if not text:
+                            raise ValueError("Document has no extracted text")
+                        source_type = "raw_text"
+                        doc_parse_run_id = None
+                    elif config.source_representation == "full_text":
+                        parsed_doc_repo = ParsedDocumentRepository(self.session)
+                        parsed_doc = await parsed_doc_repo.get_by_run(index_doc.parse_run_id)
+                        if not parsed_doc or not parsed_doc.full_text:
+                            raise ValueError(
+                                f"Parse run {index_doc.parse_run_id} did not produce full_text. "
+                                "Re-parse with a configuration that outputs full text."
+                            )
+                        text = parsed_doc.full_text
+                        source_type = "full_text"
+                        doc_parse_run_id = index_doc.parse_run_id
+                    else:
+                        raise NotImplementedError(
+                            f"source_representation '{config.source_representation}' not yet supported"
+                        )
 
                     # Chunk the document
                     chunks = self.chunking_service.chunk_text(
@@ -196,6 +226,9 @@ class IndexProcessingService:
                             "token_count": chunk.token_count,
                             "char_count": chunk.char_count,
                             "chunk_metadata": chunk.metadata,
+                            "index_version": index.version + 1,
+                            "parse_run_id": str(doc_parse_run_id) if doc_parse_run_id else None,
+                            "source_type": source_type,
                         })
 
                     # Store chunks
@@ -241,6 +274,19 @@ class IndexProcessingService:
                 processed_at=datetime.utcnow(),
             )
             await self.index_repo.update_stats(index_id, stats.model_dump(mode="json"))
+
+            # Increment version and write audit event
+            await self.index_repo.increment_version(index_id)
+            await self.index_repo.write_index_event(
+                index_id=index_id,
+                version=index.version + 1,
+                config_snapshot=config.model_dump(mode="json"),
+                document_bindings={
+                    str(doc.document_id): str(doc.parse_run_id) if doc.parse_run_id else None
+                    for doc in index.index_documents
+                },
+                triggered_by=user_id,
+            )
 
             # Determine final status
             if failed_count == total_docs:
