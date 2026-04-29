@@ -471,6 +471,16 @@ export default function IndexDetailPage() {
                   )}
                 </div>
               </div>
+              {indexDocuments.length > 0 && (
+                <div className="px-4 py-2 flex items-center gap-3 bg-muted/50 border-b text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span className="w-4" />
+                  <span className="flex-1">Document</span>
+                  <span className="text-xs">Source type</span>
+                  <span className="text-xs">Added</span>
+                  <span className="text-xs">Parse run</span>
+                  {canManageDocs && <span className="p-1 w-8" />}
+                </div>
+              )}
               {indexDocuments.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No documents in this index
