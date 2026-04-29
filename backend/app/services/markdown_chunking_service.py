@@ -53,13 +53,11 @@ class MarkdownChunkingService:
                     length_function=len,
                 )
                 raw = splitter.split_text(content)
-                pos = 0
                 sub_chunks = []
+                pos_within_section = 0
                 for sub in raw:
-                    idx = content.find(sub, pos)
-                    offset = idx if idx != -1 else pos
-                    sub_chunks.append((sub, offset))
-                    pos = max(pos, offset + 1)
+                    sub_chunks.append((sub, pos_within_section))
+                    pos_within_section += len(sub)
 
             for sub_content, offset in sub_chunks:
                 start_char = section_start + offset

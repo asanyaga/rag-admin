@@ -444,7 +444,7 @@ export function IndexCreateDialog({
               preview={preview}
               isLoading={isPreviewLoading}
               onPreview={handlePreview}
-              disabled={selectedDocumentIds.length === 0}
+              disabled={selectedDocumentIds.length === 0 || config.sourceRepresentation === 'full_markdown'}
             />
           </div>
         </div>
