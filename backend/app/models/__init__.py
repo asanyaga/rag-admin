@@ -24,6 +24,7 @@ from app.models.project_data_store import ProjectDataStore
 from app.models.source_document import SourceDocument
 from app.models.parse_run import ParseRun
 from app.models.parsed_document import ParsedDocument
+from app.models.index_event import IndexEvent
 
 __all__ = [
     "User",
@@ -68,4 +69,5 @@ __all__ = [
     "SourceDocument",
     "ParseRun",
     "ParsedDocument",
+    "IndexEvent",
 ]
