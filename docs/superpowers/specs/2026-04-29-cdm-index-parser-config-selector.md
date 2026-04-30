@@ -7,6 +7,28 @@
 
 ---
 
+## Implementation roadmap
+
+The work is split into six units. Each unit is its own branch, PR, and plan
+document under `docs/superpowers/plans/`. Status of each as of 2026-04-30:
+
+| Unit | Scope | Status | PR | Plan |
+|---|---|---|---|---|
+| **1** | Parsed-doc read APIs + ORM tighten (`index_documents.parse_run_id` FK CASCADE, `IndexDocument.parsed_document` relationship, `GET /parse-runs/configs`, `GET /parsed-documents`) | ✅ Shipped | [#47](https://github.com/asanyaga/rag-admin/pull/47) | [Unit 1 plan](../plans/2026-04-30-cdm-index-parsed-doc-unit-1-foundation.md) |
+| **2** | Source-resolution seam (`SourceResolutionService` + `ChunkingDispatcher`) + chunk preview fix (un-bandaid `2a0cfa1`) | ✅ Shipped | [#49](https://github.com/asanyaga/rag-admin/pull/49) | [Unit 2 plan](../plans/2026-04-30-cdm-index-parsed-doc-unit-2-source-resolution-seam.md) |
+| **3** | `IndexCreate.parsed_document_ids` shape, `IndexConfig` validators, drop `raw_text`, route renames, cascade-delete legacy raw_text indexes | ✅ Shipped | merged locally `08dca24` (issue [#50](https://github.com/asanyaga/rag-admin/issues/50)) | [Unit 3 plan](../plans/2026-04-30-cdm-index-parsed-doc-unit-3-shape-tightening.md) |
+| **4** | Wizard rebuild — parse-config family selector (Step 2) + parsed-doc picker (Step 4); replaces the wide-net resolver bridge from Unit 3 | ⏳ Pending | — | — |
+| **5** | Index detail "Documents" tab → "Parsed Documents" with the new column shape (Source filename / Parse run / Parsed at / Status / Chunks); restores the `Add Documents` flow on the index detail page | ⏳ Pending | — | — |
+| **6** | Cleanup — `ALTER COLUMN index_documents.parse_run_id SET NOT NULL`; consider dropping denormalized `index_documents.document_id`; optionally implement block chunking and remove the `ChunkingDispatcher.NotImplementedError` | ⏳ Pending | — | — |
+
+### Standing bridges (removed in later units)
+
+- **Wide-net wizard resolver** (`frontend/src/lib/parsed-documents.ts::resolveLatestParsedDocsForDocuments`) — Unit 3 ships this client-side helper to keep the slice-2 document picker working with the new `parsed_document_ids` API. Removed by Unit 4 once the explicit parsed-doc picker lands.
+- **`IndexDetailPage` "Add Documents" toast stub** — Unit 3 reduces the legacy bulk-add UI to a toast pointing at Unit 4/5. Replaced by Unit 5's parsed-doc picker for that page.
+- **`block` chunking `NotImplementedError`** — `ChunkingDispatcher` accepts `BlocksSource` but raises until a future unit implements block chunking. Tracked as Unit 6 cleanup work.
+
+---
+
 ## Problem
 
 Indexes today are built around `Document` + `extracted_text`. The CDM model introduces `ParsedDocument` as the actual unit of indexable content — every parse run produces one, and every `ParsedDocument` carries `full_text` (always), `full_markdown` (sometimes), and `blocks` (≥1) along with its own `parse_run_id`, `parser`, and `parse_config_hash`. The Index feature has not yet been re-centered on this unit.
