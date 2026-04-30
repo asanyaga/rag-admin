@@ -152,20 +152,31 @@ export async function previewChunks(
   projectId: string,
   data: ChunkPreviewRequest
 ): Promise<ChunkPreviewResponse> {
+  const body: Record<string, unknown> = {
+    config: {
+      // Forward the full config — sourceRepresentation, parser, parseConfigHash,
+      // and the markdown chunking knobs all matter for accurate preview.
+      source_representation: data.config.sourceRepresentation,
+      parser: data.config.parser,
+      parse_config_hash: data.config.parseConfigHash,
+      chunking_strategy: data.config.chunkingStrategy,
+      chunk_size: data.config.chunkSize,
+      chunk_overlap: data.config.chunkOverlap,
+      chunk_unit: data.config.chunkUnit,
+      split_heading_level: data.config.splitHeadingLevel,
+      max_section_chars: data.config.maxSectionChars,
+      embedding_provider: data.config.embeddingProvider,
+      embedding_model: data.config.embeddingModel,
+      embedding_dimensions: data.config.embeddingDimensions,
+    },
+    maxChunks: data.maxChunks ?? 5,
+  }
+  if (data.parsedDocumentId) body.parsedDocumentId = data.parsedDocumentId
+  else if (data.documentId) body.documentId = data.documentId
+
   const response = await apiClient.post<ChunkPreviewResponse>(
     `/projects/${projectId}/indexes/preview-chunks`,
-    {
-      documentId: data.documentId,
-      config: {
-        chunking_strategy: data.config.chunkingStrategy,
-        chunk_size: data.config.chunkSize,
-        chunk_overlap: data.config.chunkOverlap,
-        chunk_unit: data.config.chunkUnit,
-        embedding_provider: data.config.embeddingProvider,
-        embedding_model: data.config.embeddingModel,
-      },
-      maxChunks: data.maxChunks || 5,
-    }
+    body,
   )
   return response.data
 }
