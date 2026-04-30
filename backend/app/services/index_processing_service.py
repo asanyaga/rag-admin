@@ -16,15 +16,12 @@ from app.models import IndexStatus, IndexDocumentStatus
 from app.repositories.index_repository import IndexRepository
 from app.repositories.chunk_repository import ChunkRepository
 from app.schemas.index import IndexConfig, IndexStats
-from app.services.chunking_service import ChunkingService, get_chunking_service
-from app.services.markdown_chunking_service import (
-    MarkdownChunkingService,
-    get_markdown_chunking_service,
-)
+from app.services.chunking_service import get_chunking_service
+from app.services.chunking_dispatcher import ChunkingDispatcher
+from app.services.source_resolution_service import SourceResolutionService
 from app.services.embedding_provider import EmbeddingProviderRegistry
 from app.services.provider_key_service import ProviderKeyService
 from app.repositories.provider_key_repository import ProviderKeyRepository
-from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.services.exceptions import NotFoundError, ValidationError
 
 logger = logging.getLogger(__name__)
@@ -45,7 +42,9 @@ class IndexProcessingService:
         self.chunk_repo = chunk_repo
         self.provider_key_service = ProviderKeyService(provider_key_repo)
         self.chunking_service = get_chunking_service()
-        self.markdown_chunking_service = get_markdown_chunking_service()
+        # Seam dependencies (shared with chunk preview):
+        self.source_resolver = SourceResolutionService(session)
+        self.chunking_dispatcher = ChunkingDispatcher()
 
     async def start_processing(
         self,
@@ -190,40 +189,22 @@ class IndexProcessingService:
                             page_boundaries=document.processing_metadata.get("page_boundaries")
                                 if document.processing_metadata else None,
                         )
-                    elif config.source_representation == "full_text":
-                        parsed_doc_repo = ParsedDocumentRepository(self.session)
-                        parsed_doc = await parsed_doc_repo.get_by_run(index_doc.parse_run_id)
-                        if not parsed_doc or not parsed_doc.full_text:
-                            raise ValueError(
-                                f"Parse run {index_doc.parse_run_id} did not produce full_text. "
-                                "Re-parse with a configuration that outputs full text."
-                            )
-                        source_type = "full_text"
-                        doc_parse_run_id = index_doc.parse_run_id
-                        chunks = self.chunking_service.chunk_text(
-                            text=parsed_doc.full_text,
-                            config=config,
-                            source_document_id=str(doc_id),
-                            source_filename=document.source_metadata.get("filename"),
-                            page_boundaries=document.processing_metadata.get("page_boundaries")
-                                if document.processing_metadata else None,
+                    elif config.source_representation in ("full_text", "full_markdown", "block"):
+                        # CDM seam: shared with chunk preview.
+                        source = await self.source_resolver.resolve(
+                            parsed_document_id=index_doc.parse_run_id,
+                            source_representation=config.source_representation,
                         )
-                    elif config.source_representation == "full_markdown":
-                        parsed_doc_repo = ParsedDocumentRepository(self.session)
-                        parsed_doc = await parsed_doc_repo.get_by_run(index_doc.parse_run_id)
-                        if not parsed_doc or not parsed_doc.full_markdown:
-                            raise ValueError(
-                                "Parse run did not produce full_markdown. "
-                                "Re-parse the document with a configuration that outputs markdown."
-                            )
-                        source_type = "full_markdown"
-                        doc_parse_run_id = index_doc.parse_run_id
-                        chunks = self.markdown_chunking_service.chunk_markdown(
-                            markdown=parsed_doc.full_markdown,
+                        # Pass filename from Document.source_metadata so chunk metadata is
+                        # byte-identical with the pre-refactor save behaviour.
+                        chunks = self.chunking_dispatcher.dispatch(
+                            source=source,
                             config=config,
                             source_document_id=str(doc_id),
                             source_filename=document.source_metadata.get("filename"),
                         )
+                        source_type = config.source_representation
+                        doc_parse_run_id = index_doc.parse_run_id
                     else:
                         raise NotImplementedError(
                             f"source_representation '{config.source_representation}' not yet supported"
