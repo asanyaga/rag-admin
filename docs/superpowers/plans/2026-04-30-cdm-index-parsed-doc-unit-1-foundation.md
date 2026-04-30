@@ -7,12 +7,14 @@
 
 **Goal:** Lay the data and read-API foundation for the parsed-document refactor without touching the index-create write path or the wizard. After this unit:
 
-- `index_documents` has a `parsed_document_id` FK column (**nullable**, populated by backfill where possible — see the Cascade-Delete Deferral note below).
+- `index_documents.parse_run_id` FK is tightened from `SET NULL` to `CASCADE` to match the parsed-doc-centric integrity model (and `IndexDocument` gains a `parsed_document` relationship). No new column is added — `parse_run_id` already serves as the parsed-document handle, since `parsed_documents.parse_run_id` is its primary key (1:1 with parse_run).
 - `GET /projects/{projectId}/parse-runs/configs` lists the parse-config families available in the project.
 - `GET /projects/{projectId}/parsed-documents` lists parsed-documents with family + representation filters and a `latest_per_source` toggle.
 - All existing flows (index create, add documents, processing, preview) continue to work unchanged.
 
-**Architecture:** Pure-additive backend slice. Migration adds the FK column and backfills from the existing `parse_run_id`. Two new project-scoped GET routers expose the read APIs the wizard rebuild (Unit 4) will consume. Existing `IndexDocument` ORM gets one new field; nothing in the write path changes.
+**Architecture:** Pure-additive backend slice. A small Alembic migration tightens an existing FK; no new column is required because `ParsedDocument.parse_run_id` is already the parsed-document primary key (1:1 invariant; the `id` vs `parse_run_id` split shown in the CDM domain class is collapsed at the ORM layer for now and can be added later when `derived_from` ships). Two new project-scoped GET routers expose the read APIs the wizard rebuild (Unit 4) will consume.
+
+> **Note on identifier choice (recorded 2026-04-30):** The API surface uses `parsedDocumentId` as the conceptual handle, but the wire value IS a `parse_run_id` UUID under the current 1:1 schema. When `derived_from` lands and parsed-docs need their own identity, the migration is bounded: add `parsed_documents.id`, swap PK, add a unique index on `parse_run_id`, and backfill any tables that today store parse_run_id-as-parsed-doc-handle (currently only `index_documents`). The API stays the same; only the wire value changes from "parse_run_id of this parsed-doc" to "id of this parsed-doc."
 
 **Tech Stack:** Python 3.12 · FastAPI async · SQLAlchemy 2.0 async · Alembic · Pydantic v2 · pytest
 
@@ -20,11 +22,11 @@
 
 ## Cascade-delete deferral
 
-Per the breakdown discussion, this unit **does not delete legacy `index_documents` rows or legacy indexes**. The `parsed_document_id` column is added as **NULL-allowed**, backfilled from `parse_run_id` where possible, and left nullable for now. Legacy raw_text rows (with `parse_run_id IS NULL`) and rows whose `parse_run_id` does not resolve to a `ParsedDocument` will retain `parsed_document_id = NULL` until **Unit 6 (cleanup)** lands after Units 2–5 ship and the new flow is validated end-to-end.
+This unit **does not delete legacy `index_documents` rows or legacy indexes**. With Option A in place (no new column), the relevant integrity boundary is the existing `index_documents.parse_run_id` FK. Tightening it to `ON DELETE CASCADE` improves integrity for new rows but does not retroactively delete pre-existing rows with `parse_run_id IS NULL`.
 
 Implications carried forward:
-- Units 2–5 must tolerate `parsed_document_id IS NULL` on read paths (display "—" or hide the row in the new UI; existing UI continues to read `document_id` + `parse_run_id`).
-- Unit 6 will: (a) cascade-delete the remaining NULL-bearing indexes, (b) `ALTER COLUMN parsed_document_id SET NOT NULL`, (c) optionally drop `document_id` / `parse_run_id` columns.
+- Units 2–5 must tolerate `index_documents.parse_run_id IS NULL` on read paths (legacy raw_text rows; display "—" or hide in the new UI; existing UI continues to render).
+- Unit 6 (cleanup) will, after Units 2–5 validate end-to-end: (a) delete `index_documents` rows where `parse_run_id IS NULL`, (b) delete any `indexes` left empty as a result, (c) consider making `parse_run_id` NOT NULL once raw_text is fully removed (see Unit 3).
 
 ---
 
@@ -152,15 +154,15 @@ After creating, confirm issue number with the user and update this file with `**
 
 | Action | Path | What changes |
 |--------|------|--------------|
-| **Create** | `backend/alembic/versions/<rev>_add_parsed_document_id_to_index_documents.py` | New migration: add FK column + backfill |
-| Modify | `backend/app/models/index_document.py` | Add `parsed_document_id` field + relationship to `ParsedDocument` |
+| **Create** | `backend/alembic/versions/<rev>_tighten_index_documents_parse_run_fk.py` | New migration: drop existing `SET NULL` FK on `index_documents.parse_run_id`, recreate as `CASCADE` |
+| Modify | `backend/app/models/index_document.py` | Change `parse_run_id` FK to `ondelete="CASCADE"`; add `parsed_document` relationship via `primaryjoin` on `parse_run_id` |
 | Modify | `backend/app/repositories/parse_run_repository.py` | Add `list_distinct_configs_for_project(project_id)` |
 | Modify | `backend/app/repositories/parsed_document_repository.py` | Add `list_for_project(project_id, *, parser, parse_config_hash, representation, latest_per_source)` |
 | **Create** | `backend/app/schemas/parsed_document.py` (or extend existing) | `ParseConfigOption`, `ParsedDocumentListItem` |
 | **Create** | `backend/app/routers/parse_run_configs.py` | `GET /projects/{project_id}/parse-runs/configs` |
 | **Create** | `backend/app/routers/parsed_documents.py` | `GET /projects/{project_id}/parsed-documents` |
 | Modify | `backend/app/main.py` | Register new routers |
-| **Create** | `backend/tests/migrations/test_parsed_document_id_backfill.py` | Migration backfill test |
+| **Create** | `backend/tests/models/test_index_document_parsed_document_relationship.py` | Verify ORM relationship + FK cascade behavior |
 | **Create** | `backend/tests/repositories/test_parse_run_repository_configs.py` | Distinct-configs query test |
 | **Create** | `backend/tests/repositories/test_parsed_document_repository_listing.py` | Listing + filter + latest_per_source tests |
 | **Create** | `backend/tests/routers/test_parse_run_configs_router.py` | `/parse-runs/configs` endpoint tests |
@@ -172,69 +174,71 @@ No frontend changes in this unit.
 
 ## Implementation tasks (TDD)
 
-### Task 1 — ORM column + Alembic migration
+### Task 1 — IndexDocument relationship + FK cascade tighten
 
-- [ ] **1.1 Write migration test (red).** `backend/tests/migrations/test_parsed_document_id_backfill.py` — pytest fixture spins up an Alembic stamp at the previous revision, seeds `index_documents` rows with various `(parse_run_id, parsed_document)` shapes (resolvable, unresolvable, NULL), upgrades to the new revision, asserts:
-  - Resolvable rows now have `parsed_document_id` populated correctly.
-  - Unresolvable rows have `parsed_document_id IS NULL`.
-  - The FK constraint is in place with `ON DELETE CASCADE`.
-  - Column allows NULL (no NOT NULL constraint yet).
+- [ ] **1.1 Write ORM/relationship test (red).** `backend/tests/models/test_index_document_parsed_document_relationship.py` — assert that:
+  - `IndexDocument.parsed_document` traverses correctly to `ParsedDocument` when `parse_run_id` is set.
+  - `IndexDocument.parsed_document` is `None` when `parse_run_id` is `None`.
+  - Deleting the parent `ParseRun` cascade-deletes the `IndexDocument` row (not `SET NULL` anymore).
 
-- [ ] **1.2 Generate the Alembic migration (green).** Use `alembic revision --autogenerate` after adding the field to the ORM (Task 1.4) — but the file will need manual edits for the backfill UPDATE. Migration body:
+- [ ] **1.2 Tighten FK on `IndexDocument` ORM.** In `app/models/index_document.py`:
   ```python
-  def upgrade() -> None:
-      op.add_column(
-          "index_documents",
-          sa.Column(
-              "parsed_document_id",
-              postgresql.UUID(as_uuid=True),
-              sa.ForeignKey("parsed_documents.id", ondelete="CASCADE"),
-              nullable=True,
-          ),
-      )
-      op.create_index(
-          "ix_index_documents_parsed_document_id",
-          "index_documents",
-          ["parsed_document_id"],
-      )
-      op.execute("""
-          UPDATE index_documents id
-          SET parsed_document_id = pd.id
-          FROM parsed_documents pd
-          WHERE pd.parse_run_id = id.parse_run_id
-            AND id.parse_run_id IS NOT NULL
-      """)
-
-  def downgrade() -> None:
-      op.drop_index("ix_index_documents_parsed_document_id", table_name="index_documents")
-      op.drop_column("index_documents", "parsed_document_id")
-  ```
-
-- [ ] **1.3 Run migration test — verify green.**
-  ```bash
-  uv run --directory /home/asa/rag-admin/backend python -m pytest tests/migrations/test_parsed_document_id_backfill.py -o "addopts="
-  ```
-
-- [ ] **1.4 Add field to `IndexDocument` ORM.**
-  ```python
-  parsed_document_id: Mapped[UUID | None] = mapped_column(
+  parse_run_id: Mapped[UUID | None] = mapped_column(
       PGUUID(as_uuid=True),
-      ForeignKey("parsed_documents.id", ondelete="CASCADE"),
+      ForeignKey("parse_runs.id", ondelete="CASCADE"),  # was SET NULL
       nullable=True,
   )
   parsed_document: Mapped["ParsedDocument | None"] = relationship(
-      "ParsedDocument", foreign_keys=[parsed_document_id]
+      "ParsedDocument",
+      primaryjoin="IndexDocument.parse_run_id == foreign(ParsedDocument.parse_run_id)",
+      viewonly=True,
   )
   ```
-  Add `sa.Index('ix_index_documents_parsed_document_id', 'parsed_document_id')` to `__table_args__`.
+  Keep the existing `parse_run` relationship and the `ix_index_documents_parse_run_id` index unchanged.
+
+- [ ] **1.3 Generate the Alembic migration.** Run:
+  ```bash
+  uv run --directory /home/asa/rag-admin/backend alembic revision --autogenerate -m "tighten index_documents.parse_run_id FK to cascade"
+  ```
+  Expected migration body (manually verified):
+  ```python
+  def upgrade() -> None:
+      op.drop_constraint("index_documents_parse_run_id_fkey", "index_documents", type_="foreignkey")
+      op.create_foreign_key(
+          "index_documents_parse_run_id_fkey",
+          "index_documents",
+          "parse_runs",
+          ["parse_run_id"],
+          ["id"],
+          ondelete="CASCADE",
+      )
+
+  def downgrade() -> None:
+      op.drop_constraint("index_documents_parse_run_id_fkey", "index_documents", type_="foreignkey")
+      op.create_foreign_key(
+          "index_documents_parse_run_id_fkey",
+          "index_documents",
+          "parse_runs",
+          ["parse_run_id"],
+          ["id"],
+          ondelete="SET NULL",
+      )
+  ```
+  If autogenerate produces a different constraint name, use the actual name from the database (`SELECT conname FROM pg_constraint WHERE conrelid = 'index_documents'::regclass`).
+
+- [ ] **1.4 Run the relationship/cascade test — verify green.**
+  ```bash
+  uv run --directory /home/asa/rag-admin/backend python -m pytest tests/models/test_index_document_parsed_document_relationship.py -o "addopts="
+  ```
 
 - [ ] **1.5 Apply migration to local dev DB and spot-check.**
   ```bash
   docker compose -f /home/asa/rag-admin/docker-compose.local.yml exec backend alembic upgrade head
   docker compose -f /home/asa/rag-admin/docker-compose.local.yml exec postgres \
       psql -U postgres -d rag_admin -c \
-      "SELECT count(*) total, count(parsed_document_id) backfilled FROM index_documents"
+      "SELECT conname, confdeltype FROM pg_constraint WHERE conrelid = 'index_documents'::regclass AND contype = 'f'"
   ```
+  `confdeltype = 'c'` (CASCADE) on the parse_run_id FK after migration.
 
 ### Task 2 — `ParseRun` repository: distinct configs
 
@@ -434,8 +438,9 @@ No frontend changes in this unit.
 ## Manual verification checklist (to attach to the PR)
 
 - [ ] Migration runs cleanly on a freshly-cloned local DB.
-- [ ] Backfill populated `parsed_document_id` for all rows where `parse_run_id` resolves to a `ParsedDocument`.
-- [ ] Legacy raw_text `index_documents` rows remain (with `parsed_document_id IS NULL`) — **not deleted** in this unit.
+- [ ] `index_documents.parse_run_id` FK is `CASCADE` (verified via `pg_constraint` query).
+- [ ] Legacy raw_text `index_documents` rows remain untouched (still `parse_run_id IS NULL`).
+- [ ] Deleting a `ParseRun` cascades to `IndexDocument` rows that reference it (no orphan / SET NULL behavior).
 - [ ] `GET /parse-runs/configs` returns expected families.
 - [ ] `GET /parsed-documents` filters and `latest_per_source` toggle behave per spec.
 - [ ] Existing `Create Index` flow (slice-2 wizard) still works for raw_text and full_markdown.
