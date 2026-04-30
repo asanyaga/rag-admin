@@ -4,7 +4,7 @@
 
 **Spec:** [`docs/superpowers/specs/2026-04-29-cdm-index-parser-config-selector.md`](../specs/2026-04-29-cdm-index-parser-config-selector.md) §3, §4, §5 (last paragraph), §"Migration"
 **Depends on:** Unit 2 (source-resolution seam — PR #49) merged into `main`. Unit 1 (parsed-doc reads + ORM tighten — PR #47) and slice-2 (markdown chunking — PR #45) are also precursors.
-**Issue:** TBD (created in pre-implementation gate)
+**Issue:** [#50](https://github.com/asanyaga/rag-admin/issues/50)
 
 **Goal:** Make `parsed_document_id` the canonical wire shape across the index API. Drop the `raw_text` source-representation, the per-row `(document_id, parse_run_id)` binding shape, and the temporary `documentId` bridge on chunk preview. Cascade-delete legacy raw_text indexes to align the database with the new schema.
 
