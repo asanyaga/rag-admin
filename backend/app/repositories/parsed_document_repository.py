@@ -71,6 +71,34 @@ class ParsedDocumentRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_latest_for_document(
+        self, document_id: UUID
+    ) -> ParsedDocument | None:
+        """Return the newest succeeded parsed-document for a Document.
+
+        BRIDGE — used only by the chunk-preview endpoint while the slice-2
+        wizard lacks a parsed-doc picker. Removed in Unit 3 once the wizard
+        sends `parsedDocumentId` directly.
+
+        Join path: ParsedDocument → ParseRun (on parse_run_id) → Document
+        (on shared source_document_id; Document points at SourceDocument,
+        which has no back-link).
+        """
+        stmt = (
+            select(ParsedDocument)
+            .join(ParseRun, ParseRun.id == ParsedDocument.parse_run_id)
+            .join(DocumentORM, DocumentORM.source_document_id == ParseRun.source_document_id)
+            .where(
+                DocumentORM.id == document_id,
+                # only succeeded runs have a paired ParsedDocument
+                ParseRun.status == "succeeded",
+            )
+            .order_by(ParseRun.finished_at.desc().nulls_last())
+            .limit(1)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def list_for_project(
         self,
         project_id: UUID,
