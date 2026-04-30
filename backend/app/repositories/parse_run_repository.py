@@ -4,11 +4,24 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import Document as DocumentORM
 from app.models.parse_run import ParseRun
+from app.models.parsed_document import ParsedDocument
+from app.models.source_document import SourceDocument
+
+
+@dataclass(frozen=True)
+class ParseConfigOptionRow:
+    """One distinct (parser, parse_config_hash) family available to a project."""
+    parser: str
+    parse_config_hash: str
+    config: dict[str, Any]
+    parsed_document_count: int
+    has_full_markdown: bool
+    latest_parsed_at: datetime
 
 
 @dataclass
@@ -131,6 +144,67 @@ class ParseRunRepository:
             .limit(1)
         )
         return result.scalar_one_or_none()
+
+    async def list_distinct_configs_for_project(
+        self, project_id: UUID
+    ) -> list[ParseConfigOptionRow]:
+        """List distinct (parser, config_hash) families with parsed_documents in a project.
+
+        Joins parsed_documents → parse_runs → source_documents → documents and groups by
+        (parser, config_hash), returning one row per family with aggregate counts and the
+        newest finished_at across the family. Only succeeded runs are included.
+        """
+        markdown_present = case(
+            (ParsedDocument.full_markdown.isnot(None), 1), else_=0
+        )
+
+        agg_stmt = (
+            select(
+                ParseRun.parser.label("parser"),
+                ParseRun.config_hash.label("parse_config_hash"),
+                func.count(ParsedDocument.parse_run_id).label("parsed_document_count"),
+                func.coalesce(func.max(markdown_present), 0).label("has_full_markdown_int"),
+                func.max(ParseRun.finished_at).label("latest_parsed_at"),
+            )
+            .select_from(ParsedDocument)
+            .join(ParseRun, ParseRun.id == ParsedDocument.parse_run_id)
+            .join(SourceDocument, ParseRun.source_document_id == SourceDocument.id)
+            .join(DocumentORM, DocumentORM.source_document_id == SourceDocument.id)
+            .where(ParseRun.status == "succeeded")
+            .where(DocumentORM.project_id == project_id)
+            .group_by(ParseRun.parser, ParseRun.config_hash)
+            .order_by(func.max(ParseRun.finished_at).desc())
+        )
+        agg_rows = (await self.session.execute(agg_stmt)).all()
+        if not agg_rows:
+            return []
+
+        # Fetch one representative config per (parser, config_hash). The config_hash is
+        # deterministically derived from the config dict, so any row's config is correct.
+        configs: dict[tuple[str, str], dict[str, Any]] = {}
+        for row in agg_rows:
+            key = (row.parser, row.parse_config_hash)
+            if key in configs:
+                continue
+            cfg = (await self.session.execute(
+                select(ParseRun.config)
+                .where(ParseRun.parser == row.parser)
+                .where(ParseRun.config_hash == row.parse_config_hash)
+                .limit(1)
+            )).scalar()
+            configs[key] = cfg or {}
+
+        return [
+            ParseConfigOptionRow(
+                parser=row.parser,
+                parse_config_hash=row.parse_config_hash,
+                config=configs[(row.parser, row.parse_config_hash)],
+                parsed_document_count=row.parsed_document_count,
+                has_full_markdown=bool(row.has_full_markdown_int),
+                latest_parsed_at=row.latest_parsed_at,
+            )
+            for row in agg_rows
+        ]
 
     async def update_status(
         self,

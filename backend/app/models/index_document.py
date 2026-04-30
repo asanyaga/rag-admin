@@ -62,10 +62,13 @@ class IndexDocument(Base):
         nullable=True
     )
 
-    # CDM parse run binding for this document
+    # CDM parse run binding for this document.
+    # CASCADE: parsed_documents are 1:1 with parse_runs in the current schema, so deleting a
+    # parse_run also removes its parsed_document; an index_documents row that references it
+    # has nothing left to read and is removed too.
     parse_run_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("parse_runs.id", ondelete="SET NULL"),
+        ForeignKey("parse_runs.id", ondelete="CASCADE"),
         nullable=True
     )
 
@@ -73,6 +76,14 @@ class IndexDocument(Base):
     index: Mapped["Index"] = relationship(back_populates="index_documents")
     document: Mapped["Document"] = relationship(back_populates="index_documents")
     parse_run: Mapped["ParseRun | None"] = relationship("ParseRun", foreign_keys=[parse_run_id])
+    # parsed_document is the content blob produced by the bound parse_run.
+    # It joins on parse_run_id because parsed_documents.parse_run_id is its primary key
+    # (1:1 with parse_run); viewonly because writes happen via parse_run_id.
+    parsed_document: Mapped["ParsedDocument | None"] = relationship(
+        "ParsedDocument",
+        primaryjoin="IndexDocument.parse_run_id == foreign(ParsedDocument.parse_run_id)",
+        viewonly=True,
+    )
 
     __table_args__ = (
         sa.Index('ix_index_documents_index_id', 'index_id'),
