@@ -54,6 +54,19 @@ const DEFAULT_CONFIG: Partial<IndexConfig> = {
   embeddingModel: 'text-embedding-3-small',
 }
 
+function extractErrorMessage(data: unknown, fallback: string): string {
+  if (!data || typeof data !== 'object') return fallback
+  const d = data as Record<string, unknown>
+  if (typeof d.detail === 'string') return d.detail
+  if (Array.isArray(d.detail)) {
+    return d.detail.map((e: unknown) => {
+      if (e && typeof e === 'object' && 'msg' in e) return String((e as Record<string, unknown>).msg)
+      return String(e)
+    }).join('; ')
+  }
+  return fallback
+}
+
 export function IndexCreateDialog({
   open,
   onOpenChange,
@@ -86,7 +99,7 @@ export function IndexCreateDialog({
       setPreview(result)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
-        toast.error(error.response.data?.detail || 'Failed to generate preview')
+        toast.error(extractErrorMessage(error.response.data, 'Failed to generate preview'))
       } else {
         toast.error('Failed to generate preview')
       }
@@ -123,7 +136,7 @@ export function IndexCreateDialog({
       )
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
-        toast.error(error.response.data?.detail || 'Failed to create index')
+        toast.error(extractErrorMessage(error.response.data, 'Failed to create index'))
       } else {
         toast.error('Failed to create index')
       }
