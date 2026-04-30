@@ -6,8 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from app.models import IndexStatus, IndexDocumentStatus
 from app.repositories.index_repository import IndexRepository
 from app.repositories.chunk_repository import ChunkRepository
+from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.schemas.index import (
-    AddDocumentsRequest,
+    AddParsedDocumentsRequest,
     IndexConfig,
     IndexStats,
     IndexCreate,
@@ -24,10 +25,12 @@ class IndexService:
     def __init__(
         self,
         index_repo: IndexRepository,
-        chunk_repo: ChunkRepository
+        chunk_repo: ChunkRepository,
+        parsed_doc_repo: ParsedDocumentRepository,
     ):
         self.index_repo = index_repo
         self.chunk_repo = chunk_repo
+        self.parsed_doc_repo = parsed_doc_repo
 
     def _to_response(self, index, include_counts: bool = True) -> IndexResponse:
         """Convert an Index model to a response."""
@@ -74,19 +77,17 @@ class IndexService:
         self,
         project_id: UUID,
         user_id: UUID,
-        data: IndexCreate
+        data: IndexCreate,
     ) -> IndexResponse:
-        """Create a new index.
+        """Create a new index. Validates parsed-doc family + segment per spec §4."""
+        config = data.config
 
-        Raises:
-        - ConflictError: Index name already exists in project
-        - ValidationError: Invalid configuration
-        """
-        # Validate config
-        try:
-            config = data.config
-        except Exception as e:
-            raise ValidationError(f"Invalid index configuration: {e}")
+        if data.parsed_document_ids:
+            await self._validate_parsed_documents(
+                project_id=project_id,
+                config=config,
+                parsed_document_ids=data.parsed_document_ids,
+            )
 
         try:
             index = await self.index_repo.create(
@@ -94,19 +95,18 @@ class IndexService:
                 user_id=user_id,
                 name=data.name,
                 description=data.description,
-                config=config
+                config=config,
             )
-
-            # Add documents if provided
-            if data.document_ids:
-                await self.index_repo.add_documents(index.id, data.document_ids)
-
+            if data.parsed_document_ids:
+                await self.index_repo.add_parsed_documents(
+                    index.id, data.parsed_document_ids,
+                )
             return self._to_response(index)
-
         except IntegrityError as e:
-            error_str = str(e).lower()
-            if 'uq_indexes_project_name' in error_str:
-                raise ConflictError(f"Index with name '{data.name}' already exists in this project")
+            if "uq_indexes_project_name" in str(e).lower():
+                raise ConflictError(
+                    f"Index with name '{data.name}' already exists in this project"
+                )
             raise
 
     async def get_index(
@@ -202,31 +202,88 @@ class IndexService:
         if not deleted:
             raise NotFoundError(f"Index {index_id} not found")
 
-    async def add_documents(
+    async def add_parsed_documents(
         self,
         index_id: UUID,
         project_id: UUID,
-        request: AddDocumentsRequest,
+        request: AddParsedDocumentsRequest,
     ) -> IndexResponse:
-        """Add documents to an index.
-
-        Raises:
-        - NotFoundError: Index not found
-        - ValidationError: Index is processing (cannot add documents during processing)
-        """
+        """Add parsed-documents to an index."""
         index = await self.index_repo.get_by_id(index_id, project_id)
         if not index:
             raise NotFoundError(f"Index {index_id} not found")
 
         if index.status == IndexStatus.processing:
-            raise ValidationError("Cannot add documents while index is processing")
+            raise ValidationError("Cannot add parsed-documents while index is processing")
 
-        await self.index_repo.add_documents(
+        config = IndexConfig.model_validate(index.config)
+        await self._validate_parsed_documents(
+            project_id=project_id,
+            config=config,
+            parsed_document_ids=request.parsed_document_ids,
+        )
+        await self.index_repo.add_parsed_documents(
             index_id=index_id,
-            document_ids=request.document_ids,
-            parse_run_ids=request.parse_run_ids,
+            parsed_document_ids=request.parsed_document_ids,
         )
         return await self.get_index(index_id, project_id)
+
+    async def _validate_parsed_documents(
+        self,
+        *,
+        project_id: UUID,
+        config: IndexConfig,
+        parsed_document_ids: list[UUID],
+    ) -> None:
+        """Validate every parsed_doc against the index's declared family + segment."""
+        if not parsed_document_ids:
+            return
+
+        rows = await self.parsed_doc_repo.get_for_validation(
+            parsed_document_ids=parsed_document_ids,
+            project_id=project_id,
+        )
+        by_id = {row.parse_run_id: row for row in rows}
+
+        missing = [pid for pid in parsed_document_ids if pid not in by_id]
+        if missing:
+            raise NotFoundError(
+                f"parsed_document(s) not found in project: "
+                f"{', '.join(str(m) for m in missing)}"
+            )
+
+        family_mismatch: list[UUID] = []
+        failed_runs: list[UUID] = []
+        segment_missing: list[UUID] = []
+        for pid, row in by_id.items():
+            if row.parser != config.parser or row.parse_config_hash != config.parse_config_hash:
+                family_mismatch.append(pid)
+                continue
+            if row.run_status != "succeeded":
+                failed_runs.append(pid)
+                continue
+            if config.source_representation == "full_markdown" and row.full_markdown is None:
+                segment_missing.append(pid)
+            elif config.source_representation == "block" and row.block_count == 0:
+                segment_missing.append(pid)
+            # full_text is always populated by invariant
+
+        if family_mismatch:
+            raise ValidationError(
+                f"parsed_document(s) do not match declared family "
+                f"({config.parser}, {config.parse_config_hash}): "
+                f"{', '.join(str(m) for m in family_mismatch)}"
+            )
+        if failed_runs:
+            raise ValidationError(
+                f"parsed_document(s) come from a non-succeeded parse run: "
+                f"{', '.join(str(m) for m in failed_runs)}"
+            )
+        if segment_missing:
+            raise ValidationError(
+                f"parsed_document(s) lack {config.source_representation} segment: "
+                f"{', '.join(str(m) for m in segment_missing)}"
+            )
 
     async def remove_document(
         self,

@@ -59,7 +59,12 @@ async def create_index(client: AsyncClient, token: str, project_id: str) -> str:
         headers={"Authorization": f"Bearer {token}"},
         json={
             "name": "Test Index",
-            "config": {"chunkingStrategy": "recursive_character", "chunkSize": 512},
+            "config": {
+                "parser": "llamaparse",
+                "parseConfigHash": "h" * 64,
+                "chunkingStrategy": "recursive_character",
+                "chunkSize": 512,
+            },
         },
     )
     return resp.json()["id"]

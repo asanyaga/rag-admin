@@ -8,6 +8,7 @@ def _config(**kwargs) -> IndexConfig:
         source_representation="full_markdown",
         chunking_strategy="markdown_heading",
         parser="llamaparse",
+        parse_config_hash="h" * 64,
         split_heading_level=2,
         max_section_chars=4000,
     )

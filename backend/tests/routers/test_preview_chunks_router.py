@@ -123,6 +123,8 @@ async def _seed_run_with_pdoc(
 
 def _full_markdown_config() -> dict:
     return {
+        "parser": "llamaparse",
+        "parseConfigHash": "h" * 64,
         "sourceRepresentation": "full_markdown",
         "chunkingStrategy": "markdown_heading",
         "chunkSize": 512,
@@ -134,9 +136,11 @@ def _full_markdown_config() -> dict:
     }
 
 
-def _raw_text_config() -> dict:
+def _full_text_config() -> dict:
     return {
-        "sourceRepresentation": "raw_text",
+        "parser": "llamaparse",
+        "parseConfigHash": "h" * 64,
+        "sourceRepresentation": "full_text",
         "chunkingStrategy": "recursive_character",
         "chunkSize": 512,
         "chunkOverlap": 0,
@@ -150,38 +154,29 @@ def _raw_text_config() -> dict:
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_preview_chunks_validates_exactly_one_handle(
+async def test_preview_chunks_requires_parsed_document_id(
     client: AsyncClient, test_db: AsyncSession
 ):
-    """Body with neither documentId nor parsedDocumentId → 422."""
-    token = await _signup(client, "preview_neither@example.com")
-    user = await _user_by_email(test_db, "preview_neither@example.com")
+    """Posting a body with no parsed_document_id returns 422."""
+    token = await _signup(client, "preview_no_handle@example.com")
+    user = await _user_by_email(test_db, "preview_no_handle@example.com")
     project = await _make_project(test_db, user)
-
-    resp = await client.post(
-        f"/api/v1/projects/{project.id}/indexes/preview-chunks",
-        json={"config": _full_markdown_config()},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert resp.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_preview_chunks_validates_both_handles_supplied(
-    client: AsyncClient, test_db: AsyncSession
-):
-    """Body with BOTH documentId and parsedDocumentId → 422."""
-    token = await _signup(client, "preview_both@example.com")
-    user = await _user_by_email(test_db, "preview_both@example.com")
-    project = await _make_project(test_db, user)
-
-    resp = await client.post(
-        f"/api/v1/projects/{project.id}/indexes/preview-chunks",
-        json={
-            "documentId": str(uuid4()),
-            "parsedDocumentId": str(uuid4()),
-            "config": _full_markdown_config(),
+    body = {
+        "config": {
+            "parser": "llamaparse",
+            "parseConfigHash": "h" * 64,
+            "sourceRepresentation": "full_text",
+            "chunkingStrategy": "recursive_character",
+            "chunkSize": 500,
+            "chunkOverlap": 50,
+            "chunkUnit": "characters",
+            "embeddingProvider": "openai",
+            "embeddingModel": "text-embedding-3-small",
         },
+    }
+    resp = await client.post(
+        f"/api/v1/projects/{project.id}/indexes/preview-chunks",
+        json=body,
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 422
@@ -220,97 +215,6 @@ async def test_preview_chunks_with_parsed_document_id_full_markdown(
     assert len(body["previewChunks"]) >= 1
     assert body["previewChunks"][0]["content"] != ""
 
-
-@pytest.mark.asyncio
-async def test_preview_chunks_bridge_document_id_full_markdown(
-    client: AsyncClient, test_db: AsyncSession
-):
-    """Bridge path: documentId + CDM config → resolves latest parse run → 200."""
-    token = await _signup(client, "preview_bridge@example.com")
-    user = await _user_by_email(test_db, "preview_bridge@example.com")
-    project = await _make_project(test_db, user)
-
-    doc, _pdoc = await _seed_run_with_pdoc(
-        test_db,
-        user=user,
-        project=project,
-        sha="b" * 64,
-        full_markdown="# Bridge\n\nBridge content for preview test.",
-    )
-
-    resp = await client.post(
-        f"/api/v1/projects/{project.id}/indexes/preview-chunks",
-        json={
-            "documentId": str(doc.id),
-            "config": _full_markdown_config(),
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["totalChunksEstimate"] >= 1
-    assert len(body["previewChunks"]) >= 1
-
-
-@pytest.mark.asyncio
-async def test_preview_chunks_bridge_document_id_no_parse_run_returns_400(
-    client: AsyncClient, test_db: AsyncSession
-):
-    """documentId with no succeeded parse runs + CDM config → 400 mentioning 'parse'."""
-    token = await _signup(client, "preview_norun@example.com")
-    user = await _user_by_email(test_db, "preview_norun@example.com")
-    project = await _make_project(test_db, user)
-
-    # Seed document with a failed (non-succeeded) parse run only.
-    doc, _pdoc = await _seed_run_with_pdoc(
-        test_db,
-        user=user,
-        project=project,
-        sha="c" * 64,
-        status="failed",
-    )
-
-    resp = await client.post(
-        f"/api/v1/projects/{project.id}/indexes/preview-chunks",
-        json={
-            "documentId": str(doc.id),
-            "config": _full_markdown_config(),
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert resp.status_code == 400
-    assert "parse" in resp.json()["detail"].lower()
-
-
-@pytest.mark.asyncio
-async def test_preview_chunks_legacy_raw_text_path_unchanged(
-    client: AsyncClient, test_db: AsyncSession
-):
-    """raw_text + documentId → uses document.extracted_text → 200."""
-    token = await _signup(client, "preview_rawtext@example.com")
-    user = await _user_by_email(test_db, "preview_rawtext@example.com")
-    project = await _make_project(test_db, user)
-
-    doc, _pdoc = await _seed_run_with_pdoc(
-        test_db,
-        user=user,
-        project=project,
-        sha="d" * 64,
-        extracted_text="This is the raw extracted text for chunking.",
-    )
-
-    resp = await client.post(
-        f"/api/v1/projects/{project.id}/indexes/preview-chunks",
-        json={
-            "documentId": str(doc.id),
-            "config": _raw_text_config(),
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["totalChunksEstimate"] >= 1
-    assert len(body["previewChunks"]) >= 1
 
 
 @pytest.mark.asyncio
@@ -375,6 +279,8 @@ async def test_preview_chunks_seam_overlap_matches_config(
     assert pdoc is not None
 
     config = {
+        "parser": "llamaparse",
+        "parseConfigHash": "h" * 64,
         "sourceRepresentation": "full_text",
         "chunkingStrategy": "recursive_character",
         "chunkSize": 200,

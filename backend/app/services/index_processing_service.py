@@ -16,7 +16,6 @@ from app.models import IndexStatus, IndexDocumentStatus
 from app.repositories.index_repository import IndexRepository
 from app.repositories.chunk_repository import ChunkRepository
 from app.schemas.index import IndexConfig, IndexStats
-from app.services.chunking_service import get_chunking_service
 from app.services.chunking_dispatcher import ChunkingDispatcher
 from app.services.source_resolution_service import SourceResolutionService
 from app.services.embedding_provider import EmbeddingProviderRegistry
@@ -41,7 +40,6 @@ class IndexProcessingService:
         self.index_repo = index_repo
         self.chunk_repo = chunk_repo
         self.provider_key_service = ProviderKeyService(provider_key_repo)
-        self.chunking_service = get_chunking_service()
         # Seam dependencies (shared with chunk preview):
         self.source_resolver = SourceResolutionService(session)
         self.chunking_dispatcher = ChunkingDispatcher()
@@ -100,16 +98,14 @@ class IndexProcessingService:
                     "Please add your API key in settings."
                 )
 
-        # Validate CDM mode: all pending documents must have parse_run_id set
-        if config.source_representation != "raw_text":
-            for index_doc in index.index_documents:
-                if index_doc.processing_status == IndexDocumentStatus.pending:
-                    if not index_doc.parse_run_id:
-                        raise ValidationError(
-                            f"Document {index_doc.document_id} has no parse run set. "
-                            "All documents require a parse run when source_representation "
-                            "is not 'raw_text'."
-                        )
+        # Every CDM source_representation requires a parse run on each pending row.
+        for index_doc in index.index_documents:
+            if index_doc.processing_status == IndexDocumentStatus.pending:
+                if not index_doc.parse_run_id:
+                    raise ValidationError(
+                        f"IndexDocument {index_doc.document_id} has no parse_run_id; "
+                        "every parsed-doc indexed must reference a parse run"
+                    )
 
         # Update status to processing
         await self.index_repo.update_status(index_id, IndexStatus.processing)
@@ -176,20 +172,7 @@ class IndexProcessingService:
                     logger.info(f"Processing document {doc_id} ({document.title})")
 
                     # Dispatch: source representation → chunks
-                    if config.source_representation == "raw_text":
-                        if not document.extracted_text:
-                            raise ValueError("Document has no extracted text")
-                        source_type = "raw_text"
-                        doc_parse_run_id = None
-                        chunks = self.chunking_service.chunk_text(
-                            text=document.extracted_text,
-                            config=config,
-                            source_document_id=str(doc_id),
-                            source_filename=document.source_metadata.get("filename"),
-                            page_boundaries=document.processing_metadata.get("page_boundaries")
-                                if document.processing_metadata else None,
-                        )
-                    elif config.source_representation in ("full_text", "full_markdown", "block"):
+                    if config.source_representation in ("full_text", "full_markdown", "block"):
                         # CDM seam: shared with chunk preview.
                         source = await self.source_resolver.resolve(
                             parsed_document_id=index_doc.parse_run_id,

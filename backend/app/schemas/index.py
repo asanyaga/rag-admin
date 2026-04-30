@@ -17,11 +17,14 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 class IndexConfig(BaseModel):
     """Configuration for how documents are chunked and embedded."""
 
-    # Parse source binding
+    # Parse-config family — both required at validation time via
+    # `require_family_for_indexing`. Optional types let callers construct
+    # the schema with explicit None during ORM deserialisation, where the
+    # validator catches missing values uniformly.
     parser: str | None = Field(default=None)
     parse_config_hash: str | None = Field(default=None, alias="parseConfigHash")
-    source_representation: Literal["raw_text", "full_text", "full_markdown", "block"] = Field(
-        default="raw_text", alias="sourceRepresentation"
+    source_representation: Literal["full_text", "full_markdown", "block"] = Field(
+        default="full_text", alias="sourceRepresentation"
     )
 
     # Chunking strategy
@@ -63,14 +66,20 @@ class IndexConfig(BaseModel):
         return v
 
     @model_validator(mode="after")
+    def require_family_for_indexing(self) -> "IndexConfig":
+        if self.parser is None or self.parse_config_hash is None:
+            raise ValueError(
+                "IndexConfig requires parser and parse_config_hash"
+            )
+        return self
+
+    @model_validator(mode="after")
     def validate_representation_and_strategy(self) -> "IndexConfig":
         rep = self.source_representation
         strategy = self.chunking_strategy
 
-        # Validate strategy is compatible with representation
         text_strategies = {"fixed_size", "recursive_character"}
         allowed: dict[str, set[str]] = {
-            "raw_text": text_strategies,
             "full_text": text_strategies,
             "full_markdown": {"markdown_heading"},
             "block": {"block", "classified_block"},
@@ -132,16 +141,18 @@ class IndexCreate(BaseModel):
     """Schema for creating a new index."""
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = Field(None, max_length=2000)
-    document_ids: list[UUID] = Field(
+    parsed_document_ids: list[UUID] = Field(
         default_factory=list,
-        alias="documentIds",
-        description="Documents to include in this index"
+        alias="parsedDocumentIds",
+        description="Parsed-document IDs to include in this index. Each must "
+                    "match the family declared in `config.parser` and "
+                    "`config.parse_config_hash`.",
     )
     config: IndexConfig = Field(default_factory=IndexConfig)
     auto_process: bool = Field(
         default=False,
         alias="autoProcess",
-        description="Start processing immediately after creation"
+        description="Start processing immediately after creation",
     )
 
     model_config = ConfigDict(populate_by_name=True)
@@ -226,13 +237,12 @@ class IndexProcessingStatusResponse(BaseModel):
     )
 
 
-class AddDocumentsRequest(BaseModel):
-    """Schema for adding documents to an existing index."""
-    document_ids: list[UUID] = Field(..., alias="documentIds", min_length=1)
-    parse_run_ids: dict[UUID, UUID] | None = Field(
-        default=None,
-        alias="parseRunIds",
-        description="Map of document_id → parse_run_id. Required per document when source_representation != raw_text.",
+class AddParsedDocumentsRequest(BaseModel):
+    """Schema for adding parsed-documents to an existing index."""
+    parsed_document_ids: list[UUID] = Field(
+        ..., alias="parsedDocumentIds", min_length=1,
+        description="Parsed-document IDs to add. Each is validated against the "
+                    "index's declared family.",
     )
 
     model_config = ConfigDict(populate_by_name=True)
@@ -245,25 +255,14 @@ class AddDocumentsRequest(BaseModel):
 class ChunkPreviewRequest(BaseModel):
     """Schema for previewing chunks before processing.
 
-    Exactly one of `document_id` (legacy raw_text path / slice-2 wizard bridge)
-    or `parsed_document_id` (CDM path, matches the eventual spec shape) must be
-    supplied. `document_id` is removed in Unit 3.
+    `parsed_document_id` is the unit of preview — the same parsed-doc the
+    save path will read.
     """
-    document_id: UUID | None = Field(default=None, alias="documentId")
-    parsed_document_id: UUID | None = Field(default=None, alias="parsedDocumentId")
+    parsed_document_id: UUID = Field(..., alias="parsedDocumentId")
     config: IndexConfig
     max_chunks: int = Field(default=5, ge=1, le=20, alias="maxChunks")
 
     model_config = ConfigDict(populate_by_name=True)
-
-    @model_validator(mode="after")
-    def exactly_one_handle(self) -> "ChunkPreviewRequest":
-        provided = [self.document_id is not None, self.parsed_document_id is not None]
-        if sum(provided) != 1:
-            raise ValueError(
-                "Exactly one of documentId or parsedDocumentId must be provided"
-            )
-        return self
 
 
 class ChunkPreview(BaseModel):
