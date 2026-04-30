@@ -9,6 +9,7 @@ import { useProject } from '@/contexts/ProjectContext'
 import { useIndexes } from '@/hooks/useIndexes'
 import { useDocuments } from '@/hooks/useDocuments'
 import { IndexConfig, ChunkPreviewResponse, SourceRepresentation } from '@/types/index'
+import { resolveLatestParsedDocsForDocuments } from '@/lib/parsed-documents'
 import {
   Card,
   CardContent,
@@ -55,7 +56,6 @@ const STEPS = [
 ] as const
 
 const DEFAULT_CONFIG: Partial<IndexConfig> = {
-  sourceRepresentation: 'raw_text',
   chunkingStrategy: 'recursive_character',
   chunkSize: 512,
   chunkOverlap: 50,
@@ -115,7 +115,7 @@ export default function CreateIndexPage() {
     updateConfig('sourceRepresentation', value)
     if (value === 'full_markdown') {
       updateConfig('chunkingStrategy', 'markdown_heading')
-    } else if (value === 'raw_text' || value === 'full_text') {
+    } else if ((value as string) === 'raw_text' || value === 'full_text') {
       updateConfig('chunkingStrategy', 'recursive_character')
     }
   }
@@ -174,11 +174,28 @@ export default function CreateIndexPage() {
       toast.error('Select a document to preview')
       return
     }
+    if (!config.sourceRepresentation) {
+      toast.error('Select a source representation to preview')
+      return
+    }
+    if (!currentProject) {
+      toast.error('No project selected')
+      return
+    }
 
     setIsPreviewLoading(true)
     try {
+      const family = await resolveLatestParsedDocsForDocuments(
+        currentProject.id,
+        [previewDocumentId],
+        config.sourceRepresentation as 'full_text' | 'full_markdown' | 'block',
+      )
+      if (family.parsedDocumentIds.length === 0) {
+        toast.error('No parsed-documents available for preview')
+        return
+      }
       const result = await previewChunks({
-        documentId: previewDocumentId,
+        parsedDocumentId: family.parsedDocumentIds[0],
         config,
         maxChunks: 10,
       })
@@ -186,13 +203,15 @@ export default function CreateIndexPage() {
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         toast.error(extractErrorMessage(error.response.data, 'Failed to generate preview'))
+      } else if (error instanceof Error) {
+        toast.error(error.message)
       } else {
         toast.error('Failed to generate preview')
       }
     } finally {
       setIsPreviewLoading(false)
     }
-  }, [previewDocumentId, config, previewChunks])
+  }, [previewDocumentId, config, previewChunks, currentProject])
 
   const handleSubmit = async (autoProcess: boolean) => {
     if (!name.trim()) {
@@ -203,14 +222,32 @@ export default function CreateIndexPage() {
       toast.error('Select at least one document')
       return
     }
+    if (!config.sourceRepresentation) {
+      toast.error('Source representation is required')
+      return
+    }
+    if (!currentProject) {
+      toast.error('No project selected')
+      return
+    }
 
     setIsSubmitting(true)
     try {
+      const family = await resolveLatestParsedDocsForDocuments(
+        currentProject.id,
+        selectedDocumentIds,
+        config.sourceRepresentation as 'full_text' | 'full_markdown' | 'block',
+      )
+
       await createIndex({
         name: name.trim(),
         description: description.trim() || undefined,
-        documentIds: selectedDocumentIds,
-        config,
+        parsedDocumentIds: family.parsedDocumentIds,
+        config: {
+          ...config,
+          parser: family.parser,
+          parseConfigHash: family.parseConfigHash,
+        } as IndexConfig,
         autoProcess,
       })
       toast.success(
@@ -222,6 +259,8 @@ export default function CreateIndexPage() {
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         toast.error(extractErrorMessage(error.response.data, 'Failed to create index'))
+      } else if (error instanceof Error) {
+        toast.error(error.message)
       } else {
         toast.error('Failed to create index')
       }

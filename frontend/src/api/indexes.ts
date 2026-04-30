@@ -8,7 +8,7 @@ import {
   IndexCreate,
   IndexUpdate,
   IndexProcessingStatus,
-  AddDocumentsRequest,
+  AddParsedDocumentsRequest,
   ChunkPreviewRequest,
   ChunkPreviewResponse,
   Chunk,
@@ -45,21 +45,23 @@ export async function createIndex(
     `/projects/${projectId}/indexes`,
     {
       name: data.name,
-      description: data.description,
-      documentIds: data.documentIds,
+      description: data.description ?? null,
+      parsedDocumentIds: data.parsedDocumentIds,
       config: {
-        source_representation: data.config.sourceRepresentation ?? 'raw_text',
-        parser: data.config.parser ?? null,
-        parse_config_hash: data.config.parseConfigHash ?? null,
+        parser: data.config.parser,
+        parse_config_hash: data.config.parseConfigHash,
+        source_representation: data.config.sourceRepresentation,
         chunking_strategy: data.config.chunkingStrategy,
         chunk_size: data.config.chunkSize,
         chunk_overlap: data.config.chunkOverlap,
         chunk_unit: data.config.chunkUnit,
+        split_heading_level: data.config.splitHeadingLevel,
+        max_section_chars: data.config.maxSectionChars,
         embedding_provider: data.config.embeddingProvider,
         embedding_model: data.config.embeddingModel,
         embedding_dimensions: data.config.embeddingDimensions,
       },
-      autoProcess: data.autoProcess,
+      autoProcess: data.autoProcess ?? false,
     }
   )
   return response.data
@@ -119,18 +121,15 @@ export async function getProcessingStatus(
   return response.data
 }
 
-// Add documents to an index
-export async function addDocuments(
+// Add parsed documents to an index
+export async function addParsedDocuments(
   projectId: string,
   indexId: string,
-  data: AddDocumentsRequest
+  data: AddParsedDocumentsRequest,
 ): Promise<Index> {
   const response = await apiClient.post<Index>(
-    `/projects/${projectId}/indexes/${indexId}/documents`,
-    {
-      documentIds: data.documentIds,
-      parseRunIds: data.parseRunIds ?? null,
-    }
+    `/projects/${projectId}/indexes/${indexId}/parsed-documents`,
+    { parsedDocumentIds: data.parsedDocumentIds },
   )
   return response.data
 }
@@ -171,8 +170,7 @@ export async function previewChunks(
     },
     maxChunks: data.maxChunks ?? 5,
   }
-  if (data.parsedDocumentId) body.parsedDocumentId = data.parsedDocumentId
-  else if (data.documentId) body.documentId = data.documentId
+  body.parsedDocumentId = data.parsedDocumentId
 
   const response = await apiClient.post<ChunkPreviewResponse>(
     `/projects/${projectId}/indexes/preview-chunks`,

@@ -83,7 +83,7 @@ export default function IndexDetailPage() {
   // Add documents dialog
   const [addDocsDialogOpen, setAddDocsDialogOpen] = useState(false)
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([])
-  const [isAddingDocs, setIsAddingDocs] = useState(false)
+  // isAddingDocs removed — handleAddDocuments is a no-op stub until Unit 4/5
 
   // Remove document dialog
   const [removeDocDialogOpen, setRemoveDocDialogOpen] = useState(false)
@@ -162,19 +162,16 @@ export default function IndexDetailPage() {
   }
 
   const handleAddDocuments = async () => {
-    if (!projectId || !indexId || selectedDocIds.length === 0) return
-    setIsAddingDocs(true)
-    try {
-      await indexesApi.addDocuments(projectId, indexId, { documentIds: selectedDocIds })
-      await fetchIndex()
-      setAddDocsDialogOpen(false)
-      setSelectedDocIds([])
-      toast.success(`Added ${selectedDocIds.length} document(s)`)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add documents')
-    } finally {
-      setIsAddingDocs(false)
-    }
+    // TODO Unit 4/5: wire up the parsed-document picker UI.
+    // The legacy addDocuments API (document IDs) has been removed; the new
+    // addParsedDocuments API requires parsed-document IDs which this dialog
+    // doesn't have yet.  Disable the action until the new picker ships.
+    toast.error(
+      'Adding existing documents to an index is not yet wired to the new ' +
+        'parsed-document API. Use the parsed-document picker in Unit 4 once it ships.'
+    )
+    setAddDocsDialogOpen(false)
+    setSelectedDocIds([])
   }
 
   const handleRemoveDocument = async () => {
@@ -804,11 +801,9 @@ export default function IndexDetailPage() {
             </Button>
             <Button
               onClick={handleAddDocuments}
-              disabled={selectedDocIds.length === 0 || isAddingDocs}
+              disabled={selectedDocIds.length === 0}
             >
-              {isAddingDocs
-                ? 'Adding...'
-                : `Add ${selectedDocIds.length} Document(s)`}
+              {`Add ${selectedDocIds.length} Document(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>

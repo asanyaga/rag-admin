@@ -4,6 +4,7 @@
 import { useState, useCallback } from 'react'
 import { AxiosError } from 'axios'
 import { IndexCreate, IndexConfig, ChunkPreviewResponse, SourceRepresentation } from '@/types/index'
+import { resolveLatestParsedDocsForDocuments } from '@/lib/parsed-documents'
 import { DocumentListItem } from '@/types/document'
 import {
   Dialog,
@@ -33,9 +34,10 @@ import { toast } from 'sonner'
 interface IndexCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  projectId: string
   onSubmit: (data: IndexCreate) => Promise<void>
   onPreviewChunks: (
-    documentId: string,
+    parsedDocumentId: string,
     config: Partial<IndexConfig>
   ) => Promise<ChunkPreviewResponse>
   documents: DocumentListItem[]
@@ -43,7 +45,6 @@ interface IndexCreateDialogProps {
 }
 
 const DEFAULT_CONFIG: Partial<IndexConfig> = {
-  sourceRepresentation: 'raw_text',
   chunkingStrategy: 'recursive_character',
   chunkSize: 512,
   chunkOverlap: 50,
@@ -70,6 +71,7 @@ function extractErrorMessage(data: unknown, fallback: string): string {
 export function IndexCreateDialog({
   open,
   onOpenChange,
+  projectId,
   onSubmit,
   onPreviewChunks,
   documents,
@@ -91,22 +93,36 @@ export function IndexCreateDialog({
       toast.error('Select at least one document to preview')
       return
     }
+    if (!config.sourceRepresentation) {
+      toast.error('Select a source representation to preview')
+      return
+    }
 
     setIsPreviewLoading(true)
     try {
-      // Preview using the first selected document
-      const result = await onPreviewChunks(selectedDocumentIds[0], config)
+      const family = await resolveLatestParsedDocsForDocuments(
+        projectId,
+        selectedDocumentIds,
+        config.sourceRepresentation as 'full_text' | 'full_markdown' | 'block',
+      )
+      if (family.parsedDocumentIds.length === 0) {
+        toast.error('No parsed-documents available for preview')
+        return
+      }
+      const result = await onPreviewChunks(family.parsedDocumentIds[0], config)
       setPreview(result)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         toast.error(extractErrorMessage(error.response.data, 'Failed to generate preview'))
+      } else if (error instanceof Error) {
+        toast.error(error.message)
       } else {
         toast.error('Failed to generate preview')
       }
     } finally {
       setIsPreviewLoading(false)
     }
-  }, [selectedDocumentIds, config, onPreviewChunks])
+  }, [selectedDocumentIds, config, onPreviewChunks, projectId])
 
   const handleSubmit = async (autoProcess: boolean) => {
     if (!name.trim()) {
@@ -119,13 +135,28 @@ export function IndexCreateDialog({
       return
     }
 
+    if (!config.sourceRepresentation) {
+      toast.error('Source representation is required')
+      return
+    }
+
     setIsLoading(true)
     try {
+      const family = await resolveLatestParsedDocsForDocuments(
+        projectId,
+        selectedDocumentIds,
+        config.sourceRepresentation as 'full_text' | 'full_markdown' | 'block',
+      )
+
       await onSubmit({
         name: name.trim(),
         description: description.trim() || undefined,
-        documentIds: selectedDocumentIds,
-        config,
+        parsedDocumentIds: family.parsedDocumentIds,
+        config: {
+          ...config,
+          parser: family.parser,
+          parseConfigHash: family.parseConfigHash,
+        } as IndexConfig,
         autoProcess,
       })
       handleClose()
@@ -137,6 +168,8 @@ export function IndexCreateDialog({
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         toast.error(extractErrorMessage(error.response.data, 'Failed to create index'))
+      } else if (error instanceof Error) {
+        toast.error(error.message)
       } else {
         toast.error('Failed to create index')
       }
@@ -165,7 +198,7 @@ export function IndexCreateDialog({
     updateConfig('sourceRepresentation', value)
     if (value === 'full_markdown') {
       updateConfig('chunkingStrategy', 'markdown_heading')
-    } else if (value === 'raw_text' || value === 'full_text') {
+    } else if ((value as string) === 'raw_text' || value === 'full_text') {
       updateConfig('chunkingStrategy', 'recursive_character')
     }
   }

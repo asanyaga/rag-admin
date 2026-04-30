@@ -1,12 +1,26 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { IndexCreateDialog } from './IndexCreateDialog'
 import type { DocumentListItem } from '@/types/document'
 
+vi.mock('@/lib/parsed-documents', () => ({
+  resolveLatestParsedDocsForDocuments: vi.fn(),
+}))
+import { resolveLatestParsedDocsForDocuments } from '@/lib/parsed-documents'
+
+beforeEach(() => {
+  vi.mocked(resolveLatestParsedDocsForDocuments).mockResolvedValue({
+    parser: 'llamaparse',
+    parseConfigHash: 'h'.repeat(64),
+    parsedDocumentIds: ['parsed-doc-1'],
+  })
+})
+
 const defaultProps = {
   open: true,
   onOpenChange: vi.fn(),
+  projectId: 'proj-1',
   onSubmit: vi.fn().mockResolvedValue(undefined),
   onPreviewChunks: vi.fn().mockResolvedValue({
     totalChunksEstimate: 0,
@@ -103,10 +117,10 @@ describe('IndexCreateDialog — chunk preview', () => {
     const previewButton = screen.getByRole('button', { name: /preview chunks/i })
     await user.click(previewButton)
 
-    // onPreviewChunks should have been called with documentId and full_markdown config
+    // onPreviewChunks should have been called with the resolved parsedDocumentId and full_markdown config
     expect(onPreviewChunks).toHaveBeenCalledOnce()
-    const [calledDocumentId, calledConfig] = onPreviewChunks.mock.calls[0]
-    expect(calledDocumentId).toBe('doc-1')
+    const [calledParsedDocumentId, calledConfig] = onPreviewChunks.mock.calls[0]
+    expect(calledParsedDocumentId).toBe('parsed-doc-1')
     expect(calledConfig).toMatchObject({ sourceRepresentation: 'full_markdown' })
   })
 })

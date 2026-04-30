@@ -9,7 +9,7 @@ export type IndexStatus = 'created' | 'processing' | 'ready' | 'failed'
 export type IndexDocumentStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
 // CDM source representation
-export type SourceRepresentation = 'raw_text' | 'full_text' | 'full_markdown' | 'block'
+export type SourceRepresentation = 'full_text' | 'full_markdown' | 'block'
 
 // Chunking strategy
 export type ChunkingStrategy =
@@ -109,8 +109,8 @@ export interface IndexProcessingStatus {
 // Create index request
 export interface IndexCreate {
   name: string
-  description?: string
-  documentIds: string[]
+  description?: string | null
+  parsedDocumentIds: string[]
   config: Partial<IndexConfig>
   autoProcess?: boolean
 }
@@ -121,10 +121,9 @@ export interface IndexUpdate {
   description?: string
 }
 
-// Add documents request
-export interface AddDocumentsRequest {
-  documentIds: string[]
-  parseRunIds?: Record<string, string>  // document_id → parse_run_id
+// Add parsed documents request
+export interface AddParsedDocumentsRequest {
+  parsedDocumentIds: string[]
 }
 
 // Chunk preview types
@@ -147,8 +146,7 @@ export interface ChunkPreviewResponse {
 }
 
 export interface ChunkPreviewRequest {
-  documentId?: string
-  parsedDocumentId?: string
+  parsedDocumentId: string
   config: Partial<IndexConfig>
   maxChunks?: number
 }
