@@ -4,7 +4,7 @@
 
 **Spec:** [`docs/superpowers/specs/2026-04-29-cdm-index-parser-config-selector.md`](../specs/2026-04-29-cdm-index-parser-config-selector.md) §5
 **Depends on:** Unit 1 (parsed-doc reads + ORM tighten — PR #47) merged into `main`. Slice-2 (markdown chunking — PR #45) merged into `main`. Both are precursors to this branch.
-**Issue:** TBD (created in pre-implementation gate)
+**Issue:** [#48](https://github.com/asanyaga/rag-admin/issues/48)
 
 **Goal:** Replace the duplicated source-resolution logic between chunk preview and index processing with a single, shared `resolve_source(parsed_document_id, source_representation) → ChunkSource` seam. Lift the `2a0cfa1` band-aid so `Preview Chunks` works for `full_markdown` (and produces the *same* text the save path will chunk).
 
