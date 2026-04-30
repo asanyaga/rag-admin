@@ -19,7 +19,6 @@ from app.models.document import Document
 from app.repositories.index_repository import IndexRepository
 from app.repositories.chunk_repository import ChunkRepository
 from app.repositories.project_repository import ProjectRepository
-from app.repositories.document_repository import DocumentRepository
 from app.repositories.provider_key_repository import ProviderKeyRepository
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.schemas.index import (
@@ -44,7 +43,7 @@ from app.schemas.playground import PlaygroundAnswerRequest
 from app.services.answer_service import AnswerService
 from app.services.chunk_service import ChunkService
 from app.services.chunking_dispatcher import ChunkingDispatcher
-from app.services.chunking_service import ChunkResult, get_chunking_service
+from app.services.chunking_service import ChunkResult
 from app.services.index_processing_service import (
     IndexProcessingService,
     process_index_background,
@@ -83,10 +82,6 @@ def get_project_repo(db: AsyncSession = Depends(get_db)) -> ProjectRepository:
     """Dependency for project verification."""
     return ProjectRepository(db)
 
-
-def get_document_repo(db: AsyncSession = Depends(get_db)) -> DocumentRepository:
-    """Dependency for document verification."""
-    return DocumentRepository(db)
 
 
 def get_query_service(db: AsyncSession = Depends(get_db)) -> QueryService:
@@ -587,7 +582,7 @@ async def playground_answer(
     "/preview-chunks",
     response_model=ChunkPreviewResponse,
     summary="Preview chunks",
-    description="Preview how a document would be chunked without processing.",
+    description="Preview how a parsed-document would be chunked without processing.",
 )
 async def preview_chunks(
     project_id: UUID,
@@ -595,86 +590,41 @@ async def preview_chunks(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
     project_repo: ProjectRepository = Depends(get_project_repo),
-    document_repo: DocumentRepository = Depends(get_document_repo),
 ):
-    """Preview chunks for a document.
-
-    Accepts either `parsedDocumentId` (CDM path) or `documentId` (legacy /
-    bridge path). The schema validator guarantees exactly one is set.
-    """
     await verify_project_access(project_id, current_user, project_repo)
 
-    # ── Path 1: parsedDocumentId supplied (CDM path) ─────────────────────────
-    if data.parsed_document_id is not None:
-        parsed_doc_repo = ParsedDocumentRepository(db)
-        parsed_doc = await parsed_doc_repo.get_by_run(data.parsed_document_id)
-        if parsed_doc is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Parsed document {data.parsed_document_id} not found",
-            )
-        # Scope-check: verify the parsed-doc belongs to a document in this project.
-        result = await db.execute(
-            select(Document.id).where(
-                Document.source_document_id == parsed_doc.source_document_id,
-                Document.project_id == project_id,
-            )
-        )
-        if result.scalar_one_or_none() is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Parsed document {data.parsed_document_id} not found",
-            )
-        return await _preview_via_seam(
-            parsed_document_id=data.parsed_document_id,
-            config=data.config,
-            max_chunks=data.max_chunks,
-            source_document_id=None,
-            source_filename=None,
-            db=db,
-        )
-
-    # ── Path 2: documentId supplied (legacy / bridge path) ───────────────────
-    assert data.document_id is not None  # guaranteed by model_validator
-    document = await document_repo.get_by_id(data.document_id, current_user.id)
-    if not document or document.project_id != project_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document {data.document_id} not found",
-        )
-
-    # Legacy raw_text path: untouched, uses extracted_text directly.
-    if data.config.source_representation == "raw_text":
-        if not document.extracted_text:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Document has no extracted text",
-            )
-        chunking_service = get_chunking_service()
-        return chunking_service.preview_chunks(
-            text=document.extracted_text,
-            config=data.config,
-            max_chunks=data.max_chunks,
-        )
-
-    # CDM bridge: resolve the latest parsed-doc for this document.
     parsed_doc_repo = ParsedDocumentRepository(db)
-    parsed_doc = await parsed_doc_repo.get_latest_for_document(data.document_id)
+    parsed_doc = await parsed_doc_repo.get_by_run(data.parsed_document_id)
     if parsed_doc is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "No succeeded parse run found for this document. "
-                "Run a parse job before previewing CDM chunks."
-            ),
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Parsed document {data.parsed_document_id} not found",
         )
+
+    # Project scoping: a Document in this project must reference the same
+    # SourceDocument the parsed-doc points at.
+    scope_stmt = (
+        select(Document.id)
+        .where(
+            Document.source_document_id == parsed_doc.source_document_id,
+            Document.project_id == project_id,
+        )
+        .limit(1)
+    )
+    scope_result = await db.execute(scope_stmt)
+    if scope_result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Parsed document {data.parsed_document_id} not in project",
+        )
+
     return await _preview_via_seam(
-        parsed_document_id=parsed_doc.parse_run_id,
+        db=db,
+        parsed_document_id=data.parsed_document_id,
         config=data.config,
-        max_chunks=data.max_chunks,
         source_document_id=None,
         source_filename=None,
-        db=db,
+        max_chunks=data.max_chunks,
     )
 
 

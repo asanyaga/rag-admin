@@ -253,25 +253,14 @@ class AddParsedDocumentsRequest(BaseModel):
 class ChunkPreviewRequest(BaseModel):
     """Schema for previewing chunks before processing.
 
-    Exactly one of `document_id` (legacy raw_text path / slice-2 wizard bridge)
-    or `parsed_document_id` (CDM path, matches the eventual spec shape) must be
-    supplied. `document_id` is removed in Unit 3.
+    `parsed_document_id` is the unit of preview — the same parsed-doc the
+    save path will read.
     """
-    document_id: UUID | None = Field(default=None, alias="documentId")
-    parsed_document_id: UUID | None = Field(default=None, alias="parsedDocumentId")
+    parsed_document_id: UUID = Field(..., alias="parsedDocumentId")
     config: IndexConfig
     max_chunks: int = Field(default=5, ge=1, le=20, alias="maxChunks")
 
     model_config = ConfigDict(populate_by_name=True)
-
-    @model_validator(mode="after")
-    def exactly_one_handle(self) -> "ChunkPreviewRequest":
-        provided = [self.document_id is not None, self.parsed_document_id is not None]
-        if sum(provided) != 1:
-            raise ValueError(
-                "Exactly one of documentId or parsedDocumentId must be provided"
-            )
-        return self
 
 
 class ChunkPreview(BaseModel):
