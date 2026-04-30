@@ -42,6 +42,10 @@ class IndexConfig(BaseModel):
     chunk_overlap: int = Field(default=50, ge=0, alias="chunkOverlap")
     chunk_unit: Literal["tokens", "characters"] = Field(default="characters", alias="chunkUnit")
 
+    # Markdown-based config (markdown_heading)
+    split_heading_level: int = Field(default=2, ge=1, le=3, alias="splitHeadingLevel")
+    max_section_chars: int = Field(default=4000, ge=500, le=16000, alias="maxSectionChars")
+
     # Embedding config (unchanged)
     embedding_provider: str = Field(default="openai", alias="embeddingProvider")
     embedding_model: str = Field(default="text-embedding-3-small", alias="embeddingModel")
@@ -62,12 +66,6 @@ class IndexConfig(BaseModel):
     def validate_representation_and_strategy(self) -> "IndexConfig":
         rep = self.source_representation
         strategy = self.chunking_strategy
-
-        # CDM representations require parser to be set
-        if rep != "raw_text" and not self.parser:
-            raise ValueError(
-                f"source_representation='{rep}' requires 'parser' to be set"
-            )
 
         # Validate strategy is compatible with representation
         text_strategies = {"fixed_size", "recursive_character"}

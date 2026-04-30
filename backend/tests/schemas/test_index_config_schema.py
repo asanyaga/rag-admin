@@ -11,10 +11,10 @@ def test_default_config_is_raw_text():
     assert config.parse_config_hash is None
 
 
-def test_full_text_requires_parser():
-    with pytest.raises(PydanticValidationError) as exc_info:
-        IndexConfig(source_representation="full_text")
-    assert "parser" in str(exc_info.value).lower()
+def test_full_text_without_parser_is_valid():
+    config = IndexConfig(source_representation="full_text")
+    assert config.source_representation == "full_text"
+    assert config.parser is None
 
 
 def test_full_text_with_parser_is_valid():
@@ -56,3 +56,47 @@ def test_raw_text_with_fixed_size_is_valid():
 def test_parsing_strategy_field_no_longer_exists():
     config = IndexConfig()
     assert not hasattr(config, 'parsing_strategy')
+
+
+def test_markdown_config_defaults():
+    config = IndexConfig(
+        source_representation="full_markdown",
+        chunking_strategy="markdown_heading",
+        parser="llamaparse",
+    )
+    assert config.split_heading_level == 2
+    assert config.max_section_chars == 4000
+
+
+def test_split_heading_level_range():
+    with pytest.raises(PydanticValidationError):
+        IndexConfig(
+            source_representation="full_markdown",
+            chunking_strategy="markdown_heading",
+            parser="llamaparse",
+            split_heading_level=0,
+        )
+    with pytest.raises(PydanticValidationError):
+        IndexConfig(
+            source_representation="full_markdown",
+            chunking_strategy="markdown_heading",
+            parser="llamaparse",
+            split_heading_level=4,
+        )
+
+
+def test_max_section_chars_range():
+    with pytest.raises(PydanticValidationError):
+        IndexConfig(
+            source_representation="full_markdown",
+            chunking_strategy="markdown_heading",
+            parser="llamaparse",
+            max_section_chars=499,
+        )
+    with pytest.raises(PydanticValidationError):
+        IndexConfig(
+            source_representation="full_markdown",
+            chunking_strategy="markdown_heading",
+            parser="llamaparse",
+            max_section_chars=16001,
+        )

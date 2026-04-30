@@ -9,9 +9,10 @@ from app.services.exceptions import ValidationError
 
 
 def _make_mock_index(source_representation="raw_text"):
+    strategy = "markdown_heading" if source_representation == "full_markdown" else "recursive_character"
     config = IndexConfig(
         source_representation=source_representation,
-        chunking_strategy="recursive_character",
+        chunking_strategy=strategy,
         parser="llamaparse" if source_representation != "raw_text" else None,
         parse_config_hash="abc123" if source_representation != "raw_text" else None,
     )
@@ -285,6 +286,156 @@ async def test_add_documents_passes_parse_run_ids_to_repo():
     call_kwargs = index_repo.add_documents.call_args
     assert call_kwargs.kwargs.get("parse_run_ids") == {doc_id: run_id} or \
            (len(call_kwargs.args) > 2 and call_kwargs.args[2] == {doc_id: run_id})
+
+
+@pytest.mark.asyncio
+async def test_process_index_full_markdown():
+    """full_markdown: chunks sourced from ParsedDocument.full_markdown,
+    source_type = "full_markdown", heading_path present in chunk metadata."""
+    index = _make_mock_index(source_representation="full_markdown")
+    index.config = {
+        "source_representation": "full_markdown",
+        "chunking_strategy": "markdown_heading",
+        "parser": "llamaparse",
+        "parse_config_hash": "abc123",
+        "split_heading_level": 2,
+        "max_section_chars": 4000,
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "chunk_unit": "characters",
+        "embedding_provider": "openai",
+        "embedding_model": "text-embedding-3-small",
+        "embedding_dimensions": None,
+    }
+    parse_run_id = uuid4()
+    index_doc = _make_mock_index_doc(parse_run_id=parse_run_id)
+    index.index_documents = [index_doc]
+    index.version = 1
+
+    parsed_doc = MagicMock()
+    parsed_doc.full_markdown = "# Section\nSome markdown content here."
+
+    index_repo = AsyncMock()
+    index_repo.get_by_id_with_documents = AsyncMock(return_value=index)
+    index_repo.get_pending_documents = AsyncMock(return_value=[index_doc])
+    index_repo.update_document_status = AsyncMock()
+    index_repo.update_status = AsyncMock()
+    index_repo.update_stats = AsyncMock()
+    index_repo.increment_version = AsyncMock()
+    index_repo.write_index_event = AsyncMock()
+
+    parsed_doc_repo = AsyncMock()
+    parsed_doc_repo.get_by_run = AsyncMock(return_value=parsed_doc)
+
+    chunk_repo = AsyncMock()
+    chunk_repo.create_batch = AsyncMock()
+    chunk_repo.get_stats = AsyncMock(return_value={
+        "total_chunks": 1, "total_documents": 1,
+        "avg_chunk_size_chars": 37.0, "avg_chunk_size_tokens": 8.0,
+        "min_chunk_size_chars": 37, "max_chunk_size_chars": 37,
+        "total_tokens": 8,
+    })
+
+    mock_embedding_provider = AsyncMock()
+    mock_embedding_provider.embed_texts = AsyncMock(return_value=[[0.1, 0.2]])
+    mock_embedding_provider.get_dimensions = MagicMock(return_value=2)
+
+    with patch("app.services.index_processing_service.EmbeddingProviderRegistry") as mock_reg, \
+         patch("app.services.index_processing_service.ParsedDocumentRepository",
+               return_value=parsed_doc_repo), \
+         patch("app.services.index_processing_service.ProviderKeyService") as mock_pks:
+        mock_reg.get_provider.return_value = mock_embedding_provider
+        mock_pks.return_value.get_key_for_provider = AsyncMock(return_value="test-key")
+
+        service = IndexProcessingService(
+            session=AsyncMock(),
+            index_repo=index_repo,
+            chunk_repo=chunk_repo,
+            provider_key_repo=AsyncMock(),
+        )
+        await service.process_index(index.id, uuid4(), uuid4())
+
+    parsed_doc_repo.get_by_run.assert_called_once_with(parse_run_id)
+
+    call_args = chunk_repo.create_batch.call_args[0][0]
+    assert call_args[0]["source_type"] == "full_markdown"
+    assert call_args[0]["parse_run_id"] == str(parse_run_id)
+    assert "heading_path" in call_args[0]["chunk_metadata"]
+
+
+@pytest.mark.asyncio
+async def test_full_markdown_missing_raises():
+    """ValueError when parse run has no full_markdown."""
+    index = _make_mock_index(source_representation="full_markdown")
+    index.config = {
+        "source_representation": "full_markdown",
+        "chunking_strategy": "markdown_heading",
+        "parser": "llamaparse",
+        "parse_config_hash": "abc123",
+        "split_heading_level": 2,
+        "max_section_chars": 4000,
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "chunk_unit": "characters",
+        "embedding_provider": "openai",
+        "embedding_model": "text-embedding-3-small",
+        "embedding_dimensions": None,
+    }
+    parse_run_id = uuid4()
+    index_doc = _make_mock_index_doc(parse_run_id=parse_run_id)
+    index.index_documents = [index_doc]
+    index.version = 1
+
+    parsed_doc = MagicMock()
+    parsed_doc.full_markdown = None  # missing
+
+    index_repo = AsyncMock()
+    index_repo.get_by_id_with_documents = AsyncMock(return_value=index)
+    index_repo.get_pending_documents = AsyncMock(return_value=[index_doc])
+    index_repo.update_document_status = AsyncMock()
+    index_repo.update_status = AsyncMock()
+    index_repo.update_stats = AsyncMock()
+    index_repo.increment_version = AsyncMock()
+    index_repo.write_index_event = AsyncMock()
+
+    parsed_doc_repo = AsyncMock()
+    parsed_doc_repo.get_by_run = AsyncMock(return_value=parsed_doc)
+
+    chunk_repo = AsyncMock()
+    chunk_repo.get_stats = AsyncMock(return_value={
+        "total_chunks": 0, "total_documents": 1,
+        "avg_chunk_size_chars": 0.0, "avg_chunk_size_tokens": 0.0,
+        "min_chunk_size_chars": 0, "max_chunk_size_chars": 0,
+        "total_tokens": 0,
+    })
+
+    mock_embedding_provider = AsyncMock()
+    mock_embedding_provider.embed_texts = AsyncMock(return_value=[])
+    mock_embedding_provider.get_dimensions = MagicMock(return_value=1536)
+
+    with patch("app.services.index_processing_service.EmbeddingProviderRegistry") as mock_reg, \
+         patch("app.services.index_processing_service.ParsedDocumentRepository",
+               return_value=parsed_doc_repo), \
+         patch("app.services.index_processing_service.ProviderKeyService") as mock_pks:
+        mock_reg.get_provider.return_value = mock_embedding_provider
+        mock_pks.return_value.get_key_for_provider = AsyncMock(return_value="test-key")
+
+        service = IndexProcessingService(
+            session=AsyncMock(),
+            index_repo=index_repo,
+            chunk_repo=chunk_repo,
+            provider_key_repo=AsyncMock(),
+        )
+        await service.process_index(index.id, uuid4(), uuid4())
+
+    # Document must be marked failed with a descriptive message
+    failed_calls = [
+        c for c in index_repo.update_document_status.call_args_list
+        if c.args[2] == IndexDocumentStatus.failed
+    ]
+    assert len(failed_calls) == 1
+    error_msg = str(failed_calls[0])
+    assert "full_markdown" in error_msg.lower() or "markdown" in error_msg.lower()
 
 
 def test_index_response_includes_version_and_config_dirty():

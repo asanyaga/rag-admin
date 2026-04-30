@@ -13,7 +13,8 @@
       "Bash(uv pip show:*)",
       "Bash(docker compose ps:*)",
       "Bash(docker compose config:*)",
-      "Bash(docker compose logs:*)"
+      "Bash(docker compose logs:*)",
+      "Bash(npm --prefix frontend run test -- *)"
     ]
   }
 }

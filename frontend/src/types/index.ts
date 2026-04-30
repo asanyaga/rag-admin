@@ -30,6 +30,9 @@ export interface IndexConfig {
   chunkSize: number
   chunkOverlap: number
   chunkUnit: 'tokens' | 'characters'
+  // Markdown-specific chunking
+  splitHeadingLevel: number
+  maxSectionChars: number
   // Embedding
   embeddingProvider: string
   embeddingModel: string
