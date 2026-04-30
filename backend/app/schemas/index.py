@@ -139,16 +139,18 @@ class IndexCreate(BaseModel):
     """Schema for creating a new index."""
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = Field(None, max_length=2000)
-    document_ids: list[UUID] = Field(
+    parsed_document_ids: list[UUID] = Field(
         default_factory=list,
-        alias="documentIds",
-        description="Documents to include in this index"
+        alias="parsedDocumentIds",
+        description="Parsed-document IDs to include in this index. Each must "
+                    "match the family declared in `config.parser` and "
+                    "`config.parse_config_hash`.",
     )
     config: IndexConfig = Field(default_factory=IndexConfig)
     auto_process: bool = Field(
         default=False,
         alias="autoProcess",
-        description="Start processing immediately after creation"
+        description="Start processing immediately after creation",
     )
 
     model_config = ConfigDict(populate_by_name=True)
@@ -233,13 +235,12 @@ class IndexProcessingStatusResponse(BaseModel):
     )
 
 
-class AddDocumentsRequest(BaseModel):
-    """Schema for adding documents to an existing index."""
-    document_ids: list[UUID] = Field(..., alias="documentIds", min_length=1)
-    parse_run_ids: dict[UUID, UUID] | None = Field(
-        default=None,
-        alias="parseRunIds",
-        description="Map of document_id → parse_run_id. Required per document.",
+class AddParsedDocumentsRequest(BaseModel):
+    """Schema for adding parsed-documents to an existing index."""
+    parsed_document_ids: list[UUID] = Field(
+        ..., alias="parsedDocumentIds", min_length=1,
+        description="Parsed-document IDs to add. Each is validated against the "
+                    "index's declared family.",
     )
 
     model_config = ConfigDict(populate_by_name=True)
