@@ -45,7 +45,7 @@ class ChunkingDispatcher:
                     source_document_id=source_document_id,
                     source_filename=source_filename,
                 )
-            # full_text (and raw_text, if a caller routes raw_text here) use the plain-text chunker.
+            # full_text uses the plain-text chunker.
             return self.chunking_service.chunk_text(
                 text=source.text,
                 config=config,

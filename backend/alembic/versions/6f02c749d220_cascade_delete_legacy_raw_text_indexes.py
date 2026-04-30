@@ -34,5 +34,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Data delete is non-reversible; downgrade is a no-op.
+    """No-op.
+
+    Data deletion is not reversible — downgrading this migration restores no
+    data. The schema is unchanged in either direction.
+    """
     pass

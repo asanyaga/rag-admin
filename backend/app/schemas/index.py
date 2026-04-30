@@ -17,8 +17,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 class IndexConfig(BaseModel):
     """Configuration for how documents are chunked and embedded."""
 
-    # Parse-config family — both required at validation time. Optional types
-    # let the wizard build IndexConfig progressively before binding the family.
+    # Parse-config family — both required at validation time via
+    # `require_family_for_indexing`. Optional types let callers construct
+    # the schema with explicit None during ORM deserialisation, where the
+    # validator catches missing values uniformly.
     parser: str | None = Field(default=None)
     parse_config_hash: str | None = Field(default=None, alias="parseConfigHash")
     source_representation: Literal["full_text", "full_markdown", "block"] = Field(

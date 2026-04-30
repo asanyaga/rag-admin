@@ -12,7 +12,7 @@ async def _make_index(db: AsyncSession, project_id, user_id) -> Index:
         project_id=project_id,
         created_by=user_id,
         name="test-index",
-        config={"chunking_strategy": "recursive_character", "source_representation": "raw_text"},
+        config={"chunking_strategy": "recursive_character", "source_representation": "full_text"},
         status=IndexStatus.ready,
     )
     db.add(index)

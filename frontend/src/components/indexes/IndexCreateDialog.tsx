@@ -100,6 +100,7 @@ export function IndexCreateDialog({
 
     setIsPreviewLoading(true)
     try {
+      // BRIDGE: Unit 4's parsed-doc picker replaces this resolver with explicit selection.
       const family = await resolveLatestParsedDocsForDocuments(
         projectId,
         selectedDocumentIds,
@@ -142,6 +143,7 @@ export function IndexCreateDialog({
 
     setIsLoading(true)
     try {
+      // BRIDGE: Unit 4's parsed-doc picker replaces this resolver with explicit selection.
       const family = await resolveLatestParsedDocsForDocuments(
         projectId,
         selectedDocumentIds,
