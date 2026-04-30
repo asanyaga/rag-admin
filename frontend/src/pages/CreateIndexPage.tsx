@@ -8,7 +8,7 @@ import { AxiosError } from 'axios'
 import { useProject } from '@/contexts/ProjectContext'
 import { useIndexes } from '@/hooks/useIndexes'
 import { useDocuments } from '@/hooks/useDocuments'
-import { IndexConfig, ChunkPreviewResponse } from '@/types/index'
+import { IndexConfig, ChunkPreviewResponse, SourceRepresentation } from '@/types/index'
 import {
   Card,
   CardContent,
@@ -30,6 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Slider } from '@/components/ui/slider'
 import { DocumentSelector } from '@/components/indexes/DocumentSelector'
 import { ChunkPreviewPanel } from '@/components/indexes/ChunkPreviewPanel'
 import { toast } from 'sonner'
@@ -53,12 +55,28 @@ const STEPS = [
 ] as const
 
 const DEFAULT_CONFIG: Partial<IndexConfig> = {
+  sourceRepresentation: 'raw_text',
   chunkingStrategy: 'recursive_character',
   chunkSize: 512,
   chunkOverlap: 50,
   chunkUnit: 'characters',
+  splitHeadingLevel: 2,
+  maxSectionChars: 4000,
   embeddingProvider: 'openai',
   embeddingModel: 'text-embedding-3-small',
+}
+
+function extractErrorMessage(data: unknown, fallback: string): string {
+  if (!data || typeof data !== 'object') return fallback
+  const d = data as Record<string, unknown>
+  if (typeof d.detail === 'string') return d.detail
+  if (Array.isArray(d.detail)) {
+    return d.detail.map((e: unknown) => {
+      if (e && typeof e === 'object' && 'msg' in e) return String((e as Record<string, unknown>).msg)
+      return String(e)
+    }).join('; ')
+  }
+  return fallback
 }
 
 export default function CreateIndexPage() {
@@ -88,9 +106,18 @@ export default function CreateIndexPage() {
     }
   }, [currentProject, navigate])
 
-  const updateConfig = (key: keyof IndexConfig, value: string | number) => {
+  const updateConfig = (key: keyof IndexConfig, value: IndexConfig[keyof IndexConfig]) => {
     setConfig((prev) => ({ ...prev, [key]: value }))
     setPreview(null)
+  }
+
+  const handleSourceRepresentationChange = (value: SourceRepresentation) => {
+    updateConfig('sourceRepresentation', value)
+    if (value === 'full_markdown') {
+      updateConfig('chunkingStrategy', 'markdown_heading')
+    } else if (value === 'raw_text' || value === 'full_text') {
+      updateConfig('chunkingStrategy', 'recursive_character')
+    }
   }
 
   const canProceedFromStep = (step: number): boolean => {
@@ -158,7 +185,7 @@ export default function CreateIndexPage() {
       setPreview(result)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
-        toast.error(error.response.data?.detail || 'Failed to generate preview')
+        toast.error(extractErrorMessage(error.response.data, 'Failed to generate preview'))
       } else {
         toast.error('Failed to generate preview')
       }
@@ -194,7 +221,7 @@ export default function CreateIndexPage() {
       navigate('/index')
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
-        toast.error(error.response.data?.detail || 'Failed to create index')
+        toast.error(extractErrorMessage(error.response.data, 'Failed to create index'))
       } else {
         toast.error('Failed to create index')
       }
@@ -367,110 +394,161 @@ export default function CreateIndexPage() {
               <div className="space-y-8">
                 {/* Chunking Section */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold">Chunking</h3>
+                  <h3 className="text-lg font-semibold">Chunking</h3>
+
+                  {/* Source representation */}
+                  <div className="space-y-2">
+                    <Label>Source</Label>
+                    <ToggleGroup
+                      type="single"
+                      value={config.sourceRepresentation ?? 'raw_text'}
+                      onValueChange={(v) =>
+                        v && handleSourceRepresentationChange(v as SourceRepresentation)
+                      }
+                      className="justify-start"
+                    >
+                      <ToggleGroupItem value="raw_text" aria-label="Raw text">
+                        Raw text
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="full_text" aria-label="Full text">
+                        Full text
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="full_markdown" aria-label="Full Markdown">
+                        Full Markdown
+                      </ToggleGroupItem>
+                    </ToggleGroup>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Strategy</Label>
-                      <Select
-                        value={config.chunkingStrategy}
-                        onValueChange={(v) =>
-                          updateConfig(
-                            'chunkingStrategy',
-                            v as IndexConfig['chunkingStrategy']
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="recursive_character">
-                            Recursive Character (Recommended)
-                          </SelectItem>
-                          <SelectItem value="fixed_size">
-                            Fixed Size
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Splits text recursively by common separators
-                      </p>
-                    </div>
+                  {config.sourceRepresentation === 'full_markdown' ? (
+                    /* Markdown-specific controls */
+                    <>
+                      <div className="space-y-2">
+                        <Label>Heading split level</Label>
+                        <ToggleGroup
+                          type="single"
+                          value={String(config.splitHeadingLevel ?? 2)}
+                          onValueChange={(v) =>
+                            v && updateConfig('splitHeadingLevel', parseInt(v))
+                          }
+                          className="justify-start"
+                        >
+                          <ToggleGroupItem value="1">H1 only</ToggleGroupItem>
+                          <ToggleGroupItem value="2">H1 + H2</ToggleGroupItem>
+                          <ToggleGroupItem value="3">H1 + H2 + H3</ToggleGroupItem>
+                        </ToggleGroup>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Max section size</Label>
+                          <span className="text-sm text-muted-foreground">
+                            {(config.maxSectionChars ?? 4000).toLocaleString()} chars
+                          </span>
+                        </div>
+                        <Slider
+                          min={500}
+                          max={16000}
+                          step={500}
+                          value={[config.maxSectionChars ?? 4000]}
+                          onValueChange={([v]) => updateConfig('maxSectionChars', v)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Sections larger than this are split further.
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    /* Text-based chunking controls */
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Strategy</Label>
+                          <Select
+                            value={config.chunkingStrategy}
+                            onValueChange={(v) =>
+                              updateConfig(
+                                'chunkingStrategy',
+                                v as IndexConfig['chunkingStrategy']
+                              )
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="recursive_character">
+                                Recursive Character (Recommended)
+                              </SelectItem>
+                              <SelectItem value="fixed_size">Fixed Size</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            Splits text recursively by common separators
+                          </p>
+                        </div>
 
-                    <div className="space-y-2">
-                      <Label>Unit</Label>
-                      <Select
-                        value={config.chunkUnit}
-                        onValueChange={(v) =>
-                          updateConfig(
-                            'chunkUnit',
-                            v as IndexConfig['chunkUnit']
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="characters">Characters</SelectItem>
-                          <SelectItem value="tokens">Tokens</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                        <div className="space-y-2">
+                          <Label>Unit</Label>
+                          <Select
+                            value={config.chunkUnit}
+                            onValueChange={(v) =>
+                              updateConfig('chunkUnit', v as IndexConfig['chunkUnit'])
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="characters">Characters</SelectItem>
+                              <SelectItem value="tokens">Tokens</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Chunk Size</Label>
-                      <Input
-                        type="number"
-                        min={100}
-                        max={8000}
-                        value={config.chunkSize}
-                        onChange={(e) =>
-                          updateConfig(
-                            'chunkSize',
-                            parseInt(e.target.value) || 512
-                          )
-                        }
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Target size per chunk (100-8000)
-                      </p>
-                    </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Chunk Size</Label>
+                          <Input
+                            type="number"
+                            min={100}
+                            max={8000}
+                            value={config.chunkSize}
+                            onChange={(e) =>
+                              updateConfig('chunkSize', parseInt(e.target.value) || 512)
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Target size per chunk (100-8000)
+                          </p>
+                        </div>
 
-                    <div className="space-y-2">
-                      <Label>Overlap</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={Math.floor((config.chunkSize || 512) / 2)}
-                        value={config.chunkOverlap}
-                        onChange={(e) =>
-                          updateConfig(
-                            'chunkOverlap',
-                            parseInt(e.target.value) || 0
-                          )
-                        }
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Overlap between chunks (max{' '}
-                        {Math.floor((config.chunkSize || 512) / 2)})
-                      </p>
-                    </div>
-                  </div>
+                        <div className="space-y-2">
+                          <Label>Overlap</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={Math.floor((config.chunkSize || 512) / 2)}
+                            value={config.chunkOverlap}
+                            onChange={(e) =>
+                              updateConfig('chunkOverlap', parseInt(e.target.value) || 0)
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Overlap between chunks (max{' '}
+                            {Math.floor((config.chunkSize || 512) / 2)})
+                          </p>
+                        </div>
+                      </div>
 
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Smaller chunks provide more precise retrieval but may
-                      increase costs. 512-1024 characters works well for most
-                      documents.
-                    </AlertDescription>
-                  </Alert>
+                      <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription>
+                          Smaller chunks provide more precise retrieval but may increase
+                          costs. 512-1024 characters works well for most documents.
+                        </AlertDescription>
+                      </Alert>
+                    </>
+                  )}
                 </div>
 
                 {/* Embedding Section */}
@@ -577,10 +655,22 @@ export default function CreateIndexPage() {
                       </span>
                     </div>
                     <div className="flex justify-between">
+                      <span className="text-muted-foreground">Source:</span>
+                      <span className="font-medium">
+                        {config.sourceRepresentation === 'full_markdown'
+                          ? 'Full Markdown'
+                          : config.sourceRepresentation === 'full_text'
+                          ? 'Full text'
+                          : 'Raw text'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
                       <span className="text-muted-foreground">Strategy:</span>
                       <span className="font-medium">
                         {config.chunkingStrategy === 'recursive_character'
                           ? 'Recursive Character'
+                          : config.chunkingStrategy === 'markdown_heading'
+                          ? 'Markdown Heading'
                           : 'Fixed Size'}
                       </span>
                     </div>
