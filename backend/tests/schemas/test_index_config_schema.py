@@ -11,10 +11,10 @@ def test_default_config_is_raw_text():
     assert config.parse_config_hash is None
 
 
-def test_full_text_requires_parser():
-    with pytest.raises(PydanticValidationError) as exc_info:
-        IndexConfig(source_representation="full_text")
-    assert "parser" in str(exc_info.value).lower()
+def test_full_text_without_parser_is_valid():
+    config = IndexConfig(source_representation="full_text")
+    assert config.source_representation == "full_text"
+    assert config.parser is None
 
 
 def test_full_text_with_parser_is_valid():

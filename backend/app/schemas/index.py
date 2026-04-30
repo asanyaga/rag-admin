@@ -67,12 +67,6 @@ class IndexConfig(BaseModel):
         rep = self.source_representation
         strategy = self.chunking_strategy
 
-        # CDM representations require parser to be set
-        if rep != "raw_text" and not self.parser:
-            raise ValueError(
-                f"source_representation='{rep}' requires 'parser' to be set"
-            )
-
         # Validate strategy is compatible with representation
         text_strategies = {"fixed_size", "recursive_character"}
         allowed: dict[str, set[str]] = {
