@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import Index, IndexDocument, IndexStatus, IndexDocumentStatus, Chunk, Document
+from app.models.document import Document as DocumentORM
+from app.models.parse_run import ParseRun
 from app.schemas.index import IndexConfig
 
 
@@ -163,28 +165,63 @@ class IndexRepository:
 
     # Index-Document relationship methods
 
-    async def add_documents(
+    async def add_parsed_documents(
         self,
         index_id: UUID,
-        document_ids: list[UUID],
-        parse_run_ids: dict[UUID, UUID] | None = None,
+        parsed_document_ids: list[UUID],
     ) -> list[IndexDocument]:
-        """Add documents to an index."""
-        index_docs = []
-        for doc_id in document_ids:
-            index_doc = IndexDocument(
+        """Add parsed-documents to an index.
+
+        Each `parsed_document_id` is the parse_run_id of a ParsedDocument
+        (under the current 1:1 schema). The corresponding `document_id` is
+        looked up via the parsed-doc → source_document → document chain.
+        """
+        if not parsed_document_ids:
+            return []
+
+        # Resolve (parse_run_id, source_document_id) pairs.
+        pr_rows = await self.session.execute(
+            select(ParseRun.id, ParseRun.source_document_id)
+            .where(ParseRun.id.in_(parsed_document_ids))
+        )
+        sd_by_pr = {pr_id: sd_id for pr_id, sd_id in pr_rows.all()}
+
+        # Resolve source_document_id -> document_id (any Document referencing it).
+        src_ids = list(sd_by_pr.values())
+        doc_rows = await self.session.execute(
+            select(DocumentORM.id, DocumentORM.source_document_id)
+            .where(DocumentORM.source_document_id.in_(src_ids))
+        )
+        doc_by_sd: dict[UUID, UUID] = {}
+        # Multiple Documents can share a source_document (deduplicated content);
+        # take whichever appears first.
+        for doc_id, sd_id in doc_rows.all():
+            doc_by_sd.setdefault(sd_id, doc_id)
+
+        rows: list[IndexDocument] = []
+        for parsed_doc_id in parsed_document_ids:
+            sd_id = sd_by_pr.get(parsed_doc_id)
+            if sd_id is None:
+                raise ValueError(f"Parsed document {parsed_doc_id} not found")
+            doc_id = doc_by_sd.get(sd_id)
+            if doc_id is None:
+                raise ValueError(
+                    f"No Document references source_document {sd_id} "
+                    f"for parsed_document {parsed_doc_id}"
+                )
+            row = IndexDocument(
                 index_id=index_id,
                 document_id=doc_id,
+                parse_run_id=parsed_doc_id,
                 processing_status=IndexDocumentStatus.pending,
-                parse_run_id=(parse_run_ids or {}).get(doc_id),
             )
-            self.session.add(index_doc)
-            index_docs.append(index_doc)
+            self.session.add(row)
+            rows.append(row)
 
         await self.session.commit()
-        for doc in index_docs:
-            await self.session.refresh(doc)
-        return index_docs
+        for row in rows:
+            await self.session.refresh(row)
+        return rows
 
     async def remove_document(
         self,

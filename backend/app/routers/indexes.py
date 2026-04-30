@@ -29,7 +29,7 @@ from app.schemas.index import (
     IndexResponse,
     IndexListResponse,
     IndexProcessingStatusResponse,
-    AddDocumentsRequest,
+    AddParsedDocumentsRequest,
     ChunkPreview,
     ChunkPreviewRequest,
     ChunkPreviewResponse,
@@ -426,7 +426,7 @@ async def get_processing_status(
 async def add_documents(
     project_id: UUID,
     index_id: UUID,
-    data: AddDocumentsRequest,
+    data: AddParsedDocumentsRequest,
     current_user: User = Depends(get_current_active_user),
     service: IndexService = Depends(get_index_service),
     project_repo: ProjectRepository = Depends(get_project_repo),

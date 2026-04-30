@@ -7,7 +7,7 @@ from app.models import IndexStatus, IndexDocumentStatus
 from app.repositories.index_repository import IndexRepository
 from app.repositories.chunk_repository import ChunkRepository
 from app.schemas.index import (
-    AddDocumentsRequest,
+    AddParsedDocumentsRequest,
     IndexConfig,
     IndexStats,
     IndexCreate,
@@ -206,7 +206,7 @@ class IndexService:
         self,
         index_id: UUID,
         project_id: UUID,
-        request: AddDocumentsRequest,
+        request: AddParsedDocumentsRequest,
     ) -> IndexResponse:
         """Add documents to an index.
 
