@@ -6,37 +6,19 @@
 
 ---
 
+**Depends on:** [Parser & Config Selector](./2026-04-29-cdm-index-parser-config-selector.md) — the parser+config selector and `parse_run_ids` binding must be complete before this slice.
+
 ## Scope
 
-- Parser + config selector: dropdown of `(parser, config_hash)` combinations from project parse runs
-- Representation availability badges per selected parser config
-- Add-documents dialog: parse run mismatch error + inline parse action
+- Add-documents dialog: parse run mismatch error + inline parse action (for adding docs to existing indexes)
 - Index list: `config_dirty` dot indicator (already in Slice 4 backend; this slice adds the API query support)
 - Reprocess history panel on index detail page
+
+> **Not in scope:** Parser+config selector and representation availability badges have been extracted to a dedicated spec: [CDM Index — Parser & Config Selector](./2026-04-29-cdm-index-parser-config-selector.md).
 
 ---
 
 ## Backend
-
-### New endpoint: available parser configs for a project
-
-```
-GET /projects/{projectId}/parse-configs
-```
-
-Returns distinct `(parser, parse_config_hash)` combinations that have at least one successful parse run across all documents in the project.
-
-```python
-class ParseConfigOption(BaseModel):
-    parser: str
-    parse_config_hash: str
-    label: str          # human-readable: "LlamaParse — premium" derived from config fields
-    document_count: int # how many project documents have a run with this config
-    representations: list[str]  # which representations are available: ["full_text", "full_markdown", "blocks"]
-    latest_run_at: datetime
-```
-
-`representations` is derived by inspecting `parsed_documents` rows for runs matching this config — checking which fields are non-null / non-empty.
 
 ### New endpoint: documents missing a matching parse run
 
@@ -56,38 +38,11 @@ class ParseRunCheckResult(BaseModel):
     available_runs: list[ParseRunSummary]  # runs from other configs, for reference
 ```
 
-Used by the add-documents dialog to show which documents need parsing before they can be added.
+Used by the add-documents dialog to show which documents need parsing before they can be added. Checks against the `(parser, config_hash)` stored in the index's config.
 
 ---
 
 ## Frontend
-
-### Parser + config selector
-
-In the index creation form, when `source_representation != "raw_text"`:
-
-Replace the plain `parser` text input with a dropdown populated from `GET /parse-configs`.
-
-Each option shows:
-- Parser name (e.g. *"LlamaParse"*)
-- Config label (e.g. *"premium"*, derived from key config fields)
-- Document coverage: *"12 of 15 documents parsed"*
-- Representation badges: `[blocks]` `[markdown]` `[text]` — greyed out if not available
-
-Selecting an option auto-populates `IndexConfig.parser` and `IndexConfig.parse_config_hash`. The source representation selector then shows only representations available for the selected config.
-
-If no parse configs exist for the project yet, show an empty state: *"No parse runs found for this project. Parse your documents first."* with a link to the documents page.
-
-### Source representation selector — availability badges
-
-Once a parser config is selected, the representation options show availability inline:
-
-- `[✓ blocks]` — available, selectable
-- `[✓ markdown]` — available, selectable
-- `[✓ text]` — available, selectable
-- `[— blocks]` — not available (greyed), tooltip: *"This parser config did not produce blocks. Re-parse with a configuration that enables block extraction."*
-
-Auto-selects the richest available representation. User can override.
 
 ### Add-documents dialog — parse run mismatch handling
 
@@ -118,16 +73,11 @@ Clicking a row shows the full `config_snapshot` in a read-only JSON viewer (reus
 
 ### Backend
 
-- `test_parse_configs_returns_distinct_combinations`: distinct `(parser, config_hash)` pairs returned with correct `document_count` and `representations`
-- `test_parse_configs_empty_project`: empty list returned when no parse runs exist
 - `test_check_parse_runs_all_match`: all documents return `has_matching_run = true`
 - `test_check_parse_runs_missing`: documents without matching run return `has_matching_run = false` with `available_runs` populated
 
 ### Frontend
 
-- Parser config selector populates from API
-- Representation badges show correct availability
-- Empty state renders when no parse configs
 - Add-documents dialog: unready documents show amber warning and parse button
 - Add button disabled until all documents have matching runs
 - Version history panel renders `index_events` rows
@@ -137,12 +87,10 @@ Clicking a row shows the full `config_snapshot` in a read-only JSON viewer (reus
 
 ## E2E Validation Checklist
 
-1. Parse some documents with LlamaParse (premium) and some with LandingAI (standard)
-2. Open index creation form → verify parser config dropdown shows both options with correct document counts
-3. Select LlamaParse / premium → verify representation badges reflect actual availability
-4. Add documents — include one without a LlamaParse premium run → verify mismatch warning appears
-5. Click [Parse now] → confirm parse dialog is pre-filled correctly
-6. After parsing the document → re-open add dialog → verify document now shows green check
-7. Complete index creation and processing
-8. Open index detail → expand version history → verify correct config snapshot shown
-9. Change config → reprocess → verify version history has new row
+1. Create and process a CDM-mode index (requires parser+config selector from the preceding spec)
+2. Add a new document to the existing index — include one without a matching parse run → verify mismatch warning appears in the add-documents dialog
+3. Click [Parse now] → confirm parse dialog is pre-filled with the index's parser+config
+4. After parsing the document → re-open add dialog → verify document now shows green check
+5. Complete adding the document and reprocess
+6. Open index detail → expand version history → verify correct config snapshot shown for each version
+7. Change config → reprocess → verify version history gains a new row
