@@ -359,7 +359,7 @@ def test_dispatch_blocks_source_raises_not_implemented():
     with pytest.raises(NotImplementedError, match="block"):
         ChunkingDispatcher().dispatch(
             source=src,
-            config=_config("block"),
+            config=_config("block", "block"),
             source_document_id=str(uuid4()),
             source_filename=None,
         )
