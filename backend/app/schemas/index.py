@@ -17,11 +17,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 class IndexConfig(BaseModel):
     """Configuration for how documents are chunked and embedded."""
 
-    # Parse source binding
+    # Parse-config family — both required at validation time. Optional types
+    # let the wizard build IndexConfig progressively before binding the family.
     parser: str | None = Field(default=None)
     parse_config_hash: str | None = Field(default=None, alias="parseConfigHash")
-    source_representation: Literal["raw_text", "full_text", "full_markdown", "block"] = Field(
-        default="raw_text", alias="sourceRepresentation"
+    source_representation: Literal["full_text", "full_markdown", "block"] = Field(
+        default="full_text", alias="sourceRepresentation"
     )
 
     # Chunking strategy
@@ -63,14 +64,20 @@ class IndexConfig(BaseModel):
         return v
 
     @model_validator(mode="after")
+    def require_family_for_indexing(self) -> "IndexConfig":
+        if self.parser is None or self.parse_config_hash is None:
+            raise ValueError(
+                "IndexConfig requires parser and parse_config_hash"
+            )
+        return self
+
+    @model_validator(mode="after")
     def validate_representation_and_strategy(self) -> "IndexConfig":
         rep = self.source_representation
         strategy = self.chunking_strategy
 
-        # Validate strategy is compatible with representation
         text_strategies = {"fixed_size", "recursive_character"}
         allowed: dict[str, set[str]] = {
-            "raw_text": text_strategies,
             "full_text": text_strategies,
             "full_markdown": {"markdown_heading"},
             "block": {"block", "classified_block"},
@@ -232,7 +239,7 @@ class AddDocumentsRequest(BaseModel):
     parse_run_ids: dict[UUID, UUID] | None = Field(
         default=None,
         alias="parseRunIds",
-        description="Map of document_id → parse_run_id. Required per document when source_representation != raw_text.",
+        description="Map of document_id → parse_run_id. Required per document.",
     )
 
     model_config = ConfigDict(populate_by_name=True)
