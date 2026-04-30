@@ -58,7 +58,7 @@ async def test_start_processing_raises_when_cdm_doc_has_no_parse_run():
         provider_key_repo=provider_key_repo,
     )
 
-    with pytest.raises(ValidationError, match="no parse run set"):
+    with pytest.raises(ValidationError, match="no parse_run_id"):
         await service.start_processing(index.id, uuid4(), uuid4())
 
 
