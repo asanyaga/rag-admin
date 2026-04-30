@@ -3,6 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Spec:** [`docs/superpowers/specs/2026-04-29-cdm-index-parser-config-selector.md`](../specs/2026-04-29-cdm-index-parser-config-selector.md)
+**Issue:** [#46](https://github.com/asanyaga/rag-admin/issues/46)
 
 **Goal:** Lay the data and read-API foundation for the parsed-document refactor without touching the index-create write path or the wizard. After this unit:
 
