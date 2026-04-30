@@ -10,6 +10,8 @@ from app.services.source_resolution_service import TextSource, BlocksSource
 
 def _config(source_rep: str = "full_text", chunking_strategy: str = "recursive_character") -> IndexConfig:
     return IndexConfig.model_validate({
+        "parser": "llamaparse",
+        "parse_config_hash": "h" * 64,
         "source_representation": source_rep,
         "chunking_strategy": chunking_strategy,
         "chunk_size": 200,

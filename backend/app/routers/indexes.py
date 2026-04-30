@@ -65,9 +65,11 @@ router = APIRouter(prefix="/projects/{project_id}/indexes", tags=["indexes"])
 
 def get_index_service(db: AsyncSession = Depends(get_db)) -> IndexService:
     """Dependency to create IndexService."""
-    index_repo = IndexRepository(db)
-    chunk_repo = ChunkRepository(db)
-    return IndexService(index_repo, chunk_repo)
+    return IndexService(
+        index_repo=IndexRepository(db),
+        chunk_repo=ChunkRepository(db),
+        parsed_doc_repo=ParsedDocumentRepository(db),
+    )
 
 
 def get_chunk_service(db: AsyncSession = Depends(get_db)) -> ChunkService:
@@ -418,12 +420,12 @@ async def get_processing_status(
 # ---------------------------------------------------------------------------
 
 @router.post(
-    "/{index_id}/documents",
+    "/{index_id}/parsed-documents",
     response_model=IndexResponse,
-    summary="Add documents",
-    description="Add documents to an existing index.",
+    summary="Add parsed-documents",
+    description="Add parsed-documents to an existing index.",
 )
-async def add_documents(
+async def add_parsed_documents(
     project_id: UUID,
     index_id: UUID,
     data: AddParsedDocumentsRequest,
@@ -431,21 +433,13 @@ async def add_documents(
     service: IndexService = Depends(get_index_service),
     project_repo: ProjectRepository = Depends(get_project_repo),
 ):
-    """Add documents to an index."""
     await verify_project_access(project_id, current_user, project_repo)
-
     try:
-        return await service.add_documents(index_id, project_id, data)
+        return await service.add_parsed_documents(index_id, project_id, data)
     except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete(

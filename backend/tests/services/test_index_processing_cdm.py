@@ -4,18 +4,19 @@ from uuid import uuid4
 
 from app.models import IndexStatus, IndexDocumentStatus
 from app.schemas.index import IndexConfig
-from app.services.index_processing_service import IndexProcessingService
 from app.services.exceptions import ValidationError
+from app.services.index_processing_service import IndexProcessingService
+from app.services.index_service import IndexService
 from app.services.source_resolution_service import TextSource
 
 
-def _make_mock_index(source_representation="raw_text"):
+def _make_mock_index(source_representation="full_text"):
     strategy = "markdown_heading" if source_representation == "full_markdown" else "recursive_character"
     config = IndexConfig(
         source_representation=source_representation,
         chunking_strategy=strategy,
-        parser="llamaparse" if source_representation != "raw_text" else None,
-        parse_config_hash="abc123" if source_representation != "raw_text" else None,
+        parser="llamaparse",
+        parse_config_hash="abc123",
     )
     index = MagicMock()
     index.id = uuid4()
@@ -126,7 +127,7 @@ async def test_process_index_uses_full_text_from_parsed_document():
 @pytest.mark.asyncio
 async def test_process_index_raises_not_implemented_for_unsupported_representation():
     """block source_representation: seam resolves blocks but dispatcher raises NotImplementedError."""
-    index = _make_mock_index(source_representation="raw_text")
+    index = _make_mock_index()  # config overridden immediately below
     index.config = {
         "source_representation": "block",
         "chunking_strategy": "block",
@@ -190,112 +191,6 @@ async def test_process_index_raises_not_implemented_for_unsupported_representati
     # ChunkingDispatcher raises NotImplementedError for block-based chunking
     assert "not yet implemented" in failed_call[0].kwargs.get("error_message", "") or \
            "not yet implemented" in str(failed_call[0].args)
-
-
-@pytest.mark.asyncio
-async def test_process_index_raw_text_still_works():
-    """Regression: raw_text mode unchanged from before this slice."""
-    index = _make_mock_index(source_representation="raw_text")
-    index_doc = _make_mock_index_doc(parse_run_id=None)
-    index.index_documents = [index_doc]
-    index.version = 1
-
-    index_repo = AsyncMock()
-    index_repo.get_by_id_with_documents = AsyncMock(return_value=index)
-    index_repo.get_pending_documents = AsyncMock(return_value=[index_doc])
-    index_repo.update_document_status = AsyncMock()
-    index_repo.update_status = AsyncMock()
-    index_repo.update_stats = AsyncMock()
-    index_repo.increment_version = AsyncMock()
-    index_repo.write_index_event = AsyncMock()
-
-    chunk_repo = AsyncMock()
-    chunk_repo.create_batch = AsyncMock()
-    chunk_repo.get_stats = AsyncMock(return_value={
-        "total_chunks": 1, "total_documents": 1,
-        "avg_chunk_size_chars": 100.0, "avg_chunk_size_tokens": 20.0,
-        "min_chunk_size_chars": 100, "max_chunk_size_chars": 100,
-        "total_tokens": 20,
-    })
-
-    mock_embedding_provider = AsyncMock()
-    mock_embedding_provider.embed_texts = AsyncMock(return_value=[[0.1, 0.2]])
-    mock_embedding_provider.get_dimensions = MagicMock(return_value=2)
-
-    with patch("app.services.index_processing_service.EmbeddingProviderRegistry") as mock_registry, \
-         patch("app.services.index_processing_service.ProviderKeyService") as mock_pks:
-        mock_registry.get_provider.return_value = mock_embedding_provider
-        mock_pks.return_value.get_key_for_provider = AsyncMock(return_value="test-key")
-
-        service = IndexProcessingService(
-            session=AsyncMock(),
-            index_repo=index_repo,
-            chunk_repo=chunk_repo,
-            provider_key_repo=AsyncMock(),
-        )
-        await service.process_index(index.id, uuid4(), uuid4())
-
-    call_args = chunk_repo.create_batch.call_args[0][0]
-    assert call_args[0]["source_type"] == "raw_text"
-    assert call_args[0]["parse_run_id"] is None
-    index_repo.increment_version.assert_called_once()
-
-
-from app.services.index_service import IndexService
-from app.schemas.index import AddDocumentsRequest
-
-
-@pytest.mark.asyncio
-async def test_add_documents_passes_parse_run_ids_to_repo():
-    doc_id = uuid4()
-    run_id = uuid4()
-
-    _index_id = uuid4()
-    _project_id = uuid4()
-    _mock_index = MagicMock()
-    _mock_index.id = _index_id
-    _mock_index.project_id = _project_id
-    _mock_index.status = IndexStatus.created
-    _mock_index.index_documents = []
-    _mock_index.name = "test"
-    _mock_index.description = None
-    _mock_index.config = {
-        "chunking_strategy": "recursive_character",
-        "source_representation": "raw_text",
-        "chunk_size": 512,
-        "chunk_overlap": 50,
-        "chunk_unit": "characters",
-        "embedding_provider": "openai",
-        "embedding_model": "text-embedding-3-small",
-        "embedding_dimensions": None,
-    }
-    _mock_index.stats = None
-    _mock_index.error_message = None
-    _mock_index.created_by = uuid4()
-    _mock_index.created_at = MagicMock()
-    _mock_index.updated_at = MagicMock()
-    _mock_index.version = 1
-    _mock_index.config_dirty = False
-
-    index_repo = AsyncMock()
-    index_repo.get_by_id = AsyncMock(return_value=_mock_index)
-    index_repo.add_documents = AsyncMock(return_value=[])
-    index_repo.get_document_ids = AsyncMock(return_value=[doc_id])
-    index_repo.count_documents = AsyncMock(return_value=1)
-    index_repo.count_chunks = AsyncMock(return_value=0)
-
-    service = IndexService(index_repo=index_repo, chunk_repo=AsyncMock())
-    request = AddDocumentsRequest(
-        document_ids=[doc_id],
-        parse_run_ids={doc_id: run_id},
-    )
-
-    await service.add_documents(_index_id, _project_id, request)
-
-    index_repo.add_documents.assert_called_once()
-    call_kwargs = index_repo.add_documents.call_args
-    assert call_kwargs.kwargs.get("parse_run_ids") == {doc_id: run_id} or \
-           (len(call_kwargs.args) > 2 and call_kwargs.args[2] == {doc_id: run_id})
 
 
 @pytest.mark.asyncio
@@ -456,8 +351,10 @@ def test_index_response_includes_version_and_config_dirty():
     index.name = "my-index"
     index.description = None
     index.config = {
+        "parser": "llamaparse",
+        "parse_config_hash": "abc123",
         "chunking_strategy": "recursive_character",
-        "source_representation": "raw_text",
+        "source_representation": "full_text",
         "chunk_size": 512,
         "chunk_overlap": 50,
         "chunk_unit": "characters",
@@ -474,7 +371,11 @@ def test_index_response_includes_version_and_config_dirty():
     index.version = 3
     index.config_dirty = True
 
-    service = IndexService(index_repo=MagicMock(), chunk_repo=MagicMock())
+    service = IndexService(
+        index_repo=MagicMock(),
+        chunk_repo=MagicMock(),
+        parsed_doc_repo=MagicMock(),
+    )
     response = service._to_response(index)
 
     assert response.version == 3

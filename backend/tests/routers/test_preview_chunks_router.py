@@ -123,6 +123,8 @@ async def _seed_run_with_pdoc(
 
 def _full_markdown_config() -> dict:
     return {
+        "parser": "llamaparse",
+        "parseConfigHash": "h" * 64,
         "sourceRepresentation": "full_markdown",
         "chunkingStrategy": "markdown_heading",
         "chunkSize": 512,
@@ -134,9 +136,11 @@ def _full_markdown_config() -> dict:
     }
 
 
-def _raw_text_config() -> dict:
+def _full_text_config() -> dict:
     return {
-        "sourceRepresentation": "raw_text",
+        "parser": "llamaparse",
+        "parseConfigHash": "h" * 64,
+        "sourceRepresentation": "full_text",
         "chunkingStrategy": "recursive_character",
         "chunkSize": 512,
         "chunkOverlap": 0,
@@ -282,36 +286,6 @@ async def test_preview_chunks_bridge_document_id_no_parse_run_returns_400(
     assert "parse" in resp.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
-async def test_preview_chunks_legacy_raw_text_path_unchanged(
-    client: AsyncClient, test_db: AsyncSession
-):
-    """raw_text + documentId → uses document.extracted_text → 200."""
-    token = await _signup(client, "preview_rawtext@example.com")
-    user = await _user_by_email(test_db, "preview_rawtext@example.com")
-    project = await _make_project(test_db, user)
-
-    doc, _pdoc = await _seed_run_with_pdoc(
-        test_db,
-        user=user,
-        project=project,
-        sha="d" * 64,
-        extracted_text="This is the raw extracted text for chunking.",
-    )
-
-    resp = await client.post(
-        f"/api/v1/projects/{project.id}/indexes/preview-chunks",
-        json={
-            "documentId": str(doc.id),
-            "config": _raw_text_config(),
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["totalChunksEstimate"] >= 1
-    assert len(body["previewChunks"]) >= 1
-
 
 @pytest.mark.asyncio
 async def test_preview_chunks_parsed_document_outside_project_returns_404(
@@ -375,6 +349,8 @@ async def test_preview_chunks_seam_overlap_matches_config(
     assert pdoc is not None
 
     config = {
+        "parser": "llamaparse",
+        "parseConfigHash": "h" * 64,
         "sourceRepresentation": "full_text",
         "chunkingStrategy": "recursive_character",
         "chunkSize": 200,

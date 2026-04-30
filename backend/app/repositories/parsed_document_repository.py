@@ -28,6 +28,16 @@ class ParsedDocumentCreate:
 
 
 @dataclass(frozen=True)
+class ParsedDocValidationRow:
+    parse_run_id: UUID
+    parser: str
+    parse_config_hash: str
+    run_status: str
+    full_markdown: str | None
+    block_count: int
+
+
+@dataclass(frozen=True)
 class ParsedDocumentListRow:
     """One parsed-document picker row.
 
@@ -98,6 +108,50 @@ class ParsedDocumentRepository:
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_for_validation(
+        self,
+        *,
+        parsed_document_ids: list[UUID],
+        project_id: UUID,
+    ) -> list[ParsedDocValidationRow]:
+        """Return validation-row data for parsed-docs scoped to a project.
+
+        Joins parsed_doc → parse_run → document on (source_document_id, project_id),
+        so a parsed-doc whose source_document is referenced only by another
+        project's Document is silently filtered out (treated as not-in-project).
+        """
+        if not parsed_document_ids:
+            return []
+        stmt = (
+            select(
+                ParsedDocument.parse_run_id,
+                ParseRun.parser,
+                ParseRun.config_hash,
+                ParseRun.status,
+                ParsedDocument.full_markdown,
+                ParsedDocument.block_count,
+            )
+            .join(ParseRun, ParseRun.id == ParsedDocument.parse_run_id)
+            .join(DocumentORM, DocumentORM.source_document_id == ParseRun.source_document_id)
+            .where(
+                ParsedDocument.parse_run_id.in_(parsed_document_ids),
+                DocumentORM.project_id == project_id,
+            )
+            .distinct()  # in case multiple Documents share a source_document
+        )
+        result = await self.session.execute(stmt)
+        return [
+            ParsedDocValidationRow(
+                parse_run_id=row.parse_run_id,
+                parser=row.parser,
+                parse_config_hash=row.config_hash,
+                run_status=row.status,
+                full_markdown=row.full_markdown,
+                block_count=row.block_count,
+            )
+            for row in result.all()
+        ]
 
     async def list_for_project(
         self,
