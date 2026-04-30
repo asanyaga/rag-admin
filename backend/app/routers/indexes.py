@@ -9,23 +9,28 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user
 from app.models import User
+from app.models.document import Document
 from app.repositories.index_repository import IndexRepository
 from app.repositories.chunk_repository import ChunkRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.provider_key_repository import ProviderKeyRepository
+from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.schemas.index import (
     IndexCreate,
+    IndexConfig,
     IndexUpdate,
     IndexResponse,
     IndexListResponse,
     IndexProcessingStatusResponse,
     AddDocumentsRequest,
+    ChunkPreview,
     ChunkPreviewRequest,
     ChunkPreviewResponse,
 )
@@ -36,15 +41,17 @@ from app.schemas.chunk import (
 )
 from app.schemas.query import QueryRequest, QueryResponse
 from app.schemas.playground import PlaygroundAnswerRequest
-from app.services.index_service import IndexService
+from app.services.answer_service import AnswerService
 from app.services.chunk_service import ChunkService
-from app.services.query_service import QueryService
-from app.services.chunking_service import get_chunking_service
+from app.services.chunking_dispatcher import ChunkingDispatcher
+from app.services.chunking_service import ChunkResult, get_chunking_service
 from app.services.index_processing_service import (
     IndexProcessingService,
     process_index_background,
 )
-from app.services.answer_service import AnswerService
+from app.services.index_service import IndexService
+from app.services.query_service import QueryService
+from app.services.source_resolution_service import SourceResolutionService
 from app.services.trace_collector import TraceCollector
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 from app.utils.encryption import decrypt
@@ -592,32 +599,169 @@ async def preview_chunks(
     project_id: UUID,
     data: ChunkPreviewRequest,
     current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
     project_repo: ProjectRepository = Depends(get_project_repo),
     document_repo: DocumentRepository = Depends(get_document_repo),
 ):
-    """Preview chunks for a document."""
+    """Preview chunks for a document.
+
+    Accepts either `parsedDocumentId` (CDM path) or `documentId` (legacy /
+    bridge path). The schema validator guarantees exactly one is set.
+    """
     await verify_project_access(project_id, current_user, project_repo)
 
-    # Get document
+    # ── Path 1: parsedDocumentId supplied (CDM path) ─────────────────────────
+    if data.parsed_document_id is not None:
+        parsed_doc_repo = ParsedDocumentRepository(db)
+        parsed_doc = await parsed_doc_repo.get_by_run(data.parsed_document_id)
+        if parsed_doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Parsed document {data.parsed_document_id} not found",
+            )
+        # Scope-check: verify the parsed-doc belongs to a document in this project.
+        result = await db.execute(
+            select(Document.id).where(
+                Document.source_document_id == parsed_doc.source_document_id,
+                Document.project_id == project_id,
+            )
+        )
+        if result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Parsed document {data.parsed_document_id} not found",
+            )
+        return await _preview_via_seam(
+            parsed_document_id=data.parsed_document_id,
+            config=data.config,
+            max_chunks=data.max_chunks,
+            source_document_id=None,
+            source_filename=None,
+            db=db,
+        )
+
+    # ── Path 2: documentId supplied (legacy / bridge path) ───────────────────
+    assert data.document_id is not None  # guaranteed by model_validator
     document = await document_repo.get_by_id(data.document_id, current_user.id)
     if not document or document.project_id != project_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document {data.document_id} not found"
+            detail=f"Document {data.document_id} not found",
         )
 
-    if not document.extracted_text:
+    # Legacy raw_text path: untouched, uses extracted_text directly.
+    if data.config.source_representation == "raw_text":
+        if not document.extracted_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Document has no extracted text",
+            )
+        chunking_service = get_chunking_service()
+        return chunking_service.preview_chunks(
+            text=document.extracted_text,
+            config=data.config,
+            max_chunks=data.max_chunks,
+        )
+
+    # CDM bridge: resolve the latest parsed-doc for this document.
+    parsed_doc_repo = ParsedDocumentRepository(db)
+    parsed_doc = await parsed_doc_repo.get_latest_for_document(data.document_id)
+    if parsed_doc is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document has no extracted text"
+            detail=(
+                "No succeeded parse run found for this document. "
+                "Run a parse job before previewing CDM chunks."
+            ),
+        )
+    return await _preview_via_seam(
+        parsed_document_id=parsed_doc.parse_run_id,
+        config=data.config,
+        max_chunks=data.max_chunks,
+        source_document_id=None,
+        source_filename=None,
+        db=db,
+    )
+
+
+async def _preview_via_seam(
+    *,
+    parsed_document_id: UUID,
+    config: IndexConfig,
+    max_chunks: int,
+    source_document_id: str | None,
+    source_filename: str | None,
+    db: AsyncSession,
+) -> ChunkPreviewResponse:
+    """Resolve a parsed-document via the seam and return a preview response."""
+    try:
+        source = await SourceResolutionService(db).resolve(
+            parsed_document_id=parsed_document_id,
+            source_representation=config.source_representation,  # type: ignore[arg-type]  # caller guarantees source_representation != "raw_text"
+        )
+        dispatcher = ChunkingDispatcher()
+        chunks = dispatcher.dispatch(
+            source=source,
+            config=config,
+            source_document_id=source_document_id,
+            source_filename=source_filename,
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)) from exc
+
+    return _project_to_preview_response(chunks, config, max_chunks)
+
+
+def _project_to_preview_response(
+    chunks: list[ChunkResult],
+    config: IndexConfig,
+    max_chunks: int,
+) -> ChunkPreviewResponse:
+    """Build a ChunkPreviewResponse from a list of ChunkResult objects."""
+    if not chunks:
+        return ChunkPreviewResponse(
+            total_chunks_estimate=0,
+            avg_chunk_size_chars=0.0,
+            avg_chunk_size_tokens=0.0,
+            min_chunk_size_chars=0,
+            max_chunk_size_chars=0,
+            preview_chunks=[],
         )
 
-    # Generate preview
-    chunking_service = get_chunking_service()
-    return chunking_service.preview_chunks(
-        text=document.extracted_text,
-        config=data.config,
-        max_chunks=data.max_chunks
+    char_counts = [c.char_count for c in chunks]
+    token_counts = [c.token_count for c in chunks]
+
+    avg_chars = sum(char_counts) / len(char_counts)
+    avg_tokens = sum(token_counts) / len(token_counts)
+
+    preview: list[ChunkPreview] = []
+    for i, chunk in enumerate(chunks[:max_chunks]):
+        overlap_start = 0
+        if i > 0 and config.chunk_overlap > 0:
+            overlap_start = min(config.chunk_overlap, chunk.char_count // 2)
+        overlap_end = 0
+        if i < len(chunks) - 1 and config.chunk_overlap > 0:
+            overlap_end = min(config.chunk_overlap, chunk.char_count // 2)
+        preview.append(ChunkPreview(
+            index=chunk.chunk_index,
+            content=chunk.content,
+            char_count=chunk.char_count,
+            token_count=chunk.token_count,
+            overlap_start_chars=overlap_start,
+            overlap_end_chars=overlap_end,
+        ))
+
+    return ChunkPreviewResponse(
+        total_chunks_estimate=len(chunks),
+        avg_chunk_size_chars=round(avg_chars, 1),
+        avg_chunk_size_tokens=round(avg_tokens, 1),
+        min_chunk_size_chars=min(char_counts),
+        max_chunk_size_chars=max(char_counts),
+        preview_chunks=preview,
     )
 
 

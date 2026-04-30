@@ -147,7 +147,8 @@ export interface ChunkPreviewResponse {
 }
 
 export interface ChunkPreviewRequest {
-  documentId: string
+  documentId?: string
+  parsedDocumentId?: string
   config: Partial<IndexConfig>
   maxChunks?: number
 }
