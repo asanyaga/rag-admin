@@ -115,7 +115,7 @@ export default function CreateIndexPage() {
     updateConfig('sourceRepresentation', value)
     if (value === 'full_markdown') {
       updateConfig('chunkingStrategy', 'markdown_heading')
-    } else if ((value as string) === 'raw_text' || value === 'full_text') {
+    } else if (value === 'full_text') {
       updateConfig('chunkingStrategy', 'recursive_character')
     }
   }
@@ -440,15 +440,12 @@ export default function CreateIndexPage() {
                     <Label>Source</Label>
                     <ToggleGroup
                       type="single"
-                      value={config.sourceRepresentation ?? 'raw_text'}
+                      value={config.sourceRepresentation ?? 'full_text'}
                       onValueChange={(v) =>
                         v && handleSourceRepresentationChange(v as SourceRepresentation)
                       }
                       className="justify-start"
                     >
-                      <ToggleGroupItem value="raw_text" aria-label="Raw text">
-                        Raw text
-                      </ToggleGroupItem>
                       <ToggleGroupItem value="full_text" aria-label="Full text">
                         Full text
                       </ToggleGroupItem>
@@ -700,7 +697,7 @@ export default function CreateIndexPage() {
                           ? 'Full Markdown'
                           : config.sourceRepresentation === 'full_text'
                           ? 'Full text'
-                          : 'Raw text'}
+                          : 'Block'}
                       </span>
                     </div>
                     <div className="flex justify-between">

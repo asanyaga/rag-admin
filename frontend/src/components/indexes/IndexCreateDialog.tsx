@@ -198,7 +198,7 @@ export function IndexCreateDialog({
     updateConfig('sourceRepresentation', value)
     if (value === 'full_markdown') {
       updateConfig('chunkingStrategy', 'markdown_heading')
-    } else if ((value as string) === 'raw_text' || value === 'full_text') {
+    } else if (value === 'full_text') {
       updateConfig('chunkingStrategy', 'recursive_character')
     }
   }
@@ -265,16 +265,13 @@ export function IndexCreateDialog({
                   <Label>Source</Label>
                   <ToggleGroup
                     type="single"
-                    value={config.sourceRepresentation ?? 'raw_text'}
+                    value={config.sourceRepresentation ?? 'full_text'}
                     onValueChange={(v) =>
                       v && handleSourceRepresentationChange(v as SourceRepresentation)
                     }
                     className="justify-start"
                     disabled={isLoading}
                   >
-                    <ToggleGroupItem value="raw_text" aria-label="Raw text">
-                      Raw text
-                    </ToggleGroupItem>
                     <ToggleGroupItem value="full_text" aria-label="Full text">
                       Full text
                     </ToggleGroupItem>

@@ -47,7 +47,7 @@ const readyDocument: DocumentListItem = {
 }
 
 describe('IndexCreateDialog — chunking config', () => {
-  it('shows text chunking fields by default (raw_text source)', () => {
+  it('shows text chunking fields by default (full_text source)', () => {
     render(<IndexCreateDialog {...defaultProps} />)
     expect(screen.getByLabelText('Chunk Size')).toBeInTheDocument()
     expect(screen.getByLabelText('Overlap')).toBeInTheDocument()
