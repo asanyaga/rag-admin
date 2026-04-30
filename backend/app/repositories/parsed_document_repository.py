@@ -1,12 +1,19 @@
 """Repository for ParsedDocument — content blob layer."""
 from dataclasses import dataclass
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.document import Document as DocumentORM
+from app.models.parse_run import ParseRun
 from app.models.parsed_document import ParsedDocument
+from app.models.source_document import SourceDocument
+
+
+Representation = Literal["full_text", "full_markdown", "block"]
 
 
 @dataclass
@@ -18,6 +25,25 @@ class ParsedDocumentCreate:
     page_count: int
     block_count: int
     content: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ParsedDocumentListRow:
+    """One parsed-document picker row.
+
+    `parse_run_id` is the parsed-document handle under the current 1:1 schema
+    (parsed_documents.parse_run_id is its primary key). When parsed_documents grows a
+    distinct `id` column for derived parsed-docs, the API surface keeps the same shape;
+    the wire value just shifts from parse_run_id-of-this-parsed-doc to id-of-this-parsed-doc.
+    """
+    parse_run_id: UUID
+    parser: str
+    parse_config_hash: str
+    source_document_id: UUID
+    source_filename: str | None
+    has_full_markdown: bool
+    block_count: int
+    parsed_at: datetime
 
 
 class ParsedDocumentRepository:
@@ -44,3 +70,83 @@ class ParsedDocumentRepository:
             select(ParsedDocument).where(ParsedDocument.parse_run_id == parse_run_id)
         )
         return result.scalar_one_or_none()
+
+    async def list_for_project(
+        self,
+        project_id: UUID,
+        *,
+        parser: str | None = None,
+        parse_config_hash: str | None = None,
+        representation: Representation | None = None,
+        latest_per_source: bool = True,
+    ) -> list[ParsedDocumentListRow]:
+        """List parsed-documents for the project's documents, newest first.
+
+        Filters:
+          - `parser` + `parse_config_hash` restrict to one (parser, config_hash) family.
+          - `representation`: keep parsed-docs that populate the named segment
+            (`full_markdown`, `full_text`, or `block`). `full_text` and `block` are
+            invariants on every parsed_doc and pass-through; `full_markdown` is filtered
+            on `full_markdown IS NOT NULL`.
+          - `latest_per_source=True` (default) keeps only the newest parse_run per
+            `source_document_id`. Set False to expose every successful run in the family
+            for non-determinism debugging.
+        """
+        inner = (
+            select(
+                ParsedDocument.parse_run_id.label("parse_run_id"),
+                ParseRun.parser.label("parser"),
+                ParseRun.config_hash.label("parse_config_hash"),
+                ParseRun.source_document_id.label("source_document_id"),
+                ParseRun.finished_at.label("parsed_at"),
+                SourceDocument.filename.label("source_filename"),
+                ParsedDocument.full_markdown.label("full_markdown_value"),
+                ParsedDocument.block_count.label("block_count"),
+            )
+            .select_from(ParsedDocument)
+            .join(ParseRun, ParseRun.id == ParsedDocument.parse_run_id)
+            .join(SourceDocument, ParseRun.source_document_id == SourceDocument.id)
+            .join(DocumentORM, DocumentORM.source_document_id == SourceDocument.id)
+            .where(ParseRun.status == "succeeded")
+            .where(DocumentORM.project_id == project_id)
+        )
+        if parser is not None:
+            inner = inner.where(ParseRun.parser == parser)
+        if parse_config_hash is not None:
+            inner = inner.where(ParseRun.config_hash == parse_config_hash)
+        if representation == "full_markdown":
+            inner = inner.where(ParsedDocument.full_markdown.isnot(None))
+        # full_text / block: invariants — no extra filter needed.
+
+        if latest_per_source:
+            rn = (
+                func.row_number()
+                .over(
+                    partition_by=ParseRun.source_document_id,
+                    order_by=ParseRun.finished_at.desc(),
+                )
+                .label("rn")
+            )
+            sub = inner.add_columns(rn).subquery()
+            stmt = (
+                select(sub)
+                .where(sub.c.rn == 1)
+                .order_by(sub.c.parsed_at.desc())
+            )
+        else:
+            stmt = inner.order_by(ParseRun.finished_at.desc())
+
+        rows = (await self.session.execute(stmt)).all()
+        return [
+            ParsedDocumentListRow(
+                parse_run_id=r.parse_run_id,
+                parser=r.parser,
+                parse_config_hash=r.parse_config_hash,
+                source_document_id=r.source_document_id,
+                source_filename=r.source_filename,
+                has_full_markdown=r.full_markdown_value is not None,
+                block_count=r.block_count,
+                parsed_at=r.parsed_at,
+            )
+            for r in rows
+        ]
