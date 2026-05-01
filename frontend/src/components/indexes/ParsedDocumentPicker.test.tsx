@@ -102,7 +102,7 @@ describe('ParsedDocumentPicker', () => {
 
     await user.click(screen.getByRole('checkbox', { name: 'acme-msa.pdf' }))
 
-    expect(onChange).toHaveBeenCalledWith(['pd-1'])
+    expect(onChange).toHaveBeenCalledWith(['pr-1'])
   })
 
   it('filters rows by filename when search is typed', async () => {

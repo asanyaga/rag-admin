@@ -108,6 +108,40 @@ function renderPage() {
   )
 }
 
+import userEvent from '@testing-library/user-event'
+
+describe('IndexDetailPage — Add Documents dialog', () => {
+  it('opens a dialog with ParsedDocumentPicker when Add Document is clicked', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => screen.getByText('Parsed Documents (1)'))
+
+    await user.click(screen.getByRole('button', { name: /add document/i }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'vendor.pdf' })).toBeInTheDocument(),
+    )
+  })
+
+  it('calls addParsedDocuments with selected IDs on submit', async () => {
+    const { addParsedDocuments } = await import('@/api/indexes')
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => screen.getByText('Parsed Documents (1)'))
+
+    await user.click(screen.getByRole('button', { name: /add document/i }))
+    await waitFor(() => screen.getByRole('checkbox', { name: 'vendor.pdf' }))
+    await user.click(screen.getByRole('checkbox', { name: 'vendor.pdf' }))
+    await user.click(screen.getByRole('button', { name: /^add$/i }))
+
+    expect(addParsedDocuments).toHaveBeenCalledWith(
+      'proj-1',
+      'idx-1',
+      { parsedDocumentIds: ['pr-new'] },
+    )
+  })
+})
+
 describe('IndexDetailPage — Parsed Documents tab', () => {
   it('shows "Parsed Documents" section heading', async () => {
     renderPage()

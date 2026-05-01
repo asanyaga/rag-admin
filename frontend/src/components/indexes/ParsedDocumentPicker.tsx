@@ -64,11 +64,11 @@ export function ParsedDocumentPicker({
       (d.sourceFilename ?? '').toLowerCase().includes(search.trim().toLowerCase()),
   )
 
-  function toggleId(id: string) {
-    if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter((x) => x !== id))
+  function toggleId(parseRunId: string) {
+    if (selectedIds.includes(parseRunId)) {
+      onChange(selectedIds.filter((x) => x !== parseRunId))
     } else {
-      onChange([...selectedIds, id])
+      onChange([...selectedIds, parseRunId])
     }
   }
 
@@ -108,12 +108,12 @@ export function ParsedDocumentPicker({
         <div className="space-y-2">
           {filtered.map((doc) => (
             <label
-              key={doc.id}
+              key={doc.parseRunId}
               className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
             >
               <Checkbox
-                checked={selectedIds.includes(doc.id)}
-                onCheckedChange={() => toggleId(doc.id)}
+                checked={selectedIds.includes(doc.parseRunId)}
+                onCheckedChange={() => toggleId(doc.parseRunId)}
                 aria-label={doc.sourceFilename ?? 'Unknown file'}
               />
               <span className="flex-1 min-w-0">

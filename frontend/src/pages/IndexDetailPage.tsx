@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { IndexStatusBadge } from '@/components/indexes/IndexStatusBadge'
+import { ParsedDocumentPicker } from '@/components/indexes/ParsedDocumentPicker'
 import { PlaygroundPanel } from '@/components/indexes/PlaygroundPanel'
 import {
   ArrowLeft,
@@ -76,8 +77,7 @@ export default function IndexDetailPage() {
 
   // Add documents dialog
   const [addDocsDialogOpen, setAddDocsDialogOpen] = useState(false)
-  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([])
-  // isAddingDocs removed — handleAddDocuments is a no-op stub until Unit 4/5
+  const [selectedParsedDocIds, setSelectedParsedDocIds] = useState<string[]>([])
 
   // Remove document dialog
   const [removeDocDialogOpen, setRemoveDocDialogOpen] = useState(false)
@@ -173,16 +173,21 @@ export default function IndexDetailPage() {
   }
 
   const handleAddDocuments = async () => {
-    // TODO Unit 4/5: wire up the parsed-document picker UI.
-    // The legacy addDocuments API (document IDs) has been removed; the new
-    // addParsedDocuments API requires parsed-document IDs which this dialog
-    // doesn't have yet.  Disable the action until the new picker ships.
-    toast.error(
-      'Adding existing documents to an index is not yet wired to the new ' +
-        'parsed-document API. Use the parsed-document picker in Unit 4 once it ships.'
-    )
-    setAddDocsDialogOpen(false)
-    setSelectedDocIds([])
+    if (!projectId || !indexId || selectedParsedDocIds.length === 0) return
+    try {
+      await indexesApi.addParsedDocuments(projectId, indexId, {
+        parsedDocumentIds: selectedParsedDocIds,
+      })
+      await fetchIndex()
+      await fetchParsedDocs()
+      setAddDocsDialogOpen(false)
+      setSelectedParsedDocIds([])
+      toast.success(
+        `${selectedParsedDocIds.length} parsed document${selectedParsedDocIds.length > 1 ? 's' : ''} added`,
+      )
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add documents')
+    }
   }
 
   const handleRemoveDocument = async () => {
@@ -759,18 +764,35 @@ export default function IndexDetailPage() {
       )}
 
       {/* ══════ Add Documents Dialog ══════ */}
-      <Dialog open={addDocsDialogOpen} onOpenChange={setAddDocsDialogOpen}>
+      <Dialog
+        open={addDocsDialogOpen}
+        onOpenChange={(open) => {
+          setAddDocsDialogOpen(open)
+          if (!open) setSelectedParsedDocIds([])
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add Documents</DialogTitle>
+            <DialogTitle>Add Parsed Documents</DialogTitle>
             <DialogDescription>
-              Select documents to add to this index
+              Select parsed documents to add to this index
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-96 overflow-y-auto">
-            <p className="text-center text-muted-foreground py-8">
-              Use the parsed-document picker (coming in the next unit)
-            </p>
+            {index.config.parser && index.config.parseConfigHash ? (
+              <ParsedDocumentPicker
+                projectId={projectId!}
+                parser={index.config.parser}
+                parseConfigHash={index.config.parseConfigHash}
+                representation={index.config.sourceRepresentation ?? 'full_text'}
+                selectedIds={selectedParsedDocIds}
+                onChange={setSelectedParsedDocIds}
+              />
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                This index has no parse-config family set.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDocsDialogOpen(false)}>
@@ -778,9 +800,9 @@ export default function IndexDetailPage() {
             </Button>
             <Button
               onClick={handleAddDocuments}
-              disabled={selectedDocIds.length === 0}
+              disabled={selectedParsedDocIds.length === 0}
             >
-              {`Add ${selectedDocIds.length} Document(s)`}
+              Add
             </Button>
           </DialogFooter>
         </DialogContent>
