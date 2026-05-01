@@ -133,6 +133,20 @@ class IndexDocumentStatusResponse(BaseModel):
     )
 
 
+class IndexParsedDocumentItem(BaseModel):
+    """One row in the index detail 'Parsed Documents' tab."""
+    parse_run_id: UUID = Field(..., alias="parseRunId")
+    source_filename: str | None = Field(None, alias="sourceFilename")
+    parsed_at: datetime | None = Field(None, alias="parsedAt")
+    status: str
+    chunks_created: int | None = Field(None, alias="chunksCreated")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
+
+
 # -----------------------------------------------------------------------------
 # Index CRUD Schemas
 # -----------------------------------------------------------------------------

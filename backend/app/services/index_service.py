@@ -10,6 +10,7 @@ from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.schemas.index import (
     AddParsedDocumentsRequest,
     IndexConfig,
+    IndexParsedDocumentItem,
     IndexStats,
     IndexCreate,
     IndexUpdate,
@@ -309,6 +310,27 @@ class IndexService:
             raise NotFoundError(f"Document {document_id} not found in index")
 
         return await self.get_index(index_id, project_id)
+
+    async def list_index_parsed_documents(
+        self,
+        index_id: UUID,
+        project_id: UUID,
+    ) -> list[IndexParsedDocumentItem]:
+        index = await self.index_repo.get_by_id(index_id, project_id)
+        if not index:
+            raise NotFoundError(f"Index {index_id} not found")
+
+        rows = await self.index_repo.list_index_parsed_documents(index_id)
+        return [
+            IndexParsedDocumentItem(
+                parse_run_id=row.parse_run_id,
+                source_filename=row.source_filename,
+                parsed_at=row.finished_at,
+                status=row.processing_status.value if row.processing_status else "pending",
+                chunks_created=row.chunks_created,
+            )
+            for row in rows
+        ]
 
     async def get_processing_status(
         self,

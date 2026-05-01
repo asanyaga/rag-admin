@@ -24,6 +24,7 @@ from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.schemas.index import (
     IndexCreate,
     IndexConfig,
+    IndexParsedDocumentItem,
     IndexUpdate,
     IndexResponse,
     IndexListResponse,
@@ -435,6 +436,26 @@ async def add_parsed_documents(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/{index_id}/parsed-documents",
+    response_model=list[IndexParsedDocumentItem],
+    summary="List index parsed-documents",
+    description="List all parsed-documents attached to an index with their processing status.",
+)
+async def list_index_parsed_documents(
+    project_id: UUID,
+    index_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.list_index_parsed_documents(index_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.delete(

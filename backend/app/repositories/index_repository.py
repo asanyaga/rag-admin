@@ -8,6 +8,8 @@ from sqlalchemy.orm import selectinload
 from app.models import Index, IndexDocument, IndexStatus, IndexDocumentStatus, Chunk, Document
 from app.models.document import Document as DocumentORM
 from app.models.parse_run import ParseRun
+from app.models.parsed_document import ParsedDocument
+from app.models.source_document import SourceDocument
 from app.schemas.index import IndexConfig
 
 
@@ -403,3 +405,33 @@ class IndexRepository:
         await self.session.commit()
         await self.session.refresh(event)
         return event
+
+    async def list_index_parsed_documents(
+        self,
+        index_id: UUID,
+    ) -> list:
+        """Return parsed-document details for every row in index_documents."""
+        query = (
+            select(
+                IndexDocument.parse_run_id,
+                IndexDocument.processing_status,
+                IndexDocument.chunks_created,
+                ParseRun.finished_at,
+                SourceDocument.filename.label("source_filename"),
+            )
+            .join(ParseRun, ParseRun.id == IndexDocument.parse_run_id, isouter=True)
+            .join(
+                ParsedDocument,
+                ParsedDocument.parse_run_id == IndexDocument.parse_run_id,
+                isouter=True,
+            )
+            .join(
+                SourceDocument,
+                SourceDocument.id == ParsedDocument.source_document_id,
+                isouter=True,
+            )
+            .where(IndexDocument.index_id == index_id)
+            .order_by(ParseRun.finished_at.desc().nulls_last())
+        )
+        result = await self.session.execute(query)
+        return result.all()
