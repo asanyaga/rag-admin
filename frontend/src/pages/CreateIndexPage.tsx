@@ -122,6 +122,7 @@ export default function CreateIndexPage() {
     if (value === 'full_markdown') updateConfig('chunkingStrategy', 'markdown_heading')
     else if (value === 'full_text') updateConfig('chunkingStrategy', 'recursive_character')
     setSelectedParsedDocIds([])
+    setPreviewDocId(null)
     setPreview(null)
   }
 
@@ -132,6 +133,7 @@ export default function CreateIndexPage() {
     const hasMarkdown = opt?.hasFullMarkdown ?? false
     setSelectedFamily({ ...f, hasFullMarkdown: hasMarkdown })
     setSelectedParsedDocIds([])
+    setPreviewDocId(null)
     setPreview(null)
     if (config.sourceRepresentation === 'full_markdown' && !hasMarkdown) {
       updateConfig('sourceRepresentation', 'full_text')
