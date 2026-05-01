@@ -472,6 +472,7 @@ async def remove_index_parsed_document(
     service: IndexService = Depends(get_index_service),
     project_repo: ProjectRepository = Depends(get_project_repo),
 ):
+    """Remove a parsed-document from an index."""
     await verify_project_access(project_id, current_user, project_repo)
     try:
         return await service.remove_parsed_document(index_id, project_id, parse_run_id)

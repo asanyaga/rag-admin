@@ -260,3 +260,50 @@ async def test_delete_index_parsed_document_returns_404_for_unknown_run(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_index_parsed_document_returns_400_when_processing(
+    client: AsyncClient, test_db: AsyncSession
+):
+    token = await _signup(client, f"u{uuid4().hex[:6]}@x.com")
+    user = await _user_by_email(test_db, (await client.get(
+        "/api/v1/users/me", headers={"Authorization": f"Bearer {token}"}
+    )).json()["email"])
+    project = await _make_project(test_db, user)
+
+    idx, _, run, _ = await _seed_index_with_parsed_doc(
+        test_db, user=user, project=project
+    )
+    # Force index into processing state
+    idx.status = IndexStatus.processing
+    test_db.add(idx)
+    await test_db.commit()
+
+    resp = await client.delete(
+        f"/api/v1/projects/{project.id}/indexes/{idx.id}/parsed-documents/{run.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_delete_index_parsed_document_rejects_other_users_project(
+    client: AsyncClient, test_db: AsyncSession
+):
+    token_a = await _signup(client, f"u{uuid4().hex[:6]}@x.com")
+    token_b = await _signup(client, f"u{uuid4().hex[:6]}@x.com")
+    user_a = await _user_by_email(test_db, (await client.get(
+        "/api/v1/users/me", headers={"Authorization": f"Bearer {token_a}"}
+    )).json()["email"])
+    project_a = await _make_project(test_db, user_a)
+
+    idx, _, run, _ = await _seed_index_with_parsed_doc(
+        test_db, user=user_a, project=project_a
+    )
+
+    resp = await client.delete(
+        f"/api/v1/projects/{project_a.id}/indexes/{idx.id}/parsed-documents/{run.id}",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert resp.status_code in (403, 404)
