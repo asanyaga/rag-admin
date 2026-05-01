@@ -316,6 +316,11 @@ class IndexService:
         index_id: UUID,
         project_id: UUID,
     ) -> list[IndexParsedDocumentItem]:
+        """List parsed-document rows for the index detail tab.
+
+        Raises:
+            - NotFoundError: Index not found
+        """
         index = await self.index_repo.get_by_id(index_id, project_id)
         if not index:
             raise NotFoundError(f"Index {index_id} not found")
@@ -325,7 +330,7 @@ class IndexService:
             IndexParsedDocumentItem(
                 parse_run_id=row.parse_run_id,
                 source_filename=row.source_filename,
-                parsed_at=row.finished_at,
+                parsed_at=row.finished_at,  # parse_run.finished_at is when parsing completed
                 status=row.processing_status.value if row.processing_status else "pending",
                 chunks_created=row.chunks_created,
             )

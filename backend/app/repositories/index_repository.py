@@ -1,11 +1,12 @@
 """Repository for index data access."""
 from datetime import datetime
+from typing import Any, Sequence
 from uuid import UUID
-from sqlalchemy import select, delete, func
+from sqlalchemy import Row, select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Index, IndexDocument, IndexStatus, IndexDocumentStatus, Chunk, Document
+from app.models import Index, IndexDocument, IndexStatus, IndexDocumentStatus, Chunk
 from app.models.document import Document as DocumentORM
 from app.models.parse_run import ParseRun
 from app.models.parsed_document import ParsedDocument
@@ -409,7 +410,7 @@ class IndexRepository:
     async def list_index_parsed_documents(
         self,
         index_id: UUID,
-    ) -> list:
+    ) -> Sequence[Row[Any]]:
         """Return parsed-document details for every row in index_documents."""
         query = (
             select(

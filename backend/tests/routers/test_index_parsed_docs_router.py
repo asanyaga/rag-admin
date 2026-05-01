@@ -184,3 +184,25 @@ async def test_list_index_parsed_documents_returns_404_for_unknown_index(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_index_parsed_documents_rejects_other_users_project(
+    client: AsyncClient, test_db: AsyncSession
+):
+    token_a = await _signup(client, f"u{uuid4().hex[:6]}@x.com")
+    token_b = await _signup(client, f"u{uuid4().hex[:6]}@x.com")
+    user_a = await _user_by_email(test_db, (await client.get(
+        "/api/v1/users/me", headers={"Authorization": f"Bearer {token_a}"}
+    )).json()["email"])
+    project_a = await _make_project(test_db, user_a)
+
+    idx, _, _, _ = await _seed_index_with_parsed_doc(
+        test_db, user=user_a, project=project_a
+    )
+
+    resp = await client.get(
+        f"/api/v1/projects/{project_a.id}/indexes/{idx.id}/parsed-documents",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert resp.status_code in (403, 404)
