@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "additionalDirectories": ["/.claude/.worktree"],
     "allow": [
       "WebSearch",
       "WebFetch(domain:developers.llamaindex.ai)",
@@ -89,7 +88,48 @@
       "Bash(python3 *)",
       "Bash(/home/asa/rag-admin/frontend/node_modules/.bin/vitest run *)",
       "Bash(npx *)",
-      "WebFetch(domain:docs.landing.ai)"
+      "WebFetch(domain:docs.landing.ai)",
+      "Bash(grep -E \"\\\\.\\(py|ts|tsx\\)$\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(npm --prefix /home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend run build)",
+      "Bash(grep -v \"^$\")",
+      "Bash(/home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend/node_modules/.bin/tsc --noEmit -p /home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend/tsconfig.app.json)",
+      "Bash(/home/asa/rag-admin/frontend/node_modules/.bin/tsc --noEmit -p /home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend/tsconfig.app.json)",
+      "Bash(/home/asa/rag-admin/frontend/node_modules/.bin/tsc --noEmit -p /home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend/tsconfig.json)",
+      "Bash(npm --prefix /home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend run lint)",
+      "Bash(/home/asa/rag-admin/frontend/node_modules/.bin/eslint /home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend/src/types/index.ts /home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend/src/api/indexes.ts --parser-options=project:/home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend/tsconfig.json)",
+      "Bash(npm --prefix /home/asa/rag-admin/.worktrees/feature/cdm-index-slice-1/frontend install --silent)",
+      "Bash(grep -E \"\\\\.tsx$|\\\\.ts$|^d\")",
+      "Bash(grep -E \"\\\\.tsx$|\\\\.ts$|^d|^total\")",
+      "Bash(npm --prefix /home/asa/rag-admin/frontend run test -- --run src/components/indexes/IndexCreateDialog.test.tsx)",
+      "Bash(npm --prefix /home/asa/rag-admin/frontend run lint)",
+      "Bash(npm --prefix /home/asa/rag-admin/frontend run test)",
+      "Bash(npm --prefix /home/asa/rag-admin/frontend run build)",
+      "Bash(npm --prefix /home/asa/rag-admin/frontend exec -- tsc --noEmit -p /home/asa/rag-admin/frontend/tsconfig.app.json)",
+      "Bash(/home/asa/rag-admin/frontend/node_modules/.bin/tsc *)",
+      "Bash(mkdir -p /tmp/cdm-parsed-doc-handoff)",
+      "Bash(mv /home/asa/rag-admin/docs/superpowers/specs/2026-04-29-cdm-index-parser-config-selector.md /tmp/cdm-parsed-doc-handoff/spec.md)",
+      "Bash(mv /home/asa/rag-admin/docs/superpowers/plans/2026-04-29-cdm-index-parser-config-selector.md /tmp/cdm-parsed-doc-handoff/superseded-plan-1.md)",
+      "Bash(mv /home/asa/rag-admin/docs/superpowers/plans/2026-04-29-preview-chunks-cdm-refactor.md /tmp/cdm-parsed-doc-handoff/superseded-plan-2.md)",
+      "Bash(mv /home/asa/rag-admin/docs/superpowers/plans/2026-04-30-cdm-index-parsed-doc-unit-1-foundation.md /tmp/cdm-parsed-doc-handoff/unit-1-plan.md)",
+      "Bash(cp /tmp/cdm-parsed-doc-handoff/spec.md /home/asa/rag-admin/docs/superpowers/specs/2026-04-29-cdm-index-parser-config-selector.md)",
+      "Bash(cp /tmp/cdm-parsed-doc-handoff/unit-1-plan.md /home/asa/rag-admin/docs/superpowers/plans/2026-04-30-cdm-index-parsed-doc-unit-1-foundation.md)",
+      "Bash(cat)",
+      "Bash(jq -Rs '{body: .}' /tmp/pr-45-body.txt)",
+      "Bash(DATABASE_URL=\"postgresql+asyncpg://ragadmin:ragadmin_local@localhost:5432/ragadmin\" uv run --directory /home/asa/rag-admin/backend alembic upgrade head)",
+      "Bash(curl -sf http://localhost:8000/health)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(GIT_SEQUENCE_EDITOR='sed -i \"s/^pick ea66020/fixup ea66020/\"' git -C /home/asa/rag-admin/.worktrees/feature/cdm-index-source-resolution-seam rebase -i 42ca58b~1)",
+      "Bash(GIT_SEQUENCE_EDITOR='sed -i \"s/^pick 42ca58b/edit 42ca58b/\"' git *)",
+      "Bash(npm --prefix /home/asa/rag-admin/.worktrees/feature/cdm-index-source-resolution-seam/frontend install)",
+      "Bash(npm *)",
+      "Bash(/home/asa/rag-admin/.worktrees/feature/cdm-index-source-resolution-seam/frontend/node_modules/.bin/tsc --noEmit --project /home/asa/rag-admin/.worktrees/feature/cdm-index-source-resolution-seam/frontend/tsconfig.app.json)",
+      "Bash(/home/asa/rag-admin/.worktrees/feature/cdm-index-source-resolution-seam/frontend/node_modules/.bin/tsc --noEmit --project /home/asa/rag-admin/.worktrees/feature/cdm-index-source-resolution-seam/frontend/tsconfig.json)",
+      "Bash(node -e ' *)",
+      "Read(//Docker/host/bin/**)"
+    ],
+    "additionalDirectories": [
+      "/.claude/.worktree"
     ]
   },
   "enabledMcpjsonServers": [
