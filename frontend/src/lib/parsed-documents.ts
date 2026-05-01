@@ -12,6 +12,24 @@ export interface ParsedDocumentListItem {
   parsedAt: string
 }
 
+export interface ParseConfigOption {
+  parser: string
+  parseConfigHash: string
+  config: Record<string, unknown>
+  parsedDocumentCount: number
+  hasFullMarkdown: boolean
+  latestParsedAt: string
+}
+
+export async function listParseConfigs(
+  projectId: string,
+): Promise<ParseConfigOption[]> {
+  const response = await apiClient.get<ParseConfigOption[]>(
+    `/projects/${projectId}/parse-runs/configs`,
+  )
+  return response.data
+}
+
 export async function listParsedDocuments(
   projectId: string,
   params: {
