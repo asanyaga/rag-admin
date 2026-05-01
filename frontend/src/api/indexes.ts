@@ -8,6 +8,7 @@ import {
   IndexCreate,
   IndexUpdate,
   IndexProcessingStatus,
+  IndexParsedDocumentItem,
   AddParsedDocumentsRequest,
   ChunkPreviewRequest,
   ChunkPreviewResponse,
@@ -144,6 +145,28 @@ export async function removeDocument(
     `/projects/${projectId}/indexes/${indexId}/documents/${documentId}`
   )
   return response.data
+}
+
+// List parsed documents in an index
+export async function listIndexParsedDocuments(
+  projectId: string,
+  indexId: string,
+): Promise<IndexParsedDocumentItem[]> {
+  const response = await apiClient.get<IndexParsedDocumentItem[]>(
+    `/projects/${projectId}/indexes/${indexId}/parsed-documents`,
+  )
+  return response.data
+}
+
+// Remove a parsed document from an index
+export async function removeIndexParsedDocument(
+  projectId: string,
+  indexId: string,
+  parseRunId: string,
+): Promise<void> {
+  await apiClient.delete(
+    `/projects/${projectId}/indexes/${indexId}/parsed-documents/${parseRunId}`,
+  )
 }
 
 // Preview chunks

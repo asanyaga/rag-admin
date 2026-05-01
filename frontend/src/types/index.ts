@@ -95,6 +95,15 @@ export interface IndexDocumentStatusItem {
   processedAt: string | null
 }
 
+// Parsed document item within an index
+export interface IndexParsedDocumentItem {
+  parseRunId: string
+  sourceFilename: string | null
+  parsedAt: string | null
+  status: string
+  chunksCreated: number | null
+}
+
 // Processing status response
 export interface IndexProcessingStatus {
   status: IndexStatus
