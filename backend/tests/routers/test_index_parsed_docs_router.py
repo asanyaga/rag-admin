@@ -91,6 +91,7 @@ async def _seed_index_with_parsed_doc(
         project_id=project.id, name="idx",
         config={
             "source_representation": "full_markdown",
+            "chunking_strategy": "markdown_heading",
             "parser": "llamaparse",
             "parse_config_hash": "h" * 64,
         },
@@ -206,3 +207,56 @@ async def test_list_index_parsed_documents_rejects_other_users_project(
         headers={"Authorization": f"Bearer {token_b}"},
     )
     assert resp.status_code in (403, 404)
+
+
+@pytest.mark.asyncio
+async def test_delete_index_parsed_document_removes_row(
+    client: AsyncClient, test_db: AsyncSession
+):
+    token = await _signup(client, f"u{uuid4().hex[:6]}@x.com")
+    user = await _user_by_email(test_db, (await client.get(
+        "/api/v1/users/me", headers={"Authorization": f"Bearer {token}"}
+    )).json()["email"])
+    project = await _make_project(test_db, user)
+
+    idx, idx_doc, run, _ = await _seed_index_with_parsed_doc(
+        test_db, user=user, project=project
+    )
+
+    resp = await client.delete(
+        f"/api/v1/projects/{project.id}/indexes/{idx.id}/parsed-documents/{run.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+
+    # Row is gone
+    remaining = await test_db.execute(
+        select(IndexDocument).where(IndexDocument.index_id == idx.id)
+    )
+    assert remaining.scalars().all() == []
+
+
+@pytest.mark.asyncio
+async def test_delete_index_parsed_document_returns_404_for_unknown_run(
+    client: AsyncClient, test_db: AsyncSession
+):
+    token = await _signup(client, f"u{uuid4().hex[:6]}@x.com")
+    user = await _user_by_email(test_db, (await client.get(
+        "/api/v1/users/me", headers={"Authorization": f"Bearer {token}"}
+    )).json()["email"])
+    project = await _make_project(test_db, user)
+
+    idx = Index(
+        project_id=project.id, name="idx",
+        config={"source_representation": "full_text"},
+        status=IndexStatus.created, created_by=user.id,
+    )
+    test_db.add(idx)
+    await test_db.commit()
+    await test_db.refresh(idx)
+
+    resp = await client.delete(
+        f"/api/v1/projects/{project.id}/indexes/{idx.id}/parsed-documents/{uuid4()}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 404

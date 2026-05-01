@@ -337,6 +337,33 @@ class IndexService:
             for row in rows
         ]
 
+    async def remove_parsed_document(
+        self,
+        index_id: UUID,
+        project_id: UUID,
+        parse_run_id: UUID,
+    ) -> IndexResponse:
+        """Remove a specific parsed-document from an index.
+
+        Raises:
+            - NotFoundError: Index or parsed-document row not found
+            - ValidationError: Index is currently processing
+        """
+        index = await self.index_repo.get_by_id(index_id, project_id)
+        if not index:
+            raise NotFoundError(f"Index {index_id} not found")
+
+        if index.status == IndexStatus.processing:
+            raise ValidationError("Cannot remove documents while index is processing")
+
+        removed = await self.index_repo.remove_parsed_document(index_id, parse_run_id)
+        if not removed:
+            raise NotFoundError(
+                f"Parsed document with parse_run_id={parse_run_id} not found in index"
+            )
+
+        return await self.get_index(index_id, project_id)
+
     async def get_processing_status(
         self,
         index_id: UUID,

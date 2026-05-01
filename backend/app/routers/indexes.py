@@ -459,6 +459,29 @@ async def list_index_parsed_documents(
 
 
 @router.delete(
+    "/{index_id}/parsed-documents/{parse_run_id}",
+    response_model=IndexResponse,
+    summary="Remove parsed-document from index",
+    description="Remove a specific parsed-document row from an index.",
+)
+async def remove_index_parsed_document(
+    project_id: UUID,
+    index_id: UUID,
+    parse_run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: IndexService = Depends(get_index_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.remove_parsed_document(index_id, project_id, parse_run_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.delete(
     "/{index_id}/documents/{document_id}",
     response_model=IndexResponse,
     summary="Remove document",

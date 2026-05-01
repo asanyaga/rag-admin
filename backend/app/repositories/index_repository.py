@@ -436,3 +436,26 @@ class IndexRepository:
         )
         result = await self.session.execute(query)
         return result.all()
+
+    async def remove_parsed_document(
+        self,
+        index_id: UUID,
+        parse_run_id: UUID,
+    ) -> bool:
+        """Remove a specific parsed-document row from an index and its chunks."""
+        result = await self.session.execute(
+            delete(IndexDocument).where(
+                IndexDocument.index_id == index_id,
+                IndexDocument.parse_run_id == parse_run_id,
+            )
+        )
+        if result.rowcount == 0:
+            return False
+        await self.session.execute(
+            delete(Chunk).where(
+                Chunk.index_id == index_id,
+                Chunk.parse_run_id == parse_run_id,
+            )
+        )
+        await self.session.commit()
+        return True
