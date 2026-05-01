@@ -100,3 +100,6 @@ worktrees/
 
 # Scratch files
 _scratch/
+
+# Claude Code local settings
+.claude/settings.local.json
