@@ -1,18 +1,15 @@
 /**
  * Redesigned Index Detail page with persistent header, Content tab, and Playground tab
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
 import { useIndexDetail, useIndexes } from '@/hooks/useIndexes'
-import { useDocuments } from '@/hooks/useDocuments'
-import { IndexUpdate, ChunkListItem } from '@/types/index'
-import { DocumentListItem } from '@/types/document'
+import { IndexUpdate, ChunkListItem, IndexParsedDocumentItem } from '@/types/index'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -40,7 +37,6 @@ import {
   Check,
   Upload,
   Trash2,
-  ChevronDown,
   X,
   Search,
   ChevronLeft,
@@ -61,7 +57,6 @@ export default function IndexDetailPage() {
   const { index, chunks, isLoading, error, fetchIndex, fetchChunks } =
     useIndexDetail(projectId, indexId ?? null)
   const { updateIndex, processIndex } = useIndexes(projectId)
-  const { documents } = useDocuments(projectId)
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'content' | 'playground'>('content')
@@ -75,7 +70,6 @@ export default function IndexDetailPage() {
   const [showConfig, setShowConfig] = useState(false)
 
   // Content tab state
-  const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
   const [selectedChunk, setSelectedChunk] = useState<ChunkListItem | null>(null)
   const [chunkSearch, setChunkSearch] = useState('')
   const [chunkPage, setChunkPage] = useState(1)
@@ -87,7 +81,7 @@ export default function IndexDetailPage() {
 
   // Remove document dialog
   const [removeDocDialogOpen, setRemoveDocDialogOpen] = useState(false)
-  const [docToRemove, setDocToRemove] = useState<string | null>(null)
+  const [parsedDocToRemove, setParsedDocToRemove] = useState<string | null>(null)
   const [isRemovingDoc, setIsRemovingDoc] = useState(false)
 
   // Processing state
@@ -113,11 +107,28 @@ export default function IndexDetailPage() {
 
   const canEdit = index?.status === 'created'
   const canManageDocs = index?.status === 'created' || index?.status === 'ready'
-  const indexDocumentIds = index?.documentIds ?? []
-  const indexDocuments = documents.filter((d) => indexDocumentIds.includes(d.id))
-  const availableDocuments = documents.filter(
-    (d) => d.status === 'ready' && !indexDocumentIds.includes(d.id)
-  )
+
+  // Parsed documents state
+  const [parsedDocs, setParsedDocs] = useState<IndexParsedDocumentItem[]>([])
+  const [isParsedDocsLoading, setIsParsedDocsLoading] = useState(false)
+
+  const fetchParsedDocs = useCallback(async () => {
+    if (!projectId || !indexId) return
+    setIsParsedDocsLoading(true)
+    try {
+      const data = await indexesApi.listIndexParsedDocuments(projectId, indexId)
+      setParsedDocs(data)
+    } catch {
+      // silent — tab shows empty state on error
+    } finally {
+      setIsParsedDocsLoading(false)
+    }
+  }, [projectId, indexId])
+
+  // Fetch parsed documents on mount
+  useEffect(() => {
+    fetchParsedDocs()
+  }, [fetchParsedDocs])
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
@@ -175,13 +186,14 @@ export default function IndexDetailPage() {
   }
 
   const handleRemoveDocument = async () => {
-    if (!projectId || !indexId || !docToRemove) return
+    if (!projectId || !indexId || !parsedDocToRemove) return
     setIsRemovingDoc(true)
     try {
-      await indexesApi.removeDocument(projectId, indexId, docToRemove)
+      await indexesApi.removeIndexParsedDocument(projectId, indexId, parsedDocToRemove)
       await fetchIndex()
+      await fetchParsedDocs()
       setRemoveDocDialogOpen(false)
-      setDocToRemove(null)
+      setParsedDocToRemove(null)
       toast.success('Document removed')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to remove document')
@@ -441,21 +453,21 @@ export default function IndexDetailPage() {
       {activeTab === 'content' && (
         <div className="flex mx-6 mt-4 mb-6 gap-4">
           <div className="flex-1 flex flex-col min-w-0">
-            {/* Documents Section */}
+            {/* Parsed Documents Section */}
             <div className="rounded-t-lg border border-b-0">
               <div className="px-4 py-3 flex items-center justify-between border-b">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Documents ({index.documentCount})
+                  Parsed Documents ({parsedDocs.length})
                 </h3>
                 <div className="flex items-center gap-2">
-                  {index.status === 'ready' && index.documentCount > 0 && index.chunkCount > 0 && (
+                  {index.status === 'ready' && index.chunkCount > 0 && (
                     <button
                       onClick={handleProcessIndex}
                       disabled={isProcessing}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
                       <Play className="h-3.5 w-3.5" />
-                      {isProcessing ? 'Starting...' : 'Index New Documents'}
+                      {isProcessing ? 'Starting...' : 'Re-index'}
                     </button>
                   )}
                   {canManageDocs && (
@@ -468,77 +480,70 @@ export default function IndexDetailPage() {
                   )}
                 </div>
               </div>
-              {indexDocuments.length > 0 && (
-                <div className="px-4 py-2 flex items-center gap-3 bg-muted/50 border-b text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  <span className="w-4" />
-                  <span className="flex-1">Document</span>
-                  <span className="text-xs">Source type</span>
-                  <span className="text-xs">Added</span>
-                  <span className="text-xs">Parse run</span>
-                  {canManageDocs && <span className="p-1 w-8" />}
+
+              {isParsedDocsLoading ? (
+                <div className="px-4 py-3 space-y-2">
+                  {[0, 1].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
                 </div>
-              )}
-              {indexDocuments.length === 0 ? (
+              ) : parsedDocs.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  No documents in this index
+                  No parsed documents in this index
                 </div>
               ) : (
-                indexDocuments.map((doc) => (
-                    <div key={doc.id}>
-                      <div
-                        onClick={() =>
-                          setExpandedDoc(expandedDoc === doc.id ? null : doc.id)
-                        }
-                        className={cn(
-                          'px-4 py-3 flex items-center gap-3 cursor-pointer transition-colors',
-                          expandedDoc === doc.id ? 'bg-primary/5' : 'hover:bg-primary/5'
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'transition-transform text-muted-foreground',
-                            expandedDoc === doc.id ? 'rotate-0' : '-rotate-90'
-                          )}
+                <>
+                  <div className="px-4 py-2 flex items-center gap-3 bg-muted/50 border-b text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    <span className="flex-1">Source filename</span>
+                    <span className="w-24">Parse run</span>
+                    <span className="w-32">Parsed at</span>
+                    <span className="w-20">Status</span>
+                    <span className="w-16 text-right">Chunks</span>
+                    {canManageDocs && <span className="w-8" />}
+                  </div>
+                  {parsedDocs.map((pd) => (
+                    <div
+                      key={pd.parseRunId}
+                      className="px-4 py-3 flex items-center gap-3 border-b last:border-b-0 hover:bg-muted/20"
+                    >
+                      <span className="flex-1 text-sm font-medium truncate">
+                        {pd.sourceFilename ?? 'Unknown file'}
+                      </span>
+                      <span className="w-24 text-xs font-mono text-muted-foreground truncate">
+                        {pd.parseRunId.slice(0, 8)}…
+                      </span>
+                      <span className="w-32 text-xs text-muted-foreground">
+                        {pd.parsedAt
+                          ? new Date(pd.parsedAt).toLocaleDateString('en-US', {
+                              month: 'short', day: 'numeric',
+                              hour: '2-digit', minute: '2-digit',
+                            })
+                          : '—'}
+                      </span>
+                      <span className={cn(
+                        'w-20 text-xs font-medium',
+                        pd.status === 'completed' ? 'text-green-700 dark:text-green-400' :
+                        pd.status === 'processing' ? 'text-blue-700 dark:text-blue-400' :
+                        pd.status === 'failed' ? 'text-red-700 dark:text-red-400' :
+                        'text-muted-foreground',
+                      )}>
+                        {pd.status}
+                      </span>
+                      <span className="w-16 text-xs font-mono text-right text-muted-foreground">
+                        {pd.chunksCreated ?? '—'}
+                      </span>
+                      {canManageDocs && (
+                        <button
+                          className="w-8 p-1 rounded text-muted-foreground/40 hover:text-red-500 transition-colors"
+                          onClick={() => {
+                            setParsedDocToRemove(pd.parseRunId)
+                            setRemoveDocDialogOpen(true)
+                          }}
                         >
-                          <ChevronDown className="h-4 w-4" />
-                        </span>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium flex-1">{doc.title}</span>
-                        <span className="text-xs text-muted-foreground">{doc.sourceType}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(doc.createdAt).toLocaleDateString()}
-                        </span>
-                        <span className="text-muted-foreground text-sm">—</span>
-                        {canManageDocs && (
-                          <button
-                            className="p-1 rounded text-muted-foreground/40 hover:text-red-500 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setDocToRemove(doc.id)
-                              setRemoveDocDialogOpen(true)
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      {expandedDoc === doc.id && (
-                        <div className="px-4 py-2 pl-14 text-xs text-muted-foreground flex gap-5 bg-muted/50 border-t">
-                          <span>
-                            Status:{' '}
-                            <span className={`font-medium ${
-                              doc.status === 'ready' ? 'text-green-700 dark:text-green-400' :
-                              doc.status === 'processing' ? 'text-blue-700 dark:text-blue-400' :
-                              doc.status === 'failed' ? 'text-red-700 dark:text-red-400' :
-                              'text-muted-foreground'
-                            }`}>
-                              {doc.status}
-                            </span>
-                          </span>
-                        </div>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       )}
                     </div>
-                  ))
+                  ))}
+                </>
               )}
             </div>
 
@@ -763,37 +768,9 @@ export default function IndexDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-96 overflow-y-auto">
-            {availableDocuments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No available documents to add
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {availableDocuments.map((doc: DocumentListItem) => (
-                  <label
-                    key={doc.id}
-                    className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted"
-                  >
-                    <Checkbox
-                      checked={selectedDocIds.includes(doc.id)}
-                      onCheckedChange={(checked: boolean) => {
-                        if (checked) {
-                          setSelectedDocIds((prev) => [...prev, doc.id])
-                        } else {
-                          setSelectedDocIds((prev) =>
-                            prev.filter((id) => id !== doc.id)
-                          )
-                        }
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{doc.title}</p>
-                      <p className="text-sm text-muted-foreground">{doc.sourceType}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
+            <p className="text-center text-muted-foreground py-8">
+              Use the parsed-document picker (coming in the next unit)
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDocsDialogOpen(false)}>
@@ -822,7 +799,10 @@ export default function IndexDetailPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setRemoveDocDialogOpen(false)}
+              onClick={() => {
+                setRemoveDocDialogOpen(false)
+                setParsedDocToRemove(null)
+              }}
             >
               Cancel
             </Button>
