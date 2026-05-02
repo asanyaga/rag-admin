@@ -6,7 +6,9 @@ from uuid import UUID
 from app.models import Chunk, IndexStatus
 from app.repositories.index_repository import IndexRepository
 from app.repositories.chunk_repository import ChunkRepository
+from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.repositories.provider_key_repository import ProviderKeyRepository
+from app.schemas.citation import ChunkCitation
 from app.schemas.query import (
     QueryRequest,
     QueryResponse,
@@ -180,10 +182,10 @@ class QueryService:
                 similarity_threshold=request.similarity_threshold,
             )
 
-        return [
-            self._to_result(chunk, score, rank)
-            for rank, (chunk, score) in enumerate(scored_chunks, 1)
-        ]
+        results: list[RetrievalResult] = []
+        for rank, (chunk, score) in enumerate(scored_chunks, 1):
+            results.append(await self._to_result(chunk, score, rank))
+        return results
 
     async def _keyword_search(
         self, index, request: QueryRequest,
@@ -244,10 +246,10 @@ class QueryService:
                 if score >= request.similarity_threshold
             ][:request.top_k]
 
-        return [
-            self._to_result(chunk, score, rank)
-            for rank, (chunk, score) in enumerate(filtered, 1)
-        ]
+        results: list[RetrievalResult] = []
+        for rank, (chunk, score) in enumerate(filtered, 1):
+            results.append(await self._to_result(chunk, score, rank))
+        return results
 
     async def _hybrid_search(
         self, index, user_id: UUID, project_id: UUID, request: QueryRequest,
@@ -327,10 +329,10 @@ class QueryService:
                 vector_results, keyword_results, request, pool_k
             )
 
-        return [
-            self._to_result(chunk, score, rank)
-            for rank, (chunk, score) in enumerate(results, 1)
-        ]
+        out: list[RetrievalResult] = []
+        for rank, (chunk, score) in enumerate(results, 1):
+            out.append(await self._to_result(chunk, score, rank))
+        return out
 
     def _rrf_merge(
         self,
@@ -376,8 +378,7 @@ class QueryService:
     # Helpers
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _to_result(chunk: Chunk, score: float, rank: int) -> RetrievalResult:
+    async def _to_result(self, chunk: Chunk, score: float, rank: int) -> RetrievalResult:
         """Convert a Chunk ORM object to a RetrievalResult schema."""
         doc = chunk.document
         if doc:
@@ -392,6 +393,8 @@ class QueryService:
 
         page_numbers = (chunk.chunk_metadata or {}).get("page_numbers")
         page = page_numbers[0] if page_numbers else None
+
+        citation = await self._build_citation(chunk, doc_name)
 
         return RetrievalResult(
             chunk_id=str(chunk.id),
@@ -408,4 +411,67 @@ class QueryService:
                 char_count=chunk.char_count,
                 chunk_metadata=chunk.chunk_metadata or {},
             ),
+            citation=citation,
         )
+
+    async def _build_citation(self, chunk: Chunk, document_title: str) -> ChunkCitation:
+        meta = chunk.chunk_metadata or {}
+        citation = ChunkCitation(
+            chunk_id=chunk.id,
+            document_id=chunk.document_id,
+            document_title=document_title,
+            index_id=chunk.index_id,
+            index_version=getattr(chunk, "index_version", 1),
+            parse_run_id=chunk.parse_run_id,
+            source_type=chunk.source_type,
+            start_char=meta.get("start_char"),
+            end_char=meta.get("end_char"),
+            page_numbers=meta.get("page_numbers") or [],
+            heading_path=meta.get("heading_path"),
+        )
+
+        if (
+            chunk.source_type == "block"
+            and chunk.parse_run_id is not None
+            and meta.get("block_ids")
+        ):
+            await self._resolve_block_citation(citation, chunk, meta["block_ids"])
+
+        return citation
+
+    async def _resolve_block_citation(
+        self, citation: ChunkCitation, chunk: Chunk, block_ids: list[str]
+    ) -> None:
+        repo = ParsedDocumentRepository(self.chunk_repo.session)
+        parsed_doc_row = await repo.get_by_run(chunk.parse_run_id)
+        if parsed_doc_row is None:
+            # Parse run deleted — keep block fields null so the UI can detect failure.
+            return
+        blocks_raw = (parsed_doc_row.content or {}).get("blocks") or []
+        block_map = {b.get("id"): b for b in blocks_raw if b.get("id")}
+        ordered = [block_map[bid] for bid in block_ids if bid in block_map]
+        if not ordered:
+            return
+
+        citation.block_ids = block_ids
+        citation.page_indices = sorted({b.get("page_index") for b in ordered if b.get("page_index") is not None})
+        citation.block_roles = [b.get("role") for b in ordered if b.get("role") is not None]
+        citation.bboxes = [
+            (
+                {
+                    "x0": b["bbox"]["x0"],
+                    "y0": b["bbox"]["y0"],
+                    "x1": b["bbox"]["x1"],
+                    "y1": b["bbox"]["y1"],
+                }
+                if b.get("bbox")
+                else None
+            )
+            for b in ordered
+        ]
+        confidences = [
+            b["quality"]["confidence"]
+            for b in ordered
+            if b.get("quality") and b["quality"].get("confidence") is not None
+        ]
+        citation.confidence = min(confidences) if confidences else None

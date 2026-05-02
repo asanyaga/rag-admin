@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from app.schemas.citation import ChunkCitation
+
 
 class QueryRequest(BaseModel):
     """Query request matching the frontend contract."""
@@ -41,6 +43,7 @@ class RetrievalResult(BaseModel):
     score: float
     content: str
     metadata: RetrievalResultMetadata
+    citation: ChunkCitation | None = None
 
     model_config = {"populate_by_name": True}
 

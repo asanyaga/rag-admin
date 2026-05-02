@@ -106,3 +106,51 @@ def test_index_config_max_section_chars_range():
             chunking_strategy="markdown_heading",
             max_section_chars=16001,
         ))
+
+
+def _block_config(**overrides):
+    base = dict(
+        parser="llamaparse",
+        parse_config_hash="h" * 64,
+        source_representation="block",
+        chunking_strategy="block",
+    )
+    base.update(overrides)
+    return base
+
+
+def test_block_config_defaults():
+    cfg = IndexConfig(**_block_config())
+    assert cfg.group_by_heading is True
+    assert cfg.max_blocks_per_chunk == 10
+    assert cfg.block_role_filter is None
+
+
+def test_block_config_accepts_role_filter():
+    cfg = IndexConfig(**_block_config(block_role_filter=["table", "figure"]))
+    assert cfg.block_role_filter == ["table", "figure"]
+
+
+def test_max_blocks_per_chunk_below_min_rejected():
+    with pytest.raises(PydanticValidationError):
+        IndexConfig(**_block_config(max_blocks_per_chunk=0))
+
+
+def test_max_blocks_per_chunk_above_max_rejected():
+    with pytest.raises(PydanticValidationError):
+        IndexConfig(**_block_config(max_blocks_per_chunk=51))
+
+
+def test_block_role_filter_accepts_camel_case_alias():
+    cfg = IndexConfig.model_validate({
+        "parser": "llamaparse",
+        "parseConfigHash": "h" * 64,
+        "sourceRepresentation": "block",
+        "chunkingStrategy": "block",
+        "groupByHeading": False,
+        "maxBlocksPerChunk": 5,
+        "blockRoleFilter": ["paragraph"],
+    })
+    assert cfg.group_by_heading is False
+    assert cfg.max_blocks_per_chunk == 5
+    assert cfg.block_role_filter == ["paragraph"]

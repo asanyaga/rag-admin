@@ -1,5 +1,9 @@
 """Dispatch a resolved ChunkSource + IndexConfig to the right chunker."""
 from app.schemas.index import IndexConfig
+from app.services.block_chunking_service import (
+    BlockChunkingService,
+    get_block_chunking_service,
+)
 from app.services.chunking_service import (
     ChunkResult,
     ChunkingService,
@@ -23,10 +27,14 @@ class ChunkingDispatcher:
         self,
         chunking_service: ChunkingService | None = None,
         markdown_chunking_service: MarkdownChunkingService | None = None,
+        block_chunking_service: BlockChunkingService | None = None,
     ) -> None:
         self.chunking_service = chunking_service or get_chunking_service()
         self.markdown_chunking_service = (
             markdown_chunking_service or get_markdown_chunking_service()
+        )
+        self.block_chunking_service = (
+            block_chunking_service or get_block_chunking_service()
         )
 
     def dispatch(
@@ -51,11 +59,18 @@ class ChunkingDispatcher:
                 config=config,
                 source_document_id=source_document_id,
                 source_filename=source_filename,
-                page_boundaries=None,  # CDM page boundaries: see Unit 6 notes
+                page_boundaries=None,
             )
         if isinstance(source, BlocksSource):
-            raise NotImplementedError(
-                "block-based chunking is not yet implemented"
+            if config.chunking_strategy == "classified_block":
+                raise NotImplementedError(
+                    "classified_block chunking requires a classification run "
+                    "and is not yet implemented"
+                )
+            return self.block_chunking_service.chunk_blocks(
+                blocks=source.blocks,
+                config=config,
+                source_document_id=source_document_id,
+                source_filename=source_filename,
             )
-        # Defensive: ChunkSource is Union[TextSource, BlocksSource]; future variant would fall here.
         raise TypeError(f"Unsupported ChunkSource type: {type(source).__name__}")
