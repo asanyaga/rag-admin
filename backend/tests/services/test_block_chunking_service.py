@@ -112,3 +112,109 @@ def test_block_chunking_max_blocks_cap_emits_continuation_with_context():
     for cont in chunks[1:]:
         assert cont.metadata.get("context_heading") == "Big Section"
         assert cont.content.startswith("[context: Big Section]")
+
+
+def test_block_chunking_role_filter_applies_whitelist():
+    svc = BlockChunkingService()
+    blocks = [
+        _block("h1", BlockRole.HEADING, "H", y0=0.0).model_dump(),
+        _block("p1", BlockRole.PARAGRAPH, "para", y0=0.1).model_dump(),
+        _block("t1", BlockRole.TABLE, "tab", y0=0.2).model_dump(),
+    ]
+    chunks = svc.chunk_blocks(
+        blocks=blocks, config=_config(block_role_filter=["table"])
+    )
+
+    assert len(chunks) == 1
+    assert chunks[0].metadata["block_ids"] == ["t1"]
+    assert chunks[0].metadata["block_roles"] == ["table"]
+
+
+def test_block_chunking_skips_layout_blocks():
+    svc = BlockChunkingService()
+    blocks = [
+        _block("hd", BlockRole.HEADER, "running header", y0=0.0).model_dump(),
+        _block("h1", BlockRole.HEADING, "Real heading", y0=0.05).model_dump(),
+        _block("p1", BlockRole.PARAGRAPH, "real para", y0=0.1).model_dump(),
+        _block("ft", BlockRole.FOOTER, "page 1 of 5", y0=0.95).model_dump(),
+        _block("mg", BlockRole.MARGINALIA, "[note]", y0=0.5).model_dump(),
+    ]
+    chunks = svc.chunk_blocks(blocks=blocks, config=_config())
+
+    all_ids = {bid for c in chunks for bid in c.metadata["block_ids"]}
+    assert "hd" not in all_ids
+    assert "ft" not in all_ids
+    assert "mg" not in all_ids
+    assert all_ids == {"h1", "p1"}
+
+
+def test_block_chunking_layout_skipped_even_when_in_filter():
+    """Layout blocks are dropped even if explicitly listed in block_role_filter."""
+    svc = BlockChunkingService()
+    blocks = [
+        _block("hd", BlockRole.HEADER, "noise", y0=0.0).model_dump(),
+        _block("p1", BlockRole.PARAGRAPH, "real", y0=0.1).model_dump(),
+    ]
+    chunks = svc.chunk_blocks(
+        blocks=blocks, config=_config(block_role_filter=["header", "paragraph"])
+    )
+    all_ids = {bid for c in chunks for bid in c.metadata["block_ids"]}
+    assert "hd" not in all_ids
+    assert "p1" in all_ids
+
+
+def test_block_chunking_no_headings_groups_all_content():
+    svc = BlockChunkingService()
+    blocks = [
+        _block(f"p{i}", BlockRole.PARAGRAPH, f"para {i}", y0=0.1 * i).model_dump()
+        for i in range(4)
+    ]
+    chunks = svc.chunk_blocks(blocks=blocks, config=_config(max_blocks_per_chunk=10))
+
+    assert len(chunks) == 1
+    assert chunks[0].metadata["block_ids"] == ["p0", "p1", "p2", "p3"]
+    assert "context_heading" not in chunks[0].metadata
+
+
+def test_block_chunking_provenance_fields_populated():
+    svc = BlockChunkingService()
+    blocks = [
+        _block("h1", BlockRole.HEADING, "Heading", page=2, y0=0.0).model_dump(),
+        _block("p1", BlockRole.PARAGRAPH, "paragraph A", page=2, y0=0.1).model_dump(),
+        _block("p2", BlockRole.PARAGRAPH, "paragraph B", page=3, y0=0.0).model_dump(),
+    ]
+    chunks = svc.chunk_blocks(
+        blocks=blocks,
+        config=_config(),
+        source_document_id="doc-1",
+        source_filename="report.pdf",
+    )
+
+    meta = chunks[0].metadata
+    assert meta["block_ids"] == ["h1", "p1", "p2"]
+    assert meta["page_indices"] == [2, 3]
+    assert meta["block_roles"] == ["heading", "paragraph", "paragraph"]
+    assert len(meta["bboxes"]) == 3
+    for bb in meta["bboxes"]:
+        assert set(bb.keys()) == {"x0", "y0", "x1", "y1"}
+    assert meta["source_document_id"] == "doc-1"
+    assert meta["source_filename"] == "report.pdf"
+
+
+def test_block_chunking_bbox_null_when_block_has_no_bbox():
+    svc = BlockChunkingService()
+    block_dict = Block(
+        id="b1",
+        role=BlockRole.PARAGRAPH,
+        native_type="p",
+        page_index=0,
+        text="no bbox",
+    ).model_dump()
+    chunks = svc.chunk_blocks(blocks=[block_dict], config=_config())
+
+    assert chunks[0].metadata["bboxes"] == [None]
+
+
+def test_block_chunking_empty_input_returns_empty():
+    svc = BlockChunkingService()
+    assert svc.chunk_blocks(blocks=[], config=_config()) == []
