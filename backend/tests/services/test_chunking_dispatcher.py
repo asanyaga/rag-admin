@@ -62,15 +62,40 @@ def test_dispatch_text_source_passes_metadata_through():
     assert chunks[0].metadata["source_document_id"] == str(sdid)
 
 
-def test_dispatch_blocks_source_raises_not_implemented():
-    src = BlocksSource(blocks=[{"text": "foo"}])
-    with pytest.raises(NotImplementedError, match="block"):
-        ChunkingDispatcher().dispatch(
-            source=src,
-            config=_config("block", "block"),
-            source_document_id=str(uuid4()),
-            source_filename=None,
-        )
+def test_dispatch_blocks_source_routes_to_block_service():
+    from app.cdm.models import BBox, Block, BlockRole, CoordSpace
+
+    bbox = BBox(x0=0.0, y0=0.0, x1=1.0, y1=0.05, space=CoordSpace.NORMALIZED)
+    blocks = [
+        Block(
+            id="b1",
+            role=BlockRole.HEADING,
+            native_type="h1",
+            page_index=0,
+            bbox=bbox,
+            text="Heading",
+        ).model_dump(),
+        Block(
+            id="b2",
+            role=BlockRole.PARAGRAPH,
+            native_type="p",
+            page_index=0,
+            bbox=bbox.model_copy(update={"y0": 0.1, "y1": 0.2}),
+            text="Body paragraph",
+        ).model_dump(),
+    ]
+    src = BlocksSource(blocks=blocks)
+    chunks = ChunkingDispatcher().dispatch(
+        source=src,
+        config=_config("block", "block"),
+        source_document_id=str(uuid4()),
+        source_filename="acme.pdf",
+    )
+
+    assert len(chunks) == 1
+    assert chunks[0].metadata["block_ids"] == ["b1", "b2"]
+    assert chunks[0].metadata["page_indices"] == [0]
+    assert chunks[0].metadata["block_roles"] == ["heading", "paragraph"]
 
 
 def test_dispatch_empty_text_returns_empty_list():
