@@ -89,3 +89,26 @@ def test_block_chunking_table_standalone_when_no_open_group():
     assert len(chunks) == 2
     assert chunks[0].metadata["block_ids"] == ["t1"]
     assert chunks[1].metadata["block_ids"] == ["t2"]
+
+
+def test_block_chunking_max_blocks_cap_emits_continuation_with_context():
+    """When a group exceeds max_blocks_per_chunk, the next chunk is a
+    continuation tagged with the most recent heading."""
+    svc = BlockChunkingService()
+    blocks = [
+        _block("h1", BlockRole.HEADING, "Big Section", y0=0.0).model_dump(),
+        *[
+            _block(f"p{i}", BlockRole.PARAGRAPH, f"para {i}", y0=0.1 + i * 0.01).model_dump()
+            for i in range(6)
+        ],
+    ]
+    # Cap at 3 → first chunk = heading + 2 paras, second = 3 paras (continuation),
+    # third = 1 para (continuation). Continuation chunks carry context_heading.
+    chunks = svc.chunk_blocks(blocks=blocks, config=_config(max_blocks_per_chunk=3))
+
+    assert len(chunks) == 3
+    assert "context_heading" not in chunks[0].metadata
+    assert chunks[0].content.startswith("Big Section")
+    for cont in chunks[1:]:
+        assert cont.metadata.get("context_heading") == "Big Section"
+        assert cont.content.startswith("[context: Big Section]")
