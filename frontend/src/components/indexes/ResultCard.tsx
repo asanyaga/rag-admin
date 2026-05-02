@@ -3,6 +3,7 @@
  */
 import { RetrievalResult } from '@/types/index'
 import { ScoreBar } from './ScoreBar'
+import { CitationFooter } from './CitationFooter'
 import { Button } from '@/components/ui/button'
 import { FileText, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -152,6 +153,9 @@ export function ResultCard({
             </div>
           </div>
         )}
+
+        {/* Citation */}
+        {result.citation && <CitationFooter citation={result.citation} />}
       </div>
     </div>
   )
