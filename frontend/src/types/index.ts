@@ -33,10 +33,66 @@ export interface IndexConfig {
   // Markdown-specific chunking
   splitHeadingLevel: number
   maxSectionChars: number
+  // Block-specific chunking
+  groupByHeading: boolean
+  maxBlocksPerChunk: number
+  blockRoleFilter: string[] | null
   // Embedding
   embeddingProvider: string
   embeddingModel: string
   embeddingDimensions: number | null
+}
+
+// CDM block role (mirrors backend BlockRole enum values)
+export type BlockRole =
+  | 'title'
+  | 'heading'
+  | 'paragraph'
+  | 'list'
+  | 'table'
+  | 'figure'
+  | 'caption'
+  | 'header'
+  | 'footer'
+  | 'marginalia'
+  | 'code'
+  | 'formula'
+  | 'link'
+  | 'other'
+
+export const BLOCK_ROLE_OPTIONS: BlockRole[] = [
+  'title', 'heading', 'paragraph', 'list', 'table', 'figure',
+  'caption', 'code', 'formula', 'link', 'other',
+]
+
+export interface BBoxLike {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+}
+
+export interface ChunkCitation {
+  chunkId: string
+  documentId: string
+  documentTitle: string
+  indexId: string
+  indexVersion: number
+  parseRunId: string | null
+  sourceType: 'raw_text' | 'full_text' | 'full_markdown' | 'block'
+
+  // Text-based
+  startChar: number | null
+  endChar: number | null
+  pageNumbers: number[]
+  headingPath: string[] | null
+
+  // Block-based
+  blockIds: string[] | null
+  pageIndices: number[] | null
+  blockRoles: BlockRole[] | null
+  bboxes: (BBoxLike | null)[] | null
+  confidence: number | null
 }
 
 // Index statistics
@@ -240,6 +296,7 @@ export interface RetrievalResult {
   score: number
   content: string
   metadata: RetrievalResultMetadata
+  citation?: ChunkCitation | null
 }
 
 export interface QueryResponse {
