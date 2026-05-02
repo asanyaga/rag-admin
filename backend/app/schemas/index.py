@@ -49,6 +49,15 @@ class IndexConfig(BaseModel):
     split_heading_level: int = Field(default=2, ge=1, le=3, alias="splitHeadingLevel")
     max_section_chars: int = Field(default=4000, ge=500, le=16000, alias="maxSectionChars")
 
+    # Block-based config (block, classified_block)
+    group_by_heading: bool = Field(default=True, alias="groupByHeading")
+    max_blocks_per_chunk: int = Field(
+        default=10, ge=1, le=50, alias="maxBlocksPerChunk"
+    )
+    block_role_filter: list[str] | None = Field(
+        default=None, alias="blockRoleFilter"
+    )
+
     # Embedding config (unchanged)
     embedding_provider: str = Field(default="openai", alias="embeddingProvider")
     embedding_model: str = Field(default="text-embedding-3-small", alias="embeddingModel")
