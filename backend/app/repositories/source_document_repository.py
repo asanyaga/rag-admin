@@ -45,6 +45,15 @@ class SourceDocumentRepository:
         )
         return result.scalar_one_or_none()
 
+    async def update_storage_uri(self, source_document_id: UUID, storage_uri: str) -> None:
+        result = await self.session.execute(
+            select(SourceDocument).where(SourceDocument.id == source_document_id)
+        )
+        row = result.scalar_one_or_none()
+        if row is not None:
+            row.storage_uri = storage_uri
+            await self.session.commit()
+
     async def get_or_create_by_sha256(
         self,
         *,

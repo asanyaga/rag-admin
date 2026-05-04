@@ -23,6 +23,7 @@ import { Slider } from '@/components/ui/slider'
 import { ParseConfigFamilySelector } from '@/components/indexes/ParseConfigFamilySelector'
 import { ParsedDocumentPicker } from '@/components/indexes/ParsedDocumentPicker'
 import { ChunkPreviewPanel } from '@/components/indexes/ChunkPreviewPanel'
+import { BlockConfigPanel } from '@/components/indexes/BlockConfigPanel'
 import { toast } from 'sonner'
 import {
   FileText, ChevronRight, ChevronLeft, Info, Check,
@@ -52,6 +53,9 @@ const DEFAULT_CONFIG: Partial<IndexConfig> = {
   chunkUnit: 'characters',
   splitHeadingLevel: 2,
   maxSectionChars: 4000,
+  groupByHeading: true,
+  maxBlocksPerChunk: 10,
+  blockRoleFilter: null,
   embeddingProvider: 'openai',
   embeddingModel: 'text-embedding-3-small',
 }
@@ -121,6 +125,7 @@ export default function CreateIndexPage() {
     updateConfig('sourceRepresentation', value)
     if (value === 'full_markdown') updateConfig('chunkingStrategy', 'markdown_heading')
     else if (value === 'full_text') updateConfig('chunkingStrategy', 'recursive_character')
+    else if (value === 'block') updateConfig('chunkingStrategy', 'block')
     setSelectedParsedDocIds([])
     setPreviewDocId(null)
     setPreview(null)
@@ -333,6 +338,9 @@ export default function CreateIndexPage() {
                     >
                       Full Markdown
                     </ToggleGroupItem>
+                    <ToggleGroupItem value="block" aria-label="Blocks">
+                      Blocks
+                    </ToggleGroupItem>
                   </ToggleGroup>
                   {!selectedFamily?.hasFullMarkdown && (
                     <p className="text-sm text-muted-foreground">
@@ -408,6 +416,8 @@ export default function CreateIndexPage() {
                         </p>
                       </div>
                     </>
+                  ) : config.sourceRepresentation === 'block' ? (
+                    <BlockConfigPanel config={config} onUpdate={updateConfig} />
                   ) : (
                     <>
                       <div className="grid grid-cols-2 gap-4">

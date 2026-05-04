@@ -354,8 +354,11 @@ class DocumentService:
         if not document:
             raise NotFoundError(f"Document {document_id} not found")
 
-        # Delete file from storage (best effort)
-        if document.source_metadata.get("file_path"):
+        # Delete file from storage only for legacy (non-CDM) documents.
+        # CDM documents have source_document_id set; their physical file belongs
+        # to the SourceDocument and must not be removed when a single Document
+        # is deleted, because other documents may share the same source bytes.
+        if document.source_document_id is None and document.source_metadata.get("file_path"):
             try:
                 await self.storage_service.delete(
                     document.source_metadata["file_path"]
@@ -447,98 +450,116 @@ async def process_cdm_parsing(
     project_id: UUID,
     representation_kind: str,
     config: dict,
-    document_repo: DocumentRepository,
-    parse_run_repo: Any,
-    parsed_doc_repo: Any,
-    source_doc_repo: Any,
     storage_service: StorageService,
     llamaparse_client: Any,
     landingai_client: Any = None,
 ) -> None:
     """Background task: CDM parse + persist for a newly uploaded document.
 
-    Creates a ParsingService from the provided repos and client, runs
-    parse_and_persist, and writes the extracted_text shim for downstream readers.
+    Opens a fresh DB session (independent of the request session) so that
+    long-running parsers (LlamaParse, LandingAI) don't time out on the
+    connection that was held open during request handling.
     """
     from app.cdm.models import ParserKind
     from app.cdm.source import SourceDocument as SourceDocumentCDM
+    from app.database import AsyncSessionLocal
+    from app.dependencies.documents import get_document_extractor
+    from app.repositories.parse_run_repository import ParseRunRepository
+    from app.repositories.parsed_document_repository import ParsedDocumentRepository
+    from app.repositories.source_document_repository import SourceDocumentRepository
     from app.services.parsing.errors import ParseFailedError
     from app.services.parsing.parsing_service import ParsingService
 
-    # Fetch source document ORM
-    source_orm = await source_doc_repo.get(source_document_id)
-    if source_orm is None:
-        await document_repo.update_status(
-            document_id=document_id,
-            status=DocumentStatus.failed,
-            status_message="SourceDocument not found",
-        )
-        return
+    async with AsyncSessionLocal() as session:
+        document_repo = DocumentRepository(session)
+        source_doc_repo = SourceDocumentRepository(session)
+        parse_run_repo = ParseRunRepository(session)
+        parsed_doc_repo = ParsedDocumentRepository(session)
 
-    # Fetch Document to get file_path
-    doc = await document_repo.get_by_id_unscoped(document_id)
-    if doc is None:
-        return  # Deleted before task ran
+        try:
+            source_orm = await source_doc_repo.get(source_document_id)
+            if source_orm is None:
+                await document_repo.update_status(
+                    document_id=document_id,
+                    status=DocumentStatus.failed,
+                    status_message="SourceDocument not found",
+                )
+                return
 
-    file_path = doc.source_metadata.get("file_path")
-    if not file_path:
-        await document_repo.update_status(
-            document_id=document_id,
-            status=DocumentStatus.failed,
-            status_message="Missing file_path in source_metadata",
-        )
-        return
+            file_path = source_orm.storage_uri
+            if not file_path:
+                await document_repo.update_status(
+                    document_id=document_id,
+                    status=DocumentStatus.failed,
+                    status_message="SourceDocument has no storage_uri",
+                )
+                return
 
-    source_cdm = SourceDocumentCDM(
-        id=str(source_orm.id),
-        sha256=source_orm.sha256,
-        filename=source_orm.filename,
-        mime_type=source_orm.mime_type,
-        byte_size=source_orm.byte_size,
-        storage_uri=source_orm.storage_uri,
-        created_at=source_orm.created_at,
-    )
+            source_cdm = SourceDocumentCDM(
+                id=str(source_orm.id),
+                sha256=source_orm.sha256,
+                filename=source_orm.filename,
+                mime_type=source_orm.mime_type,
+                byte_size=source_orm.byte_size,
+                storage_uri=source_orm.storage_uri,
+                created_at=source_orm.created_at,
+            )
 
-    from app.dependencies.documents import get_document_extractor
-    service = ParsingService(
-        source_doc_repo=source_doc_repo,
-        parse_run_repo=parse_run_repo,
-        parsed_doc_repo=parsed_doc_repo,
-        storage=storage_service,
-        clients={
-            ParserKind.LLAMAPARSE: llamaparse_client,
-            ParserKind.LANDING_AI: landingai_client,
-            ParserKind.SIMPLE: get_document_extractor(),
-        },
-    )
+            service = ParsingService(
+                source_doc_repo=source_doc_repo,
+                parse_run_repo=parse_run_repo,
+                parsed_doc_repo=parsed_doc_repo,
+                storage=storage_service,
+                clients={
+                    ParserKind.LLAMAPARSE: llamaparse_client,
+                    ParserKind.LANDING_AI: landingai_client,
+                    ParserKind.SIMPLE: get_document_extractor(),
+                },
+            )
 
-    try:
-        run, parsed_doc = await service.parse_and_persist(
-            source=source_cdm,
-            file_path=file_path,
-            representation_kind=representation_kind,
-            config=config,
-            project_id=project_id,
-        )
-    except ParseFailedError as e:
-        await document_repo.update_status(
-            document_id=document_id,
-            status=DocumentStatus.failed,
-            status_message=str(e),
-        )
-        return
+            try:
+                run, parsed_doc = await service.parse_and_persist(
+                    source=source_cdm,
+                    file_path=file_path,
+                    representation_kind=representation_kind,
+                    config=config,
+                    project_id=project_id,
+                )
+            except ParseFailedError as e:
+                await document_repo.update_status(
+                    document_id=document_id,
+                    status=DocumentStatus.failed,
+                    status_message=str(e),
+                )
+                return
 
-    if parsed_doc is not None:
-        # extracted_text shim: keeps downstream readers working until migration spec retires it
-        await document_repo.update_extraction(
-            document_id=document_id,
-            extracted_text=parsed_doc.full_text or "",
-            processing_metadata={},
-            status=DocumentStatus.ready,
-        )
-    else:
-        await document_repo.update_status(
-            document_id=document_id,
-            status=DocumentStatus.failed,
-            status_message=f"Parse run finished with status: {run.status.value}",
-        )
+            if parsed_doc is not None:
+                # extracted_text shim: keeps downstream readers working until migration spec retires it
+                await document_repo.update_extraction(
+                    document_id=document_id,
+                    extracted_text=parsed_doc.full_text or "",
+                    processing_metadata={},
+                    status=DocumentStatus.ready,
+                )
+            else:
+                await document_repo.update_status(
+                    document_id=document_id,
+                    status=DocumentStatus.failed,
+                    status_message=f"Parse run finished with status: {run.status.value}",
+                )
+
+        except Exception:
+            logger.exception(
+                "Unexpected error in process_cdm_parsing for document %s", document_id
+            )
+            try:
+                await document_repo.update_status(
+                    document_id=document_id,
+                    status=DocumentStatus.failed,
+                    status_message="Internal error during parsing",
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to update document status after unexpected error for document %s",
+                    document_id,
+                )

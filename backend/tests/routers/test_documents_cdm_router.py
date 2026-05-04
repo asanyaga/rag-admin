@@ -97,6 +97,10 @@ async def test_upload_cdm_writes_all_four_tables(client: AsyncClient, test_db: A
         source: SourceDocumentCDM = kwargs["source"]
         return _make_fake_parse_result(source.id)
 
+    mock_session_factory = MagicMock()
+    mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=test_db)
+    mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
     with (
         patch.dict(
             "app.services.parsing.parsing_service._RUNNERS",
@@ -106,6 +110,7 @@ async def test_upload_cdm_writes_all_four_tables(client: AsyncClient, test_db: A
             "app.dependencies.documents.get_llamaparse_client",
             return_value=MagicMock(),
         ),
+        patch("app.database.AsyncSessionLocal", mock_session_factory),
     ):
         response = await client.post(
             "/api/v1/documents",
