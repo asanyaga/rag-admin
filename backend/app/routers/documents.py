@@ -88,9 +88,6 @@ async def upload_document(
 ):
     """Upload a document and initiate background processing."""
     from app.dependencies.documents import get_llamaparse_client, get_landingai_client
-    from app.repositories.parse_run_repository import ParseRunRepository
-    from app.repositories.parsed_document_repository import ParsedDocumentRepository
-    from app.repositories.source_document_repository import SourceDocumentRepository
 
     try:
         config_dict = None
@@ -124,10 +121,6 @@ async def upload_document(
                 project_id=project_id,
                 representation_kind=representation_kind,
                 config=parse_cfg,
-                document_repo=DocumentRepository(db),
-                parse_run_repo=ParseRunRepository(db),
-                parsed_doc_repo=ParsedDocumentRepository(db),
-                source_doc_repo=SourceDocumentRepository(db),
                 storage_service=storage_service,
                 llamaparse_client=get_llamaparse_client(),
                 landingai_client=get_landingai_client(),
@@ -169,9 +162,6 @@ async def bulk_upload_documents(
 ):
     """Bulk upload documents and initiate background processing for each."""
     from app.dependencies.documents import get_llamaparse_client, get_landingai_client
-    from app.repositories.parse_run_repository import ParseRunRepository
-    from app.repositories.parsed_document_repository import ParsedDocumentRepository
-    from app.repositories.source_document_repository import SourceDocumentRepository
 
     if len(files) > 20:
         raise HTTPException(
@@ -219,10 +209,6 @@ async def bulk_upload_documents(
                 project_id=project_id,
                 representation_kind=representation_kind,
                 config=parse_cfg,
-                document_repo=DocumentRepository(db),
-                parse_run_repo=ParseRunRepository(db),
-                parsed_doc_repo=ParsedDocumentRepository(db),
-                source_doc_repo=SourceDocumentRepository(db),
                 storage_service=storage_service,
                 llamaparse_client=get_llamaparse_client(),
                 landingai_client=get_landingai_client(),
@@ -401,9 +387,6 @@ async def create_document_parse_run(
 ):
     """Dispatch a new CDM parse run for an existing document."""
     from app.dependencies.documents import get_llamaparse_client, get_landingai_client
-    from app.repositories.parse_run_repository import ParseRunRepository
-    from app.repositories.parsed_document_repository import ParsedDocumentRepository
-    from app.repositories.source_document_repository import SourceDocumentRepository
     from app.services.document_service import process_cdm_parsing
 
     document_repo = DocumentRepository(db)
@@ -431,10 +414,6 @@ async def create_document_parse_run(
         project_id=document.project_id,
         representation_kind=representation_kind,
         config=parse_cfg,
-        document_repo=DocumentRepository(db),
-        parse_run_repo=ParseRunRepository(db),
-        parsed_doc_repo=ParsedDocumentRepository(db),
-        source_doc_repo=SourceDocumentRepository(db),
         storage_service=storage_service,
         llamaparse_client=get_llamaparse_client(),
         landingai_client=get_landingai_client(),

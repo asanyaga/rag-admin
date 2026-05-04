@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from typing import Any, Callable, Dict
 from uuid import UUID
 
@@ -24,6 +25,8 @@ from app.services.parsing.landingai_runner import run_landingai
 from app.services.parsing.llamaparse_runner import run_llamaparse
 from app.services.parsing.simple_runner import run_simple
 
+
+logger = logging.getLogger(__name__)
 
 _RUNNERS: Dict[ParserKind, Callable] = {
     ParserKind.LLAMAPARSE: run_llamaparse,
@@ -102,13 +105,19 @@ class ParsingService:
         from app.utils.file_validation import compute_checksum
         sha256 = compute_checksum(bytes_)
         storage_uri = await self._storage.save(bytes_, f"uploads/{sha256}/{filename}")
-        orm, _ = await self._source_doc_repo.get_or_create_by_sha256(
+        orm, created = await self._source_doc_repo.get_or_create_by_sha256(
             sha256=sha256,
             storage_uri=storage_uri,
             filename=filename,
             mime_type=mime_type,
             byte_size=len(bytes_),
         )
+        # If an existing SourceDocument was returned but the file was just saved
+        # to a different path (e.g. re-upload with a different filename after the
+        # original file was deleted), update storage_uri so future parses find it.
+        if not created and orm.storage_uri != storage_uri:
+            await self._source_doc_repo.update_storage_uri(orm.id, storage_uri)
+            orm.storage_uri = storage_uri
         return _source_orm_to_cdm(orm)
 
     async def parse_and_persist(
@@ -138,12 +147,10 @@ class ParsingService:
             config_hash=config_hash,
             project_id=project_id,
         )
-        if existing is not None:
+        if existing is not None and existing.status in ("succeeded", "partial"):
             cdm_run = _run_orm_to_cdm(existing)
-            if existing.status in ("succeeded", "partial"):
-                doc_orm = await self._parsed_doc_repo.get_by_run(existing.id)
-                return cdm_run, _doc_orm_to_cdm(doc_orm) if doc_orm else None
-            return cdm_run, None
+            doc_orm = await self._parsed_doc_repo.get_by_run(existing.id)
+            return cdm_run, _doc_orm_to_cdm(doc_orm) if doc_orm else None
 
         runner = _RUNNERS.get(parser)
         if runner is None:

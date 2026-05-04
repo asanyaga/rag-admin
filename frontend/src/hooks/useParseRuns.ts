@@ -26,6 +26,7 @@ interface UseParseRunsReturn {
   isLoadingContent: boolean
   error: string | null
   selectRun: (id: string) => void
+  refresh: () => void
 }
 
 function pickInitialRun(
@@ -50,6 +51,10 @@ export function useParseRuns(
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingContent, setIsLoadingContent] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // True for a short window after a manual refresh to keep polling alive even
+  // when all existing runs are already terminal (new run may not exist yet).
+  const [forcePolling, setForcePolling] = useState(false)
+  const forcePollingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -105,11 +110,11 @@ export function useParseRuns(
     }
   }, [documentId, fetchList, stopPolling])
 
-  // Poll while any run is non-terminal.
+  // Poll while any run is non-terminal, or while forcePolling is active.
   useEffect(() => {
     if (!documentId) return
     const hasActive = parseRuns.some((r) => !isTerminal(r.status))
-    if (!hasActive) {
+    if (!hasActive && !forcePolling) {
       stopPolling()
       return
     }
@@ -120,7 +125,7 @@ export function useParseRuns(
     return () => {
       stopPolling()
     }
-  }, [documentId, parseRuns, fetchList, stopPolling])
+  }, [documentId, parseRuns, fetchList, stopPolling, forcePolling])
 
   // Cleanup on unmount.
   useEffect(() => {
@@ -171,6 +176,21 @@ export function useParseRuns(
     setSelectedRunId(id)
   }, [])
 
+  // Called after triggering a reparse — fetches immediately and holds polling
+  // open for 30 s so the new run (which may not exist yet) is picked up.
+  const refresh = useCallback(() => {
+    if (!documentId) return
+    void fetchList(documentId, { silent: true })
+    setForcePolling(true)
+    if (forcePollingTimerRef.current !== null) {
+      clearTimeout(forcePollingTimerRef.current)
+    }
+    forcePollingTimerRef.current = setTimeout(() => {
+      setForcePolling(false)
+      forcePollingTimerRef.current = null
+    }, 30_000)
+  }, [documentId, fetchList])
+
   const selectedRun = useMemo(
     () => parseRuns.find((r) => r.id === selectedRunId),
     [parseRuns, selectedRunId]
@@ -184,5 +204,6 @@ export function useParseRuns(
     isLoadingContent,
     error,
     selectRun,
+    refresh,
   }
 }

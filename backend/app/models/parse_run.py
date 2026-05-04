@@ -57,10 +57,6 @@ class ParseRun(Base):
     )
 
     __table_args__ = (
-        sa.UniqueConstraint(
-            "source_document_id", "representation_kind", "config_hash",
-            name="ux_parse_runs_content_config",
-        ),
         sa.Index("ix_parse_runs_status", "status"),
         sa.Index("ix_parse_runs_source_document_id", "source_document_id"),
     )

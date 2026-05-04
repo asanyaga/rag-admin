@@ -60,7 +60,7 @@ export default function DocumentsPage(): JSX.Element {
   const [selectedDocument, setSelectedDocument] = useState<DocumentListItem | null>(null)
   const [reparseDialogOpen, setReparseDialogOpen] = useState(false)
 
-  const { parseRuns } = useParseRuns(viewDocumentId)
+  const { parseRuns, refresh: refreshParseRuns } = useParseRuns(viewDocumentId)
 
   if (!currentProject) {
     return (
@@ -195,6 +195,7 @@ export default function DocumentsPage(): JSX.Element {
       toast.success('Re-parse started', {
         description: 'Parsing is in progress',
       })
+      refreshParseRuns()
     } catch (err) {
       toast.error('Re-parse failed', {
         description: err instanceof Error ? err.message : 'An error occurred',
