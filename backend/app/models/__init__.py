@@ -25,6 +25,8 @@ from app.models.source_document import SourceDocument
 from app.models.parse_run import ParseRun
 from app.models.parsed_document import ParsedDocument
 from app.models.index_event import IndexEvent
+from app.models.classification_run import ClassificationRun
+from app.models.classification_region import ClassificationRegion
 
 __all__ = [
     "User",
@@ -70,4 +72,6 @@ __all__ = [
     "ParseRun",
     "ParsedDocument",
     "IndexEvent",
+    "ClassificationRun",
+    "ClassificationRegion",
 ]
