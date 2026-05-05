@@ -31,6 +31,9 @@ import DataStoresPage from './pages/DataStoresPage'
 import DataStoreDetailPage from './pages/DataStoreDetailPage'
 import ExportPlaygroundPage from './pages/ExportPlaygroundPage'
 import { ParseRunDetailPage } from './pages/ParseRunDetailPage'
+import ClassificationPage from './pages/ClassificationPage'
+import NewClassificationRunPage from './pages/NewClassificationRunPage'
+import ClassificationRunDetailPage from './pages/ClassificationRunDetailPage'
 
 const router = createBrowserRouter([
   {
@@ -95,6 +98,21 @@ const router = createBrowserRouter([
             path: 'extraction',
             element: <ExtractionPage />,
             handle: { breadcrumb: 'Extraction' },
+          },
+          {
+            path: 'classify',
+            element: <ClassificationPage />,
+            handle: { breadcrumb: 'Classify' },
+          },
+          {
+            path: 'classify/new',
+            element: <NewClassificationRunPage />,
+            handle: { breadcrumb: 'New Classification Run' },
+          },
+          {
+            path: 'classify/:runId',
+            element: <ClassificationRunDetailPage />,
+            handle: { breadcrumb: 'Classification Run' },
           },
           {
             path: 'data-stores',

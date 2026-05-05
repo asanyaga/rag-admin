@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
-from app.routers import auth, oauth, otel_proxy, projects, users, documents, folders, indexes, provider_keys, golden_sets, eval_runs, experiments, parse_runs, parse_run_configs, parsed_documents, extraction, extraction_ground_truth, extraction_eval, agent, data_stores, export_mappings
+from app.routers import auth, oauth, otel_proxy, projects, users, documents, folders, indexes, provider_keys, golden_sets, eval_runs, experiments, parse_runs, parse_run_configs, parsed_documents, extraction, extraction_ground_truth, extraction_eval, agent, data_stores, export_mappings, classification
 from app.utils.oauth import setup_oauth
 
 # Import database engine for SQLAlchemy instrumentation
@@ -170,3 +170,5 @@ app.include_router(extraction_eval.router, prefix="/api/v1")
 app.include_router(agent.router, prefix="/api/v1")
 app.include_router(data_stores.router, prefix="/api/v1")
 app.include_router(export_mappings.router, prefix="/api/v1")
+app.include_router(classification.documents_router, prefix="/api/v1")
+app.include_router(classification.runs_router, prefix="/api/v1")

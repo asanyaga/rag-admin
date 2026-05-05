@@ -1,0 +1,48 @@
+// frontend/src/api/classification.ts
+import apiClient from './client'
+import type { ClassificationRun, ClassificationRunCreateRequest } from '@/types/classification'
+
+export async function createClassificationRun(
+  documentId: string,
+  data: ClassificationRunCreateRequest,
+): Promise<ClassificationRun> {
+  const response = await apiClient.post<ClassificationRun>(
+    `/documents/${documentId}/classification-runs`,
+    {
+      parse_run_id: data.parseRunId,
+      labels: data.labels,
+      llm_provider: data.llmProvider,
+      llm_model: data.llmModel,
+      batch_size: data.batchSize,
+      batch_overlap: data.batchOverlap,
+    },
+  )
+  return response.data
+}
+
+export async function listDocumentClassificationRuns(
+  documentId: string,
+): Promise<ClassificationRun[]> {
+  const response = await apiClient.get<ClassificationRun[]>(
+    `/documents/${documentId}/classification-runs`,
+  )
+  return response.data
+}
+
+export async function listAllClassificationRuns(
+  projectId: string,
+): Promise<ClassificationRun[]> {
+  const response = await apiClient.get<ClassificationRun[]>(
+    `/classification-runs?project_id=${projectId}`,
+  )
+  return response.data
+}
+
+export async function getClassificationRun(runId: string): Promise<ClassificationRun> {
+  const response = await apiClient.get<ClassificationRun>(`/classification-runs/${runId}`)
+  return response.data
+}
+
+export async function deleteClassificationRun(runId: string): Promise<void> {
+  await apiClient.delete(`/classification-runs/${runId}`)
+}

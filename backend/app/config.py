@@ -44,6 +44,21 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 25
     ALLOWED_MIME_TYPES: list[str] = ["application/pdf", "image/jpeg", "image/png"]
 
+    # Classification LLM defaults
+    CLASSIFIER_LLM_PROVIDER: str = "ollama_local"
+    CLASSIFIER_LLM_MODEL: str = "qwen2.5:7b"
+
+    # Ollama — local instance
+    OLLAMA_LOCAL_BASE_URL: str = "http://localhost:11434/v1"
+
+    # Ollama — cloud instance (https://ollama.com)
+    # Leave OLLAMA_CLOUD_API_KEY empty to disable the ollama_cloud provider.
+    OLLAMA_CLOUD_BASE_URL: str = "https://ollama.com/v1"
+    OLLAMA_CLOUD_API_KEY: str = ""
+
+    # Groq hosted inference
+    GROQ_API_KEY: str = ""
+
     # LlamaParse / LlamaCloud
     LLAMA_CLOUD_KEY: str = ""
 
