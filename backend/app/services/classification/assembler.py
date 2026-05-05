@@ -1,9 +1,12 @@
 from __future__ import annotations
+import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from app.cdm.classification import ClassifiedRegion
 from app.cdm.models import ParsedDocument
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -30,7 +33,7 @@ def resolve_page_statuses(
 
         for page_result in batch_pages:
             page = page_result.page
-            in_middle = page < batch_end - quarter
+            in_middle = (batch_start + quarter) <= page < (batch_end - quarter)
             priority = 0 if in_middle else 1
             if page not in best or priority < best[page][0]:
                 best[page] = (priority, page_result.label_statuses)
@@ -60,6 +63,11 @@ def assemble_regions(
                 current_end = page
             elif status == "continue" and current_start is not None:
                 current_end = page
+            elif status == "continue" and current_start is None:
+                logger.warning(
+                    "Ignoring 'continue' status for label %r on page %d: no preceding 'start'",
+                    label, page,
+                )
             elif status == "none" and current_start is not None:
                 regions.append(_make_region(label, current_start, current_end, doc))
                 current_start = None

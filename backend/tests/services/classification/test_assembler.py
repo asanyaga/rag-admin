@@ -27,14 +27,14 @@ def _make_doc(page_count: int) -> ParsedDocument:
 
 
 def test_resolve_prefers_middle_pages():
-    """Page 7 appears in batch (0-9) at edge and batch (7-16) in the middle.
+    """Page 7 appears in batch (0-9) at edge and batch (4-13) in the middle.
     The batch where it's in the middle should win."""
     batch_a = [
         BatchPageResult(page=7, label_statuses={"bs": "start"}, batch_start=0, batch_end=9),
     ]
     batch_b = [
-        BatchPageResult(page=7, label_statuses={"bs": "none"}, batch_start=7, batch_end=16),
-        BatchPageResult(page=10, label_statuses={"bs": "continue"}, batch_start=7, batch_end=16),
+        BatchPageResult(page=7, label_statuses={"bs": "none"}, batch_start=4, batch_end=13),
+        BatchPageResult(page=10, label_statuses={"bs": "continue"}, batch_start=4, batch_end=13),
     ]
     resolved = resolve_page_statuses([batch_a, batch_b])
     # Page 7 at edge of batch_a (priority 1) vs middle of batch_b (priority 0)
