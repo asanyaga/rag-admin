@@ -1,7 +1,7 @@
 // frontend/src/hooks/useClassificationRuns.ts
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as classificationApi from '@/api/classification'
-import type { ClassificationRun, ClassificationRunStatus } from '@/types/classification'
+import type { AnnotatedBlock, ClassificationRun, ClassificationRunStatus } from '@/types/classification'
 
 const POLL_MS = 5000
 const TERMINAL: ReadonlyArray<ClassificationRunStatus> = ['completed', 'failed']
@@ -137,4 +137,28 @@ export function useClassificationRunDetail(runId: string | null): UseClassificat
   }, [runId, fetchRun])
 
   return { run, isLoading, error, refresh }
+}
+
+interface UseClassificationRunBlocksReturn {
+  blocks: AnnotatedBlock[]
+  isLoading: boolean
+  error: string | null
+}
+
+export function useClassificationRunBlocks(runId: string | null): UseClassificationRunBlocksReturn {
+  const [blocks, setBlocks] = useState<AnnotatedBlock[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!runId) return
+    setIsLoading(true)
+    setError(null)
+    classificationApi.getClassificationRunBlocks(runId)
+      .then((data) => { setBlocks(data) })
+      .catch((err) => { setError(err instanceof Error ? err.message : 'Failed to fetch blocks') })
+      .finally(() => { setIsLoading(false) })
+  }, [runId])
+
+  return { blocks, isLoading, error }
 }
