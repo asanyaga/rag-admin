@@ -17,6 +17,7 @@ from app.repositories.classification_run_repository import (
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.repositories.document_repository import DocumentRepository
 from app.schemas.classification import (
+    AnnotatedBlockResponse,
     ClassificationRegionResponse,
     ClassificationRunCreateRequest,
     ClassificationRunResponse,
@@ -212,3 +213,27 @@ async def delete_classification_run(
     if run is None:
         raise HTTPException(status_code=404, detail="Classification run not found")
     await repo.delete(run_id)
+
+
+@runs_router.get("/{run_id}/blocks", response_model=list[AnnotatedBlockResponse])
+async def get_classification_run_blocks(
+    run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    repo = ClassificationRunRepository(db)
+    run = await repo.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Classification run not found")
+    blocks = await repo.get_annotated_blocks(run_id)
+    return [
+        AnnotatedBlockResponse(
+            blockId=b.block_id,
+            pageIndex=b.page_index,
+            role=b.role,
+            text=b.text,
+            markdown=b.markdown,
+            label=b.label,
+        )
+        for b in blocks
+    ]
