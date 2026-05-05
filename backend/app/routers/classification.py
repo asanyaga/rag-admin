@@ -44,28 +44,38 @@ async def _run_classification_background(
 ) -> None:
     from app.cdm.models import ParsedDocument as CDMParsedDocument
 
-    async with AsyncSessionLocal() as session:
-        repo = ClassificationRunRepository(session)
-        pd_repo = ParsedDocumentRepository(session)
+    try:
+        async with AsyncSessionLocal() as session:
+            repo = ClassificationRunRepository(session)
+            pd_repo = ParsedDocumentRepository(session)
 
-        pd_orm = await pd_repo.get_by_run(parse_run_id)
-        if pd_orm is None:
-            await repo.update_status(run_id=run_id, status="failed", error="ParsedDocument not found")
-            return
+            pd_orm = await pd_repo.get_by_run(parse_run_id)
+            if pd_orm is None:
+                await repo.update_status(run_id=run_id, status="failed", error="ParsedDocument not found")
+                return
 
-        doc = CDMParsedDocument.model_validate(pd_orm.content)
-        registry = get_llm_registry()
-        service = ClassificationService(repo=repo, llm_registry=registry)
+            doc = CDMParsedDocument.model_validate(pd_orm.content)
+            registry = get_llm_registry()
+            service = ClassificationService(repo=repo, llm_registry=registry)
 
-        await service.execute(
-            run_id=run_id,
-            doc=doc,
-            labels=labels,
-            llm_provider=llm_provider,
-            llm_model=llm_model,
-            batch_size=batch_size,
-            batch_overlap=batch_overlap,
-        )
+            await service.execute(
+                run_id=run_id,
+                doc=doc,
+                labels=labels,
+                llm_provider=llm_provider,
+                llm_model=llm_model,
+                batch_size=batch_size,
+                batch_overlap=batch_overlap,
+            )
+    except Exception:
+        logger.exception("Classification background task failed for run %s", run_id)
+        # Open a fresh session to guarantee the status update commits even if
+        # the original session was left in a dirty state.
+        async with AsyncSessionLocal() as recovery_session:
+            recovery_repo = ClassificationRunRepository(recovery_session)
+            run = await recovery_repo.get(run_id)
+            if run and run.status == "running":
+                await recovery_repo.update_status(run_id=run_id, status="failed", error="Internal error — check server logs")
 
 
 def _to_run_response(run, regions=None) -> ClassificationRunResponse:
