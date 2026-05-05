@@ -1,10 +1,7 @@
 """Tests for OpenAI-compatible adapters (Ollama, Groq)."""
 
-from unittest.mock import AsyncMock, patch
-import pytest
 from app.services.llm.ollama_adapter import OllamaAdapter
 from app.services.llm.groq_adapter import GroqAdapter
-from app.services.llm.types import LLMConfig
 
 
 def test_ollama_adapter_init():

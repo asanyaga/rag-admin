@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 class OpenAIAdapter:
     """Thin wrapper around the OpenAI chat completions API."""
 
+    _provider_name: str = "openai"
+
     def __init__(self, api_key: str, base_url: str | None = None):
         self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
@@ -62,5 +64,5 @@ class OpenAIAdapter:
             ),
             latency_ms=latency,
             model=config.model,
-            provider="openai",
+            provider=self._provider_name,
         )
