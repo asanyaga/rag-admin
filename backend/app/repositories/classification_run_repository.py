@@ -22,6 +22,16 @@ class ClassificationRunCreate:
     batch_overlap: int
 
 
+@dataclass
+class AnnotatedBlock:
+    block_id: str
+    page_index: int
+    role: str
+    text: str
+    markdown: str | None
+    label: str | None
+
+
 class ClassificationRunRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
