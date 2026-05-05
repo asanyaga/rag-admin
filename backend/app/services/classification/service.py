@@ -1,6 +1,5 @@
 # backend/app/services/classification/service.py
 from __future__ import annotations
-import json
 import logging
 import time
 from uuid import UUID
