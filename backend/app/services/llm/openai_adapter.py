@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 class OpenAIAdapter:
     """Thin wrapper around the OpenAI chat completions API."""
 
-    def __init__(self, api_key: str):
-        self.client = AsyncOpenAI(api_key=api_key)
+    def __init__(self, api_key: str, base_url: str | None = None):
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     async def stream_completion(
         self,
