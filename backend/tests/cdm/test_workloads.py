@@ -51,3 +51,10 @@ def test_slice_doc_original_unchanged():
     region = ClassifiedRegion(label="x", page_start=0, page_end=0, block_ids=[])
     slice_doc(doc, region)
     assert doc.page_count == 5  # original not mutated
+
+
+def test_slice_doc_rejects_inverted_range():
+    doc = _make_doc()
+    region = ClassifiedRegion(label="x", page_start=3, page_end=1, block_ids=[])
+    with pytest.raises(ValueError):
+        slice_doc(doc, region)

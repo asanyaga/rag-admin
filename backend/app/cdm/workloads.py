@@ -5,6 +5,10 @@ from app.cdm.models import ParsedDocument
 
 def slice_doc(doc: ParsedDocument, region: ClassifiedRegion) -> ParsedDocument:
     """Return a derived sub-ParsedDocument containing only region pages."""
+    if region.page_end < region.page_start:
+        raise ValueError(
+            f"page_end ({region.page_end}) must be >= page_start ({region.page_start})"
+        )
     page_set = set(range(region.page_start, region.page_end + 1))
     pages = [p for p in doc.pages if p.index in page_set]
     blocks = [b for b in doc.blocks if b.page_index in page_set]
