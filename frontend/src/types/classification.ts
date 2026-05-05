@@ -39,3 +39,12 @@ export interface ClassificationRunCreateRequest {
   batchSize?: number
   batchOverlap?: number
 }
+
+export interface AnnotatedBlock {
+  blockId: string
+  pageIndex: number
+  role: string
+  text: string
+  markdown: string | null
+  label: string | null
+}
