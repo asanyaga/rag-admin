@@ -16,7 +16,7 @@
 |---|---|---|
 | Modify | `backend/app/ports/data_extraction.py` | Port interface + `FieldCitation` + `ExtractionOutput` types |
 | Create | `backend/app/adapters/extraction/llm_context.py` | Pure LLM context utilities (page markdown, shadow schema, citation stripping) |
-| Modify | `backend/app/adapters/extraction/registry.py` | Identity-based `EXTRACTOR_PREFERENCE_ORDER`, updated factory |
+| Modify | `backend/app/adapters/extraction/registry.py` | Pure catalogue (`get_known_extractors`); `get_extractor(method, credentials)` factory |
 | Modify | `backend/app/adapters/extraction/llamaextract.py` | Stub new port signature (raises `NotImplementedError`) |
 | Modify | `backend/app/models/extraction_result.py` | Add `source_parse_run_id`, `citations`, `provider_response_raw` columns |
 | Create | `backend/alembic/versions/xxxx_add_extraction_provenance_columns.py` | Alembic migration |
@@ -605,11 +605,15 @@ git commit -m "feat(extraction): add LLM context utilities — page markers, sha
 
 ---
 
-## Task 3: Registry Redesign
+## Task 3: Registry — Pure Catalogue + Explicit Credentials
 
 **Files:**
 - Modify: `backend/app/adapters/extraction/registry.py`
 - Modify: `backend/app/adapters/extraction/llamaextract.py` (stub new port signature)
+
+The registry is a pure catalogue. No settings reads, no ordering opinion, no credential
+checks. `get_extractor(method, credentials)` takes credentials explicitly so the call site
+— not the registry — owns credential resolution. This is the BYOK seam.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -618,63 +622,56 @@ Create `backend/tests/adapters/extraction/test_registry.py`:
 ```python
 """Tests for extraction adapter registry."""
 import pytest
-from unittest.mock import patch
-from app.adapters.extraction.registry import (
-    EXTRACTOR_PREFERENCE_ORDER,
-    get_available_extractors,
-    get_extractor,
-)
+from app.adapters.extraction.registry import get_known_extractors, get_extractor
 
 
-class TestExtractorPreferenceOrder:
-    def test_ollama_is_first(self):
-        assert EXTRACTOR_PREFERENCE_ORDER[0] == "ollama"
-
-    def test_opaque_providers_are_last(self):
-        last_two = EXTRACTOR_PREFERENCE_ORDER[-2:]
-        assert "llamaextract" in last_two
-        assert "landingai" in last_two
-
-    def test_llamaextract_after_all_llm_adapters(self):
-        llm_adapters = ["ollama", "together_ai", "groq", "openai", "anthropic"]
-        llamaextract_idx = EXTRACTOR_PREFERENCE_ORDER.index("llamaextract")
-        for adapter in llm_adapters:
-            assert EXTRACTOR_PREFERENCE_ORDER.index(adapter) < llamaextract_idx
-
-
-class TestGetAvailableExtractors:
-    def test_returns_list(self):
-        extractors = get_available_extractors()
-        assert isinstance(extractors, list)
+class TestGetKnownExtractors:
+    def test_returns_all_adapters_unconditionally(self):
+        extractors = get_known_extractors()
+        methods = [e["extraction_method"] for e in extractors]
+        assert "llamaextract" in methods
+        assert "ollama" in methods
 
     def test_each_entry_has_required_keys(self):
-        for e in get_available_extractors():
+        for e in get_known_extractors():
             assert "extraction_method" in e
             assert "name" in e
             assert "description" in e
+            assert "config_schema" in e
 
-    def test_order_matches_preference_order(self):
-        extractors = get_available_extractors()
-        methods = [e["extraction_method"] for e in extractors]
-        # All returned methods must appear in EXTRACTOR_PREFERENCE_ORDER
-        for method in methods:
-            assert method in EXTRACTOR_PREFERENCE_ORDER
-        # Their relative order must match preference
-        for i in range(len(methods) - 1):
-            assert EXTRACTOR_PREFERENCE_ORDER.index(methods[i]) < EXTRACTOR_PREFERENCE_ORDER.index(methods[i + 1])
+    def test_no_settings_dependency(self):
+        from unittest.mock import patch
+        # get_known_extractors must never touch settings
+        with patch("app.adapters.extraction.registry.settings",
+                   side_effect=RuntimeError("settings must not be read")):
+            result = get_known_extractors()
+        assert isinstance(result, list)
+
+    def test_result_is_stable(self):
+        # Same list returned on repeated calls — no side effects
+        assert get_known_extractors() == get_known_extractors()
 
 
 class TestGetExtractor:
     def test_unknown_method_raises(self):
         with pytest.raises(ValueError, match="Unknown extraction method"):
-            get_extractor("nonexistent_method")
+            get_extractor("nonexistent_method", {})
 
-    def test_llamaextract_returns_adapter_when_key_present(self):
-        with patch("app.adapters.extraction.registry.settings") as mock_settings:
-            mock_settings.LLAMA_CLOUD_KEY = "test-key"
-            extractor = get_extractor("llamaextract")
-            assert extractor is not None
-            assert extractor.extractor_type == "llamaextract"
+    def test_llamaextract_uses_credentials_api_key(self):
+        extractor = get_extractor("llamaextract", {"api_key": "test-key-123"})
+        assert extractor.extractor_type == "llamaextract"
+
+    def test_llamaextract_works_with_empty_credentials(self):
+        # Empty credentials dict is valid — adapter handles absent key internally
+        extractor = get_extractor("llamaextract", {})
+        assert extractor is not None
+
+    def test_no_settings_read_in_factory(self):
+        from unittest.mock import patch
+        with patch("app.adapters.extraction.registry.settings",
+                   side_effect=RuntimeError("settings must not be read")):
+            extractor = get_extractor("llamaextract", {"api_key": "k"})
+        assert extractor.extractor_type == "llamaextract"
 ```
 
 - [ ] **Step 2: Run tests to confirm they fail**
@@ -683,51 +680,32 @@ class TestGetExtractor:
 uv run --directory backend python -m pytest tests/adapters/extraction/test_registry.py -v
 ```
 
-Expected: `ImportError` for `EXTRACTOR_PREFERENCE_ORDER`, plus failures for tests relying on the new ordering.
+Expected: `ImportError` — `get_known_extractors` does not exist yet; `get_extractor` has wrong signature.
 
 - [ ] **Step 3: Replace `backend/app/adapters/extraction/registry.py`**
 
 ```python
-"""Extractor registry — maps extraction method strings to adapter instances."""
-from app.config import settings
+"""Extractor registry — pure catalogue and credential-aware factory.
+
+The registry never reads settings. Credentials are passed explicitly by the
+call site, which resolves them from settings (now) or the database (BYOK).
+"""
 from app.ports.data_extraction import DataExtractor
 
-EXTRACTOR_PREFERENCE_ORDER = [
-    "ollama",         # open-weight, local or self-hosted — highest autonomy
-    "together_ai",    # hosted open-weight
-    "groq",           # hosted open-weight
-    "openai",         # proprietary SOTA
-    "anthropic",      # proprietary SOTA
-    "llamaextract",   # opaque extraction provider
-    "landingai",      # opaque extraction provider
-]
 
+def get_known_extractors() -> list[dict]:
+    """Catalogue of all known extraction adapters.
 
-def get_extractor(extraction_method: str) -> DataExtractor:
-    """Get an extractor instance by method string.
-
-    Raises ValueError for unknown methods. Adapter-specific dependencies
-    (storage service, repositories) are injected by each adapter's factory.
+    Returns every adapter unconditionally — no credential checks, no settings
+    reads. Ordering is a UI concern; this list makes no preference statement.
     """
-    if extraction_method == "llamaextract":
-        from app.adapters.extraction.llamaextract import LlamaExtractAdapter
-        api_key = settings.LLAMA_CLOUD_KEY or None
-        return LlamaExtractAdapter(api_key=api_key)
-
-    raise ValueError(f"Unknown extraction method: {extraction_method!r}")
-
-
-def get_available_extractors() -> list[dict]:
-    """Return info about available extraction methods in preference order."""
-    all_extractors: dict[str, dict] = {}
-
-    if settings.LLAMA_CLOUD_KEY:
-        all_extractors["llamaextract"] = {
+    return [
+        {
             "extraction_method": "llamaextract",
             "name": "LlamaExtract",
             "description": (
-                "Structured extraction via LlamaCloud. Multimodal, supports "
-                "citations and reasoning."
+                "Structured extraction via LlamaCloud. "
+                "Multimodal, supports citations and reasoning."
             ),
             "config_schema": {
                 "type": "object",
@@ -740,32 +718,58 @@ def get_available_extractors() -> list[dict]:
                         "type": "string",
                         "enum": ["FAST", "BALANCED", "MULTIMODAL", "PREMIUM"],
                         "default": "MULTIMODAL",
-                        "description": "Extraction mode — affects quality and cost",
                     },
-                    "cite_sources": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Trace extracted values to source pages/text",
-                    },
-                    "use_reasoning": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Include reasoning for extraction decisions",
-                    },
-                    "page_range": {
-                        "type": "string",
-                        "description": "Pages to extract from, e.g. '1-5'",
-                    },
+                    "cite_sources": {"type": "boolean", "default": False},
+                    "use_reasoning": {"type": "boolean", "default": False},
+                    "page_range": {"type": "string"},
                 },
             },
-        }
-
-    # Return in EXTRACTOR_PREFERENCE_ORDER, skipping unconfigured adapters
-    return [
-        all_extractors[method]
-        for method in EXTRACTOR_PREFERENCE_ORDER
-        if method in all_extractors
+        },
+        {
+            "extraction_method": "ollama",
+            "name": "Ollama",
+            "description": (
+                "Open-weight extraction via Ollama runtime. "
+                "Supports local, self-hosted, and Ollama cloud deployments."
+            ),
+            "config_schema": {
+                "type": "object",
+                "properties": {
+                    "model": {
+                        "type": "string",
+                        "description": "Model name, e.g. llama3.2:8b",
+                    },
+                    "endpoint": {
+                        "type": "string",
+                        "default": "http://localhost:11434/v1",
+                    },
+                    "temperature": {"type": "number", "default": 0.0},
+                    "structured_output_mode": {
+                        "type": "string",
+                        "enum": ["json_schema", "json_mode", "prompt_only"],
+                        "default": "json_schema",
+                    },
+                    "inject_block_ids": {"type": "boolean", "default": False},
+                    "system_prompt": {"type": "string"},
+                    "user_prompt_template": {"type": "string"},
+                },
+                "required": ["model"],
+            },
+        },
     ]
+
+
+def get_extractor(method: str, credentials: dict) -> DataExtractor:
+    """Construct an adapter with caller-supplied credentials.
+
+    Credentials are resolved by the call site, not here. Raises ValueError
+    for unknown methods.
+    """
+    if method == "llamaextract":
+        from app.adapters.extraction.llamaextract import LlamaExtractAdapter
+        return LlamaExtractAdapter(api_key=credentials.get("api_key"))
+
+    raise ValueError(f"Unknown extraction method: {method!r}")
 ```
 
 - [ ] **Step 4: Stub the new port signature in `LlamaExtractAdapter`**
@@ -775,7 +779,7 @@ Replace `backend/app/adapters/extraction/llamaextract.py`:
 ```python
 """LlamaExtract adapter — stub for CDM port signature.
 
-Full refactor in: docs/superpowers/specs/2026-05-06-llamaextract-adapter-refactor-design.md
+Full refactor: docs/superpowers/specs/2026-05-06-llamaextract-adapter-refactor-design.md
 """
 from typing import Any
 from app.ports.data_extraction import DataExtractor, ExtractionOutput
@@ -813,13 +817,13 @@ class LlamaExtractAdapter(DataExtractor):
 uv run --directory backend python -m pytest tests/adapters/extraction/test_registry.py -v
 ```
 
-Expected: All 9 tests pass.
+Expected: All 8 tests pass.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add backend/app/adapters/extraction/registry.py backend/app/adapters/extraction/llamaextract.py backend/tests/adapters/extraction/test_registry.py
-git commit -m "feat(extraction): redesign registry with identity-based preference order; stub LlamaExtract for CDM port"
+git commit -m "feat(extraction): registry as pure catalogue; get_extractor takes explicit credentials"
 ```
 
 ---
@@ -1290,8 +1294,8 @@ class ExtractionResultResponse(BaseModel):
     extraction_method: str = Field(..., alias="extractionMethod")
     config: dict | None = None
     structured_data: dict | None = Field(None, alias="structuredData")
-    citations: list | None = Field(None, alias="citations")                    # new
-    provider_response_raw: dict | None = Field(None, alias="providerResponseRaw")  # new
+    citations: list | None = Field(None, alias="citations")                         # new
+    provider_response_raw: dict | None = Field(None, alias="providerResponseRaw")   # new
     extraction_metadata: dict | None = Field(None, alias="extractionMetadata")
     status: ExtractionResultStatus
     status_message: str | None = Field(None, alias="statusMessage")
@@ -1337,7 +1341,7 @@ Expected: All 6 tests pass.
 
 ```bash
 git add backend/app/schemas/extraction_result.py backend/tests/schemas/test_extraction_result_schemas.py
-git commit -m "feat(extraction): update schemas — RunExtractionRequest uses parse_run_id; ExtractionResultResponse exposes provenance fields"
+git commit -m "feat(extraction): update schemas — RunExtractionRequest uses parse_run_id; ExtractionResultResponse exposes provenance fields; ExtractorInfoResponse adds configured flag"
 ```
 
 ---
@@ -1601,7 +1605,7 @@ from app.schemas.extraction_result import (
     ExtractionResultListResponse,
     ExtractorInfoResponse,
 )
-from app.adapters.extraction.registry import get_available_extractors
+from app.adapters.extraction.registry import get_known_extractors
 from app.services.exceptions import NotFoundError, ConflictError
 
 logger = logging.getLogger(__name__)
@@ -1725,16 +1729,32 @@ class ExtractionService:
         return [ExtractionResultListResponse.from_orm_model(r) for r in results]
 
     async def get_extractors(self) -> list[ExtractorInfoResponse]:
-        extractors = get_available_extractors()
+        """Return full catalogue with configured flag from current credential source.
+
+        BYOK seam: _get_configured_methods_from_settings() is replaced with a
+        project_extractor_credentials DB lookup when BYOK is implemented.
+        """
+        catalogue = get_known_extractors()
+        configured = self._get_configured_methods_from_settings()
         return [
             ExtractorInfoResponse(
                 extractionMethod=e["extraction_method"],
                 name=e["name"],
                 description=e["description"],
                 configSchema=e.get("config_schema"),
+                configured=e["extraction_method"] in configured,
             )
-            for e in extractors
+            for e in catalogue
         ]
+
+    def _get_configured_methods_from_settings(self) -> set[str]:
+        from app.config import settings
+        configured: set[str] = set()
+        if getattr(settings, "LLAMA_CLOUD_KEY", None):
+            configured.add("llamaextract")
+        if getattr(settings, "OLLAMA_ENDPOINT", None):
+            configured.add("ollama")
+        return configured
 
 
 async def process_extraction(
@@ -1904,7 +1924,7 @@ Expected: `test_run_extraction_accepts_parse_run_id` fails with 422 (router stil
 
 - [ ] **Step 3: Update `backend/app/routers/extraction.py`**
 
-Replace the `get_extraction_service` dependency and the `run_extraction` endpoint:
+Replace the `get_extraction_service` dependency, add `_resolve_credentials_from_settings`, and update the `run_extraction` endpoint:
 
 ```python
 from app.repositories.parsed_document_repository import ParsedDocumentRepository  # new import
@@ -1919,6 +1939,23 @@ def get_extraction_service(
         result_repo=ExtractionResultRepository(db),
         parsed_document_repo=ParsedDocumentRepository(db),  # replaces document_repo
     )
+
+
+def _resolve_credentials_from_settings(method: str) -> dict:
+    """Resolve adapter credentials from application settings.
+
+    BYOK seam: replace this function body with a project_extractor_credentials
+    DB lookup when BYOK is implemented. Nothing else in the system changes.
+    """
+    from app.config import settings
+    if method == "llamaextract":
+        return {"api_key": getattr(settings, "LLAMA_CLOUD_KEY", None)}
+    if method == "ollama":
+        return {
+            "endpoint": getattr(settings, "OLLAMA_ENDPOINT", "http://localhost:11434/v1"),
+            "api_key": getattr(settings, "OLLAMA_API_KEY", None),
+        }
+    return {}
 ```
 
 Replace the `run_extraction` endpoint body:
@@ -1939,12 +1976,8 @@ async def run_extraction(
     storage_service: StorageService = Depends(get_storage_service),
 ):
     try:
-        extractor = get_extractor(body.extraction_method)
-        if extractor is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unknown extraction method: {body.extraction_method}",
-            )
+        credentials = _resolve_credentials_from_settings(body.extraction_method)
+        extractor = get_extractor(body.extraction_method, credentials)
 
         result = await service.run_extraction(
             parse_run_id=body.parse_run_id,
@@ -2002,7 +2035,7 @@ git commit -m "feat(extraction): update router — parse_run_id request body, Pa
 **Spec coverage:**
 - ✅ Port interface (`DataExtractor`, `FieldCitation`, `ExtractionOutput`) — Task 1
 - ✅ `llm_context.py` utilities (`build_extraction_context`, `augment_schema_with_sources`, `strip_source_fields`) — Task 2
-- ✅ Registry with `EXTRACTOR_PREFERENCE_ORDER` and identity-based keys — Task 3
+- ✅ Registry as pure catalogue (`get_known_extractors`), `get_extractor(method, credentials)` with explicit credentials — Task 3
 - ✅ LlamaExtract stub for new port signature — Task 3
 - ✅ ORM columns (`source_parse_run_id`, `citations`, `provider_response_raw`) — Task 4
 - ✅ Alembic migration — Task 4

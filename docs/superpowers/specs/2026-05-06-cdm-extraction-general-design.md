@@ -169,31 +169,64 @@ Shared functions used by all LLM adapters:
 
 ---
 
-## Registry & Preference Order
+## Registry
 
 **File:** `backend/app/adapters/extraction/registry.py`
 
-Registry keys are extractor *identities* — what the user is choosing — not protocol names.
-The OpenAI-compatible protocol is an internal adapter implementation detail.
+The registry is a pure catalogue. It knows what adapters exist and how to construct them.
+It has no opinion on ordering, availability, or user preferences — those are user/project
+concerns and do not belong in the backend constant layer.
+
+### Catalogue
+
+`get_known_extractors() → list[dict]` returns every known adapter unconditionally. No
+credential checks, no settings reads, no filtering. The list is static. Adapter entries
+are returned in registration order — no hierarchy implied.
+
+The UI receives the full catalogue and decides how to present it (ordering, "Configure"
+badges for unconfigured entries, etc.) without the backend encoding a product preference.
+
+### Adapter construction
+
+`get_extractor(method: str, credentials: dict) → DataExtractor` takes credentials
+explicitly. The caller is responsible for resolving credentials from wherever they live.
 
 ```python
-EXTRACTOR_PREFERENCE_ORDER = [
-    "ollama",         # open-weight, local or self-hosted
-    "together_ai",    # hosted open-weight
-    "groq",           # hosted open-weight
-    "openai",         # proprietary SOTA
-    "anthropic",      # proprietary SOTA
-    "llamaextract",   # opaque extraction provider
-    "landingai",      # opaque extraction provider
+# Today — call site resolves from settings
+credentials = _resolve_credentials_from_settings(method)
+extractor = get_extractor(method, credentials)
+
+# BYOK — call site resolves from project_extractor_credentials table
+credentials = await credential_repo.get_for_project(project_id, method)
+extractor = get_extractor(method, credentials)
+```
+
+The registry never reads `settings` directly. Only the call-site resolver changes for BYOK.
+
+### BYOK seam
+
+Credentials are stored at the **project level** (`project_extractor_credentials` table,
+not per-user). All project members share one configured credential set. Per-user overrides
+are deferred — if needed, that is a well-scoped additive change, not a registry refactor.
+
+Today, `_resolve_credentials_from_settings(method)` in the router reads from `settings`.
+For BYOK, replace that single function with a `project_extractor_credentials` DB lookup.
+Nothing else in the system changes.
+
+### `configured` flag
+
+`GET /extractors` returns the full catalogue with a `configured: bool` per entry. The
+service overlays this flag by checking the current credential source for each method:
+
+```json
+[
+  { "extractionMethod": "llamaextract", "name": "LlamaExtract", "configured": true,  ... },
+  { "extractionMethod": "ollama",        "name": "Ollama",        "configured": false, ... }
 ]
 ```
 
-`get_available_extractors()` returns entries in this order, filtered to those with valid
-configuration (API keys present, local endpoint reachable). The UI presents them in this
-order. When Ollama is configured, it appears first, reflecting the autonomy preference.
-
-`get_extractor(method: str) → DataExtractor` constructs the adapter with injected
-dependencies (storage service, repositories) sourced from app settings and DI.
+`configured: false` means "adapter exists, credentials not yet provided." The UI shows a
+"Configure" link rather than hiding the entry.
 
 ---
 
@@ -215,7 +248,7 @@ that support prompt injection (e.g. LlamaExtract's `prompt_override`) map their 
 
 ### Adapter-specific fields
 
-Each adapter's `config_schema` (returned by `get_available_extractors()`) documents its
+Each adapter's `config_schema` (returned by `get_known_extractors()`) documents its
 own fields. See the individual adapter specs for details.
 
 ---
