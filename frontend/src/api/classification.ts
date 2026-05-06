@@ -1,6 +1,6 @@
 // frontend/src/api/classification.ts
 import apiClient from './client'
-import type { ClassificationRun, ClassificationRunCreateRequest } from '@/types/classification'
+import type { AnnotatedBlock, ClassificationRun, ClassificationRunCreateRequest } from '@/types/classification'
 
 export async function createClassificationRun(
   documentId: string,
@@ -45,4 +45,9 @@ export async function getClassificationRun(runId: string): Promise<Classificatio
 
 export async function deleteClassificationRun(runId: string): Promise<void> {
   await apiClient.delete(`/classification-runs/${runId}`)
+}
+
+export async function getClassificationRunBlocks(runId: string): Promise<AnnotatedBlock[]> {
+  const response = await apiClient.get<AnnotatedBlock[]>(`/classification-runs/${runId}/blocks`)
+  return response.data
 }

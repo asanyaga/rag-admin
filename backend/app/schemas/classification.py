@@ -45,3 +45,12 @@ class ClassificationRunResponse(BaseModel):
     duration_ms: int | None = Field(None, alias="durationMs")
     created_at: datetime = Field(..., alias="createdAt")
     regions: list[ClassificationRegionResponse] = []
+
+
+class AnnotatedBlockResponse(BaseModel):
+    blockId: str
+    pageIndex: int
+    role: str
+    text: str
+    markdown: str | None
+    label: str | None

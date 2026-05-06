@@ -2,7 +2,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useClassificationRunDetail } from '@/hooks/useClassificationRuns'
 import { ClassificationRunStatusBadge } from '@/components/classification/ClassificationRunStatusBadge'
-import { ClassificationRegionList } from '@/components/classification/ClassificationRegionList'
+import { ClassificationResultsViewer } from '@/components/classification/ClassificationResultsViewer'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -97,8 +97,8 @@ export default function ClassificationRunDetailPage(): JSX.Element {
 
       {run.status === 'completed' && (
         <section>
-          <h2 className="text-lg font-medium mb-3">Identified regions</h2>
-          <ClassificationRegionList regions={run.regions} />
+          <h2 className="text-lg font-medium mb-3">Classification results</h2>
+          <ClassificationResultsViewer runId={run.id} labelsRequested={run.labelsRequested} />
         </section>
       )}
     </div>
