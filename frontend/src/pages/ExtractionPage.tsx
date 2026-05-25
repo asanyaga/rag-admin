@@ -60,7 +60,7 @@ export default function ExtractionPage(): JSX.Element {
     runExtraction,
   } = useExtractionResults(selectedDocumentId)
 
-  const { parseRuns } = useParseRuns(selectedDocumentId)
+  const { parseRuns, isLoading: parseRunsLoading } = useParseRuns(selectedDocumentId)
   const latestViableRun = parseRuns.find(
     (r) => r.status === 'succeeded' || r.status === 'partial'
   )
@@ -269,14 +269,18 @@ export default function ExtractionPage(): JSX.Element {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="text-sm font-medium">Run New Extraction</h3>
-                  {(!isDocumentReady || !latestViableRun) && selectedDocument && (
+                  {(!isDocumentReady || (!parseRunsLoading && !latestViableRun)) && selectedDocument && (
                     <span className="text-xs text-muted-foreground">
                       {isDocumentReady ? '(parse document first)' : '(document must be ready)'}
                     </span>
                   )}
                 </div>
                 {isDocumentReady ? (
-                  latestViableRun ? (
+                  parseRunsLoading ? (
+                    <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                      Loading...
+                    </div>
+                  ) : latestViableRun ? (
                     <div className="rounded-lg border p-4">
                       <ExtractionForm
                         parseRunId={latestViableRun.id}
