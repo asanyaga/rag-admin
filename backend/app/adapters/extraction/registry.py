@@ -93,8 +93,8 @@ def get_extractor(
         deps = dependencies or {}
         return LlamaExtractAdapter(
             api_key=credentials.get("api_key"),
-            source_document_repo=deps["source_document_repo"],
-            storage_service=deps["storage_service"],
+            source_document_repo=deps.get("source_document_repo"),
+            storage_service=deps.get("storage_service"),
         )
 
     raise ValueError(f"Unknown extraction method: {method!r}")
