@@ -60,4 +60,60 @@ describe('ExtractionForm', () => {
     })
     expect(screen.getByText(/not configured/i)).toBeInTheDocument()
   })
+
+  it('shows extraction target and confidence scores controls for llamaextract', () => {
+    render(
+      <ExtractionForm
+        parseRunId="run-1"
+        schemas={[schema]}
+        extractors={[extractor]}
+        onRun={vi.fn()}
+      />
+    )
+    expect(screen.getByLabelText(/target/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/confidence scores/i)).toBeInTheDocument()
+  })
+
+  it('includes confidence_scores in config when checked', async () => {
+    const user = userEvent.setup()
+    const onRun = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ExtractionForm
+        parseRunId="run-1"
+        schemas={[schema]}
+        extractors={[extractor]}
+        onRun={onRun}
+      />
+    )
+    await user.click(screen.getByLabelText(/confidence scores/i))
+    await user.click(screen.getByRole('button', { name: /run extraction/i }))
+    await waitFor(() => {
+      expect(onRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({ confidence_scores: true }),
+        })
+      )
+    })
+  })
+
+  it('includes extraction_target in config for llamaextract', async () => {
+    const user = userEvent.setup()
+    const onRun = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ExtractionForm
+        parseRunId="run-1"
+        schemas={[schema]}
+        extractors={[extractor]}
+        onRun={onRun}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /run extraction/i }))
+    await waitFor(() => {
+      expect(onRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({ extraction_target: 'PER_DOC' }),
+        })
+      )
+    })
+  })
 })

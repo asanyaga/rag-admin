@@ -36,6 +36,8 @@ export function ExtractionForm({
   const [pageRange, setPageRange] = useState('')
   const [isRunning, setIsRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [extractionTarget, setExtractionTarget] = useState('PER_DOC')
+  const [confidenceScores, setConfidenceScores] = useState(false)
 
   useEffect(() => {
     if (schemas.length > 0 && !schemaId) setSchemaId(schemas[0].id)
@@ -66,6 +68,10 @@ export function ExtractionForm({
     if (citeSources) config.cite_sources = true
     if (useReasoning) config.use_reasoning = true
     if (pageRange.trim()) config.page_range = pageRange.trim()
+    if (extractionMethod === 'llamaextract') {
+      config.extraction_target = extractionTarget
+      if (confidenceScores) config.confidence_scores = true
+    }
 
     setIsRunning(true)
     try {
@@ -182,6 +188,35 @@ export function ExtractionForm({
           />
         </div>
       </div>
+
+      {extractionMethod === 'llamaextract' && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="extraction-target" className="text-xs">Target</Label>
+            <Select value={extractionTarget} onValueChange={setExtractionTarget}>
+              <SelectTrigger id="extraction-target" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PER_DOC">Per Document</SelectItem>
+                <SelectItem value="PER_PAGE">Per Page</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end pb-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="confidence-scores"
+                checked={confidenceScores}
+                onCheckedChange={(checked) => setConfidenceScores(checked === true)}
+              />
+              <Label htmlFor="confidence-scores" className="text-xs font-normal">
+                Confidence Scores
+              </Label>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
