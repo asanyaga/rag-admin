@@ -35,6 +35,9 @@ export interface ExtractionResult {
   config: Record<string, unknown> | null
   structuredData: Record<string, unknown> | null
   extractionMetadata: Record<string, unknown> | null
+  citations: Record<string, unknown>[] | null
+  providerResponseRaw: Record<string, unknown> | null
+  sourceParseRunId: string | null
   status: ExtractionResultStatus
   statusMessage: string | null
   startedAt: string | null
@@ -54,7 +57,7 @@ export interface ExtractionResultListItem {
 }
 
 export interface RunExtractionRequest {
-  documentId: string
+  parseRunId: string
   extractionSchemaId: string
   extractionMethod: string
   config?: Record<string, unknown>
@@ -65,4 +68,5 @@ export interface ExtractorInfo {
   name: string
   description: string
   configSchema: Record<string, unknown> | null
+  configured: boolean
 }
