@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     OLLAMA_CLOUD_BASE_URL: str = "https://ollama.com/v1"
     OLLAMA_CLOUD_API_KEY: str = ""
 
+    # Ollama — extraction endpoint
+    # Set to enable OllamaExtractor. Empty = extractor shows as "not configured".
+    # Example: OLLAMA_ENDPOINT=http://localhost:11434/v1
+    OLLAMA_ENDPOINT: str = ""
+
     # Groq hosted inference
     GROQ_API_KEY: str = ""
 

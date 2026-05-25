@@ -5,6 +5,10 @@ from typing import Any
 from uuid import UUID
 
 
+class ExtractionError(Exception):
+    """Raised by LLM extraction adapters for recoverable extraction failures."""
+
+
 @dataclass(frozen=True)
 class FieldCitation:
     """Provenance link from an extracted field value back to the CDM."""
