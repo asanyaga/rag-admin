@@ -20,12 +20,14 @@ class TestRunExtractionRequest:
         assert req.parse_run_id == run_id
 
     def test_rejects_document_id_field(self):
-        with pytest.raises(Exception):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError) as exc_info:
             RunExtractionRequest(
                 documentId=str(uuid4()),    # old field — must not be accepted
                 extractionSchemaId=str(uuid4()),
                 extractionMethod="ollama",
             )
+        assert any(e["loc"] == ("parseRunId",) for e in exc_info.value.errors())
 
 
 class TestExtractionResultResponse:
