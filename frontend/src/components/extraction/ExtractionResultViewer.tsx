@@ -177,7 +177,7 @@ export function ExtractionResultViewer({
         <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="outline" size="sm" className="w-full justify-between">
-              <span>Metadata (Citations / Reasoning)</span>
+              <span>Extraction Metadata</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </CollapsibleTrigger>
@@ -186,6 +186,26 @@ export function ExtractionResultViewer({
               <CardContent className="pt-4">
                 <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
                   {JSON.stringify(result.extractionMetadata, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {result.providerResponseRaw && Object.keys(result.providerResponseRaw).length > 0 && (
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full justify-between">
+              <span>Provider Response</span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="mt-2">
+              <CardContent className="pt-4">
+                <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+                  {JSON.stringify(result.providerResponseRaw, null, 2)}
                 </pre>
               </CardContent>
             </Card>
