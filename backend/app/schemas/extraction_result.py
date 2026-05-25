@@ -61,8 +61,8 @@ class ExtractionSchemaResponse(BaseModel):
 # --- Extraction Result schemas ---
 
 class RunExtractionRequest(BaseModel):
-    """Request to run an extraction."""
-    document_id: UUID = Field(..., alias="documentId")
+    """Request to run an extraction against a CDM ParsedDocument."""
+    parse_run_id: UUID = Field(..., alias="parseRunId")
     extraction_schema_id: UUID = Field(..., alias="extractionSchemaId")
     extraction_method: str = Field(..., alias="extractionMethod")
     config: dict | None = None
@@ -79,10 +79,13 @@ class ExtractionResultResponse(BaseModel):
     extraction_method: str = Field(..., alias="extractionMethod")
     config: dict | None = None
     structured_data: dict | None = Field(None, alias="structuredData")
+    citations: list | None = Field(None, alias="citations")
+    provider_response_raw: dict | None = Field(None, alias="providerResponseRaw")
     extraction_metadata: dict | None = Field(None, alias="extractionMetadata")
     status: ExtractionResultStatus
     status_message: str | None = Field(None, alias="statusMessage")
     started_at: datetime | None = Field(None, alias="startedAt")
+    source_parse_run_id: UUID | None = Field(None, alias="sourceParseRunId")
     created_by: UUID = Field(..., alias="createdBy")
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
@@ -99,10 +102,13 @@ class ExtractionResultResponse(BaseModel):
             extractionMethod=obj.extraction_method,
             config=obj.config,
             structuredData=obj.structured_data,
+            citations=obj.citations,
+            providerResponseRaw=obj.provider_response_raw,
             extractionMetadata=obj.extraction_metadata,
             status=obj.status,
             statusMessage=obj.status_message,
             startedAt=obj.started_at,
+            sourceParseRunId=obj.source_parse_run_id,
             createdBy=obj.created_by,
             createdAt=obj.created_at,
             updatedAt=obj.updated_at,
