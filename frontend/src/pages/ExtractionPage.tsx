@@ -4,6 +4,7 @@ import { useProject } from '@/contexts/ProjectContext'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useExtractionSchemas } from '@/hooks/useExtractionSchemas'
 import { useExtractionResults } from '@/hooks/useExtractionResults'
+import { useParseRuns } from '@/hooks/useParseRuns'
 import type {
   ExtractionSchema,
   ExtractionSchemaCreate,
@@ -58,6 +59,11 @@ export default function ExtractionPage(): JSX.Element {
     selectResult,
     runExtraction,
   } = useExtractionResults(selectedDocumentId)
+
+  const { parseRuns } = useParseRuns(selectedDocumentId)
+  const latestViableRun = parseRuns.find(
+    (r) => r.status === 'succeeded' || r.status === 'partial'
+  )
 
   const [extractors, setExtractors] = useState<ExtractorInfo[]>([])
   const [schemaEditorOpen, setSchemaEditorOpen] = useState(false)
@@ -263,22 +269,28 @@ export default function ExtractionPage(): JSX.Element {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="text-sm font-medium">Run New Extraction</h3>
-                  {!isDocumentReady && selectedDocument && (
+                  {(!isDocumentReady || !latestViableRun) && selectedDocument && (
                     <span className="text-xs text-muted-foreground">
-                      (document must be ready)
+                      {isDocumentReady ? '(parse document first)' : '(document must be ready)'}
                     </span>
                   )}
                 </div>
                 {isDocumentReady ? (
-                  <div className="rounded-lg border p-4">
-                    <ExtractionForm
-                      documentId={selectedDocumentId}
-                      schemas={schemas}
-                      extractors={extractors}
-                      onRun={handleRunExtraction}
-                      onEditSchema={handleEditSchema}
-                    />
-                  </div>
+                  latestViableRun ? (
+                    <div className="rounded-lg border p-4">
+                      <ExtractionForm
+                        parseRunId={latestViableRun.id}
+                        schemas={schemas}
+                        extractors={extractors}
+                        onRun={handleRunExtraction}
+                        onEditSchema={handleEditSchema}
+                      />
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                      Parse the document first to enable extraction.
+                    </div>
+                  )
                 ) : (
                   <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                     {selectedDocument?.status === 'processing'

@@ -14,7 +14,7 @@ import {
 import { Pencil, Play } from 'lucide-react'
 
 interface ExtractionFormProps {
-  documentId: string
+  parseRunId: string
   schemas: ExtractionSchema[]
   extractors: ExtractorInfo[]
   onRun: (request: RunExtractionRequest) => Promise<void>
@@ -22,7 +22,7 @@ interface ExtractionFormProps {
 }
 
 export function ExtractionForm({
-  documentId,
+  parseRunId,
   schemas,
   extractors,
   onRun,
@@ -67,7 +67,7 @@ export function ExtractionForm({
     setIsRunning(true)
     try {
       await onRun({
-        documentId,
+        parseRunId,
         extractionSchemaId: schemaId,
         extractionMethod,
         config,
