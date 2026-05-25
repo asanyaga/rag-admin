@@ -15,6 +15,8 @@ from app.models import User
 from app.repositories.extraction_schema_repository import ExtractionSchemaRepository
 from app.repositories.extraction_result_repository import ExtractionResultRepository
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
+from app.repositories.source_document_repository import SourceDocumentRepository
+from app.dependencies.documents import get_storage_service
 from app.schemas.extraction_result import (
     ExtractionSchemaCreate,
     ExtractionSchemaUpdate,
@@ -173,7 +175,14 @@ async def run_extraction(
 ):
     try:
         credentials = _resolve_credentials_from_settings(body.extraction_method)
-        extractor = get_extractor(body.extraction_method, credentials)
+        extractor = get_extractor(
+            body.extraction_method,
+            credentials,
+            {
+                "source_document_repo": SourceDocumentRepository(db),
+                "storage_service": get_storage_service(),
+            },
+        )
 
         result = await service.run_extraction(
             parse_run_id=body.parse_run_id,
