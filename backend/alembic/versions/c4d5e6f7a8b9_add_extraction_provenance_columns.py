@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "c4d5e6f7a8b9"
 down_revision: Union[str, None] = "b2c3d4e5f6a1"
@@ -27,7 +28,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "extraction_results",
-        sa.Column("source_parse_run_id", sa.UUID(), nullable=True),
+        sa.Column("source_parse_run_id", postgresql.UUID(as_uuid=True), nullable=True),
     )
     op.create_foreign_key(
         "fk_extraction_results_source_parse_run_id",
