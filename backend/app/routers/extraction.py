@@ -11,12 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user
-from app.dependencies.documents import get_storage_service
 from app.models import User
-from app.ports import StorageService
-from app.repositories.document_repository import DocumentRepository
 from app.repositories.extraction_schema_repository import ExtractionSchemaRepository
 from app.repositories.extraction_result_repository import ExtractionResultRepository
+from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.schemas.extraction_result import (
     ExtractionSchemaCreate,
     ExtractionSchemaUpdate,
@@ -41,8 +39,25 @@ def get_extraction_service(
     return ExtractionService(
         schema_repo=ExtractionSchemaRepository(db),
         result_repo=ExtractionResultRepository(db),
-        document_repo=DocumentRepository(db),
+        parsed_document_repo=ParsedDocumentRepository(db),
     )
+
+
+def _resolve_credentials_from_settings(method: str) -> dict:
+    """Resolve adapter credentials from application settings.
+
+    BYOK seam: replace this function body with a project_extractor_credentials
+    DB lookup when BYOK is implemented. Nothing else in the system changes.
+    """
+    from app.config import settings
+    if method == "llamaextract":
+        return {"api_key": getattr(settings, "LLAMA_CLOUD_KEY", None)}
+    if method == "ollama":
+        return {
+            "endpoint": getattr(settings, "OLLAMA_ENDPOINT", "http://localhost:11434/v1"),
+            "api_key": getattr(settings, "OLLAMA_API_KEY", None),
+        }
+    return {}
 
 
 # --- Schema endpoints ---
@@ -147,7 +162,7 @@ async def delete_extraction_schema(
     "/extractions/run",
     response_model=ExtractionResultResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="Run extraction on a document",
+    summary="Run extraction on a CDM ParsedDocument",
 )
 async def run_extraction(
     body: RunExtractionRequest,
@@ -155,35 +170,24 @@ async def run_extraction(
     current_user: User = Depends(get_current_active_user),
     service: ExtractionService = Depends(get_extraction_service),
     db: AsyncSession = Depends(get_db),
-    storage_service: StorageService = Depends(get_storage_service),
 ):
     try:
-        # Validate extractor exists
-        extractor = get_extractor(body.extraction_method)
-        if extractor is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unknown extraction method: {body.extraction_method}",
-            )
+        credentials = _resolve_credentials_from_settings(body.extraction_method)
+        extractor = get_extractor(body.extraction_method, credentials)
 
-        # Create pending result
         result = await service.run_extraction(
-            document_id=body.document_id,
+            parse_run_id=body.parse_run_id,
             extraction_schema_id=body.extraction_schema_id,
             extraction_method=body.extraction_method,
             user_id=current_user.id,
             config=body.config,
         )
 
-        # Schedule background extraction
-        result_repo = ExtractionResultRepository(db)
-        document_repo = DocumentRepository(db)
         background_tasks.add_task(
             process_extraction,
             extraction_result_id=result.id,
-            result_repo=result_repo,
-            document_repo=document_repo,
-            storage_service=storage_service,
+            result_repo=ExtractionResultRepository(db),
+            parsed_document_repo=ParsedDocumentRepository(db),
             extractor=extractor,
         )
 

@@ -9,16 +9,15 @@ logger = logging.getLogger(__name__)
 async def extract_node(state: dict) -> dict:
     """Extract structured data from a document using DataExtractor."""
     from app.adapters.extraction.registry import get_extractor
+    from app.config import settings
 
     logger.info("extract_node: processing document %s", state.get("document_id", "unknown"))
 
-    extractor = get_extractor("llamaextract")
-    if extractor is None:
-        return {
-            **state,
-            "error": "llamaextract extractor not available",
-            "current_step": "failed",
-        }
+    credentials = {}
+    if settings.LLAMA_CLOUD_KEY:
+        credentials["api_key"] = settings.LLAMA_CLOUD_KEY
+
+    extractor = get_extractor("llamaextract", credentials)
 
     config = dict(state.get("extraction_config") or {})
     config["extraction_target"] = "PER_DOC"

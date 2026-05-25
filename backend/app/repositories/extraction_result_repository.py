@@ -22,6 +22,7 @@ class ExtractionResultRepository:
         extraction_method: str,
         created_by: UUID,
         config: dict | None = None,
+        source_parse_run_id: UUID | None = None,
     ) -> ExtractionResult:
         """Create a new pending extraction result."""
         result = ExtractionResult(
@@ -31,6 +32,7 @@ class ExtractionResultRepository:
             extraction_method=extraction_method,
             config=config,
             created_by=created_by,
+            source_parse_run_id=source_parse_run_id,
             status=ExtractionResultStatus.pending,
         )
         self.session.add(result)
@@ -77,6 +79,8 @@ class ExtractionResultRepository:
         result_id: UUID,
         structured_data: dict,
         extraction_metadata: dict | None = None,
+        citations: list[dict] | None = None,
+        provider_response_raw: dict | None = None,
     ) -> ExtractionResult | None:
         """Update extraction result with completed data."""
         extraction_result = await self.get_by_id(result_id)
@@ -85,6 +89,8 @@ class ExtractionResultRepository:
 
         extraction_result.structured_data = structured_data
         extraction_result.extraction_metadata = extraction_metadata
+        extraction_result.citations = citations
+        extraction_result.provider_response_raw = provider_response_raw
         extraction_result.status = ExtractionResultStatus.completed
         extraction_result.status_message = None
 
