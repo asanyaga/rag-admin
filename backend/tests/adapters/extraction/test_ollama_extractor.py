@@ -71,11 +71,18 @@ class TestCallModel:
 
         return Concrete()
 
+    def _make_async_context_manager_mock(self, mock_client):
+        """Wrap a mock to support async context manager protocol."""
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        return mock_client
+
     async def test_json_schema_mode_sends_response_format(self, mixin):
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
             return_value=_mock_response('{"key": "val"}')
         )
+        mock_client = self._make_async_context_manager_mock(mock_client)
         with patch.object(mixin, "_build_client", return_value=mock_client):
             result = await mixin._call_model(
                 messages=[{"role": "user", "content": "x"}],
@@ -97,6 +104,7 @@ class TestCallModel:
         mock_client.chat.completions.create = AsyncMock(
             return_value=_mock_response('{"x": 1}')
         )
+        mock_client = self._make_async_context_manager_mock(mock_client)
         with patch.object(mixin, "_build_client", return_value=mock_client):
             await mixin._call_model(
                 messages=[],
@@ -115,6 +123,7 @@ class TestCallModel:
         mock_client.chat.completions.create = AsyncMock(
             return_value=_mock_response('{"x": 1}')
         )
+        mock_client = self._make_async_context_manager_mock(mock_client)
         with patch.object(mixin, "_build_client", return_value=mock_client):
             await mixin._call_model(
                 messages=[],
@@ -133,6 +142,7 @@ class TestCallModel:
         mock_client.chat.completions.create = AsyncMock(
             return_value=_mock_response("Sorry, I cannot extract this.")
         )
+        mock_client = self._make_async_context_manager_mock(mock_client)
         with patch.object(mixin, "_build_client", return_value=mock_client):
             with pytest.raises(ExtractionError, match="non-JSON"):
                 await mixin._call_model(
@@ -152,8 +162,9 @@ class TestCallModel:
         mock_client.chat.completions.create = AsyncMock(
             side_effect=openai.APIConnectionError(request=MagicMock())
         )
+        mock_client = self._make_async_context_manager_mock(mock_client)
         with patch.object(mixin, "_build_client", return_value=mock_client):
-            with pytest.raises(ExtractionError, match="Cannot connect to Ollama"):
+            with pytest.raises(ExtractionError, match="Cannot connect to endpoint"):
                 await mixin._call_model(
                     messages=[],
                     augmented_schema={},
@@ -174,6 +185,7 @@ class TestCallModel:
             body={"error": {"message": "unsupported"}},
         )
         mock_client.chat.completions.create = AsyncMock(side_effect=bad_request)
+        mock_client = self._make_async_context_manager_mock(mock_client)
         with patch.object(mixin, "_build_client", return_value=mock_client):
             with pytest.raises(openai.BadRequestError):
                 await mixin._call_model(
@@ -191,6 +203,7 @@ class TestCallModel:
         mock_client.chat.completions.create = AsyncMock(
             return_value=_mock_response('{}')
         )
+        mock_client = self._make_async_context_manager_mock(mock_client)
         with patch.object(mixin, "_build_client", return_value=mock_client):
             await mixin._call_model(
                 messages=[],
@@ -210,6 +223,7 @@ class TestCallModel:
         mock_client.chat.completions.create = AsyncMock(
             return_value=_mock_response('{}')
         )
+        mock_client = self._make_async_context_manager_mock(mock_client)
         with patch.object(mixin, "_build_client", return_value=mock_client):
             await mixin._call_model(
                 messages=[],

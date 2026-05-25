@@ -34,8 +34,6 @@ class OpenAICompatMixin:
         temperature = config.get("temperature", 0.0)
         mode = config.get("structured_output_mode", "json_schema")
 
-        client = self._build_client(endpoint, api_key)
-
         kwargs: dict = {
             "model": model,
             "messages": messages,
@@ -56,7 +54,8 @@ class OpenAICompatMixin:
         # prompt_only: no response_format key
 
         try:
-            response = await client.chat.completions.create(**kwargs)
+            async with self._build_client(endpoint, api_key) as client:
+                response = await client.chat.completions.create(**kwargs)
         except openai.BadRequestError as e:
             if e.status_code in (400, 422):
                 logger.warning(
@@ -67,7 +66,7 @@ class OpenAICompatMixin:
             raise
         except openai.APIConnectionError as e:
             raise ExtractionError(
-                f"Cannot connect to Ollama endpoint {endpoint!r}. Is Ollama running?"
+                f"Cannot connect to endpoint {endpoint!r}: connection refused."
             ) from e
 
         raw_content = response.choices[0].message.content
