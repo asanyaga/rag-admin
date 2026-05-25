@@ -16,8 +16,8 @@ class LlamaExtractAdapter(DataExtractor):
     def __init__(
         self,
         api_key: str | None,
-        source_document_repo: SourceDocumentRepository,
-        storage_service: StorageService,
+        source_document_repo: SourceDocumentRepository | None,
+        storage_service: StorageService | None,
     ):
         self._api_key = api_key
         self._client: AsyncLlamaCloud | None = None
