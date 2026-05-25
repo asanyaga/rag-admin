@@ -39,8 +39,15 @@ class ExtractionService:
 
     # --- Schema CRUD ---
 
-    async def create_schema(self, project_id, user_id, name, schema_definition,
-                             description=None, extraction_target="PER_DOC"):
+    async def create_schema(
+        self,
+        project_id: UUID,
+        user_id: UUID,
+        name: str,
+        schema_definition: dict,
+        description: str | None = None,
+        extraction_target: str = "PER_DOC",
+    ) -> ExtractionSchemaResponse:
         try:
             schema = await self.schema_repo.create(
                 project_id=project_id, name=name, schema_definition=schema_definition,
@@ -62,8 +69,15 @@ class ExtractionService:
         schemas = await self.schema_repo.list_by_project(project_id, user_id)
         return [ExtractionSchemaResponse.from_orm_model(s) for s in schemas]
 
-    async def update_schema(self, schema_id, user_id, name=None, description=None,
-                             schema_definition=None, extraction_target=None):
+    async def update_schema(
+        self,
+        schema_id: UUID,
+        user_id: UUID,
+        name: str | None = None,
+        description: str | None = None,
+        schema_definition: dict | None = None,
+        extraction_target: str | None = None,
+    ) -> ExtractionSchemaResponse:
         schema = await self.schema_repo.update(
             schema_id=schema_id, user_id=user_id, name=name, description=description,
             schema_definition=schema_definition, extraction_target=extraction_target,
@@ -140,17 +154,32 @@ class ExtractionService:
         return [ExtractionResultListResponse.from_orm_model(r) for r in results]
 
     async def get_extractors(self) -> list[ExtractorInfoResponse]:
-        """Return full catalogue of available extractors."""
+        """Return full catalogue with configured flag from current credential source.
+
+        BYOK seam: _get_configured_methods_from_settings() is replaced with a
+        project_extractor_credentials DB lookup when BYOK is implemented.
+        """
         catalogue = get_known_extractors()
+        configured = self._get_configured_methods_from_settings()
         return [
             ExtractorInfoResponse(
                 extractionMethod=e["extraction_method"],
                 name=e["name"],
                 description=e["description"],
                 configSchema=e.get("config_schema"),
+                configured=e["extraction_method"] in configured,
             )
             for e in catalogue
         ]
+
+    def _get_configured_methods_from_settings(self) -> set[str]:
+        from app.config import settings
+        configured: set[str] = set()
+        if getattr(settings, "LLAMA_CLOUD_KEY", None):
+            configured.add("llamaextract")
+        if getattr(settings, "OLLAMA_ENDPOINT", None):
+            configured.add("ollama")
+        return configured
 
 
 async def process_extraction(

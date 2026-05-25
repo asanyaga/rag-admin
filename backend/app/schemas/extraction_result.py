@@ -146,5 +146,6 @@ class ExtractorInfoResponse(BaseModel):
     name: str
     description: str
     config_schema: dict | None = Field(None, alias="configSchema")
+    configured: bool = Field(False, alias="configured")
 
     model_config = ConfigDict(populate_by_name=True)
