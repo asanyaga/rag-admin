@@ -18,11 +18,8 @@ class TestGetKnownExtractors:
             assert "config_schema" in e
 
     def test_no_settings_dependency(self):
-        # get_known_extractors must never touch settings.
-        # The registry module doesn't import settings, confirming no dependency.
         import app.adapters.extraction.registry as registry_module
-        assert not hasattr(registry_module, "settings"), \
-            "Registry must not import settings"
+        assert not hasattr(registry_module, "settings")
         result = get_known_extractors()
         assert isinstance(result, list)
 
@@ -46,10 +43,7 @@ class TestGetExtractor:
         assert extractor is not None
 
     def test_no_settings_read_in_factory(self):
-        # get_extractor must not read settings. It receives credentials as a parameter.
-        # The registry module doesn't import settings, confirming no direct dependency.
         import app.adapters.extraction.registry as registry_module
-        assert not hasattr(registry_module, "settings"), \
-            "Registry must not import settings"
+        assert not hasattr(registry_module, "settings")
         extractor = get_extractor("llamaextract", {"api_key": "k"})
         assert extractor.extractor_type == "llamaextract"
