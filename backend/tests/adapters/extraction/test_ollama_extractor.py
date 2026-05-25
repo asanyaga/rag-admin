@@ -370,3 +370,24 @@ class TestOllamaExtractorExtract:
 
         assert output.structured_data == {}
         assert output.citations == []
+
+
+# ---------------------------------------------------------------------------
+# Registry
+# ---------------------------------------------------------------------------
+
+class TestRegistryOllama:
+    def test_get_extractor_returns_ollama_extractor(self):
+        from app.adapters.extraction.ollama import OllamaExtractor
+        from app.adapters.extraction.registry import get_extractor
+
+        extractor = get_extractor("ollama", {})
+        assert isinstance(extractor, OllamaExtractor)
+        assert extractor.extractor_type == "ollama"
+
+    def test_ollama_extractor_needs_no_credentials(self):
+        from app.adapters.extraction.registry import get_extractor
+
+        # No credentials, no dependencies — should construct fine
+        extractor = get_extractor("ollama", {})
+        assert extractor is not None

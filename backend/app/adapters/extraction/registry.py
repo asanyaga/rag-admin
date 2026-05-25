@@ -97,4 +97,8 @@ def get_extractor(
             storage_service=deps.get("storage_service"),
         )
 
+    if method == "ollama":
+        from app.adapters.extraction.ollama import OllamaExtractor
+        return OllamaExtractor()
+
     raise ValueError(f"Unknown extraction method: {method!r}")
