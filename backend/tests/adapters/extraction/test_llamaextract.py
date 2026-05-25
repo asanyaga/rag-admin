@@ -72,6 +72,7 @@ class TestExtractOutputMapping:
         file_obj = MagicMock()
         file_obj.id = file_id
         adapter._client.files.create = AsyncMock(return_value=file_obj)
+        adapter._client.files.delete = AsyncMock()
 
     async def test_structured_data_from_result(
         self, adapter, source_doc_repo, storage_service, parsed_doc
@@ -112,11 +113,13 @@ class TestExtractOutputMapping:
         result_obj.data = {}
         result_obj.model_dump.return_value = {}
         adapter._client.extraction.extract = AsyncMock(return_value=result_obj)
+        adapter._client.files.delete = AsyncMock()
 
         await adapter.extract(parsed_doc, {"type": "object"}, {})
 
         call_kwargs = adapter._client.files.create.call_args.kwargs
         assert call_kwargs["purpose"] == "extract"
+        assert call_kwargs["file"] == ("document.pdf", b"bytes", "application/octet-stream")
 
 
 class TestExtractConfigPassthrough:
@@ -128,6 +131,7 @@ class TestExtractConfigPassthrough:
         file_obj = MagicMock()
         file_obj.id = "file-1"
         adapter._client.files.create = AsyncMock(return_value=file_obj)
+        adapter._client.files.delete = AsyncMock()
         result_obj = MagicMock()
         result_obj.data = {}
         result_obj.model_dump.return_value = {}

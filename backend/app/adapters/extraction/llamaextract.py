@@ -16,8 +16,8 @@ class LlamaExtractAdapter(DataExtractor):
     def __init__(
         self,
         api_key: str | None,
-        source_document_repo: SourceDocumentRepository | None,
-        storage_service: StorageService | None,
+        source_document_repo: SourceDocumentRepository,
+        storage_service: StorageService,
     ):
         self._api_key = api_key
         self._client: AsyncLlamaCloud | None = None
@@ -39,6 +39,11 @@ class LlamaExtractAdapter(DataExtractor):
         return "LlamaExtract"
 
     async def _get_file_bytes(self, source_document_id: str) -> bytes:
+        if self._source_doc_repo is None or self._storage_service is None:
+            raise RuntimeError(
+                "LlamaExtractAdapter requires source_document_repo and storage_service; "
+                "pass them via get_extractor(..., dependencies={...})"
+            )
         source_doc = await self._source_doc_repo.get(UUID(source_document_id))
         if not source_doc:
             raise ValueError(f"SourceDocument {source_document_id} not found")
@@ -75,12 +80,15 @@ class LlamaExtractAdapter(DataExtractor):
             extraction_config["prompt_override"] = config["system_prompt"]
 
         t0 = time.monotonic()
-        result = await client.extraction.extract(
-            data_schema=schema,
-            file_id=file_obj.id,
-            config=extraction_config,
-        )
-        latency_ms = int((time.monotonic() - t0) * 1000)
+        try:
+            result = await client.extraction.extract(
+                data_schema=schema,
+                file_id=file_obj.id,
+                config=extraction_config,
+            )
+        finally:
+            latency_ms = int((time.monotonic() - t0) * 1000)
+            await client.files.delete(file_obj.id)
 
         raw_response = result.model_dump() if hasattr(result, "model_dump") else dict(result)
 
