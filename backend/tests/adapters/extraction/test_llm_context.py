@@ -92,6 +92,13 @@ class TestBuildExtractionContext:
         ctx = build_extraction_context(doc)
         assert "Fallback content" in ctx
 
+    def test_fallback_to_full_text_when_no_markdown(self):
+        from app.adapters.extraction.llm_context import build_extraction_context
+        doc = _make_parsed_doc(blocks=[], full_markdown=None)
+        doc = doc.model_copy(update={"full_text": "plain text fallback"})
+        ctx = build_extraction_context(doc)
+        assert "plain text fallback" in ctx
+
 
 class TestAugmentSchemaWithSources:
     def test_flat_schema_gets_source_siblings(self):

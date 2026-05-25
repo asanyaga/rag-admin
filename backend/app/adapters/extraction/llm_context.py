@@ -19,7 +19,7 @@ def build_extraction_context(
     Falls back to full_markdown (without page markers) if no blocks exist.
     """
     if not parsed_doc.blocks:
-        return parsed_doc.full_markdown or ""
+        return parsed_doc.full_markdown or parsed_doc.full_text or ""
 
     blocks_by_page: dict[int, list] = {}
     for block in parsed_doc.blocks:
