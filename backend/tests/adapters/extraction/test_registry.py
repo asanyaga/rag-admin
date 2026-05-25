@@ -1,5 +1,6 @@
 """Tests for extraction adapter registry."""
 import pytest
+from unittest.mock import AsyncMock
 from app.adapters.extraction.registry import get_known_extractors, get_extractor
 
 
@@ -34,16 +35,47 @@ class TestGetExtractor:
             get_extractor("nonexistent_method", {})
 
     def test_llamaextract_uses_credentials_api_key(self):
-        extractor = get_extractor("llamaextract", {"api_key": "test-key-123"})
+        extractor = get_extractor(
+            "llamaextract",
+            {"api_key": "test-key-123"},
+            {"source_document_repo": AsyncMock(), "storage_service": AsyncMock()},
+        )
         assert extractor.extractor_type == "llamaextract"
 
     def test_llamaextract_works_with_empty_credentials(self):
-        # Empty credentials dict is valid — adapter handles absent key internally
-        extractor = get_extractor("llamaextract", {})
+        extractor = get_extractor(
+            "llamaextract",
+            {},
+            {"source_document_repo": AsyncMock(), "storage_service": AsyncMock()},
+        )
         assert extractor is not None
 
     def test_no_settings_read_in_factory(self):
         import app.adapters.extraction.registry as registry_module
         assert not hasattr(registry_module, "settings")
-        extractor = get_extractor("llamaextract", {"api_key": "k"})
+        extractor = get_extractor(
+            "llamaextract",
+            {"api_key": "k"},
+            {"source_document_repo": AsyncMock(), "storage_service": AsyncMock()},
+        )
         assert extractor.extractor_type == "llamaextract"
+
+
+class TestLlamaExtractConfigSchema:
+    def test_config_schema_has_extraction_target(self):
+        extractor = next(
+            e for e in get_known_extractors()
+            if e["extraction_method"] == "llamaextract"
+        )
+        props = extractor["config_schema"]["properties"]
+        assert "extraction_target" in props
+        assert props["extraction_target"]["enum"] == ["PER_DOC", "PER_PAGE"]
+
+    def test_config_schema_has_confidence_scores(self):
+        extractor = next(
+            e for e in get_known_extractors()
+            if e["extraction_method"] == "llamaextract"
+        )
+        props = extractor["config_schema"]["properties"]
+        assert "confidence_scores" in props
+        assert props["confidence_scores"]["type"] == "boolean"
