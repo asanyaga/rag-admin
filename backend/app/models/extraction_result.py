@@ -53,6 +53,13 @@ class ExtractionResult(Base):
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    citations: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    provider_response_raw: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    source_parse_run_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("parse_runs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id"),
@@ -83,4 +90,5 @@ class ExtractionResult(Base):
         sa.Index('ix_extraction_results_document_schema', 'document_id', 'extraction_schema_id'),
         sa.Index('ix_extraction_results_document_id', 'document_id'),
         sa.Index('ix_extraction_results_status', 'status'),
+        sa.Index('ix_extraction_results_parse_run', 'source_parse_run_id'),
     )
