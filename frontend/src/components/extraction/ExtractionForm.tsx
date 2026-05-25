@@ -337,6 +337,7 @@ export function ExtractionForm({
                 <Label className="text-xs">API Key</Label>
                 <Input
                   type="password"
+                  autoComplete="new-password"
                   value={ollamaApiKey}
                   onChange={(e) => setOllamaApiKey(e.target.value)}
                   placeholder="Bearer token"
