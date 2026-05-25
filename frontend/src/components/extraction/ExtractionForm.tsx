@@ -45,6 +45,9 @@ export function ExtractionForm({
     if (extractors.length > 0 && !extractionMethod) setExtractionMethod(extractors[0].extractionMethod)
   }, [extractors, extractionMethod])
 
+  const selectedExtractor = extractors.find((e) => e.extractionMethod === extractionMethod)
+  const isConfigured = selectedExtractor?.configured ?? true
+
   const handleRun = async () => {
     setError(null)
 
@@ -136,8 +139,8 @@ export function ExtractionForm({
               </SelectTrigger>
               <SelectContent>
                 {extractors.map((e) => (
-                  <SelectItem key={e.extractionMethod} value={e.extractionMethod}>
-                    {e.name}
+                  <SelectItem key={e.extractionMethod} value={e.extractionMethod} disabled={!e.configured}>
+                    {e.name}{!e.configured ? ' (not configured)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -204,7 +207,7 @@ export function ExtractionForm({
           </div>
         </div>
 
-        <Button onClick={handleRun} disabled={isRunning} size="sm">
+        <Button onClick={handleRun} disabled={isRunning || !isConfigured} size="sm">
           {isRunning ? (
             'Running...'
           ) : (
@@ -217,6 +220,12 @@ export function ExtractionForm({
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {!isConfigured && (
+        <p className="text-xs text-amber-600">
+          {selectedExtractor?.name ?? 'This extractor'} is not configured. Contact your administrator.
+        </p>
+      )}
     </div>
   )
 }

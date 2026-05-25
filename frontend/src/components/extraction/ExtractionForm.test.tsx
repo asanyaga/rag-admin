@@ -44,4 +44,20 @@ describe('ExtractionForm', () => {
       )
     })
   })
+
+  it('disables Run button and shows warning when selected extractor is not configured', async () => {
+    const unconfigured: ExtractorInfo = { ...extractor, configured: false }
+    render(
+      <ExtractionForm
+        parseRunId="run-1"
+        schemas={[schema]}
+        extractors={[unconfigured]}
+        onRun={vi.fn()}
+      />
+    )
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /run extraction/i })).toBeDisabled()
+    })
+    expect(screen.getByText(/not configured/i)).toBeInTheDocument()
+  })
 })
