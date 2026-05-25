@@ -1,52 +1,85 @@
-"""Extractor registry — maps extraction method strings to adapter instances."""
-from app.config import settings
+"""Extractor registry — pure catalogue and credential-aware factory.
+
+The registry never reads settings. Credentials are passed explicitly by the
+call site, which resolves them from settings (now) or the database (BYOK).
+"""
 from app.ports.data_extraction import DataExtractor
 
 
-def get_extractor(extraction_method: str) -> DataExtractor | None:
-    """Get an extractor instance by method string."""
-    if extraction_method == "llamaextract":
-        from app.adapters.extraction.llamaextract import LlamaExtractAdapter
-        api_key = settings.LLAMA_CLOUD_KEY or None
-        return LlamaExtractAdapter(api_key=api_key)
+def get_known_extractors() -> list[dict]:
+    """Catalogue of all known extraction adapters.
 
-    raise ValueError(f"Unknown extraction method: {extraction_method}")
-
-
-def get_available_extractors() -> list[dict]:
-    """Return info about all available extraction methods."""
-    extractors: list[dict] = []
-
-    if settings.LLAMA_CLOUD_KEY:
-        extractors.append({
+    Returns every adapter unconditionally — no credential checks, no settings
+    reads. Ordering is a UI concern; this list makes no preference statement.
+    """
+    return [
+        {
             "extraction_method": "llamaextract",
             "name": "LlamaExtract",
-            "description": "Structured data extraction via LlamaCloud LlamaExtract. Supports multiple extraction modes and targets.",
+            "description": (
+                "Structured extraction via LlamaCloud. "
+                "Multimodal, supports citations and reasoning."
+            ),
             "config_schema": {
                 "type": "object",
                 "properties": {
+                    "system_prompt": {
+                        "type": "string",
+                        "description": "Custom extraction prompt (maps to LlamaExtract prompt_override)",
+                    },
                     "extraction_mode": {
                         "type": "string",
                         "enum": ["FAST", "BALANCED", "MULTIMODAL", "PREMIUM"],
                         "default": "MULTIMODAL",
-                        "description": "Extraction mode (affects quality and cost)",
                     },
-                    "cite_sources": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Trace extracted values to source pages/text",
-                    },
-                    "use_reasoning": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Include reasoning for extraction decisions",
-                    },
-                    "page_range": {
-                        "type": "string",
-                        "description": "Specific pages to extract from (e.g. '1-5')",
-                    },
+                    "cite_sources": {"type": "boolean", "default": False},
+                    "use_reasoning": {"type": "boolean", "default": False},
+                    "page_range": {"type": "string"},
                 },
             },
-        })
+        },
+        {
+            "extraction_method": "ollama",
+            "name": "Ollama",
+            "description": (
+                "Open-weight extraction via Ollama runtime. "
+                "Supports local, self-hosted, and Ollama cloud deployments."
+            ),
+            "config_schema": {
+                "type": "object",
+                "properties": {
+                    "model": {
+                        "type": "string",
+                        "description": "Model name, e.g. llama3.2:8b",
+                    },
+                    "endpoint": {
+                        "type": "string",
+                        "default": "http://localhost:11434/v1",
+                    },
+                    "temperature": {"type": "number", "default": 0.0},
+                    "structured_output_mode": {
+                        "type": "string",
+                        "enum": ["json_schema", "json_mode", "prompt_only"],
+                        "default": "json_schema",
+                    },
+                    "inject_block_ids": {"type": "boolean", "default": False},
+                    "system_prompt": {"type": "string"},
+                    "user_prompt_template": {"type": "string"},
+                },
+                "required": ["model"],
+            },
+        },
+    ]
 
-    return extractors
+
+def get_extractor(method: str, credentials: dict) -> DataExtractor:
+    """Construct an adapter with caller-supplied credentials.
+
+    Credentials are resolved by the call site, not here. Raises ValueError
+    for unknown methods.
+    """
+    if method == "llamaextract":
+        from app.adapters.extraction.llamaextract import LlamaExtractAdapter
+        return LlamaExtractAdapter(api_key=credentials.get("api_key"))
+
+    raise ValueError(f"Unknown extraction method: {method!r}")

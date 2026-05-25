@@ -29,6 +29,7 @@ from app.schemas.extraction_result import (
 from app.services.extraction_service import ExtractionService, process_extraction
 from app.services.exceptions import NotFoundError, ConflictError
 from app.adapters.extraction.registry import get_extractor
+from app.config import settings
 
 
 router = APIRouter(tags=["extraction"])
@@ -158,13 +159,13 @@ async def run_extraction(
     storage_service: StorageService = Depends(get_storage_service),
 ):
     try:
-        # Validate extractor exists
-        extractor = get_extractor(body.extraction_method)
-        if extractor is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unknown extraction method: {body.extraction_method}",
-            )
+        # Resolve credentials and get extractor
+        credentials = {}
+        if body.extraction_method == "llamaextract":
+            if settings.LLAMA_CLOUD_KEY:
+                credentials["api_key"] = settings.LLAMA_CLOUD_KEY
+
+        extractor = get_extractor(body.extraction_method, credentials)
 
         # Create pending result
         result = await service.run_extraction(

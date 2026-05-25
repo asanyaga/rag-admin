@@ -15,7 +15,7 @@ from app.schemas.extraction_result import (
     ExtractionResultListResponse,
     ExtractorInfoResponse,
 )
-from app.adapters.extraction.registry import get_available_extractors
+from app.adapters.extraction.registry import get_known_extractors
 from app.services.exceptions import NotFoundError, ConflictError
 
 logger = logging.getLogger(__name__)
@@ -182,7 +182,7 @@ class ExtractionService:
 
     async def get_extractors(self) -> list[ExtractorInfoResponse]:
         """Get list of available extractors."""
-        extractors = get_available_extractors()
+        extractors = get_known_extractors()
         return [
             ExtractorInfoResponse(
                 extractionMethod=e["extraction_method"],
