@@ -1,4 +1,5 @@
 """LlamaExtract adapter — CDM-based DataExtractor port implementation."""
+import time
 from typing import Any
 from uuid import UUID
 
@@ -49,4 +50,47 @@ class LlamaExtractAdapter(DataExtractor):
         schema: dict[str, Any],
         config: dict[str, Any] | None = None,
     ) -> ExtractionOutput:
-        raise NotImplementedError("extract() — see Task 3 of the implementation plan")
+        config = config or {}
+
+        file_bytes = await self._get_file_bytes(parsed_document.source_document_id)
+        client = self._get_client()
+        file_obj = await client.files.create(
+            file=("document.pdf", file_bytes, "application/octet-stream"),
+            purpose="extract",
+        )
+
+        extraction_config: dict[str, Any] = {
+            "extraction_mode": config.get("extraction_mode", "MULTIMODAL"),
+            "extraction_target": config.get("extraction_target", "PER_DOC"),
+        }
+        if config.get("cite_sources") is not None:
+            extraction_config["cite_sources"] = config["cite_sources"]
+        if config.get("use_reasoning") is not None:
+            extraction_config["use_reasoning"] = config["use_reasoning"]
+        if config.get("confidence_scores") is not None:
+            extraction_config["confidence_scores"] = config["confidence_scores"]
+        if config.get("page_range") is not None:
+            extraction_config["page_range"] = config["page_range"]
+        if config.get("system_prompt") is not None:
+            extraction_config["prompt_override"] = config["system_prompt"]
+
+        t0 = time.monotonic()
+        result = await client.extraction.extract(
+            data_schema=schema,
+            file_id=file_obj.id,
+            config=extraction_config,
+        )
+        latency_ms = int((time.monotonic() - t0) * 1000)
+
+        raw_response = result.model_dump() if hasattr(result, "model_dump") else dict(result)
+
+        return ExtractionOutput(
+            structured_data=result.data if result.data is not None else {},
+            source_parse_run_id=UUID(parsed_document.parse_run_id),
+            citations=None,
+            provider_response_raw=raw_response,
+            extraction_metadata={
+                "latency_ms": latency_ms,
+                "file_id": str(file_obj.id),
+            },
+        )
