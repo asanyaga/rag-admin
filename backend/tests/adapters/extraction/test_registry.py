@@ -47,3 +47,23 @@ class TestGetExtractor:
         assert not hasattr(registry_module, "settings")
         extractor = get_extractor("llamaextract", {"api_key": "k"})
         assert extractor.extractor_type == "llamaextract"
+
+
+class TestLlamaExtractConfigSchema:
+    def test_config_schema_has_extraction_target(self):
+        extractor = next(
+            e for e in get_known_extractors()
+            if e["extraction_method"] == "llamaextract"
+        )
+        props = extractor["config_schema"]["properties"]
+        assert "extraction_target" in props
+        assert props["extraction_target"]["enum"] == ["PER_DOC", "PER_PAGE"]
+
+    def test_config_schema_has_confidence_scores(self):
+        extractor = next(
+            e for e in get_known_extractors()
+            if e["extraction_method"] == "llamaextract"
+        )
+        props = extractor["config_schema"]["properties"]
+        assert "confidence_scores" in props
+        assert props["confidence_scores"]["type"] == "boolean"
