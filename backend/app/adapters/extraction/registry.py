@@ -78,14 +78,23 @@ def get_known_extractors() -> list[dict]:
     ]
 
 
-def get_extractor(method: str, credentials: dict) -> DataExtractor:
-    """Construct an adapter with caller-supplied credentials.
+def get_extractor(
+    method: str,
+    credentials: dict,
+    dependencies: dict | None = None,
+) -> DataExtractor:
+    """Construct an adapter with caller-supplied credentials and dependencies.
 
-    Credentials are resolved by the call site, not here. Raises ValueError
+    Credentials and dependencies are resolved by the call site. Raises ValueError
     for unknown methods.
     """
     if method == "llamaextract":
         from app.adapters.extraction.llamaextract import LlamaExtractAdapter
-        return LlamaExtractAdapter(api_key=credentials.get("api_key"))
+        deps = dependencies or {}
+        return LlamaExtractAdapter(
+            api_key=credentials.get("api_key"),
+            source_document_repo=deps["source_document_repo"],
+            storage_service=deps["storage_service"],
+        )
 
     raise ValueError(f"Unknown extraction method: {method!r}")
