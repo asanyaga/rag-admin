@@ -45,14 +45,16 @@ class TestGetFileBytes:
     ):
         source_doc = MagicMock()
         source_doc.storage_uri = "uploads/test.pdf"
+        source_doc.mime_type = "application/pdf"
         source_doc_repo.get.return_value = source_doc
         storage_service.get.return_value = b"pdf bytes"
 
-        result = await adapter._get_file_bytes(SOURCE_DOC_ID)
+        file_bytes, mime_type = await adapter._get_file_bytes(SOURCE_DOC_ID)
 
         source_doc_repo.get.assert_called_once_with(UUID(SOURCE_DOC_ID))
         storage_service.get.assert_called_once_with("uploads/test.pdf")
-        assert result == b"pdf bytes"
+        assert file_bytes == b"pdf bytes"
+        assert mime_type == "application/pdf"
 
     async def test_raises_when_source_doc_not_found(
         self, adapter, source_doc_repo
@@ -62,11 +64,42 @@ class TestGetFileBytes:
         with pytest.raises(ValueError, match="SourceDocument .* not found"):
             await adapter._get_file_bytes(SOURCE_DOC_ID)
 
+    async def test_raises_extraction_error_for_non_pdf_mime_type(
+        self, adapter, source_doc_repo, storage_service
+    ):
+        from app.ports.data_extraction import ExtractionError
+        source_doc = MagicMock()
+        source_doc.storage_uri = "uploads/photo.jpg"
+        source_doc.mime_type = "image/jpeg"
+        source_doc_repo.get.return_value = source_doc
+
+        with pytest.raises(ExtractionError, match="LlamaExtract only supports PDF"):
+            await adapter._get_file_bytes(SOURCE_DOC_ID)
+
+        # Storage should NOT be accessed when format is unsupported
+        storage_service.get.assert_not_called()
+
+    async def test_allows_none_mime_type(
+        self, adapter, source_doc_repo, storage_service
+    ):
+        """When mime_type is unknown (None), let LlamaExtract decide."""
+        source_doc = MagicMock()
+        source_doc.storage_uri = "uploads/doc"
+        source_doc.mime_type = None
+        source_doc_repo.get.return_value = source_doc
+        storage_service.get.return_value = b"bytes"
+
+        file_bytes, mime_type = await adapter._get_file_bytes(SOURCE_DOC_ID)
+
+        assert file_bytes == b"bytes"
+        assert mime_type == "application/octet-stream"
+
 
 class TestExtractOutputMapping:
     async def _setup_mocks(self, adapter, source_doc_repo, storage_service, file_id="file-abc"):
         source_doc = MagicMock()
         source_doc.storage_uri = "uploads/doc.pdf"
+        source_doc.mime_type = "application/pdf"
         source_doc_repo.get.return_value = source_doc
         storage_service.get.return_value = b"bytes"
         file_obj = MagicMock()
@@ -119,13 +152,14 @@ class TestExtractOutputMapping:
 
         call_kwargs = adapter._client.files.create.call_args.kwargs
         assert call_kwargs["purpose"] == "extract"
-        assert call_kwargs["file"] == ("document.pdf", b"bytes", "application/octet-stream")
+        assert call_kwargs["file"] == ("document.pdf", b"bytes", "application/pdf")
 
 
 class TestExtractConfigPassthrough:
     async def _setup_mocks(self, adapter, source_doc_repo, storage_service):
         source_doc = MagicMock()
         source_doc.storage_uri = "uploads/doc.pdf"
+        source_doc.mime_type = "application/pdf"
         source_doc_repo.get.return_value = source_doc
         storage_service.get.return_value = b"bytes"
         file_obj = MagicMock()
