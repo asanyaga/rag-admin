@@ -176,6 +176,14 @@ async def create_classification_run(
     if byok_provider:
         provider_key_repo = ProviderKeyRepository(db)
         api_key = await resolve_api_key(provider_key_repo, current_user.id, byok_provider)
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"No API key configured for provider '{llm_provider}'. "
+                    "Add one in Settings → API Keys."
+                ),
+            )
 
     background_tasks.add_task(
         _run_classification_background,

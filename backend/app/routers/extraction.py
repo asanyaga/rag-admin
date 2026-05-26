@@ -63,8 +63,6 @@ async def _resolve_credentials_from_settings(
     provider_map = {
         "llamaextract": "llama_cloud",
         "ollama":        "ollama_cloud",
-        "groq":          "groq",
-        "vision_agent":  "landing_ai",
     }
     provider = provider_map.get(method)
     if not provider:
@@ -205,14 +203,12 @@ async def run_extraction(
             },
         )
 
-        # Merge BYOK credentials as defaults; per-request config overrides them.
-        merged_config = {**credentials, **(body.config or {})}
         result = await service.run_extraction(
             parse_run_id=body.parse_run_id,
             extraction_schema_id=body.extraction_schema_id,
             extraction_method=body.extraction_method,
             user_id=current_user.id,
-            config=merged_config,
+            config=body.config,
         )
 
         background_tasks.add_task(

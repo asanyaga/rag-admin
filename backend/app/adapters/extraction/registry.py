@@ -99,6 +99,9 @@ def get_extractor(
 
     if method == "ollama":
         from app.adapters.extraction.ollama import OllamaExtractor
-        return OllamaExtractor()
+        return OllamaExtractor(
+            default_endpoint=credentials.get("endpoint"),
+            default_api_key=credentials.get("api_key"),
+        )
 
     raise ValueError(f"Unknown extraction method: {method!r}")
