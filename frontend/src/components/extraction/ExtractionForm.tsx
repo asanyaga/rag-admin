@@ -25,7 +25,7 @@ type OllamaEndpointPreset = 'local' | 'cloud' | 'custom'
 
 const OLLAMA_ENDPOINTS: Record<OllamaEndpointPreset, string> = {
   local: 'http://host.docker.internal:11434/v1',
-  cloud: 'https://ollama.com',
+  cloud: 'https://ollama.com/v1',
   custom: '',
 }
 
