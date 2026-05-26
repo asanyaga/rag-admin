@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user
 from app.models import User
+from app.repositories.document_repository import DocumentRepository
 from app.repositories.extraction_schema_repository import ExtractionSchemaRepository
 from app.repositories.extraction_result_repository import ExtractionResultRepository
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
@@ -42,6 +43,7 @@ def get_extraction_service(
         schema_repo=ExtractionSchemaRepository(db),
         result_repo=ExtractionResultRepository(db),
         parsed_document_repo=ParsedDocumentRepository(db),
+        document_repo=DocumentRepository(db),
     )
 
 

@@ -7,6 +7,7 @@ from uuid import UUID
 from app.cdm import models as cdm_models
 from app.models.extraction_result import ExtractionResultStatus
 from app.ports.data_extraction import DataExtractor
+from app.repositories.document_repository import DocumentRepository
 from app.repositories.extraction_schema_repository import ExtractionSchemaRepository
 from app.repositories.extraction_result_repository import ExtractionResultRepository
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
@@ -32,10 +33,12 @@ class ExtractionService:
         schema_repo: ExtractionSchemaRepository,
         result_repo: ExtractionResultRepository,
         parsed_document_repo: ParsedDocumentRepository,
+        document_repo: DocumentRepository,
     ):
         self.schema_repo = schema_repo
         self.result_repo = result_repo
         self.parsed_document_repo = parsed_document_repo
+        self.document_repo = document_repo
 
     # --- Schema CRUD ---
 
@@ -111,11 +114,21 @@ class ExtractionService:
         if not schema:
             raise NotFoundError(f"Extraction schema {extraction_schema_id} not found")
 
+        document = await self.document_repo.get_by_source_document_for_project(
+            source_document_id=orm_parsed_doc.source_document_id,
+            project_id=schema.project_id,
+        )
+        if not document:
+            raise NotFoundError(
+                f"No document found in project {schema.project_id} "
+                f"for source_document {orm_parsed_doc.source_document_id}"
+            )
+
         merged_config = dict(config or {})
         merged_config["extraction_target"] = schema.extraction_target
 
         result = await self.result_repo.create(
-            document_id=orm_parsed_doc.source_document_id,
+            document_id=document.id,
             source_parse_run_id=parse_run_id,
             extraction_schema_id=extraction_schema_id,
             schema_definition_snapshot=schema.schema_definition,

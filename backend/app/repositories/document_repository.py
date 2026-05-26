@@ -84,6 +84,26 @@ class DocumentRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_source_document_for_project(
+        self,
+        source_document_id: UUID,
+        project_id: UUID,
+    ) -> Document | None:
+        """Return the project-scoped Document that wraps a given SourceDocument.
+
+        Used by the extraction service to resolve documents.id from a parse
+        run's source_document_id + the extraction schema's project_id.
+        """
+        result = await self.session.execute(
+            select(Document).where(
+                and_(
+                    Document.source_document_id == source_document_id,
+                    Document.project_id == project_id,
+                )
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def get_by_source(
         self,
         project_id: UUID,
