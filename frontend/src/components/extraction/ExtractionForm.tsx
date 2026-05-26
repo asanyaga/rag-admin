@@ -21,6 +21,14 @@ interface ExtractionFormProps {
   onEditSchema?: (schema: ExtractionSchema) => void
 }
 
+type OllamaEndpointPreset = 'local' | 'cloud' | 'custom'
+
+const OLLAMA_ENDPOINTS: Record<OllamaEndpointPreset, string> = {
+  local: 'http://host.docker.internal:11434/v1',
+  cloud: 'https://ollama.com/v1',
+  custom: '',
+}
+
 export function ExtractionForm({
   parseRunId,
   schemas,
@@ -30,14 +38,25 @@ export function ExtractionForm({
 }: ExtractionFormProps) {
   const [schemaId, setSchemaId] = useState('')
   const [extractionMethod, setExtractionMethod] = useState('')
+
+  // LlamaExtract config
   const [extractionMode, setExtractionMode] = useState('MULTIMODAL')
   const [citeSources, setCiteSources] = useState(false)
   const [useReasoning, setUseReasoning] = useState(false)
   const [pageRange, setPageRange] = useState('')
-  const [isRunning, setIsRunning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [extractionTarget, setExtractionTarget] = useState('PER_DOC')
   const [confidenceScores, setConfidenceScores] = useState(false)
+
+  // Ollama config
+  const [ollamaModel, setOllamaModel] = useState('')
+  const [ollamaEndpointPreset, setOllamaEndpointPreset] = useState<OllamaEndpointPreset>('local')
+  const [ollamaCustomEndpoint, setOllamaCustomEndpoint] = useState('')
+  const [ollamaApiKey, setOllamaApiKey] = useState('')
+  const [ollamaStructuredOutputMode, setOllamaStructuredOutputMode] = useState('json_schema')
+  const [ollamaInjectBlockIds, setOllamaInjectBlockIds] = useState(false)
+
+  const [isRunning, setIsRunning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (schemas.length > 0 && !schemaId) setSchemaId(schemas[0].id)
@@ -50,6 +69,11 @@ export function ExtractionForm({
   const selectedExtractor = extractors.find((e) => e.extractionMethod === extractionMethod)
   const isConfigured = selectedExtractor?.configured ?? true
 
+  function getOllamaEndpoint(): string {
+    if (ollamaEndpointPreset === 'custom') return ollamaCustomEndpoint
+    return OLLAMA_ENDPOINTS[ollamaEndpointPreset]
+  }
+
   const handleRun = async () => {
     setError(null)
 
@@ -61,16 +85,30 @@ export function ExtractionForm({
       setError('No extraction method available')
       return
     }
-
-    const config: Record<string, unknown> = {
-      extraction_mode: extractionMode,
+    if (extractionMethod === 'ollama' && !ollamaModel.trim()) {
+      setError('Model name is required for Ollama')
+      return
     }
-    if (citeSources) config.cite_sources = true
-    if (useReasoning) config.use_reasoning = true
-    if (pageRange.trim()) config.page_range = pageRange.trim()
+
+    let config: Record<string, unknown>
+
     if (extractionMethod === 'llamaextract') {
+      config = { extraction_mode: extractionMode }
+      if (citeSources) config.cite_sources = true
+      if (useReasoning) config.use_reasoning = true
+      if (pageRange.trim()) config.page_range = pageRange.trim()
       config.extraction_target = extractionTarget
       if (confidenceScores) config.confidence_scores = true
+    } else if (extractionMethod === 'ollama') {
+      config = {
+        model: ollamaModel.trim(),
+        endpoint: getOllamaEndpoint(),
+        structured_output_mode: ollamaStructuredOutputMode,
+        inject_block_ids: ollamaInjectBlockIds,
+      }
+      if (ollamaApiKey.trim()) config.api_key = ollamaApiKey.trim()
+    } else {
+      config = {}
     }
 
     setIsRunning(true)
@@ -101,8 +139,12 @@ export function ExtractionForm({
     )
   }
 
+  const isOllamaModelMissing = extractionMethod === 'ollama' && !ollamaModel.trim()
+  const isRunDisabled = isRunning || !isConfigured || isOllamaModelMissing
+
   return (
     <div className="space-y-4">
+      {/* Schema + Method row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs">Schema</Label>
@@ -162,87 +204,184 @@ export function ExtractionForm({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs">Mode</Label>
-          <Select value={extractionMode} onValueChange={setExtractionMode}>
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="FAST">Fast</SelectItem>
-              <SelectItem value="BALANCED">Balanced</SelectItem>
-              <SelectItem value="MULTIMODAL">Multimodal</SelectItem>
-              <SelectItem value="PREMIUM">Premium</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs">Page Range</Label>
-          <Input
-            value={pageRange}
-            onChange={(e) => setPageRange(e.target.value)}
-            placeholder="e.g. 1-5"
-            className="h-9"
-          />
-        </div>
-      </div>
-
+      {/* LlamaExtract-specific config */}
       {extractionMethod === 'llamaextract' && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="extraction-target" className="text-xs">Target</Label>
-            <Select value={extractionTarget} onValueChange={setExtractionTarget}>
-              <SelectTrigger id="extraction-target" className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PER_DOC">Per Document</SelectItem>
-                <SelectItem value="PER_PAGE">Per Page</SelectItem>
-              </SelectContent>
-            </Select>
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Mode</Label>
+              <Select value={extractionMode} onValueChange={setExtractionMode}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FAST">Fast</SelectItem>
+                  <SelectItem value="BALANCED">Balanced</SelectItem>
+                  <SelectItem value="MULTIMODAL">Multimodal</SelectItem>
+                  <SelectItem value="PREMIUM">Premium</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Page Range</Label>
+              <Input
+                value={pageRange}
+                onChange={(e) => setPageRange(e.target.value)}
+                placeholder="e.g. 1-5"
+                className="h-9"
+              />
+            </div>
           </div>
-          <div className="flex items-end pb-2">
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="extraction-target" className="text-xs">Target</Label>
+              <Select value={extractionTarget} onValueChange={setExtractionTarget}>
+                <SelectTrigger id="extraction-target" className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PER_DOC">Per Document</SelectItem>
+                  <SelectItem value="PER_PAGE">Per Page</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end pb-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="confidence-scores"
+                  checked={confidenceScores}
+                  onCheckedChange={(checked) => setConfidenceScores(checked === true)}
+                />
+                <Label htmlFor="confidence-scores" className="text-xs font-normal">
+                  Confidence Scores
+                </Label>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="confidence-scores"
-                checked={confidenceScores}
-                onCheckedChange={(checked) => setConfidenceScores(checked === true)}
+                id="cite-sources-inline"
+                checked={citeSources}
+                onCheckedChange={(checked) => setCiteSources(checked === true)}
               />
-              <Label htmlFor="confidence-scores" className="text-xs font-normal">
-                Confidence Scores
+              <Label htmlFor="cite-sources-inline" className="text-xs font-normal">
+                Citations
               </Label>
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="use-reasoning-inline"
+                checked={useReasoning}
+                onCheckedChange={(checked) => setUseReasoning(checked === true)}
+              />
+              <Label htmlFor="use-reasoning-inline" className="text-xs font-normal">
+                Reasoning
+              </Label>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Ollama-specific config */}
+      {extractionMethod === 'ollama' && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Model</Label>
+              <Input
+                value={ollamaModel}
+                onChange={(e) => setOllamaModel(e.target.value)}
+                placeholder="e.g. llama3.2:8b"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Output Mode</Label>
+              <Select value={ollamaStructuredOutputMode} onValueChange={setOllamaStructuredOutputMode}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="json_schema">JSON Schema</SelectItem>
+                  <SelectItem value="json_mode">JSON Mode</SelectItem>
+                  <SelectItem value="prompt_only">Prompt Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Endpoint</Label>
+              <Select
+                value={ollamaEndpointPreset}
+                onValueChange={(v) => setOllamaEndpointPreset(v as OllamaEndpointPreset)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="local">Local (host.docker.internal:11434)</SelectItem>
+                  <SelectItem value="cloud">Ollama Cloud</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(ollamaEndpointPreset === 'cloud' || ollamaEndpointPreset === 'custom') && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">API Key</Label>
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  value={ollamaApiKey}
+                  onChange={(e) => setOllamaApiKey(e.target.value)}
+                  placeholder="Bearer token"
+                  className="h-9"
+                />
+              </div>
+            )}
+          </div>
+
+          {ollamaEndpointPreset === 'custom' && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Custom Endpoint URL</Label>
+              <Input
+                value={ollamaCustomEndpoint}
+                onChange={(e) => setOllamaCustomEndpoint(e.target.value)}
+                placeholder="https://your-ollama-host/v1"
+                className="h-9"
+              />
+            </div>
+          )}
+
+          {ollamaEndpointPreset !== 'custom' && (
+            <p className="text-[11px] text-muted-foreground font-mono">
+              {OLLAMA_ENDPOINTS[ollamaEndpointPreset]}
+            </p>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="inject-block-ids"
+              checked={ollamaInjectBlockIds}
+              onCheckedChange={(checked) => setOllamaInjectBlockIds(checked === true)}
+            />
+            <Label htmlFor="inject-block-ids" className="text-xs font-normal">
+              Inject block IDs (block-level citations)
+            </Label>
           </div>
         </div>
       )}
 
+      {/* Run button */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="cite-sources-inline"
-              checked={citeSources}
-              onCheckedChange={(checked) => setCiteSources(checked === true)}
-            />
-            <Label htmlFor="cite-sources-inline" className="text-xs font-normal">
-              Citations
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="use-reasoning-inline"
-              checked={useReasoning}
-              onCheckedChange={(checked) => setUseReasoning(checked === true)}
-            />
-            <Label htmlFor="use-reasoning-inline" className="text-xs font-normal">
-              Reasoning
-            </Label>
-          </div>
-        </div>
-
-        <Button onClick={handleRun} disabled={isRunning || !isConfigured} size="sm">
+        <div />
+        <Button onClick={handleRun} disabled={isRunDisabled} size="sm">
           {isRunning ? (
             'Running...'
           ) : (

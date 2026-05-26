@@ -38,7 +38,8 @@ class LlamaExtractAdapter(DataExtractor):
     def display_name(self) -> str:
         return "LlamaExtract"
 
-    async def _get_file_bytes(self, source_document_id: str) -> bytes:
+    async def _get_file_bytes(self, source_document_id: str) -> tuple[bytes, str, str]:
+        """Return (file_bytes, filename, mime_type) from the source document."""
         if self._source_doc_repo is None or self._storage_service is None:
             raise RuntimeError(
                 "LlamaExtractAdapter requires source_document_repo and storage_service; "
@@ -47,7 +48,10 @@ class LlamaExtractAdapter(DataExtractor):
         source_doc = await self._source_doc_repo.get(UUID(source_document_id))
         if not source_doc:
             raise ValueError(f"SourceDocument {source_document_id} not found")
-        return await self._storage_service.get(source_doc.storage_uri)
+        filename = source_doc.filename or "document"
+        mime_type = source_doc.mime_type or "application/octet-stream"
+        file_bytes = await self._storage_service.get(source_doc.storage_uri)
+        return file_bytes, filename, mime_type
 
     async def extract(
         self,
@@ -57,10 +61,10 @@ class LlamaExtractAdapter(DataExtractor):
     ) -> ExtractionOutput:
         config = config or {}
 
-        file_bytes = await self._get_file_bytes(parsed_document.source_document_id)
+        file_bytes, filename, mime_type = await self._get_file_bytes(parsed_document.source_document_id)
         client = self._get_client()
         file_obj = await client.files.create(
-            file=("document.pdf", file_bytes, "application/octet-stream"),
+            file=(filename, file_bytes, mime_type),
             purpose="extract",
         )
 
