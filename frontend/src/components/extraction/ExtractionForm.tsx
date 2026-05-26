@@ -24,7 +24,7 @@ interface ExtractionFormProps {
 type OllamaEndpointPreset = 'local' | 'cloud' | 'custom'
 
 const OLLAMA_ENDPOINTS: Record<OllamaEndpointPreset, string> = {
-  local: 'http://localhost:11434/v1',
+  local: 'http://host.docker.internal:11434/v1',
   cloud: 'https://ollama.com/v1',
   custom: '',
 }
@@ -325,7 +325,7 @@ export function ExtractionForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="local">Local (localhost:11434)</SelectItem>
+                  <SelectItem value="local">Local (host.docker.internal:11434)</SelectItem>
                   <SelectItem value="cloud">Ollama Cloud</SelectItem>
                   <SelectItem value="custom">Custom</SelectItem>
                 </SelectContent>
@@ -357,6 +357,12 @@ export function ExtractionForm({
                 className="h-9"
               />
             </div>
+          )}
+
+          {ollamaEndpointPreset !== 'custom' && (
+            <p className="text-[11px] text-muted-foreground font-mono">
+              {OLLAMA_ENDPOINTS[ollamaEndpointPreset]}
+            </p>
           )}
 
           <div className="flex items-center space-x-2">
