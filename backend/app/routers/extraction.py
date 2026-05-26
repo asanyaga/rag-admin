@@ -9,6 +9,7 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user
 from app.models import User
@@ -16,6 +17,7 @@ from app.repositories.document_repository import DocumentRepository
 from app.repositories.extraction_schema_repository import ExtractionSchemaRepository
 from app.repositories.extraction_result_repository import ExtractionResultRepository
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
+from app.repositories.provider_key_repository import ProviderKeyRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
 from app.dependencies.documents import get_storage_service
 from app.schemas.extraction_result import (
@@ -29,6 +31,7 @@ from app.schemas.extraction_result import (
 )
 from app.services.extraction_service import ExtractionService, process_extraction
 from app.services.exceptions import NotFoundError, ConflictError
+from app.services.provider_key_service import resolve_api_key
 from app.adapters.extraction.registry import get_extractor
 
 
@@ -47,21 +50,34 @@ def get_extraction_service(
     )
 
 
-def _resolve_credentials_from_settings(method: str) -> dict:
-    """Resolve adapter credentials from application settings.
+async def _resolve_credentials_from_settings(
+    repo: ProviderKeyRepository,
+    user_id: UUID,
+    method: str,
+) -> dict:
+    """Resolve adapter credentials: DB first, env-var fallback.
 
-    BYOK seam: replace this function body with a project_extractor_credentials
-    DB lookup when BYOK is implemented. Nothing else in the system changes.
+    Maps extraction method names to BYOK provider IDs.
+    The Ollama endpoint URL is config (not a secret) and always comes from settings.
     """
-    from app.config import settings
-    if method == "llamaextract":
-        return {"api_key": getattr(settings, "LLAMA_CLOUD_KEY", None)}
+    provider_map = {
+        "llamaextract": "llama_cloud",
+        "ollama":        "ollama_cloud",
+        "groq":          "groq",
+        "vision_agent":  "landing_ai",
+    }
+    provider = provider_map.get(method)
+    if not provider:
+        return {}
+
+    key = await resolve_api_key(repo, user_id, provider)
+
     if method == "ollama":
         return {
-            "endpoint": getattr(settings, "OLLAMA_ENDPOINT", "http://localhost:11434/v1"),
-            "api_key": getattr(settings, "OLLAMA_API_KEY", None),
+            "endpoint": settings.OLLAMA_ENDPOINT or "http://localhost:11434/v1",
+            "api_key": key,
         }
-    return {}
+    return {"api_key": key} if key else {}
 
 
 # --- Schema endpoints ---
@@ -176,7 +192,10 @@ async def run_extraction(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        credentials = _resolve_credentials_from_settings(body.extraction_method)
+        provider_key_repo = ProviderKeyRepository(db)
+        credentials = await _resolve_credentials_from_settings(
+            provider_key_repo, current_user.id, body.extraction_method
+        )
         extractor = get_extractor(
             body.extraction_method,
             credentials,
