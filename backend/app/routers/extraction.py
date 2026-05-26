@@ -205,12 +205,14 @@ async def run_extraction(
             },
         )
 
+        # Merge BYOK credentials as defaults; per-request config overrides them.
+        merged_config = {**credentials, **(body.config or {})}
         result = await service.run_extraction(
             parse_run_id=body.parse_run_id,
             extraction_schema_id=body.extraction_schema_id,
             extraction_method=body.extraction_method,
             user_id=current_user.id,
-            config=body.config,
+            config=merged_config,
         )
 
         background_tasks.add_task(
