@@ -54,7 +54,7 @@ from app.services.query_service import QueryService
 from app.services.source_resolution_service import SourceResolutionService
 from app.services.trace_collector import TraceCollector
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
-from app.utils.encryption import decrypt
+from app.services.provider_key_service import resolve_api_key
 
 router = APIRouter(prefix="/projects/{project_id}/indexes", tags=["indexes"])
 
@@ -577,14 +577,15 @@ async def playground_answer(
     """Stream an answer for the playground via Server-Sent Events."""
     await verify_project_access(project_id, current_user, project_repo)
 
-    # Resolve the LLM provider API key (reuses embedding key storage)
+    # Resolve the LLM provider API key: DB first, env-var fallback
     llm_provider = data.llm_config.provider
-    key_record = await provider_key_repo.get_for_provider(
+    api_key = await resolve_api_key(
+        repo=provider_key_repo,
         user_id=current_user.id,
         provider=llm_provider,
         project_id=project_id,
     )
-    if not key_record:
+    if not api_key:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
@@ -592,8 +593,6 @@ async def playground_answer(
                 "Add one in Settings → API Keys."
             ),
         )
-
-    api_key = decrypt(key_record.api_key_encrypted)
 
     collector = None
     if trace:
