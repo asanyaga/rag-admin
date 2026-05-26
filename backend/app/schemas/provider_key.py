@@ -6,7 +6,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 # Supported embedding providers
-SUPPORTED_PROVIDERS = ["openai", "voyage", "local", "anthropic"]
+SUPPORTED_PROVIDERS = [
+    "openai", "voyage", "local", "anthropic",
+    "groq", "llama_cloud", "landing_ai", "ollama_cloud",
+]
 
 
 class ProviderKeyCreate(BaseModel):
@@ -103,7 +106,31 @@ PROVIDER_MODELS = {
         "requires_key": True,
         "models": [],
         "dimensions": {}
-    }
+    },
+    "groq": {
+        "display_name": "Groq",
+        "requires_key": True,
+        "models": [],
+        "dimensions": {},
+    },
+    "llama_cloud": {
+        "display_name": "LlamaIndex Cloud",
+        "requires_key": True,
+        "models": [],
+        "dimensions": {},
+    },
+    "landing_ai": {
+        "display_name": "Landing AI",
+        "requires_key": True,
+        "models": [],
+        "dimensions": {},
+    },
+    "ollama_cloud": {
+        "display_name": "Ollama Cloud",
+        "requires_key": True,
+        "models": [],
+        "dimensions": {},
+    },
 }
 
 
