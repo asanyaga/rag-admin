@@ -77,7 +77,7 @@ export function PromptConfigEditor({
         </div>
         <div className="space-y-1.5">
           <Label>Model</Label>
-          {value.provider === 'ollama' ? (
+          {(value.provider === 'ollama_cloud' || value.provider === 'ollama_local') ? (
             <Input
               placeholder="e.g. llama3.2"
               value={value.model ?? ''}

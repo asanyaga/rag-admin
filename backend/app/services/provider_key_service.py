@@ -201,6 +201,7 @@ async def resolve_api_key(
         "llama_cloud":  settings.LLAMA_CLOUD_KEY,
         "landing_ai":   settings.VISION_AGENT_API_KEY,
         "ollama_cloud": settings.OLLAMA_CLOUD_API_KEY,
+        "ollama_local": "ollama",  # local Ollama doesn't need a real key
     }
     value = env_fallbacks.get(provider, "")
     return value if value else None

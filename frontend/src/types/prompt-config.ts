@@ -37,13 +37,15 @@ export const PROVIDER_MODEL_OPTIONS: Record<string, { value: string; label: stri
     { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
     { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
   ],
-  ollama: [],
+  ollama_cloud: [],
+  ollama_local: [],
 }
 
 export const PROVIDERS = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
-  { value: 'ollama', label: 'Ollama (local)' },
+  { value: 'ollama_cloud', label: 'Ollama Cloud' },
+  { value: 'ollama_local', label: 'Ollama (Local)' },
 ]
 
 export const THINKING_PROVIDERS = new Set(['openai', 'anthropic', 'deepseek'])

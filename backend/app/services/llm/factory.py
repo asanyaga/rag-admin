@@ -13,8 +13,11 @@ from app.services.llm.ollama_adapter import OllamaAdapter
 _ADAPTER_FACTORIES: dict[str, Callable[[str], LLMPort]] = {
     "openai": OpenAIAdapter,
     "anthropic": AnthropicAdapter,
-    "ollama": lambda api_key: OllamaAdapter(
+    "ollama_cloud": lambda api_key: OllamaAdapter(
         base_url=settings.OLLAMA_CLOUD_BASE_URL, api_key=api_key
+    ),
+    "ollama_local": lambda api_key: OllamaAdapter(
+        base_url=settings.OLLAMA_LOCAL_BASE_URL, api_key=api_key
     ),
 }
 
