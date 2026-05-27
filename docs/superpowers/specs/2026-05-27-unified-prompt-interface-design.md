@@ -132,8 +132,9 @@ No other features require DB changes in Phase 1 (Playground is stateless; Classi
 ### Endpoint changes
 
 **Playground** (`schemas/playground.py`):
-- Remove `instructions: str | None`
-- Add `llm_config: PromptConfig | None`
+- Remove `instructions: str | None` and the existing `LLMConfigSchema` field (provider, model, temperature, max_tokens)
+- Add `llm_config: PromptConfig | None` — consolidates both into one shape
+- `query: str` is unchanged — it is the live user input, constructed at runtime, and is not part of `PromptConfig`
 
 **ExtractionSchema** (`schemas/extraction_schema.py`):
 - Add `llm_config: PromptConfig | None` (alias `llmConfig`)
