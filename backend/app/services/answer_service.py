@@ -10,8 +10,7 @@ from app.schemas.query import QueryRequest, RetrievalResult
 from app.schemas.playground import PlaygroundAnswerRequest
 from app.services.query_service import QueryService
 from app.services.trace_collector import TraceCollector
-from app.services.llm.openai_adapter import OpenAIAdapter
-from app.services.llm.anthropic_adapter import AnthropicAdapter
+from app.services.llm.factory import create_adapter
 from app.services.llm.prompt import build_rag_prompt
 from app.services.llm.prompt_config import resolve_llm_config
 from app.utils.encryption import decrypt
@@ -103,11 +102,7 @@ class AnswerService:
         )
 
         try:
-            adapter = (
-                AnthropicAdapter(api_key=api_key)
-                if llm_config.provider == "anthropic"
-                else OpenAIAdapter(api_key=api_key)
-            )
+            adapter = create_adapter(llm_config.provider, api_key)
             token_count = 0
 
             if collector:
