@@ -1,6 +1,7 @@
 """Service for provider key management (BYOK)."""
 from uuid import UUID
 
+from app.config import settings
 from app.repositories.provider_key_repository import ProviderKeyRepository
 from app.schemas.provider_key import (
     ProviderKeyCreate,
@@ -174,3 +175,32 @@ class ProviderKeyService:
             project_id=project_id
         )
         return key is not None
+
+
+async def resolve_api_key(
+    repo: ProviderKeyRepository,
+    user_id: UUID,
+    provider: str,
+    project_id: UUID | None = None,
+) -> str | None:
+    """Resolve an API key: DB first (project-level → account-level), then env-var fallback.
+
+    Returns None if no key is found in either source.
+    Empty string env vars are treated as not configured.
+    """
+    key_record = await repo.get_for_provider(
+        user_id=user_id,
+        provider=provider,
+        project_id=project_id,
+    )
+    if key_record:
+        return decrypt(key_record.api_key_encrypted)
+
+    env_fallbacks: dict[str, str] = {
+        "groq":         settings.GROQ_API_KEY,
+        "llama_cloud":  settings.LLAMA_CLOUD_KEY,
+        "landing_ai":   settings.VISION_AGENT_API_KEY,
+        "ollama_cloud": settings.OLLAMA_CLOUD_API_KEY,
+    }
+    value = env_fallbacks.get(provider, "")
+    return value if value else None

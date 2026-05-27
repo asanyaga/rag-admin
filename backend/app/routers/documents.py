@@ -24,6 +24,8 @@ from app.ports import StorageService
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.parse_run_repository import ParseRunRepository
 from app.repositories.project_repository import ProjectRepository
+from app.repositories.provider_key_repository import ProviderKeyRepository
+from app.services.provider_key_service import resolve_api_key
 from app.schemas.document import (
     DocumentResponse,
     DocumentListResponse,
@@ -42,6 +44,44 @@ from pydantic import BaseModel as PydanticBaseModel
 class _ParseRunCreateRequest(PydanticBaseModel):
     parser_type: str = "simple"
     config: dict | None = None
+
+
+_PARSER_PROVIDER: dict[str, str] = {
+    "llamaparse": "llama_cloud",
+    "landing_ai": "landing_ai",
+}
+
+_PARSER_KEY_LABEL: dict[str, str] = {
+    "llamaparse": "LlamaCloud",
+    "landing_ai": "Landing AI",
+}
+
+
+async def _resolve_parser_key(
+    db: AsyncSession,
+    user_id: UUID,
+    parser_type: str,
+) -> tuple[str | None, str | None]:
+    """Return (llamaparse_api_key, landingai_api_key) for the given parser type.
+
+    Raises HTTP 400 if the chosen parser requires a key that is not configured
+    in BYOK settings or the environment.
+    """
+    provider = _PARSER_PROVIDER.get(parser_type)
+    if not provider:
+        return None, None  # simple parser — no key needed
+
+    key = await resolve_api_key(ProviderKeyRepository(db), user_id, provider)
+    if not key:
+        label = _PARSER_KEY_LABEL.get(parser_type, parser_type)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No {label} API key configured. Add one in Settings → API Keys.",
+        )
+
+    if parser_type == "llamaparse":
+        return key, None
+    return None, key
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -87,7 +127,9 @@ async def upload_document(
     storage_service: StorageService = Depends(get_storage_service),
 ):
     """Upload a document and initiate background processing."""
-    from app.dependencies.documents import get_llamaparse_client, get_landingai_client
+    llamaparse_api_key, landingai_api_key = await _resolve_parser_key(
+        db, current_user.id, parser_type
+    )
 
     try:
         config_dict = None
@@ -122,8 +164,8 @@ async def upload_document(
                 representation_kind=representation_kind,
                 config=parse_cfg,
                 storage_service=storage_service,
-                llamaparse_client=get_llamaparse_client(),
-                landingai_client=get_landingai_client(),
+                llamaparse_api_key=llamaparse_api_key,
+                landingai_api_key=landingai_api_key,
             )
         else:
             logger.error(
@@ -161,7 +203,9 @@ async def bulk_upload_documents(
     storage_service: StorageService = Depends(get_storage_service),
 ):
     """Bulk upload documents and initiate background processing for each."""
-    from app.dependencies.documents import get_llamaparse_client, get_landingai_client
+    llamaparse_api_key, landingai_api_key = await _resolve_parser_key(
+        db, current_user.id, parser_type
+    )
 
     if len(files) > 20:
         raise HTTPException(
@@ -210,8 +254,8 @@ async def bulk_upload_documents(
                 representation_kind=representation_kind,
                 config=parse_cfg,
                 storage_service=storage_service,
-                llamaparse_client=get_llamaparse_client(),
-                landingai_client=get_landingai_client(),
+                llamaparse_api_key=llamaparse_api_key,
+                landingai_api_key=landingai_api_key,
             )
         else:
             logger.error(
@@ -386,7 +430,6 @@ async def create_document_parse_run(
     storage_service: StorageService = Depends(get_storage_service),
 ):
     """Dispatch a new CDM parse run for an existing document."""
-    from app.dependencies.documents import get_llamaparse_client, get_landingai_client
     from app.services.document_service import process_cdm_parsing
 
     document_repo = DocumentRepository(db)
@@ -402,6 +445,10 @@ async def create_document_parse_run(
             detail="Document has no source_document_id; upload must be re-done via CDM path",
         )
 
+    llamaparse_api_key, landingai_api_key = await _resolve_parser_key(
+        db, current_user.id, body.parser_type
+    )
+
     cfg = body.config or {}
     representation_kind = cfg.get("representation_kind", "extract_rich")
     parse_cfg = {k: v for k, v in cfg.items() if k != "representation_kind"}
@@ -415,8 +462,9 @@ async def create_document_parse_run(
         representation_kind=representation_kind,
         config=parse_cfg,
         storage_service=storage_service,
-        llamaparse_client=get_llamaparse_client(),
-        landingai_client=get_landingai_client(),
+        llamaparse_api_key=llamaparse_api_key,
+        landingai_api_key=landingai_api_key,
+        force=True,
     )
     return {"status": "accepted"}
 

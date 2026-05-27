@@ -61,7 +61,7 @@ class AnswerService:
 
         # Send chunks to the client
         chunks_data = [
-            r.model_dump(by_alias=True) for r in query_response.results
+            r.model_dump(by_alias=True, mode="json") for r in query_response.results
         ]
         yield _sse_event("chunks", chunks_data)
 
@@ -145,7 +145,7 @@ class AnswerService:
             # Emit trace event after done
             if collector:
                 trace = collector.build_trace()
-                yield _sse_event("trace", trace.model_dump(by_alias=True))
+                yield _sse_event("trace", trace.model_dump(by_alias=True, mode="json"))
 
         except Exception as e:
             if llm_span is not None and llm_span_ctx is not None:

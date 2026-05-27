@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import AsyncSessionLocal, get_db
 from app.dependencies.auth import get_current_active_user
-from app.dependencies.llm import get_llm_registry
 from app.models import User
 from app.repositories.classification_run_repository import (
     ClassificationRunCreate,
@@ -16,6 +15,7 @@ from app.repositories.classification_run_repository import (
 )
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.provider_key_repository import ProviderKeyRepository
 from app.schemas.classification import (
     AnnotatedBlockResponse,
     ClassificationRegionResponse,
@@ -24,6 +24,9 @@ from app.schemas.classification import (
 )
 from app.services.classification.service import ClassificationService
 from app.services.llm.registry import LLMRegistry
+from app.services.llm.ollama_adapter import OllamaAdapter
+from app.services.llm.groq_adapter import GroqAdapter
+from app.services.provider_key_service import resolve_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,29 @@ documents_router = APIRouter(prefix="/documents", tags=["classification"])
 runs_router = APIRouter(prefix="/classification-runs", tags=["classification"])
 
 
+def _classification_provider_to_byok(llm_provider: str) -> str | None:
+    """Map classification LLM provider names to BYOK provider IDs."""
+    return {"groq": "groq", "ollama_cloud": "ollama_cloud"}.get(llm_provider)
+
+
+def _build_llm_registry(provider: str, api_key: str | None) -> LLMRegistry:
+    """Build a per-request LLM registry with the resolved API key."""
+    registry = LLMRegistry()
+    if provider == "ollama_local":
+        registry.register(
+            "ollama_local",
+            OllamaAdapter(base_url=settings.OLLAMA_LOCAL_BASE_URL, api_key="ollama"),
+        )
+    elif provider == "ollama_cloud" and api_key:
+        registry.register(
+            "ollama_cloud",
+            OllamaAdapter(base_url=settings.OLLAMA_CLOUD_BASE_URL, api_key=api_key),
+        )
+    elif provider == "groq" and api_key:
+        registry.register("groq", GroqAdapter(api_key=api_key))
+    return registry
+
+
 async def _run_classification_background(
     run_id: UUID,
     parse_run_id: UUID,
@@ -42,6 +68,7 @@ async def _run_classification_background(
     llm_model: str,
     batch_size: int,
     batch_overlap: int,
+    api_key: str | None,
 ) -> None:
     from app.cdm.models import ParsedDocument as CDMParsedDocument
 
@@ -56,7 +83,7 @@ async def _run_classification_background(
                 return
 
             doc = CDMParsedDocument.model_validate(pd_orm.content)
-            registry = get_llm_registry()
+            registry = _build_llm_registry(llm_provider, api_key)
             service = ClassificationService(repo=repo, llm_registry=registry)
 
             await service.execute(
@@ -144,6 +171,20 @@ async def create_classification_run(
         batch_overlap=batch_overlap,
     ))
 
+    byok_provider = _classification_provider_to_byok(llm_provider)
+    api_key: str | None = None
+    if byok_provider:
+        provider_key_repo = ProviderKeyRepository(db)
+        api_key = await resolve_api_key(provider_key_repo, current_user.id, byok_provider)
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"No API key configured for provider '{llm_provider}'. "
+                    "Add one in Settings → API Keys."
+                ),
+            )
+
     background_tasks.add_task(
         _run_classification_background,
         run_id=run.id,
@@ -153,6 +194,7 @@ async def create_classification_run(
         llm_model=llm_model,
         batch_size=batch_size,
         batch_overlap=batch_overlap,
+        api_key=api_key,
     )
 
     return _to_run_response(run)

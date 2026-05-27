@@ -44,6 +44,14 @@ Return a single JSON object that conforms to the schema (including __source fiel
 class OllamaExtractor(OpenAICompatMixin, DataExtractor):
     """Structured extraction via Ollama's OpenAI-compatible REST API."""
 
+    def __init__(
+        self,
+        default_endpoint: str | None = None,
+        default_api_key: str | None = None,
+    ) -> None:
+        self._default_endpoint = default_endpoint
+        self._default_api_key = default_api_key
+
     @property
     def extractor_type(self) -> str:
         return "ollama"
@@ -73,7 +81,12 @@ class OllamaExtractor(OpenAICompatMixin, DataExtractor):
         schema: dict[str, Any],
         config: dict[str, Any] | None = None,
     ) -> ExtractionOutput:
-        cfg = config or {}
+        cfg = dict(config or {})
+        # Apply constructor defaults when not overridden per-run
+        if self._default_endpoint and "endpoint" not in cfg:
+            cfg["endpoint"] = self._default_endpoint
+        if self._default_api_key and "api_key" not in cfg:
+            cfg["api_key"] = self._default_api_key
         context = build_extraction_context(
             parsed_document, cfg.get("inject_block_ids", False)
         )
