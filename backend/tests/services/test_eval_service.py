@@ -137,7 +137,7 @@ async def test_get_run_config(
         generation_model_id="gpt-4o",
         judge_model_provider="anthropic",
         judge_model_id="claude-3-haiku",
-        llm_config={"systemPrompt": "Custom prompt"},
+        llm_config={"system_prompt": "Custom prompt"},
         experiment_id=test_experiment.id,
         variant_label="hybrid k=10",
     )
@@ -155,7 +155,7 @@ async def test_get_run_config(
     assert config["generationModel"]["modelId"] == "gpt-4o"
     assert config["judgeModel"]["provider"] == "anthropic"
     assert config["judgeModel"]["modelId"] == "claude-3-haiku"
-    assert config["llmConfig"]["systemPrompt"] == "Custom prompt"
+    assert config["llmConfig"]["system_prompt"] == "Custom prompt"
     assert config["experimentId"] == str(test_experiment.id)
     assert config["variantLabel"] == "hybrid k=10"
 
