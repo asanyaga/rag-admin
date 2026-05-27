@@ -451,8 +451,8 @@ async def process_cdm_parsing(
     representation_kind: str,
     config: dict,
     storage_service: StorageService,
-    llamaparse_client: Any,
-    landingai_client: Any = None,
+    llamaparse_api_key: str | None = None,
+    landingai_api_key: str | None = None,
     force: bool = False,
 ) -> None:
     """Background task: CDM parse + persist for a newly uploaded document.
@@ -460,6 +460,10 @@ async def process_cdm_parsing(
     Opens a fresh DB session (independent of the request session) so that
     long-running parsers (LlamaParse, LandingAI) don't time out on the
     connection that was held open during request handling.
+
+    API keys are passed as strings (resolved via BYOK in the calling router) and
+    used to construct parser clients inside the task, so no plaintext key is
+    stored in the config or returned in API responses.
 
     Pass ``force=True`` to bypass same-config reuse and always run a fresh parse.
     """
@@ -472,6 +476,17 @@ async def process_cdm_parsing(
     from app.repositories.source_document_repository import SourceDocumentRepository
     from app.services.parsing.errors import ParseFailedError
     from app.services.parsing.parsing_service import ParsingService
+
+    # Build parser clients from the resolved API keys
+    llamaparse_client = None
+    if llamaparse_api_key:
+        from llama_cloud import AsyncLlamaCloud
+        llamaparse_client = AsyncLlamaCloud(api_key=llamaparse_api_key)
+
+    landingai_client = None
+    if landingai_api_key:
+        from landingai_ade import LandingAIADE
+        landingai_client = LandingAIADE(apikey=landingai_api_key)
 
     async with AsyncSessionLocal() as session:
         document_repo = DocumentRepository(session)

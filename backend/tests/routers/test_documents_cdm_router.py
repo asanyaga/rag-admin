@@ -107,9 +107,10 @@ async def test_upload_cdm_writes_all_four_tables(client: AsyncClient, test_db: A
             {ParserKind.LLAMAPARSE: AsyncMock(side_effect=fake_run_llamaparse)},
         ),
         patch(
-            "app.dependencies.documents.get_llamaparse_client",
-            return_value=MagicMock(),
+            "app.routers.documents.resolve_api_key",
+            new=AsyncMock(return_value="test-api-key"),
         ),
+        patch("llama_cloud.AsyncLlamaCloud", MagicMock(return_value=MagicMock())),
         patch("app.database.AsyncSessionLocal", mock_session_factory),
     ):
         response = await client.post(
@@ -172,7 +173,7 @@ async def test_upload_always_uses_cdm_regardless_of_flag(client: AsyncClient, te
         headers={"Authorization": f"Bearer {token}"},
         data={
             "project_id": project_id,
-            "parser_type": "llamaparse",
+            "parser_type": "simple",
             "title": "Always CDM Test Doc",
         },
         files=[("file", ("test.pdf", MINIMAL_PDF, "application/pdf"))],
