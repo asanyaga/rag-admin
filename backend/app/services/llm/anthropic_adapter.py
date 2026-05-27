@@ -1,15 +1,33 @@
 """Anthropic LLM adapter."""
 
+import re
 import time
-import json
 import logging
 from typing import AsyncIterator
 
-from anthropic import AsyncAnthropic
+from anthropic import AsyncAnthropic, BadRequestError
 
 from app.services.llm.types import LLMConfig, TokenUsage, CompletionResult
 
 logger = logging.getLogger(__name__)
+
+# Matches Anthropic's deprecation message: "`param_name` is deprecated for this model."
+_DEPRECATED_PARAM_RE = re.compile(r"`(\w+)`\s+is deprecated")
+
+
+def _strip_deprecated(kwargs: dict, error_msg: str) -> dict | None:
+    """Return a copy of kwargs with the deprecated param removed.
+
+    Parses the param name directly from Anthropic's error message so any
+    future deprecations are handled automatically without code changes.
+    Returns None if the error doesn't name a param we can safely remove.
+    """
+    match = _DEPRECATED_PARAM_RE.search(error_msg)
+    if match:
+        param = match.group(1)
+        if param in kwargs:
+            return {k: v for k, v in kwargs.items() if k != param}
+    return None
 
 
 class AnthropicAdapter:
@@ -23,18 +41,36 @@ class AnthropicAdapter:
         messages: list[dict],
         config: LLMConfig,
     ) -> AsyncIterator[str]:
-        """Stream content tokens from Anthropic."""
-        system_msg, user_messages = self._split_system(messages)
+        """Stream content tokens from Anthropic.
 
-        async with self.client.messages.stream(
+        Retries once without the offending parameter if Anthropic returns a
+        deprecation error (e.g. temperature not supported on newer models).
+        """
+        system_msg, user_messages = self._split_system(messages)
+        kwargs: dict = dict(
             model=config.model,
             messages=user_messages,
             system=system_msg or "",
             temperature=config.temperature,
             max_tokens=config.max_tokens,
-        ) as stream:
-            async for text in stream.text_stream:
-                yield text
+        )
+        async for token in self._stream(kwargs):
+            yield token
+
+    async def _stream(self, kwargs: dict) -> AsyncIterator[str]:
+        try:
+            async with self.client.messages.stream(**kwargs) as stream:
+                async for text in stream.text_stream:
+                    yield text
+        except BadRequestError as e:
+            retried = _strip_deprecated(kwargs, str(e))
+            if retried is not None:
+                logger.warning("Anthropic deprecated param stripped, retrying: %s", e)
+                async with self.client.messages.stream(**retried) as stream:
+                    async for text in stream.text_stream:
+                        yield text
+            else:
+                raise
 
     async def complete(
         self,
@@ -57,12 +93,19 @@ class AnthropicAdapter:
         if config.json_mode:
             user_messages = list(user_messages)
             user_messages.append({"role": "assistant", "content": "{"})
-
             kwargs["messages"] = user_messages
 
-        response = await self.client.messages.create(**kwargs)
-        latency = (time.monotonic() - start) * 1000
+        try:
+            response = await self.client.messages.create(**kwargs)
+        except BadRequestError as e:
+            retried = _strip_deprecated(kwargs, str(e))
+            if retried is not None:
+                logger.warning("Anthropic deprecated param stripped, retrying: %s", e)
+                response = await self.client.messages.create(**retried)
+            else:
+                raise
 
+        latency = (time.monotonic() - start) * 1000
         content = response.content[0].text if response.content else ""
 
         # If we used the prefill trick, prepend the { back
