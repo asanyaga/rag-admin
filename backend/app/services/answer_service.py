@@ -10,9 +10,9 @@ from app.schemas.query import QueryRequest, RetrievalResult
 from app.schemas.playground import PlaygroundAnswerRequest
 from app.services.query_service import QueryService
 from app.services.trace_collector import TraceCollector
-from app.services.llm.types import LLMConfig, TokenUsage
 from app.services.llm.openai_adapter import OpenAIAdapter
 from app.services.llm.prompt import build_rag_prompt
+from app.services.llm.prompt_config import resolve_llm_config
 from app.utils.encryption import decrypt
 
 logger = logging.getLogger(__name__)
@@ -73,15 +73,16 @@ class AnswerService:
             return
 
         # Phase 2: Build prompt
+        system_prompt = request.llm_config.system_prompt if request.llm_config else None
         if collector:
             with collector.span("prompt_building", "Build RAG Prompt", input={
                 "chunk_count": len(query_response.results),
-                "has_instructions": bool(request.instructions),
+                "has_system_prompt": bool(system_prompt),
             }) as s:
                 messages = build_rag_prompt(
                     query=request.query,
                     chunks=query_response.results,
-                    instructions=request.instructions,
+                    system_prompt=system_prompt,
                 )
                 total_chars = sum(len(m.get("content", "")) for m in messages)
                 s.output = {"message_count": len(messages), "total_chars": total_chars}
@@ -90,15 +91,14 @@ class AnswerService:
             messages = build_rag_prompt(
                 query=request.query,
                 chunks=query_response.results,
-                instructions=request.instructions,
+                system_prompt=system_prompt,
             )
 
         # Phase 3: Stream LLM response
-        llm_config = LLMConfig(
-            provider=request.llm_config.provider,
-            model=request.llm_config.model,
-            temperature=request.llm_config.temperature,
-            max_tokens=request.llm_config.max_tokens,
+        llm_config = resolve_llm_config(
+            request.llm_config,
+            default_provider="openai",
+            default_model="gpt-4o",
         )
 
         try:
