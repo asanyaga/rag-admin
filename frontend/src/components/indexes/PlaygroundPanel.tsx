@@ -5,11 +5,11 @@
 import { useRef } from 'react'
 import { usePlayground } from '@/hooks/usePlayground'
 import { RetrievalParameters } from './RetrievalParameters'
-import { GenerationParameters } from './GenerationParameters'
 import { QueryHistory } from './QueryHistory'
 import { ResultsPanel } from './ResultsPanel'
 import { AnswerPanel } from './AnswerPanel'
 import { QueryTracePanel } from './QueryTracePanel'
+import { PromptConfigEditor } from '@/components/shared/PromptConfigEditor'
 import { cn } from '@/lib/utils'
 import { Search, Sparkles, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -41,16 +41,9 @@ export function PlaygroundPanel({
     setThreshold,
     mode,
     setMode,
-    provider,
-    setProvider,
-    model,
-    setModel,
-    temperature,
-    setTemperature,
-    maxTokens,
-    setMaxTokens,
-    instructions,
-    setInstructions,
+    promptConfig,
+    setPromptConfig,
+    setPromptConfigProvider,
     results,
     isSearching,
     error,
@@ -149,18 +142,20 @@ export function PlaygroundPanel({
         />
 
         {isAnswerMode && (
-          <GenerationParameters
-            provider={provider}
-            model={model}
-            temperature={temperature}
-            maxTokens={maxTokens}
-            instructions={instructions}
-            onProviderChange={setProvider}
-            onModelChange={setModel}
-            onTemperatureChange={setTemperature}
-            onMaxTokensChange={setMaxTokens}
-            onInstructionsChange={setInstructions}
-          />
+          <div className="rounded-lg border border-zinc-200 p-4">
+            <div className="flex items-center gap-1.5 mb-4">
+              <Sparkles className="h-4 w-4 text-zinc-400" />
+              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Generation
+              </h3>
+            </div>
+            <PromptConfigEditor
+              value={promptConfig}
+              onChange={setPromptConfig}
+              onProviderChange={setPromptConfigProvider}
+              capabilities={{ thinking: true }}
+            />
+          </div>
         )}
 
         <QueryHistory
@@ -235,8 +230,8 @@ export function PlaygroundPanel({
             streamingPhase={streamingPhase}
             metrics={answerMetrics}
             highlightedChunk={highlightedChunk}
-            model={model}
-            provider={provider}
+            model={promptConfig.model ?? ''}
+            provider={promptConfig.provider ?? ''}
             onCitationClick={onCitationClick}
           />
         )}

@@ -13,6 +13,8 @@ import {
   streamAnswer,
   AnswerDoneMetadata,
 } from '@/api/playground'
+import { usePromptConfig } from './usePromptConfig'
+import type { PromptConfig } from '@/types/prompt-config'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -25,16 +27,6 @@ export interface AnswerMetrics {
   promptTokens: number
   completionTokens: number
   totalTokens: number
-}
-
-export const LLM_MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  openai: [
-    { value: 'gpt-4o', label: 'GPT-4o' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'gpt-4.1', label: 'GPT-4.1' },
-    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
-    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
-  ],
 }
 
 export interface UsePlaygroundReturn {
@@ -55,16 +47,9 @@ export interface UsePlaygroundReturn {
   setMode: (mode: PlaygroundMode) => void
 
   // LLM params (answer mode)
-  provider: string
-  setProvider: (provider: string) => void
-  model: string
-  setModel: (model: string) => void
-  temperature: number
-  setTemperature: (t: number) => void
-  maxTokens: number
-  setMaxTokens: (t: number) => void
-  instructions: string
-  setInstructions: (text: string) => void
+  promptConfig: PromptConfig
+  setPromptConfig: (config: PromptConfig) => void
+  setPromptConfigProvider: (provider: string) => void
 
   // Results
   results: RetrievalResult[]
@@ -107,11 +92,11 @@ export function usePlayground(
 
   // ─── Mode & LLM config ─────────────────────────────────────────────────
   const [mode, setMode] = useState<PlaygroundMode>('retrieval')
-  const [provider, setProviderRaw] = useState('openai')
-  const [model, setModel] = useState('gpt-4o')
-  const [temperature, setTemperature] = useState(0.0)
-  const [maxTokens, setMaxTokens] = useState(1024)
-  const [instructions, setInstructions] = useState('')
+  const {
+    promptConfig,
+    setPromptConfig,
+    setProvider: setPromptConfigProvider,
+  } = usePromptConfig()
 
   // ─── Results state ──────────────────────────────────────────────────────
   const [results, setResults] = useState<RetrievalResult[]>([])
@@ -135,15 +120,6 @@ export function usePlayground(
 
   // ─── Abort controller ref ───────────────────────────────────────────────
   const abortRef = useRef<AbortController | null>(null)
-
-  // ─── Provider change (auto-select first model) ─────────────────────────
-  const setProvider = useCallback((p: string) => {
-    setProviderRaw(p)
-    const models = LLM_MODEL_OPTIONS[p]
-    if (models?.length) {
-      setModel(models[0].value)
-    }
-  }, [])
 
   // ─── Citation click handler ─────────────────────────────────────────────
   const handleCitationClick = useCallback(
@@ -229,23 +205,17 @@ export function usePlayground(
           indexId,
           {
             query: trimmed,
-            instructions: instructions || undefined,
             retrievalConfig: {
               searchType,
               topK,
               similarityThreshold: threshold,
             },
-            llmConfig: {
-              provider,
-              model,
-              temperature,
-              maxTokens,
-            },
+            llmConfig: promptConfig,
           },
           {
             onChunks: (chunks: RetrievalResult[]) => {
               setResults(chunks)
-              setExecutionTimeMs(null) // retrieval time not separate in answer mode
+              setExecutionTimeMs(null)
               setStreamingPhase('generating')
             },
             onToken: (content: string) => {
@@ -273,7 +243,6 @@ export function usePlayground(
           controller.signal,
           { trace: true }
         )
-        // Stream may complete without a done event on abort
         setIsSearching(false)
         if (streamingPhase !== 'done') {
           setStreamingPhase('done')
@@ -299,11 +268,7 @@ export function usePlayground(
     projectId,
     indexId,
     mode,
-    provider,
-    model,
-    temperature,
-    maxTokens,
-    instructions,
+    promptConfig,
     streamingPhase,
   ])
 
@@ -332,16 +297,9 @@ export function usePlayground(
     setMode,
 
     // LLM params
-    provider,
-    setProvider,
-    model,
-    setModel,
-    temperature,
-    setTemperature,
-    maxTokens,
-    setMaxTokens,
-    instructions,
-    setInstructions,
+    promptConfig,
+    setPromptConfig,
+    setPromptConfigProvider,
 
     // Results
     results,
