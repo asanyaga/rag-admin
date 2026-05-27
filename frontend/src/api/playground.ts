@@ -4,23 +4,18 @@
 import { getAccessToken } from './client'
 import { RetrievalResult } from '@/types/index'
 import { QueryTrace } from '@/types/trace'
+import type { PromptConfig } from '@/types/prompt-config'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
 export interface PlaygroundAnswerRequest {
   query: string
-  instructions?: string
   retrievalConfig: {
     searchType: string
     topK: number
     similarityThreshold: number
   }
-  llmConfig: {
-    provider: string
-    model: string
-    temperature: number
-    maxTokens: number
-  }
+  llmConfig?: PromptConfig
 }
 
 export interface TokenUsage {
@@ -113,18 +108,27 @@ export async function streamAnswer(
       },
       body: JSON.stringify({
         query: params.query,
-        instructions: params.instructions || null,
         retrieval_config: {
           search_type: params.retrievalConfig.searchType,
           top_k: params.retrievalConfig.topK,
           similarity_threshold: params.retrievalConfig.similarityThreshold,
         },
-        llm_config: {
-          provider: params.llmConfig.provider,
-          model: params.llmConfig.model,
-          temperature: params.llmConfig.temperature,
-          max_tokens: params.llmConfig.maxTokens,
-        },
+        llm_config: params.llmConfig ? {
+          system_prompt: params.llmConfig.systemPrompt ?? null,
+          provider: params.llmConfig.provider ?? null,
+          model: params.llmConfig.model ?? null,
+          temperature: params.llmConfig.temperature ?? null,
+          max_tokens: params.llmConfig.maxTokens ?? null,
+          top_p: params.llmConfig.topP ?? null,
+          thinking: params.llmConfig.thinking ? {
+            enabled: params.llmConfig.thinking.enabled,
+            effort: params.llmConfig.thinking.effort ?? null,
+            budget_tokens: params.llmConfig.thinking.budgetTokens ?? null,
+          } : null,
+          json_mode: params.llmConfig.jsonMode ?? false,
+          structured_output: params.llmConfig.structuredOutput ?? null,
+          tools: params.llmConfig.tools ?? null,
+        } : null,
       }),
       signal,
     }
