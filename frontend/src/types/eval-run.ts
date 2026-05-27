@@ -1,6 +1,7 @@
 /**
  * Evaluation Run feature types
  */
+import type { PromptConfig } from '@/types/prompt-config'
 
 export type EvalRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'partial_failure'
 
@@ -57,7 +58,7 @@ export interface CreateEvalRunRequest {
   mode: EvalMode
   generationModel?: ModelConfig
   judgeModel?: ModelConfig
-  systemPrompt?: string
+  llmConfig?: PromptConfig
   experimentId?: string
   variantLabel?: string
 }

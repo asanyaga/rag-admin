@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -23,9 +22,8 @@ import { useEvalRuns, useLlmModels } from '@/hooks/useEvalRuns'
 import { useIndexes } from '@/hooks/useIndexes'
 import { getEvalRunConfig } from '@/api/eval-runs'
 import type { EvalRunConfig, EvalMode } from '@/types/eval-run'
-
-const DEFAULT_SYSTEM_PROMPT =
-  'Answer the user\'s question using ONLY the provided context.\nCite sources using [1], [2], etc. corresponding to the chunk numbers.\nIf the context doesn\'t contain enough information, say so.'
+import { usePromptConfig } from '@/hooks/usePromptConfig'
+import { PromptConfigEditor } from '@/components/shared/PromptConfigEditor'
 
 export default function NewEvalRunPage() {
   const navigate = useNavigate()
@@ -51,8 +49,8 @@ export default function NewEvalRunPage() {
   const [mode, setMode] = useState<EvalMode | null>(null)
   const [generationModel, setGenerationModel] = useState('')
   const [judgeModel, setJudgeModel] = useState('')
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { promptConfig, setPromptConfig, setProvider: setPromptConfigProvider } = usePromptConfig()
   const [cloneSourceName, setCloneSourceName] = useState<string | null>(null)
 
   // Clone: fetch source run config and pre-fill
@@ -85,8 +83,15 @@ export default function NewEvalRunPage() {
         if (jModel?.provider && jModel?.modelId) {
           setJudgeModel(`${jModel.provider}:${jModel.modelId}`)
         }
-        if (config.systemPrompt) {
-          setSystemPrompt(config.systemPrompt as string)
+        if (config.llmConfig) {
+          const lc = config.llmConfig as Record<string, unknown>
+          setPromptConfig({
+            systemPrompt: lc.system_prompt as string | undefined,
+            provider: lc.provider as string | undefined,
+            model: lc.model as string | undefined,
+            temperature: lc.temperature as number | undefined,
+            maxTokens: lc.max_tokens as number | undefined,
+          })
         }
       } catch {
         // ignore clone errors — user can fill manually
@@ -144,10 +149,7 @@ export default function NewEvalRunPage() {
           mode === 'retrieval_and_answer' && judgeModel
             ? parseModelValue(judgeModel)
             : undefined,
-        systemPrompt:
-          mode === 'retrieval_and_answer'
-            ? systemPrompt || undefined
-            : undefined,
+        llmConfig: mode === 'retrieval_and_answer' ? promptConfig : undefined,
         experimentId: experimentId || undefined,
         variantLabel: variantLabel.trim() || undefined,
       })
@@ -411,12 +413,12 @@ export default function NewEvalRunPage() {
             )}
 
             <div className="space-y-2">
-              <Label className="text-xs">System Prompt</Label>
-              <Textarea
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                rows={4}
-                className="text-xs font-mono"
+              <h3 className="text-sm font-medium">LLM Configuration</h3>
+              <PromptConfigEditor
+                value={promptConfig}
+                onChange={setPromptConfig}
+                onProviderChange={setPromptConfigProvider}
+                capabilities={{ thinking: true }}
               />
             </div>
 
