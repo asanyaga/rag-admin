@@ -116,7 +116,7 @@ async def _make_run(
     gen_model_id=None,
     judge_provider=None,
     judge_model_id=None,
-    system_prompt=None,
+    llm_config=None,
 ) -> EvalRun:
     run = await repo.create(
         project_id=project.id,
@@ -132,7 +132,7 @@ async def _make_run(
         generation_model_id=gen_model_id,
         judge_model_provider=judge_provider,
         judge_model_id=judge_model_id,
-        system_prompt=system_prompt,
+        llm_config=llm_config,
     )
     return run
 
