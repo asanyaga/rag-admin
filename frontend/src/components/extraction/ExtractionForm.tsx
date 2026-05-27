@@ -51,7 +51,6 @@ export function ExtractionForm({
   const [ollamaModel, setOllamaModel] = useState('')
   const [ollamaEndpointPreset, setOllamaEndpointPreset] = useState<OllamaEndpointPreset>('local')
   const [ollamaCustomEndpoint, setOllamaCustomEndpoint] = useState('')
-  const [ollamaApiKey, setOllamaApiKey] = useState('')
   const [ollamaStructuredOutputMode, setOllamaStructuredOutputMode] = useState('json_schema')
   const [ollamaInjectBlockIds, setOllamaInjectBlockIds] = useState(false)
 
@@ -106,7 +105,6 @@ export function ExtractionForm({
         structured_output_mode: ollamaStructuredOutputMode,
         inject_block_ids: ollamaInjectBlockIds,
       }
-      if (ollamaApiKey.trim()) config.api_key = ollamaApiKey.trim()
     } else {
       config = {}
     }
@@ -314,38 +312,28 @@ export function ExtractionForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Endpoint</Label>
-              <Select
-                value={ollamaEndpointPreset}
-                onValueChange={(v) => setOllamaEndpointPreset(v as OllamaEndpointPreset)}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="local">Local (host.docker.internal:11434)</SelectItem>
-                  <SelectItem value="cloud">Ollama Cloud</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {(ollamaEndpointPreset === 'cloud' || ollamaEndpointPreset === 'custom') && (
-              <div className="space-y-1.5">
-                <Label className="text-xs">API Key</Label>
-                <Input
-                  type="password"
-                  autoComplete="new-password"
-                  value={ollamaApiKey}
-                  onChange={(e) => setOllamaApiKey(e.target.value)}
-                  placeholder="Bearer token"
-                  className="h-9"
-                />
-              </div>
-            )}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Endpoint</Label>
+            <Select
+              value={ollamaEndpointPreset}
+              onValueChange={(v) => setOllamaEndpointPreset(v as OllamaEndpointPreset)}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="local">Local (host.docker.internal:11434)</SelectItem>
+                <SelectItem value="cloud">Ollama Cloud</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {(ollamaEndpointPreset === 'cloud' || ollamaEndpointPreset === 'custom') && (
+            <p className="text-[11px] text-muted-foreground">
+              API key is resolved from Settings → API Keys (Ollama Cloud). No key is sent in the request.
+            </p>
+          )}
 
           {ollamaEndpointPreset === 'custom' && (
             <div className="space-y-1.5">
