@@ -453,12 +453,15 @@ async def process_cdm_parsing(
     storage_service: StorageService,
     llamaparse_client: Any,
     landingai_client: Any = None,
+    force: bool = False,
 ) -> None:
     """Background task: CDM parse + persist for a newly uploaded document.
 
     Opens a fresh DB session (independent of the request session) so that
     long-running parsers (LlamaParse, LandingAI) don't time out on the
     connection that was held open during request handling.
+
+    Pass ``force=True`` to bypass same-config reuse and always run a fresh parse.
     """
     from app.cdm.models import ParserKind
     from app.cdm.source import SourceDocument as SourceDocumentCDM
@@ -524,6 +527,7 @@ async def process_cdm_parsing(
                     representation_kind=representation_kind,
                     config=config,
                     project_id=project_id,
+                    force=force,
                 )
             except ParseFailedError as e:
                 await document_repo.update_status(

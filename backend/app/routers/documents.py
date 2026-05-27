@@ -417,6 +417,7 @@ async def create_document_parse_run(
         storage_service=storage_service,
         llamaparse_client=get_llamaparse_client(),
         landingai_client=get_landingai_client(),
+        force=True,
     )
     return {"status": "accepted"}
 

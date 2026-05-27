@@ -128,6 +128,7 @@ class ParsingService:
         representation_kind: str,
         config: dict[str, Any],
         project_id: UUID,
+        force: bool = False,
     ) -> tuple[ParseRunCDM, ParsedDocumentCDM | None]:
         """Run parse with same-project reuse. Persists success, partial, and failure runs.
 
@@ -136,21 +137,25 @@ class ParsingService:
           - parsed_doc is not None when run.status is SUCCEEDED or PARTIAL.
           - parsed_doc is None when run.status is FAILED.
         Raises ParseFailedError on terminal failure after the failed ParseRun is persisted.
+
+        Pass ``force=True`` to bypass the same-config reuse check and always run a fresh
+        parse. Used by the explicit re-parse endpoint.
         """
         parser = ParserKind(config.get("parser", ParserKind.LLAMAPARSE.value))
         config_hash = _compute_config_hash(config)
         source_uuid = UUID(source.id)
 
-        existing = await self._parse_run_repo.get_latest_for_project(
-            source_document_id=source_uuid,
-            representation_kind=representation_kind,
-            config_hash=config_hash,
-            project_id=project_id,
-        )
-        if existing is not None and existing.status in ("succeeded", "partial"):
-            cdm_run = _run_orm_to_cdm(existing)
-            doc_orm = await self._parsed_doc_repo.get_by_run(existing.id)
-            return cdm_run, _doc_orm_to_cdm(doc_orm) if doc_orm else None
+        if not force:
+            existing = await self._parse_run_repo.get_latest_for_project(
+                source_document_id=source_uuid,
+                representation_kind=representation_kind,
+                config_hash=config_hash,
+                project_id=project_id,
+            )
+            if existing is not None and existing.status in ("succeeded", "partial"):
+                cdm_run = _run_orm_to_cdm(existing)
+                doc_orm = await self._parsed_doc_repo.get_by_run(existing.id)
+                return cdm_run, _doc_orm_to_cdm(doc_orm) if doc_orm else None
 
         runner = _RUNNERS.get(parser)
         if runner is None:
