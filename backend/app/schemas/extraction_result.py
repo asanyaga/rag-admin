@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.extraction_result import ExtractionResultStatus
+from app.schemas.prompt_config import PromptConfig
 
 
 # --- Extraction Schema schemas ---
@@ -66,6 +67,8 @@ class RunExtractionRequest(BaseModel):
     extraction_schema_id: UUID = Field(..., alias="extractionSchemaId")
     extraction_method: str = Field(..., alias="extractionMethod")
     config: dict | None = None
+    llm_config: PromptConfig | None = Field(None, alias="llmConfig")
+    user_prompt_template: str | None = Field(None, alias="userPromptTemplate")
 
     model_config = ConfigDict(populate_by_name=True)
 

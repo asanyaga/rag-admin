@@ -286,3 +286,34 @@ class TestProcessExtraction:
         mock_result_repo.update_status.assert_called_once_with(
             result_id, ExtractionResultStatus.failed, "ParsedDocument not found for parse_run_id"
         )
+
+
+class TestRunExtractionConfigMerge:
+    def test_llm_config_added_to_merged_config(self):
+        from app.schemas.prompt_config import PromptConfig
+
+        llm_config = PromptConfig(provider="openai", model="gpt-4o", temperature=0.2)
+        user_prompt_template = "Extract from: {schema_json}"
+        base_config = {"structured_output_mode": "json_schema"}
+
+        merged_config = dict(base_config or {})
+        if llm_config:
+            merged_config["llm_config"] = llm_config.model_dump(by_alias=False, mode="json")
+        if user_prompt_template:
+            merged_config["user_prompt_template"] = user_prompt_template
+
+        assert merged_config["llm_config"]["provider"] == "openai"
+        assert merged_config["llm_config"]["model"] == "gpt-4o"
+        assert merged_config["llm_config"]["temperature"] == 0.2
+        assert merged_config["user_prompt_template"] == user_prompt_template
+
+    def test_none_llm_config_not_added(self):
+        merged_config = {}
+        llm_config = None
+        user_prompt_template = None
+        if llm_config:
+            merged_config["llm_config"] = llm_config.model_dump(by_alias=False, mode="json")
+        if user_prompt_template:
+            merged_config["user_prompt_template"] = user_prompt_template
+        assert "llm_config" not in merged_config
+        assert "user_prompt_template" not in merged_config

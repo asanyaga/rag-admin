@@ -76,3 +76,32 @@ class TestExtractionResultResponse:
         resp = ExtractionResultResponse.from_orm_model(obj)
         assert resp.citations is None
         assert resp.provider_response_raw is None
+
+
+class TestRunExtractionRequestLLMFields:
+    def test_accepts_llm_config_camelcase(self):
+        from app.schemas.extraction_result import RunExtractionRequest
+        body = RunExtractionRequest.model_validate({
+            "parseRunId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            "extractionSchemaId": "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+            "extractionMethod": "llm",
+            "llmConfig": {
+                "provider": "ollama_local",
+                "model": "llama3.2:8b",
+                "temperature": 0.0,
+            },
+            "userPromptTemplate": "Extract: {schema_json}",
+        })
+        assert body.llm_config is not None
+        assert body.llm_config.provider == "ollama_local"
+        assert body.user_prompt_template == "Extract: {schema_json}"
+
+    def test_llm_config_and_template_are_optional(self):
+        from app.schemas.extraction_result import RunExtractionRequest
+        body = RunExtractionRequest.model_validate({
+            "parseRunId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            "extractionSchemaId": "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+            "extractionMethod": "llamaextract",
+        })
+        assert body.llm_config is None
+        assert body.user_prompt_template is None

@@ -54,28 +54,38 @@ async def _resolve_credentials_from_settings(
     repo: ProviderKeyRepository,
     user_id: UUID,
     method: str,
+    provider: str | None = None,
 ) -> dict:
     """Resolve adapter credentials: DB first, env-var fallback.
 
-    Maps extraction method names to BYOK provider IDs.
-    The Ollama endpoint URL is config (not a secret) and always comes from settings.
+    For the 'llm' method, `provider` determines which endpoint + key to return.
+    The Ollama local endpoint URL is config (not a secret) and always comes from settings.
     """
-    provider_map = {
-        "llamaextract": "llama_cloud",
-        "ollama":        "ollama_cloud",
-    }
-    provider = provider_map.get(method)
-    if not provider:
+    if method == "llamaextract":
+        key = await resolve_api_key(repo, user_id, "llama_cloud")
+        return {"api_key": key} if key else {}
+
+    if method == "llm":
+        effective_provider = provider or "ollama_local"
+
+        if effective_provider == "ollama_local":
+            return {"endpoint": settings.OLLAMA_LOCAL_BASE_URL}
+
+        if effective_provider == "ollama_cloud":
+            key = await resolve_api_key(repo, user_id, "ollama_cloud")
+            return {
+                "endpoint": settings.OLLAMA_CLOUD_BASE_URL,
+                "api_key": key,
+            }
+
+        if effective_provider == "openai":
+            key = await resolve_api_key(repo, user_id, "openai")
+            return {"api_key": key} if key else {}
+
+        # Unknown provider — return empty dict (extractor uses its own defaults)
         return {}
 
-    key = await resolve_api_key(repo, user_id, provider)
-
-    if method == "ollama":
-        return {
-            "endpoint": settings.OLLAMA_ENDPOINT or "http://localhost:11434/v1",
-            "api_key": key,
-        }
-    return {"api_key": key} if key else {}
+    return {}
 
 
 # --- Schema endpoints ---
@@ -191,8 +201,12 @@ async def run_extraction(
 ):
     try:
         provider_key_repo = ProviderKeyRepository(db)
+        llm_provider = body.llm_config.provider if body.llm_config else None
         credentials = await _resolve_credentials_from_settings(
-            provider_key_repo, current_user.id, body.extraction_method
+            provider_key_repo,
+            current_user.id,
+            body.extraction_method,
+            provider=llm_provider,
         )
         extractor = get_extractor(
             body.extraction_method,
@@ -209,6 +223,8 @@ async def run_extraction(
             extraction_method=body.extraction_method,
             user_id=current_user.id,
             config=body.config,
+            llm_config=body.llm_config,
+            user_prompt_template=body.user_prompt_template,
         )
 
         background_tasks.add_task(
