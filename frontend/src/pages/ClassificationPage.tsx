@@ -88,7 +88,9 @@ export default function ClassificationPage(): JSX.Element {
                   <ClassificationRunStatusBadge status={run.status} />
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {run.llmProvider} / {run.llmModel}
+                  {run.classifierType === 'llm'
+                    ? `${run.classifierConfig.provider as string} / ${run.classifierConfig.model as string}`
+                    : run.classifierType}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {run.durationMs !== null ? `${(run.durationMs / 1000).toFixed(1)}s` : '—'}

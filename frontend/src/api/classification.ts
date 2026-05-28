@@ -11,10 +11,8 @@ export async function createClassificationRun(
     {
       parse_run_id: data.parseRunId,
       labels: data.labels,
-      llm_provider: data.llmProvider,
-      llm_model: data.llmModel,
-      batch_size: data.batchSize,
-      batch_overlap: data.batchOverlap,
+      classifier_type: data.classifierType,
+      classifier_config: data.classifierConfig,
     },
   )
   return response.data

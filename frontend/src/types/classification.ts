@@ -18,12 +18,10 @@ export interface ClassificationRun {
   parseRunId: string
   documentId: string
   labelsRequested: string[]
-  llmProvider: string
-  llmModel: string
+  classifierType: string
+  classifierConfig: Record<string, unknown>
   status: ClassificationRunStatus
   error: string | null
-  batchSize: number
-  batchOverlap: number
   inputTokens: number | null
   outputTokens: number | null
   durationMs: number | null
@@ -34,10 +32,8 @@ export interface ClassificationRun {
 export interface ClassificationRunCreateRequest {
   parseRunId: string
   labels: string[]
-  llmProvider?: string
-  llmModel?: string
-  batchSize?: number
-  batchOverlap?: number
+  classifierType?: string
+  classifierConfig?: Record<string, unknown>
 }
 
 export interface AnnotatedBlock {
