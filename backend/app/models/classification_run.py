@@ -1,4 +1,3 @@
-# backend/app/models/classification_run.py
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -28,12 +27,10 @@ class ClassificationRun(Base):
         nullable=False,
     )
     labels_requested: Mapped[list] = mapped_column(JSON, nullable=False)
-    llm_provider: Mapped[str] = mapped_column(Text, nullable=False)
-    llm_model: Mapped[str] = mapped_column(Text, nullable=False)
+    classifier_type: Mapped[str] = mapped_column(Text, nullable=False)
+    classifier_config: Mapped[dict] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    batch_size: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
-    batch_overlap: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
