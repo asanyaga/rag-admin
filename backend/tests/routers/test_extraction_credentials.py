@@ -46,14 +46,16 @@ async def test_llamaextract_falls_back_to_env():
 
 
 @pytest.mark.asyncio
-async def test_ollama_returns_endpoint_and_key():
-    """Ollama should return both endpoint and api_key."""
+async def test_llm_ollama_cloud_returns_endpoint_and_key():
+    """LLM method with ollama_cloud provider returns both endpoint and api_key."""
     from app.utils.encryption import encrypt
     repo = _make_repo(encrypt("ollama-key-789"))
     with patch("app.routers.extraction.settings") as mock_settings:
-        mock_settings.OLLAMA_ENDPOINT = "http://myollama:11434/v1"
-        result = await _resolve_credentials_from_settings(repo, USER_ID, "ollama")
-    assert result["endpoint"] == "http://myollama:11434/v1"
+        mock_settings.OLLAMA_CLOUD_BASE_URL = "https://ollama.com/v1"
+        result = await _resolve_credentials_from_settings(
+            repo, USER_ID, "llm", provider="ollama_cloud"
+        )
+    assert result["endpoint"] == "https://ollama.com/v1"
     assert result["api_key"] == "ollama-key-789"
 
 
