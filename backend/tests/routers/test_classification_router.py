@@ -75,10 +75,14 @@ async def test_get_blocks_returns_annotated_list(
         parse_run_id=parse_run_id,
         document_id=uuid4(),
         labels_requested=["section_a"],
-        llm_provider="ollama_local",
-        llm_model="qwen2.5:7b",
-        batch_size=10,
-        batch_overlap=3,
+        classifier_type="llm",
+        classifier_config={
+            "provider": "ollama_local",
+            "model": "qwen2.5:7b",
+            "batch_size": 10,
+            "batch_overlap": 3,
+            "llm_config": {},
+        },
         status="completed",
     )
     test_db.add(run)

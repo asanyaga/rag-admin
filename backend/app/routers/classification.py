@@ -22,52 +22,37 @@ from app.schemas.classification import (
     ClassificationRunCreateRequest,
     ClassificationRunResponse,
 )
+from app.services.classification.classifier_factory import (
+    _resolve_byok_provider,
+    build_classifier,
+)
 from app.services.classification.service import ClassificationService
-from app.services.llm.registry import LLMRegistry
-from app.services.llm.ollama_adapter import OllamaAdapter
-from app.services.llm.groq_adapter import GroqAdapter
 from app.services.provider_key_service import resolve_api_key
 
 logger = logging.getLogger(__name__)
 
-# Mounted at /api/v1/documents
 documents_router = APIRouter(prefix="/documents", tags=["classification"])
-
-# Mounted at /api/v1/classification-runs
 runs_router = APIRouter(prefix="/classification-runs", tags=["classification"])
 
-
-def _classification_provider_to_byok(llm_provider: str) -> str | None:
-    """Map classification LLM provider names to BYOK provider IDs."""
-    return {"groq": "groq", "ollama_cloud": "ollama_cloud"}.get(llm_provider)
+_DEFAULT_CLASSIFIER_TYPE = "llm"
 
 
-def _build_llm_registry(provider: str, api_key: str | None) -> LLMRegistry:
-    """Build a per-request LLM registry with the resolved API key."""
-    registry = LLMRegistry()
-    if provider == "ollama_local":
-        registry.register(
-            "ollama_local",
-            OllamaAdapter(base_url=settings.OLLAMA_LOCAL_BASE_URL, api_key="ollama"),
-        )
-    elif provider == "ollama_cloud" and api_key:
-        registry.register(
-            "ollama_cloud",
-            OllamaAdapter(base_url=settings.OLLAMA_CLOUD_BASE_URL, api_key=api_key),
-        )
-    elif provider == "groq" and api_key:
-        registry.register("groq", GroqAdapter(api_key=api_key))
-    return registry
+def _default_classifier_config() -> dict:
+    return {
+        "provider": settings.CLASSIFIER_LLM_PROVIDER,
+        "model": settings.CLASSIFIER_LLM_MODEL,
+        "batch_size": 10,
+        "batch_overlap": 3,
+        "llm_config": {},
+    }
 
 
 async def _run_classification_background(
     run_id: UUID,
     parse_run_id: UUID,
     labels: list[str],
-    llm_provider: str,
-    llm_model: str,
-    batch_size: int,
-    batch_overlap: int,
+    classifier_type: str,
+    classifier_config: dict,
     api_key: str | None,
 ) -> None:
     from app.cdm.models import ParsedDocument as CDMParsedDocument
@@ -83,27 +68,19 @@ async def _run_classification_background(
                 return
 
             doc = CDMParsedDocument.model_validate(pd_orm.content)
-            registry = _build_llm_registry(llm_provider, api_key)
-            service = ClassificationService(repo=repo, llm_registry=registry)
-
-            await service.execute(
-                run_id=run_id,
-                doc=doc,
-                labels=labels,
-                llm_provider=llm_provider,
-                llm_model=llm_model,
-                batch_size=batch_size,
-                batch_overlap=batch_overlap,
-            )
+            classifier = build_classifier(classifier_type, classifier_config, api_key)
+            service = ClassificationService(repo=repo, classifier=classifier)
+            await service.execute(run_id=run_id, doc=doc, labels=labels)
     except Exception:
         logger.exception("Classification background task failed for run %s", run_id)
-        # Open a fresh session to guarantee the status update commits even if
-        # the original session was left in a dirty state.
         async with AsyncSessionLocal() as recovery_session:
             recovery_repo = ClassificationRunRepository(recovery_session)
             run = await recovery_repo.get(run_id)
             if run and run.status == "running":
-                await recovery_repo.update_status(run_id=run_id, status="failed", error="Internal error — check server logs")
+                await recovery_repo.update_status(
+                    run_id=run_id, status="failed",
+                    error="Internal error — check server logs",
+                )
 
 
 def _to_run_response(run, regions=None) -> ClassificationRunResponse:
@@ -112,12 +89,10 @@ def _to_run_response(run, regions=None) -> ClassificationRunResponse:
         parseRunId=run.parse_run_id,
         documentId=run.document_id,
         labelsRequested=run.labels_requested,
-        llmProvider=run.llm_provider,
-        llmModel=run.llm_model,
+        classifierType=run.classifier_type,
+        classifierConfig=run.classifier_config,
         status=run.status,
         error=run.error,
-        batchSize=run.batch_size,
-        batchOverlap=run.batch_overlap,
         inputTokens=run.input_tokens,
         outputTokens=run.output_tokens,
         durationMs=run.duration_ms,
@@ -155,23 +130,19 @@ async def create_classification_run(
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    llm_provider = body.llm_provider or settings.CLASSIFIER_LLM_PROVIDER
-    llm_model = body.llm_model or settings.CLASSIFIER_LLM_MODEL
-    batch_size = body.batch_size or 10
-    batch_overlap = body.batch_overlap or 3
+    classifier_type = body.classifier_type or _DEFAULT_CLASSIFIER_TYPE
+    classifier_config = body.classifier_config or _default_classifier_config()
 
     repo = ClassificationRunRepository(db)
     run = await repo.create(ClassificationRunCreate(
         parse_run_id=body.parse_run_id,
         document_id=document_id,
         labels_requested=body.labels,
-        llm_provider=llm_provider,
-        llm_model=llm_model,
-        batch_size=batch_size,
-        batch_overlap=batch_overlap,
+        classifier_type=classifier_type,
+        classifier_config=classifier_config,
     ))
 
-    byok_provider = _classification_provider_to_byok(llm_provider)
+    byok_provider = _resolve_byok_provider(classifier_type, classifier_config)
     api_key: str | None = None
     if byok_provider:
         provider_key_repo = ProviderKeyRepository(db)
@@ -180,7 +151,7 @@ async def create_classification_run(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    f"No API key configured for provider '{llm_provider}'. "
+                    f"No API key configured for provider '{byok_provider}'. "
                     "Add one in Settings → API Keys."
                 ),
             )
@@ -190,10 +161,8 @@ async def create_classification_run(
         run_id=run.id,
         parse_run_id=body.parse_run_id,
         labels=body.labels,
-        llm_provider=llm_provider,
-        llm_model=llm_model,
-        batch_size=batch_size,
-        batch_overlap=batch_overlap,
+        classifier_type=classifier_type,
+        classifier_config=classifier_config,
         api_key=api_key,
     )
 
