@@ -1,3 +1,5 @@
+import type { PromptConfig } from '@/types/prompt-config'
+
 export type ExtractionResultStatus = 'pending' | 'completed' | 'failed'
 
 export interface ExtractionSchema {
@@ -61,6 +63,8 @@ export interface RunExtractionRequest {
   extractionSchemaId: string
   extractionMethod: string
   config?: Record<string, unknown>
+  llmConfig?: PromptConfig
+  userPromptTemplate?: string
 }
 
 export interface ExtractorInfo {
