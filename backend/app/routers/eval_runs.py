@@ -23,10 +23,9 @@ from app.schemas.llm_models import LlmModelsResponse, get_available_chat_models
 from app.services.eval_service import EvalService
 from app.services.judge_service import JudgeService
 from app.services.query_service import QueryService
-from app.services.llm.openai_adapter import OpenAIAdapter
-from app.services.llm.anthropic_adapter import AnthropicAdapter
+from app.services.llm.credentials import resolve_provider_credentials
+from app.services.llm.factory import create_adapter
 from app.services.exceptions import NotFoundError, ValidationError
-from app.utils.encryption import decrypt
 
 router = APIRouter(
     prefix="/projects/{project_id}/eval-runs",
@@ -73,27 +72,6 @@ async def verify_project_access(
 
 
 # ---------------------------------------------------------------------------
-# LLM adapter resolution helpers
-# ---------------------------------------------------------------------------
-
-async def _resolve_adapter(provider: str, user_id: UUID, project_id: UUID, db: AsyncSession):
-    """Resolve an LLM adapter for a given provider."""
-    provider_key_repo = ProviderKeyRepository(db)
-    key = await provider_key_repo.get_for_provider(user_id, provider, project_id)
-    if not key:
-        raise ValidationError(f"No API key configured for provider '{provider}'")
-
-    api_key = decrypt(key.api_key_encrypted)
-
-    if provider == "openai":
-        return OpenAIAdapter(api_key)
-    elif provider == "anthropic":
-        return AnthropicAdapter(api_key)
-    else:
-        raise ValidationError(f"Unsupported LLM provider: {provider}")
-
-
-# ---------------------------------------------------------------------------
 # Background task helper
 # ---------------------------------------------------------------------------
 
@@ -120,12 +98,18 @@ async def execute_eval_run_background(
 
     if mode == "retrieval_and_answer":
         if generation_provider:
-            generation_adapter = await _resolve_adapter(
+            creds = await resolve_provider_credentials(
                 generation_provider, user_id, project_id, db
             )
+            generation_adapter = create_adapter(
+                generation_provider, creds.api_key, creds.base_url
+            )
         if judge_provider:
-            judge_adapter = await _resolve_adapter(
+            creds = await resolve_provider_credentials(
                 judge_provider, user_id, project_id, db
+            )
+            judge_adapter = create_adapter(
+                judge_provider, creds.api_key, creds.base_url
             )
 
     service = EvalService(
