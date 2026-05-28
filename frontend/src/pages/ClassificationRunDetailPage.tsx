@@ -50,8 +50,10 @@ export default function ClassificationRunDetailPage(): JSX.Element {
             <ClassificationRunStatusBadge status={run.status} />
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            {run.llmProvider} / {run.llmModel} ·{' '}
-            {formatDistanceToNow(new Date(run.createdAt), { addSuffix: true })}
+            {run.classifierType === 'llm'
+              ? `${run.classifierConfig.provider as string} / ${run.classifierConfig.model as string}`
+              : run.classifierType}{' '}
+            · {formatDistanceToNow(new Date(run.createdAt), { addSuffix: true })}
           </p>
         </div>
         <Button variant="outline" onClick={handleRerun}>

@@ -56,10 +56,8 @@ export default function NewClassificationRunPage(): JSX.Element {
       const run = await createClassificationRun(selectedDocumentId, {
         parseRunId: selectedParseRunId,
         labels: values.labels,
-        llmProvider: values.llmProvider,
-        llmModel: values.llmModel,
-        batchSize: values.batchSize,
-        batchOverlap: values.batchOverlap,
+        classifierType: values.classifierType,
+        classifierConfig: values.classifierConfig,
       })
       toast.success('Classification started')
       navigate(`/classify/${run.id}`)
