@@ -102,7 +102,7 @@ class AnswerService:
         )
 
         try:
-            adapter = create_adapter(llm_config.provider, api_key)
+            adapter = create_adapter(llm_config.provider, api_key, None)
             token_count = 0
 
             if collector:
@@ -118,26 +118,35 @@ class AnswerService:
                 llm_span_ctx = None
                 llm_span = None
 
+            stream = await adapter.stream_completion(messages, llm_config)
             try:
-                async for token in adapter.stream_completion(messages, llm_config):
+                async for token in stream:
                     token_count += 1
                     yield _sse_event("token", {"content": token})
             finally:
                 if llm_span is not None and llm_span_ctx is not None:
-                    llm_span.metrics.completion_tokens = token_count
-                    llm_span.metrics.total_tokens = token_count
+                    usage = stream.usage
+                    llm_span.metrics.completion_tokens = (
+                        usage.completion_tokens if usage else token_count
+                    )
+                    llm_span.metrics.total_tokens = (
+                        usage.total_tokens if usage else token_count
+                    )
                     llm_span.metrics.model = llm_config.model
                     llm_span.metrics.provider = llm_config.provider
-                    llm_span.output = {"completion_tokens": token_count}
+                    llm_span.output = {
+                        "completion_tokens": usage.completion_tokens if usage else token_count
+                    }
                     llm_span_ctx.__exit__(None, None, None)
 
             latency_ms = (time.monotonic() - start) * 1000
 
+            usage = stream.usage
             yield _sse_event("done", {
                 "usage": {
-                    "promptTokens": 0,
-                    "completionTokens": token_count,
-                    "totalTokens": token_count,
+                    "promptTokens": usage.prompt_tokens if usage else None,
+                    "completionTokens": usage.completion_tokens if usage else None,
+                    "totalTokens": usage.total_tokens if usage else None,
                 },
                 "latencyMs": round(latency_ms, 1),
             })
