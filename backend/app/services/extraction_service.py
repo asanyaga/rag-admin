@@ -104,6 +104,8 @@ class ExtractionService:
         extraction_method: str,
         user_id: UUID,
         config: dict | None = None,
+        llm_config=None,           # PromptConfig | None
+        user_prompt_template: str | None = None,
     ) -> ExtractionResultResponse:
         """Create a pending extraction result anchored to a CDM ParsedDocument."""
         orm_parsed_doc = await self.parsed_document_repo.get_by_run(parse_run_id)
@@ -126,6 +128,10 @@ class ExtractionService:
 
         merged_config = dict(config or {})
         merged_config["extraction_target"] = schema.extraction_target
+        if llm_config is not None:
+            merged_config["llm_config"] = llm_config.model_dump(by_alias=False, mode="json")
+        if user_prompt_template:
+            merged_config["user_prompt_template"] = user_prompt_template
 
         result = await self.result_repo.create(
             document_id=document.id,
@@ -190,8 +196,8 @@ class ExtractionService:
         configured: set[str] = set()
         if getattr(settings, "LLAMA_CLOUD_KEY", None):
             configured.add("llamaextract")
-        if getattr(settings, "OLLAMA_ENDPOINT", None):
-            configured.add("ollama")
+        # "llm" is always configured — ollama_local requires no API key
+        configured.add("llm")
         return configured
 
 

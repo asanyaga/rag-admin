@@ -3,6 +3,7 @@ import type { ExtractionSchema, ExtractorInfo, RunExtractionRequest } from '@/ty
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
@@ -12,6 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Pencil, Play } from 'lucide-react'
+import { PromptConfigEditor } from '@/components/shared/PromptConfigEditor'
+import { usePromptConfig } from '@/hooks/usePromptConfig'
 
 interface ExtractionFormProps {
   parseRunId: string
@@ -19,14 +22,6 @@ interface ExtractionFormProps {
   extractors: ExtractorInfo[]
   onRun: (request: RunExtractionRequest) => Promise<void>
   onEditSchema?: (schema: ExtractionSchema) => void
-}
-
-type OllamaEndpointPreset = 'local' | 'cloud' | 'custom'
-
-const OLLAMA_ENDPOINTS: Record<OllamaEndpointPreset, string> = {
-  local: 'http://host.docker.internal:11434/v1',
-  cloud: 'https://ollama.com/v1',
-  custom: '',
 }
 
 export function ExtractionForm({
@@ -47,12 +42,11 @@ export function ExtractionForm({
   const [extractionTarget, setExtractionTarget] = useState('PER_DOC')
   const [confidenceScores, setConfidenceScores] = useState(false)
 
-  // Ollama config
-  const [ollamaModel, setOllamaModel] = useState('')
-  const [ollamaEndpointPreset, setOllamaEndpointPreset] = useState<OllamaEndpointPreset>('local')
-  const [ollamaCustomEndpoint, setOllamaCustomEndpoint] = useState('')
-  const [ollamaStructuredOutputMode, setOllamaStructuredOutputMode] = useState('json_schema')
-  const [ollamaInjectBlockIds, setOllamaInjectBlockIds] = useState(false)
+  // LLM method config
+  const { promptConfig, setPromptConfig, setProvider } = usePromptConfig()
+  const [userPromptTemplate, setUserPromptTemplate] = useState('')
+  const [structuredOutputMode, setStructuredOutputMode] = useState('json_schema')
+  const [injectBlockIds, setInjectBlockIds] = useState(false)
 
   const [isRunning, setIsRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,11 +62,6 @@ export function ExtractionForm({
   const selectedExtractor = extractors.find((e) => e.extractionMethod === extractionMethod)
   const isConfigured = selectedExtractor?.configured ?? true
 
-  function getOllamaEndpoint(): string {
-    if (ollamaEndpointPreset === 'custom') return ollamaCustomEndpoint
-    return OLLAMA_ENDPOINTS[ollamaEndpointPreset]
-  }
-
   const handleRun = async () => {
     setError(null)
 
@@ -82,10 +71,6 @@ export function ExtractionForm({
     }
     if (!extractionMethod) {
       setError('No extraction method available')
-      return
-    }
-    if (extractionMethod === 'ollama' && !ollamaModel.trim()) {
-      setError('Model name is required for Ollama')
       return
     }
 
@@ -98,25 +83,49 @@ export function ExtractionForm({
       if (pageRange.trim()) config.page_range = pageRange.trim()
       config.extraction_target = extractionTarget
       if (confidenceScores) config.confidence_scores = true
-    } else if (extractionMethod === 'ollama') {
-      config = {
-        model: ollamaModel.trim(),
-        endpoint: getOllamaEndpoint(),
-        structured_output_mode: ollamaStructuredOutputMode,
-        inject_block_ids: ollamaInjectBlockIds,
+      setIsRunning(true)
+      try {
+        await onRun({
+          parseRunId,
+          extractionSchemaId: schemaId,
+          extractionMethod,
+          config,
+        })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to run extraction')
+      } finally {
+        setIsRunning(false)
       }
-    } else {
-      config = {}
+      return
     }
 
+    if (extractionMethod === 'llm') {
+      config = {
+        structured_output_mode: structuredOutputMode,
+        inject_block_ids: injectBlockIds,
+      }
+      setIsRunning(true)
+      try {
+        await onRun({
+          parseRunId,
+          extractionSchemaId: schemaId,
+          extractionMethod,
+          config,
+          llmConfig: promptConfig,
+          userPromptTemplate: userPromptTemplate.trim() || undefined,
+        })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to run extraction')
+      } finally {
+        setIsRunning(false)
+      }
+      return
+    }
+
+    // Fallback for unknown methods
     setIsRunning(true)
     try {
-      await onRun({
-        parseRunId,
-        extractionSchemaId: schemaId,
-        extractionMethod,
-        config,
-      })
+      await onRun({ parseRunId, extractionSchemaId: schemaId, extractionMethod, config: {} })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run extraction')
     } finally {
@@ -137,8 +146,7 @@ export function ExtractionForm({
     )
   }
 
-  const isOllamaModelMissing = extractionMethod === 'ollama' && !ollamaModel.trim()
-  const isRunDisabled = isRunning || !isConfigured || isOllamaModelMissing
+  const isRunDisabled = isRunning || !isConfigured
 
   return (
     <div className="space-y-4">
@@ -284,25 +292,35 @@ export function ExtractionForm({
         </>
       )}
 
-      {/* Ollama-specific config */}
-      {extractionMethod === 'ollama' && (
-        <div className="space-y-3">
+      {/* LLM method config */}
+      {extractionMethod === 'llm' && (
+        <div className="space-y-4">
+          <PromptConfigEditor
+            value={promptConfig}
+            onChange={setPromptConfig}
+            onProviderChange={setProvider}
+            capabilities={{ thinking: true }}
+          />
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">User prompt template</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Variables: <code>{'{schema_json}'}</code> and <code>{'{document_context}'}</code>.
+              Leave blank to use the default template.
+            </p>
+            <Textarea
+              value={userPromptTemplate}
+              onChange={(e) => setUserPromptTemplate(e.target.value)}
+              className="font-mono text-xs min-h-[80px]"
+              placeholder="Extract structured data from the following document..."
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Model</Label>
-              <Input
-                value={ollamaModel}
-                onChange={(e) => setOllamaModel(e.target.value)}
-                placeholder="e.g. llama3.2:8b"
-                className="h-9"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Output Mode</Label>
-              <Select value={ollamaStructuredOutputMode} onValueChange={setOllamaStructuredOutputMode}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
+              <Label className="text-xs">Output mode</Label>
+              <Select value={structuredOutputMode} onValueChange={setStructuredOutputMode}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="json_schema">JSON Schema</SelectItem>
                   <SelectItem value="json_mode">JSON Mode</SelectItem>
@@ -310,58 +328,18 @@ export function ExtractionForm({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Endpoint</Label>
-            <Select
-              value={ollamaEndpointPreset}
-              onValueChange={(v) => setOllamaEndpointPreset(v as OllamaEndpointPreset)}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="local">Local (host.docker.internal:11434)</SelectItem>
-                <SelectItem value="cloud">Ollama Cloud</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {(ollamaEndpointPreset === 'cloud' || ollamaEndpointPreset === 'custom') && (
-            <p className="text-[11px] text-muted-foreground">
-              API key is resolved from Settings → API Keys (Ollama Cloud). No key is sent in the request.
-            </p>
-          )}
-
-          {ollamaEndpointPreset === 'custom' && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Custom Endpoint URL</Label>
-              <Input
-                value={ollamaCustomEndpoint}
-                onChange={(e) => setOllamaCustomEndpoint(e.target.value)}
-                placeholder="https://your-ollama-host/v1"
-                className="h-9"
-              />
+            <div className="flex items-end pb-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="inject-block-ids"
+                  checked={injectBlockIds}
+                  onCheckedChange={(v) => setInjectBlockIds(v === true)}
+                />
+                <Label htmlFor="inject-block-ids" className="text-xs font-normal">
+                  Inject block IDs
+                </Label>
+              </div>
             </div>
-          )}
-
-          {ollamaEndpointPreset !== 'custom' && (
-            <p className="text-[11px] text-muted-foreground font-mono">
-              {OLLAMA_ENDPOINTS[ollamaEndpointPreset]}
-            </p>
-          )}
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="inject-block-ids"
-              checked={ollamaInjectBlockIds}
-              onCheckedChange={(checked) => setOllamaInjectBlockIds(checked === true)}
-            />
-            <Label htmlFor="inject-block-ids" className="text-xs font-normal">
-              Inject block IDs (block-level citations)
-            </Label>
           </div>
         </div>
       )}
