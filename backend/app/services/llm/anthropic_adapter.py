@@ -89,12 +89,6 @@ class AnthropicAdapter:
             max_tokens=config.max_tokens,
         )
 
-        # For JSON mode, use the prefill trick: add an assistant message starting with {
-        if config.json_mode:
-            user_messages = list(user_messages)
-            user_messages.append({"role": "assistant", "content": "{"})
-            kwargs["messages"] = user_messages
-
         try:
             response = await self.client.messages.create(**kwargs)
         except BadRequestError as e:
@@ -107,10 +101,6 @@ class AnthropicAdapter:
 
         latency = (time.monotonic() - start) * 1000
         content = response.content[0].text if response.content else ""
-
-        # If we used the prefill trick, prepend the { back
-        if config.json_mode:
-            content = "{" + content
 
         return CompletionResult(
             content=content,
