@@ -3,8 +3,9 @@ from app.services.classification.llm_classifier import LLMClassifier
 from app.services.classification.llamaindex_split_classifier import LlamaIndexSplitClassifier
 from app.services.classification.port import ClassificationPort
 from app.services.llm.factory import create_adapter
-from app.services.llm.registry import LLMRegistry
 
+# Providers that require a user-supplied API key for classification.
+# ollama_local is excluded — it uses a dummy key.
 _LLM_BYOK_PROVIDERS = {"groq", "ollama_cloud", "anthropic", "openai"}
 
 
@@ -16,40 +17,28 @@ def _resolve_byok_provider(classifier_type: str, classifier_config: dict) -> str
     return None
 
 
-def _build_llm_registry(provider: str, api_key: str | None) -> LLMRegistry:
-    from app.services.llm.groq_adapter import GroqAdapter
-
-    registry = LLMRegistry()
-    if provider == "groq":
-        if api_key:
-            registry.register("groq", GroqAdapter(api_key=api_key))
-    else:
-        effective_key = api_key if api_key is not None else "ollama"
-        try:
-            adapter = create_adapter(provider, effective_key)
-            registry.register(provider, adapter)
-        except ValueError:
-            pass
-    return registry
-
-
 def build_classifier(
     classifier_type: str,
     classifier_config: dict,
     api_key: str | None,
+    base_url: str | None = None,
 ) -> ClassificationPort:
     if classifier_type == "llm":
         provider = classifier_config.get("provider", settings.CLASSIFIER_LLM_PROVIDER)
         model = classifier_config.get("model", settings.CLASSIFIER_LLM_MODEL)
         batch_size = int(classifier_config.get("batch_size", 10))
         batch_overlap = int(classifier_config.get("batch_overlap", 3))
-        llm_config = classifier_config.get("llm_config") or {}
-        system_prompt: str | None = llm_config.get("system_prompt")
-        temperature: float = float(llm_config.get("temperature", 0.0))
-        max_tokens: int = int(llm_config.get("max_tokens", 4096))
-        registry = _build_llm_registry(provider, api_key)
+        llm_cfg = classifier_config.get("llm_config") or {}
+        system_prompt: str | None = llm_cfg.get("system_prompt")
+        temperature: float = float(llm_cfg.get("temperature", 0.0))
+        max_tokens: int = int(llm_cfg.get("max_tokens", 4096))
+
+        effective_key = api_key if api_key is not None else "ollama"
+        # ValueError from create_adapter propagates immediately — no silent swallow
+        adapter = create_adapter(provider, effective_key, base_url)
+
         return LLMClassifier(
-            llm_registry=registry,
+            adapter=adapter,
             provider=provider,
             model=model,
             batch_size=batch_size,
