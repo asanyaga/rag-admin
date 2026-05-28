@@ -48,14 +48,16 @@ async def test_llm_ollama_cloud_resolves_byok_key():
 
 @pytest.mark.asyncio
 async def test_llm_openai_resolves_byok_key():
-    """openai provider resolves API key from DB; no endpoint override."""
+    """openai provider resolves API key from DB and returns OpenAI base URL."""
     from app.utils.encryption import encrypt
     repo = _make_repo(encrypt("openai-key-456"))
-    result = await _resolve_credentials_from_settings(
-        repo, USER_ID, "llm", provider="openai"
-    )
+    with patch("app.routers.extraction.settings") as mock_settings:
+        mock_settings.OPENAI_BASE_URL = "https://api.openai.com/v1"
+        result = await _resolve_credentials_from_settings(
+            repo, USER_ID, "llm", provider="openai"
+        )
     assert result["api_key"] == "openai-key-456"
-    assert "endpoint" not in result
+    assert result["endpoint"] == "https://api.openai.com/v1"
 
 
 @pytest.mark.asyncio

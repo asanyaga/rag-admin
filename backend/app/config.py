@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     # Example: OLLAMA_ENDPOINT=http://localhost:11434/v1
     OLLAMA_ENDPOINT: str = ""
 
+    # OpenAI
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+
     # Groq hosted inference
     GROQ_API_KEY: str = ""
 

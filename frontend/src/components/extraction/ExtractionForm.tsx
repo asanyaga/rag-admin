@@ -56,7 +56,10 @@ export function ExtractionForm({
   }, [schemas, schemaId])
 
   useEffect(() => {
-    if (extractors.length > 0 && !extractionMethod) setExtractionMethod(extractors[0].extractionMethod)
+    if (extractors.length > 0 && !extractionMethod) {
+      const firstConfigured = extractors.find((e) => e.configured)
+      setExtractionMethod(firstConfigured?.extractionMethod ?? extractors[0].extractionMethod)
+    }
   }, [extractors, extractionMethod])
 
   const selectedExtractor = extractors.find((e) => e.extractionMethod === extractionMethod)

@@ -80,7 +80,7 @@ async def _resolve_credentials_from_settings(
 
         if effective_provider == "openai":
             key = await resolve_api_key(repo, user_id, "openai")
-            return {"api_key": key} if key else {}
+            return {"endpoint": settings.OPENAI_BASE_URL, "api_key": key}
 
         # Unknown provider — return empty dict (extractor uses its own defaults)
         return {}
