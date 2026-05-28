@@ -8,10 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 class ClassificationRunCreateRequest(BaseModel):
     parse_run_id: UUID
     labels: list[str]
-    llm_provider: str | None = None
-    llm_model: str | None = None
-    batch_size: int | None = None
-    batch_overlap: int | None = None
+    classifier_type: str | None = None
+    classifier_config: dict | None = None
 
 
 class ClassificationRegionResponse(BaseModel):
@@ -34,12 +32,10 @@ class ClassificationRunResponse(BaseModel):
     parse_run_id: UUID = Field(..., alias="parseRunId")
     document_id: UUID = Field(..., alias="documentId")
     labels_requested: list[str] = Field(..., alias="labelsRequested")
-    llm_provider: str = Field(..., alias="llmProvider")
-    llm_model: str = Field(..., alias="llmModel")
+    classifier_type: str = Field(..., alias="classifierType")
+    classifier_config: dict = Field(..., alias="classifierConfig")
     status: str
     error: str | None = None
-    batch_size: int = Field(..., alias="batchSize")
-    batch_overlap: int = Field(..., alias="batchOverlap")
     input_tokens: int | None = Field(None, alias="inputTokens")
     output_tokens: int | None = Field(None, alias="outputTokens")
     duration_ms: int | None = Field(None, alias="durationMs")

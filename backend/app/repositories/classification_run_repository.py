@@ -18,10 +18,8 @@ class ClassificationRunCreate:
     parse_run_id: UUID
     document_id: UUID
     labels_requested: list[str]
-    llm_provider: str
-    llm_model: str
-    batch_size: int
-    batch_overlap: int
+    classifier_type: str
+    classifier_config: dict
 
 
 @dataclass
@@ -43,10 +41,8 @@ class ClassificationRunRepository:
             parse_run_id=data.parse_run_id,
             document_id=data.document_id,
             labels_requested=data.labels_requested,
-            llm_provider=data.llm_provider,
-            llm_model=data.llm_model,
-            batch_size=data.batch_size,
-            batch_overlap=data.batch_overlap,
+            classifier_type=data.classifier_type,
+            classifier_config=data.classifier_config,
             status="pending",
         )
         self.session.add(run)
