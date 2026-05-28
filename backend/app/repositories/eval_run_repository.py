@@ -28,7 +28,7 @@ class EvalRunRepository:
         generation_model_id: str | None = None,
         judge_model_provider: str | None = None,
         judge_model_id: str | None = None,
-        system_prompt: str | None = None,
+        llm_config: dict | None = None,
         experiment_id: UUID | None = None,
         variant_label: str | None = None,
     ) -> EvalRun:
@@ -44,7 +44,7 @@ class EvalRunRepository:
             generation_model_id=generation_model_id,
             judge_model_provider=judge_model_provider,
             judge_model_id=judge_model_id,
-            system_prompt=system_prompt,
+            llm_config=llm_config,
             experiment_id=experiment_id,
             variant_label=variant_label,
         )

@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.schemas.prompt_config import PromptConfig
+
 
 # ---------------------------------------------------------------------------
 # Config
@@ -39,7 +41,7 @@ class EvalRunCreate(BaseModel):
     mode: str = Field("retrieval_only")
     generation_model: ModelConfig | None = Field(None, alias="generationModel")
     judge_model: ModelConfig | None = Field(None, alias="judgeModel")
-    system_prompt: str | None = Field(None, alias="systemPrompt")
+    llm_config: PromptConfig | None = Field(None, alias="llmConfig")
     experiment_id: UUID | None = Field(None, alias="experimentId")
     variant_label: str | None = Field(None, alias="variantLabel", max_length=255)
 
@@ -95,6 +97,7 @@ class EvalRunResponse(BaseModel):
     experiment_id: UUID | None = Field(None, alias="experimentId")
     experiment_name: str | None = Field(None, alias="experimentName")
     variant_label: str | None = Field(None, alias="variantLabel")
+    llm_config: dict | None = Field(None, alias="llmConfig")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 

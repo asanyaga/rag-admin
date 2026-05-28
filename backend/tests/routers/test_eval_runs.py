@@ -209,7 +209,7 @@ async def test_get_run_config(client: AsyncClient):
     assert config["mode"] == "retrieval_only"
     assert config["generationModel"] is None
     assert config["judgeModel"] is None
-    assert config["systemPrompt"] is None
+    assert config["llmConfig"] is None
     assert config["experimentId"] == exp_id
     assert config["variantLabel"] == "baseline"
 

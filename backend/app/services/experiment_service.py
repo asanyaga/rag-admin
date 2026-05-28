@@ -115,7 +115,7 @@ class ExperimentService:
             'mode': lambda r: r.mode,
             'generationModel': lambda r: f"{r.generation_model_provider}:{r.generation_model_id}" if r.generation_model_provider else '—',
             'judgeModel': lambda r: f"{r.judge_model_provider}:{r.judge_model_id}" if r.judge_model_provider else '—',
-            'systemPrompt': lambda r: (r.system_prompt or '(default)')[:80],
+            'systemPrompt': lambda r: ((r.llm_config or {}).get('system_prompt') or '(default)')[:80],
         }
 
         varying = {}
@@ -181,6 +181,7 @@ class ExperimentService:
             experiment_id=run.experiment_id,
             experiment_name=exp_name,
             variant_label=run.variant_label,
+            llm_config=run.llm_config,
         )
 
     def _to_response(self, experiment, run_count: int = 0) -> ExperimentResponse:

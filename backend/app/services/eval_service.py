@@ -27,7 +27,9 @@ from app.schemas.query import QueryRequest
 from app.services.query_service import QueryService
 from app.services.trace_collector import TraceCollector
 from app.services.judge_service import JudgeService, JUDGE_PROMPT_TEMPLATE
-from app.services.answer_generation_service import generate_answer, DEFAULT_SYSTEM_PROMPT
+from app.services.answer_generation_service import generate_answer
+from app.schemas.prompt_config import PromptConfig as PromptConfigSchema
+from app.services.llm.prompt import DEFAULT_RAG_SYSTEM_PROMPT
 from app.services.llm.types import LLMConfig
 from app.services.llm.port import LLMPort
 from app.services.exceptions import NotFoundError, ValidationError
@@ -77,7 +79,7 @@ class EvalService:
             generation_model_id=data.generation_model.model_id if data.generation_model else None,
             judge_model_provider=data.judge_model.provider if data.judge_model else None,
             judge_model_id=data.judge_model.model_id if data.judge_model else None,
-            system_prompt=data.system_prompt,
+            llm_config=data.llm_config.model_dump(by_alias=False, mode="json") if data.llm_config else None,
             experiment_id=data.experiment_id,
             variant_label=data.variant_label,
         )
@@ -120,7 +122,7 @@ class EvalService:
                 "provider": run.judge_model_provider,
                 "modelId": run.judge_model_id,
             } if run.judge_model_provider else None,
-            "systemPrompt": run.system_prompt,
+            "llmConfig": run.llm_config,
             "experimentId": str(run.experiment_id) if run.experiment_id else None,
             "variantLabel": run.variant_label,
         }
@@ -420,25 +422,30 @@ class EvalService:
         had_error = False
 
         if is_answer_mode and self._generation_adapter and self._judge_adapter:
-            # Build the generation messages (mirrors answer_generation_service logic)
-            gen_sys_prompt = run.system_prompt or DEFAULT_SYSTEM_PROMPT
+            prompt_config = PromptConfigSchema.model_validate(run.llm_config) if run.llm_config else None
+            lc = run.llm_config or {}
+            gen_config = LLMConfig(
+                provider=run.generation_model_provider,
+                model=run.generation_model_id,
+                temperature=lc.get("temperature", 0.0),
+                max_tokens=lc.get("max_tokens", 1024),
+            )
+            sys_prompt = (
+                prompt_config.system_prompt
+                if prompt_config and prompt_config.system_prompt
+                else DEFAULT_RAG_SYSTEM_PROMPT
+            )
             gen_context = "\n\n".join(
                 f"[{i + 1}] {chunk.get('content', '')}"
                 for i, chunk in enumerate(retrieved_chunks_info)
             )
             gen_messages = [
-                {"role": "system", "content": gen_sys_prompt},
+                {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": f"Context:\n{gen_context}\n\nQuestion: {query.query_text}"},
             ]
 
             # Generate answer (with tracing)
             try:
-                gen_config = LLMConfig(
-                    provider=run.generation_model_provider,
-                    model=run.generation_model_id,
-                    temperature=0.0,
-                    max_tokens=1024,
-                )
                 with collector.span("llm_generation", f"Answer Generation ({gen_config.model})", input={
                     "model": gen_config.model,
                     "provider": gen_config.provider,
@@ -451,7 +458,7 @@ class EvalService:
                         chunks=retrieved_chunks_info,
                         generation_adapter=self._generation_adapter,
                         generation_config=gen_config,
-                        system_prompt=run.system_prompt,
+                        prompt_config=prompt_config,
                     )
                     gen_span.output = {
                         "answer_length": len(generated_answer),
@@ -678,4 +685,5 @@ class EvalService:
             experiment_id=run.experiment_id,
             experiment_name=exp_name,
             variant_label=run.variant_label,
+            llmConfig=run.llm_config,
         )
