@@ -51,18 +51,28 @@ def augment_schema_with_sources(schema: dict[str, Any]) -> dict[str, Any]:
 def _augment_recursive(schema: dict[str, Any]) -> dict[str, Any]:
     if schema.get("type") == "object" and "properties" in schema:
         new_props: dict[str, Any] = {}
+        new_required = list(schema.get("required") or [])
+
         for key, value in schema["properties"].items():
             new_props[key] = _augment_recursive(value)
             if value.get("type") not in ("object", "array"):
-                new_props[f"{key}__source"] = {
-                    "type": "object",
+                source_key = f"{key}__source"
+                new_props[source_key] = {
+                    "type": ["object", "null"],
                     "properties": {
                         "page_index": {"type": "integer"},
-                        "block_id": {"type": "string"},
+                        "block_id": {"type": ["string", "null"]},
                     },
-                    "required": ["page_index"],
+                    "required": ["page_index", "block_id"],
+                    "additionalProperties": False,
                 }
-        return {**schema, "properties": new_props}
+                if source_key not in new_required:
+                    new_required.append(source_key)
+
+        result = {**schema, "properties": new_props, "additionalProperties": False}
+        if new_required:
+            result["required"] = new_required
+        return result
 
     if schema.get("type") == "array" and "items" in schema:
         return {**schema, "items": _augment_recursive(schema["items"])}
@@ -101,16 +111,17 @@ def _strip_recursive(
         field_schema = (schema.get("properties") or {}).get(key, {})
 
         if key in source_map:
-            source = source_map[key] or {}
-            raw_page = source.get("page_index")
-            citations.append(
-                FieldCitation(
-                    field_path=field_path,
-                    page_index=int(raw_page) if raw_page is not None else None,
-                    block_ids=[source["block_id"]] if source.get("block_id") else None,
-                    text_spans=None,
+            source = source_map[key]
+            if source is not None:
+                raw_page = source.get("page_index")
+                citations.append(
+                    FieldCitation(
+                        field_path=field_path,
+                        page_index=int(raw_page) if raw_page is not None else None,
+                        block_ids=[source["block_id"]] if source.get("block_id") else None,
+                        text_spans=None,
+                    )
                 )
-            )
 
         if isinstance(value, dict) and field_schema.get("type") == "object":
             clean[key] = _strip_recursive(value, field_schema, field_path, citations)

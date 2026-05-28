@@ -114,10 +114,52 @@ class TestAugmentSchemaWithSources:
         props = aug["properties"]
         assert "total__source" in props
         assert "vendor__source" in props
-        assert props["total__source"]["type"] == "object"
         assert "page_index" in props["total__source"]["properties"]
         assert "block_id" in props["total__source"]["properties"]
-        assert props["total__source"]["required"] == ["page_index"]
+
+    def test_source_type_is_nullable_object(self):
+        from app.adapters.extraction.llm_context import augment_schema_with_sources
+        aug = augment_schema_with_sources({
+            "type": "object", "properties": {"x": {"type": "string"}}
+        })
+        assert aug["properties"]["x__source"]["type"] == ["object", "null"]
+
+    def test_source_object_has_additional_properties_false(self):
+        from app.adapters.extraction.llm_context import augment_schema_with_sources
+        aug = augment_schema_with_sources({
+            "type": "object", "properties": {"x": {"type": "string"}}
+        })
+        assert aug["properties"]["x__source"]["additionalProperties"] is False
+
+    def test_source_required_contains_both_fields(self):
+        from app.adapters.extraction.llm_context import augment_schema_with_sources
+        aug = augment_schema_with_sources({
+            "type": "object", "properties": {"x": {"type": "string"}}
+        })
+        assert set(aug["properties"]["x__source"]["required"]) == {"page_index", "block_id"}
+
+    def test_block_id_is_nullable_string(self):
+        from app.adapters.extraction.llm_context import augment_schema_with_sources
+        aug = augment_schema_with_sources({
+            "type": "object", "properties": {"x": {"type": "string"}}
+        })
+        assert aug["properties"]["x__source"]["properties"]["block_id"]["type"] == ["string", "null"]
+
+    def test_parent_object_gets_additional_properties_false(self):
+        from app.adapters.extraction.llm_context import augment_schema_with_sources
+        aug = augment_schema_with_sources({
+            "type": "object", "properties": {"x": {"type": "string"}}
+        })
+        assert aug["additionalProperties"] is False
+
+    def test_source_fields_added_to_parent_required(self):
+        from app.adapters.extraction.llm_context import augment_schema_with_sources
+        aug = augment_schema_with_sources({
+            "type": "object",
+            "properties": {"x": {"type": "string"}},
+            "required": ["x"],
+        })
+        assert "x__source" in aug["required"]
 
     def test_original_fields_preserved(self):
         from app.adapters.extraction.llm_context import augment_schema_with_sources
@@ -193,6 +235,14 @@ class TestStripSourceFields:
         from app.adapters.extraction.llm_context import strip_source_fields
         schema = {"type": "object", "properties": {"x": {"type": "string"}}}
         raw = {"x": "val"}
+        clean, citations = strip_source_fields(raw, schema)
+        assert clean == {"x": "val"}
+        assert citations == []
+
+    def test_null_source_yields_no_citation(self):
+        from app.adapters.extraction.llm_context import strip_source_fields
+        schema = {"type": "object", "properties": {"x": {"type": "string"}}}
+        raw = {"x": "val", "x__source": None}
         clean, citations = strip_source_fields(raw, schema)
         assert clean == {"x": "val"}
         assert citations == []
