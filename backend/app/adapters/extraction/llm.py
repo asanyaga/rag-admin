@@ -117,6 +117,6 @@ class LLMExtractor(OpenAICompatMixin, DataExtractor):
             structured_data=structured_data,
             source_parse_run_id=UUID(parsed_document.parse_run_id),
             citations=citations,
-            provider_response_raw=None,
+            provider_response_raw=raw,
             extraction_metadata={"model": cfg.get("model"), "latency_ms": latency_ms},
         )
