@@ -1,7 +1,9 @@
 """Generic LLM extraction adapter.
 
-Works with any OpenAI-compatible provider. Reads per-run LLM config from
-the 'llm_config' key in the config dict (a serialized PromptConfig).
+Works with any provider supported by create_adapter(). Reads per-run LLM
+config from the 'llm_config' key in the config dict (a serialized PromptConfig).
+Caller is responsible for pre-resolving credentials (provider, api_key, base_url)
+and placing them in the config dict before calling extract().
 """
 import json
 import time
@@ -13,11 +15,12 @@ from app.adapters.extraction.llm_context import (
     build_extraction_context,
     strip_source_fields,
 )
-from app.adapters.extraction.openai_compat_mixin import OpenAICompatMixin
 from app.cdm.models import ParsedDocument
-from app.ports.data_extraction import DataExtractor, ExtractionOutput
+from app.ports.data_extraction import DataExtractor, ExtractionError, ExtractionOutput
 from app.schemas.prompt_config import PromptConfig
+from app.services.llm.factory import create_adapter
 from app.services.llm.prompt_config import resolve_llm_config
+from app.services.llm.types import LLMConfig, LLMConnectionError
 
 DEFAULT_EXTRACTION_SYSTEM_PROMPT = (
     "You are a structured data extraction assistant. Extract information from the provided "
@@ -43,18 +46,18 @@ where in the document you found the value.
 Return a single JSON object that conforms to the schema (including __source fields)."""
 
 
-class LLMExtractor(OpenAICompatMixin, DataExtractor):
-    """Structured extraction via any OpenAI-compatible LLM provider."""
+class LLMExtractor(DataExtractor):
+    """Structured extraction via any LLM provider supported by create_adapter()."""
 
     extractor_type = "llm"
     display_name = "LLM"
 
     def __init__(
         self,
-        default_endpoint: str | None = None,
-        default_api_key: str | None = None,
+        default_provider: str = "ollama_local",
+        default_api_key: str = "ollama",
     ) -> None:
-        self._default_endpoint = default_endpoint
+        self._default_provider = default_provider
         self._default_api_key = default_api_key
 
     def _build_messages(
@@ -80,36 +83,52 @@ class LLMExtractor(OpenAICompatMixin, DataExtractor):
     ) -> ExtractionOutput:
         cfg = dict(config or {})
 
-        # Apply constructor defaults when not overridden per-run
-        if self._default_endpoint and "endpoint" not in cfg:
-            cfg["endpoint"] = self._default_endpoint
-        if self._default_api_key and "api_key" not in cfg:
-            cfg["api_key"] = self._default_api_key
+        # Resolve provider and credentials from cfg (pre-resolved by caller)
+        provider = cfg.get("provider") or self._default_provider
+        api_key = cfg.get("api_key") or self._default_api_key
+        base_url: str | None = cfg.get("base_url")
 
         # Resolve LLM config from PromptConfig stored in config["llm_config"]
         prompt_config: PromptConfig | None = None
         if cfg.get("llm_config"):
             prompt_config = PromptConfig.model_validate(cfg["llm_config"])
-        llm_config = resolve_llm_config(
+        resolved = resolve_llm_config(
             prompt_config,
-            default_provider="ollama_local",
+            default_provider=provider,
             default_model="llama3.2:8b",
         )
-        cfg["model"] = llm_config.model
-        cfg["temperature"] = llm_config.temperature
-        cfg["max_tokens"] = llm_config.max_tokens
         if prompt_config and prompt_config.system_prompt:
             cfg["system_prompt"] = prompt_config.system_prompt
 
-        context = build_extraction_context(
-            parsed_document, cfg.get("inject_block_ids", False)
-        )
+        structured_output_mode = cfg.get("structured_output_mode", "json_schema")
+        context = build_extraction_context(parsed_document, cfg.get("inject_block_ids", False))
         aug_schema = augment_schema_with_sources(schema)
         messages = self._build_messages(aug_schema, context, cfg)
 
+        llm_config = LLMConfig(
+            provider=resolved.provider,
+            model=resolved.model,
+            temperature=resolved.temperature,
+            max_tokens=resolved.max_tokens,
+            structured_output_mode=structured_output_mode,
+            structured_output_schema=aug_schema if structured_output_mode == "json_schema" else None,
+        )
+
+        adapter = create_adapter(provider, api_key, base_url)
+
         t0 = time.monotonic()
-        raw = await self._call_model(messages, aug_schema, cfg)
+        try:
+            result = await adapter.complete(messages, llm_config)
+        except LLMConnectionError as exc:
+            raise ExtractionError(f"Cannot connect to LLM provider '{provider}': {exc}") from exc
         latency_ms = int((time.monotonic() - t0) * 1000)
+
+        try:
+            raw = json.loads(result.content)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise ExtractionError(
+                f"Model returned non-JSON response: {result.content[:200]!r}"
+            ) from exc
 
         structured_data, citations = strip_source_fields(raw, schema)
 
@@ -118,5 +137,14 @@ class LLMExtractor(OpenAICompatMixin, DataExtractor):
             source_parse_run_id=UUID(parsed_document.parse_run_id),
             citations=citations,
             provider_response_raw=raw,
-            extraction_metadata={"model": cfg.get("model"), "latency_ms": latency_ms},
+            extraction_metadata={
+                "model": llm_config.model,
+                "provider": llm_config.provider,
+                "latency_ms": latency_ms,
+                "usage": {
+                    "prompt_tokens": result.usage.prompt_tokens,
+                    "completion_tokens": result.usage.completion_tokens,
+                    "total_tokens": result.usage.total_tokens,
+                } if result.usage else None,
+            },
         )

@@ -81,8 +81,8 @@ def get_extractor(
     if method == "llm":
         from app.adapters.extraction.llm import LLMExtractor
         return LLMExtractor(
-            default_endpoint=credentials.get("endpoint"),
-            default_api_key=credentials.get("api_key"),
+            default_provider=credentials.get("provider", "ollama_local"),
+            default_api_key=credentials.get("api_key", "ollama"),
         )
 
     raise ValueError(f"Unknown extraction method: {method!r}")
