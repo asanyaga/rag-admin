@@ -100,7 +100,7 @@ export default function NewEvalRunPage() {
 
     loadConfig()
     return () => { cancelled = true }
-  }, [cloneRunId, projectId])
+  }, [cloneRunId, projectId, setPromptConfig])
 
   const readyIndexes = indexes.filter((i) => i.status === 'ready')
 
