@@ -9,7 +9,7 @@ class TestGetKnownExtractors:
         extractors = get_known_extractors()
         methods = [e["extraction_method"] for e in extractors]
         assert "llamaextract" in methods
-        assert "ollama" in methods
+        assert "llm" in methods
 
     def test_each_entry_has_required_keys(self):
         for e in get_known_extractors():

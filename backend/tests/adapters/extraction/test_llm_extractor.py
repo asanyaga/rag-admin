@@ -169,3 +169,32 @@ class TestLLMExtractorExtract:
             await extractor.extract(parsed_doc, schema, {"endpoint": "http://override:11434/v1"})
         _, _, passed_cfg = mock_call.call_args.args
         assert passed_cfg["endpoint"] == "http://override:11434/v1"
+
+
+class TestRegistryLLM:
+    def test_get_extractor_returns_llm_extractor(self):
+        from app.adapters.extraction.llm import LLMExtractor
+        from app.adapters.extraction.registry import get_extractor
+
+        extractor = get_extractor("llm", {})
+        assert isinstance(extractor, LLMExtractor)
+        assert extractor.extractor_type == "llm"
+
+    def test_llm_extractor_needs_no_credentials(self):
+        from app.adapters.extraction.registry import get_extractor
+
+        extractor = get_extractor("llm", {})
+        assert extractor is not None
+
+    def test_ollama_method_no_longer_registered(self):
+        from app.adapters.extraction.registry import get_extractor
+
+        with pytest.raises(ValueError, match="Unknown extraction method"):
+            get_extractor("ollama", {})
+
+    def test_llm_method_in_catalogue(self):
+        from app.adapters.extraction.registry import get_known_extractors
+
+        methods = {e["extraction_method"] for e in get_known_extractors()}
+        assert "llm" in methods
+        assert "ollama" not in methods
