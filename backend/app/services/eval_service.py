@@ -454,7 +454,7 @@ class EvalService:
                         chunks=retrieved_chunks_info,
                         generation_adapter=self._generation_adapter,
                         generation_config=gen_config,
-                        prompt_config=prompt_config,
+                        prompt_config=gen_pc,
                     )
                     gen_span.output = {
                         "answer_length": len(generated_answer),
