@@ -14,7 +14,6 @@ from app.schemas.eval_run import (
     EvalRunConfig,
     EvalRunResponse,
     EvalRunResultResponse,
-    ModelConfig,
     RetrievedChunkInfo,
     ExpectedSourceInfo,
     QueryComparisonItem,
@@ -30,6 +29,7 @@ from app.services.judge_service import JudgeService, JUDGE_PROMPT_TEMPLATE
 from app.services.answer_generation_service import generate_answer
 from app.schemas.prompt_config import PromptConfig as PromptConfigSchema
 from app.services.llm.prompt import DEFAULT_RAG_SYSTEM_PROMPT
+from app.services.llm.prompt_config import resolve_llm_config
 from app.services.llm.types import LLMConfig
 from app.services.llm.port import LLMPort
 from app.services.exceptions import NotFoundError, ValidationError
@@ -75,11 +75,8 @@ class EvalService:
             config=data.config.model_dump(by_alias=True),
             user_id=user_id,
             mode=data.mode,
-            generation_model_provider=data.generation_model.provider if data.generation_model else None,
-            generation_model_id=data.generation_model.model_id if data.generation_model else None,
-            judge_model_provider=data.judge_model.provider if data.judge_model else None,
-            judge_model_id=data.judge_model.model_id if data.judge_model else None,
-            llm_config=data.llm_config.model_dump(by_alias=False, mode="json") if data.llm_config else None,
+            generation_config=data.generation_config.model_dump(by_alias=False, mode="json") if data.generation_config else None,
+            judge_config=data.judge_config.model_dump(by_alias=False, mode="json") if data.judge_config else None,
             experiment_id=data.experiment_id,
             variant_label=data.variant_label,
         )
@@ -114,15 +111,8 @@ class EvalService:
             "name": run.name,
             "config": run.config,
             "mode": run.mode,
-            "generationModel": {
-                "provider": run.generation_model_provider,
-                "modelId": run.generation_model_id,
-            } if run.generation_model_provider else None,
-            "judgeModel": {
-                "provider": run.judge_model_provider,
-                "modelId": run.judge_model_id,
-            } if run.judge_model_provider else None,
-            "llmConfig": run.llm_config,
+            "generationConfig": run.generation_config,
+            "judgeConfig": run.judge_config,
             "experimentId": str(run.experiment_id) if run.experiment_id else None,
             "variantLabel": run.variant_label,
         }
@@ -422,17 +412,23 @@ class EvalService:
         had_error = False
 
         if is_answer_mode and self._generation_adapter and self._judge_adapter:
-            prompt_config = PromptConfigSchema.model_validate(run.llm_config) if run.llm_config else None
-            lc = run.llm_config or {}
+            gen_pc = PromptConfigSchema.model_validate(run.generation_config) if run.generation_config else None
+            resolved = resolve_llm_config(
+                gen_pc,
+                default_provider="openai",
+                default_model="gpt-4o",
+                default_temperature=0.0,
+                default_max_tokens=1024,
+            )
             gen_config = LLMConfig(
-                provider=run.generation_model_provider,
-                model=run.generation_model_id,
-                temperature=lc.get("temperature", 0.0),
-                max_tokens=lc.get("max_tokens", 1024),
+                provider=resolved.provider,
+                model=resolved.model,
+                temperature=resolved.temperature,
+                max_tokens=resolved.max_tokens,
             )
             sys_prompt = (
-                prompt_config.system_prompt
-                if prompt_config and prompt_config.system_prompt
+                gen_pc.system_prompt
+                if gen_pc and gen_pc.system_prompt
                 else DEFAULT_RAG_SYSTEM_PROMPT
             )
             gen_context = "\n\n".join(
@@ -473,9 +469,14 @@ class EvalService:
             # Judge answer (only if generation succeeded)
             if generated_answer and not generation_error:
                 try:
+                    resolved_judge = resolve_llm_config(
+                        PromptConfigSchema.model_validate(run.judge_config) if run.judge_config else None,
+                        default_provider="openai",
+                        default_model="gpt-4o",
+                    )
                     judge_config = LLMConfig(
-                        provider=run.judge_model_provider,
-                        model=run.judge_model_id,
+                        provider=resolved_judge.provider,
+                        model=resolved_judge.model,
                     )
                     # Build the judge messages (mirrors judge_service logic)
                     judge_prompt = JUDGE_PROMPT_TEMPLATE.format(
@@ -646,20 +647,6 @@ class EvalService:
         gs_name = run.golden_set.name if run.golden_set else ""
         idx_name = run.index.name if run.index else ""
 
-        gen_model = None
-        if run.generation_model_provider and run.generation_model_id:
-            gen_model = ModelConfig(
-                provider=run.generation_model_provider,
-                model_id=run.generation_model_id,
-            )
-
-        judge_model = None
-        if run.judge_model_provider and run.judge_model_id:
-            judge_model = ModelConfig(
-                provider=run.judge_model_provider,
-                model_id=run.judge_model_id,
-            )
-
         exp_name = None
         if hasattr(run, 'experiment') and run.experiment:
             exp_name = run.experiment.name
@@ -678,12 +665,11 @@ class EvalService:
             created_by=run.created_by,
             created_at=run.created_at,
             mode=run.mode,
-            generation_model=gen_model,
-            judge_model=judge_model,
+            generationConfig=run.generation_config,
+            judgeConfig=run.judge_config,
             items_completed=run.items_completed,
             failed_item_count=run.failed_item_count,
             experiment_id=run.experiment_id,
             experiment_name=exp_name,
             variant_label=run.variant_label,
-            llmConfig=run.llm_config,
         )

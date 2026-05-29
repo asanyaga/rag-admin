@@ -133,11 +133,17 @@ async def test_get_run_config(
         config={"searchType": "hybrid", "topK": 10, "similarityThreshold": 0.3},
         user_id=test_user.id,
         mode="retrieval_and_answer",
-        generation_model_provider="openai",
-        generation_model_id="gpt-4o",
-        judge_model_provider="anthropic",
-        judge_model_id="claude-3-haiku",
-        llm_config={"system_prompt": "Custom prompt"},
+        generation_config={
+            "provider": "openai",
+            "model": "gpt-4o",
+            "temperature": 0.2,
+            "max_tokens": 2048,
+            "system_prompt": "Custom prompt",
+        },
+        judge_config={
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-6",
+        },
         experiment_id=test_experiment.id,
         variant_label="hybrid k=10",
     )
@@ -151,11 +157,11 @@ async def test_get_run_config(
     assert config["config"]["topK"] == 10
     assert config["config"]["similarityThreshold"] == 0.3
     assert config["mode"] == "retrieval_and_answer"
-    assert config["generationModel"]["provider"] == "openai"
-    assert config["generationModel"]["modelId"] == "gpt-4o"
-    assert config["judgeModel"]["provider"] == "anthropic"
-    assert config["judgeModel"]["modelId"] == "claude-3-haiku"
-    assert config["llmConfig"]["system_prompt"] == "Custom prompt"
+    assert config["generationConfig"]["provider"] == "openai"
+    assert config["generationConfig"]["model"] == "gpt-4o"
+    assert config["generationConfig"]["system_prompt"] == "Custom prompt"
+    assert config["judgeConfig"]["provider"] == "anthropic"
+    assert config["judgeConfig"]["model"] == "claude-sonnet-4-6"
     assert config["experimentId"] == str(test_experiment.id)
     assert config["variantLabel"] == "hybrid k=10"
 
@@ -181,9 +187,8 @@ async def test_get_run_config_retrieval_only(
     config = await eval_service.get_run_config(run.id, test_project.id)
 
     assert config["mode"] == "retrieval_only"
-    assert config["generationModel"] is None
-    assert config["judgeModel"] is None
-    assert config["llmConfig"] is None
+    assert config["generationConfig"] is None
+    assert config["judgeConfig"] is None
     assert config["experimentId"] is None
     assert config["variantLabel"] is None
 
