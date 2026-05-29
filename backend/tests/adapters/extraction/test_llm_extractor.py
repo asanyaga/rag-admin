@@ -201,6 +201,33 @@ class TestLLMExtractorExtract:
         output = await e.extract(parsed_doc, schema, {})
         assert output.structured_data == {"vendor": "Acme"}
 
+    async def test_extraction_error_carries_raw_response_and_metadata_on_parse_failure(self, parsed_doc):
+        from app.adapters.extraction.llm import LLMExtractor
+        from app.ports.data_extraction import ExtractionError
+        adapter = _make_adapter("not valid json at all")
+        e = LLMExtractor(adapter=adapter, provider="openai")
+        with pytest.raises(ExtractionError) as exc_info:
+            await e.extract(parsed_doc, {"type": "object", "properties": {}}, {})
+        err = exc_info.value
+        assert err.raw_response == "not valid json at all"
+        assert err.metadata is not None
+        assert err.metadata["provider"] == "openai"
+        assert "latency_ms" in err.metadata
+
+    async def test_extraction_error_carries_metadata_on_connection_error(self, parsed_doc):
+        from app.adapters.extraction.llm import LLMExtractor
+        from app.ports.data_extraction import ExtractionError
+        from app.services.llm.types import LLMConnectionError
+        adapter = MagicMock()
+        adapter.complete = AsyncMock(side_effect=LLMConnectionError("timeout"))
+        e = LLMExtractor(adapter=adapter, provider="anthropic")
+        with pytest.raises(ExtractionError) as exc_info:
+            await e.extract(parsed_doc, {"type": "object", "properties": {}}, {})
+        err = exc_info.value
+        assert err.metadata is not None
+        assert err.metadata["provider"] == "anthropic"
+        assert err.raw_response is None
+
     async def test_strips_code_fence_when_model_adds_trailing_text(self, parsed_doc):
         from app.adapters.extraction.llm import LLMExtractor
         raw = {"total": 99}

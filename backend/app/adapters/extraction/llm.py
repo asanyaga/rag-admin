@@ -123,7 +123,11 @@ class LLMExtractor(DataExtractor):
             result = await self._adapter.complete(messages, llm_config)
         except LLMConnectionError as exc:
             raise ExtractionError(
-                f"Cannot connect to LLM provider '{resolved.provider}': {exc}"
+                f"Cannot connect to LLM provider '{resolved.provider}': {exc}",
+                metadata={
+                    "model": llm_config.model,
+                    "provider": llm_config.provider,
+                },
             ) from exc
         latency_ms = int((time.monotonic() - t0) * 1000)
 
@@ -131,7 +135,18 @@ class LLMExtractor(DataExtractor):
             raw = json.loads(_strip_code_fences(result.content))
         except (json.JSONDecodeError, ValueError) as exc:
             raise ExtractionError(
-                f"Model returned non-JSON response: {result.content[:200]!r}"
+                f"Model returned non-JSON response: {result.content[:200]!r}",
+                raw_response=result.content,
+                metadata={
+                    "model": llm_config.model,
+                    "provider": llm_config.provider,
+                    "latency_ms": latency_ms,
+                    "usage": {
+                        "prompt_tokens": result.usage.prompt_tokens,
+                        "completion_tokens": result.usage.completion_tokens,
+                        "total_tokens": result.usage.total_tokens,
+                    } if result.usage else None,
+                },
             ) from exc
 
         structured_data, citations = strip_source_fields(raw, schema)
