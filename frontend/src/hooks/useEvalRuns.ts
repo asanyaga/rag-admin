@@ -5,7 +5,6 @@ import type {
   EvalRunResult,
   EvalRunProgress,
   RunComparison,
-  LlmModelOption,
 } from '@/types/eval-run'
 import * as api from '@/api/eval-runs'
 
@@ -230,43 +229,3 @@ export function useRunComparison(
   return { comparison, isLoading, error }
 }
 
-// ---------------------------------------------------------------------------
-// useLlmModels — fetch available LLM chat models
-// ---------------------------------------------------------------------------
-
-interface UseLlmModelsReturn {
-  models: LlmModelOption[]
-  isLoading: boolean
-  error: string | null
-}
-
-export function useLlmModels(): UseLlmModelsReturn {
-  const [models, setModels] = useState<LlmModelOption[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    const load = async () => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        const data = await api.fetchLlmModels()
-        if (!cancelled) setModels(data)
-      } catch (err) {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : 'Failed to fetch LLM models')
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  return { models, isLoading, error }
-}

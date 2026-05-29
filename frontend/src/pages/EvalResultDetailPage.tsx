@@ -157,9 +157,9 @@ export default function EvalResultDetailPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-base">Generated Answer</CardTitle>
-                  {run.generationModel && (
+                  {run.generationConfig?.model && (
                     <Badge variant="secondary" className="text-xs font-normal">
-                      {run.generationModel.modelId}
+                      {run.generationConfig.provider}/{run.generationConfig.model}
                     </Badge>
                   )}
                 </div>
