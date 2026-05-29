@@ -69,18 +69,15 @@ async def _resolve_credentials_from_settings(
         effective_provider = provider or "ollama_local"
 
         if effective_provider == "ollama_local":
-            return {"endpoint": settings.OLLAMA_LOCAL_BASE_URL}
+            return {"provider": "ollama_local"}
 
         if effective_provider == "ollama_cloud":
             key = await resolve_api_key(repo, user_id, "ollama_cloud")
-            return {
-                "endpoint": settings.OLLAMA_CLOUD_BASE_URL,
-                "api_key": key,
-            }
+            return {"provider": "ollama_cloud", "api_key": key}
 
         if effective_provider == "openai":
             key = await resolve_api_key(repo, user_id, "openai")
-            return {"endpoint": settings.OPENAI_BASE_URL, "api_key": key}
+            return {"provider": "openai", "api_key": key}
 
         # Unknown provider — return empty dict (extractor uses its own defaults)
         return {}

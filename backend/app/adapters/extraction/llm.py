@@ -114,7 +114,7 @@ class LLMExtractor(DataExtractor):
             structured_output_schema=aug_schema if structured_output_mode == "json_schema" else None,
         )
 
-        adapter = create_adapter(provider, api_key, base_url)
+        adapter = create_adapter(resolved.provider, api_key, base_url)
 
         t0 = time.monotonic()
         try:
