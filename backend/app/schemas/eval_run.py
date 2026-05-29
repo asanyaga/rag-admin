@@ -7,10 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.schemas.prompt_config import PromptConfig
 
 
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
-
 class EvalRunConfig(BaseModel):
     """Configuration for an evaluation run."""
     search_type: str = Field("semantic", alias="searchType")
@@ -20,18 +16,6 @@ class EvalRunConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class ModelConfig(BaseModel):
-    """Provider + model ID pair for generation/judge models."""
-    provider: str
-    model_id: str = Field(..., alias="modelId")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-# ---------------------------------------------------------------------------
-# Create
-# ---------------------------------------------------------------------------
-
 class EvalRunCreate(BaseModel):
     """Request to create and run an evaluation."""
     golden_set_id: UUID = Field(..., alias="goldenSetId")
@@ -39,9 +23,8 @@ class EvalRunCreate(BaseModel):
     name: str | None = Field(None, max_length=255)
     config: EvalRunConfig
     mode: str = Field("retrieval_only")
-    generation_model: ModelConfig | None = Field(None, alias="generationModel")
-    judge_model: ModelConfig | None = Field(None, alias="judgeModel")
-    llm_config: PromptConfig | None = Field(None, alias="llmConfig")
+    generation_config: PromptConfig | None = Field(None, alias="generationConfig")
+    judge_config: PromptConfig | None = Field(None, alias="judgeConfig")
     experiment_id: UUID | None = Field(None, alias="experimentId")
     variant_label: str | None = Field(None, alias="variantLabel", max_length=255)
 
@@ -50,16 +33,16 @@ class EvalRunCreate(BaseModel):
     @model_validator(mode="after")
     def validate_answer_mode_fields(self):
         if self.mode == "retrieval_and_answer":
-            if not self.generation_model:
-                raise ValueError("generationModel is required for retrieval_and_answer mode")
-            if not self.judge_model:
-                raise ValueError("judgeModel is required for retrieval_and_answer mode")
+            if not self.generation_config:
+                raise ValueError("generationConfig is required for retrieval_and_answer mode")
+            if not self.judge_config:
+                raise ValueError("judgeConfig is required for retrieval_and_answer mode")
+            if not (self.generation_config.provider and self.generation_config.model):
+                raise ValueError("generationConfig must specify provider and model")
+            if not (self.judge_config.provider and self.judge_config.model):
+                raise ValueError("judgeConfig must specify provider and model")
         return self
 
-
-# ---------------------------------------------------------------------------
-# Metrics
-# ---------------------------------------------------------------------------
 
 class EvalRunMetrics(BaseModel):
     """Aggregated metrics for an evaluation run."""
@@ -70,10 +53,6 @@ class EvalRunMetrics(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-
-# ---------------------------------------------------------------------------
-# Response
-# ---------------------------------------------------------------------------
 
 class EvalRunResponse(BaseModel):
     """Response for an evaluation run."""
@@ -90,21 +69,16 @@ class EvalRunResponse(BaseModel):
     created_by: UUID = Field(..., alias="createdBy")
     created_at: datetime = Field(..., alias="createdAt")
     mode: str = Field("retrieval_only")
-    generation_model: ModelConfig | None = Field(None, alias="generationModel")
-    judge_model: ModelConfig | None = Field(None, alias="judgeModel")
+    generation_config: dict | None = Field(None, alias="generationConfig")
+    judge_config: dict | None = Field(None, alias="judgeConfig")
     items_completed: int = Field(0, alias="itemsCompleted")
     failed_item_count: int = Field(0, alias="failedItemCount")
     experiment_id: UUID | None = Field(None, alias="experimentId")
     experiment_name: str | None = Field(None, alias="experimentName")
     variant_label: str | None = Field(None, alias="variantLabel")
-    llm_config: dict | None = Field(None, alias="llmConfig")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
-
-# ---------------------------------------------------------------------------
-# Progress
-# ---------------------------------------------------------------------------
 
 class EvalRunProgress(BaseModel):
     """Progress of a running eval run."""
@@ -115,10 +89,6 @@ class EvalRunProgress(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-
-# ---------------------------------------------------------------------------
-# Per-query results
-# ---------------------------------------------------------------------------
 
 class RetrievedChunkInfo(BaseModel):
     """Info about a single retrieved chunk in eval results."""
@@ -146,7 +116,7 @@ class ExpectedSourceInfo(BaseModel):
 class ClaimItem(BaseModel):
     """A single claim from the judge's faithfulness evaluation."""
     text: str
-    label: str  # "supported" | "unsupported" | "unclear"
+    label: str
     source: str | None = None
 
     model_config = ConfigDict(populate_by_name=True)
@@ -173,12 +143,7 @@ class EvalRunResultResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
-# ---------------------------------------------------------------------------
-# Comparison
-# ---------------------------------------------------------------------------
-
 class QueryComparisonMetrics(BaseModel):
-    """Metrics for one side of a comparison."""
     precision: float
     recall: float
     f1: float
@@ -187,7 +152,6 @@ class QueryComparisonMetrics(BaseModel):
 
 
 class QueryComparisonItem(BaseModel):
-    """Per-query comparison between two runs."""
     query_id: UUID = Field(..., alias="queryId")
     query_text: str = Field("", alias="queryText")
     baseline: QueryComparisonMetrics
@@ -198,7 +162,6 @@ class QueryComparisonItem(BaseModel):
 
 
 class ComparisonSummary(BaseModel):
-    """Summary statistics for a comparison between two runs."""
     avg_delta_precision: float = Field(..., alias="avgDeltaPrecision")
     avg_delta_recall: float = Field(..., alias="avgDeltaRecall")
     avg_delta_f1: float = Field(..., alias="avgDeltaF1")
@@ -210,7 +173,6 @@ class ComparisonSummary(BaseModel):
 
 
 class RunComparisonResponse(BaseModel):
-    """Full comparison response between two evaluation runs."""
     baseline_run: EvalRunResponse = Field(..., alias="baselineRun")
     challenger_run: EvalRunResponse = Field(..., alias="challengerRun")
     per_query_comparison: list[QueryComparisonItem] = Field(..., alias="perQueryComparison")
