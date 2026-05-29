@@ -2,7 +2,28 @@
 from dataclasses import FrozenInstanceError
 from uuid import UUID
 import pytest
-from app.ports.data_extraction import DataExtractor, ExtractionOutput, FieldCitation
+from app.ports.data_extraction import DataExtractor, ExtractionOutput, ExtractionError, FieldCitation
+
+
+class TestExtractionError:
+    def test_default_attributes_are_none(self):
+        exc = ExtractionError("something failed")
+        assert exc.raw_response is None
+        assert exc.metadata is None
+        assert str(exc) == "something failed"
+
+    def test_carries_raw_response(self):
+        exc = ExtractionError("parse error", raw_response="not valid json")
+        assert exc.raw_response == "not valid json"
+
+    def test_carries_metadata(self):
+        meta = {"model": "llama3.2:8b", "provider": "ollama_local", "latency_ms": 300}
+        exc = ExtractionError("conn failed", metadata=meta)
+        assert exc.metadata == meta
+
+    def test_is_still_an_exception(self):
+        with pytest.raises(ExtractionError):
+            raise ExtractionError("test")
 
 
 class TestFieldCitation:
