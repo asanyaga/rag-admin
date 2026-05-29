@@ -5,6 +5,7 @@ The caller (router or test) is responsible for resolving credentials
 and calling create_adapter() before instantiating LLMExtractor.
 """
 import json
+import re
 import time
 from typing import Any
 from uuid import UUID
@@ -20,6 +21,14 @@ from app.schemas.prompt_config import PromptConfig
 from app.services.llm.port import LLMPort
 from app.services.llm.prompt_config import resolve_llm_config
 from app.services.llm.types import LLMConfig, LLMConnectionError
+
+_CODE_FENCE_RE = re.compile(r'^```(?:json)?\s*\n?(.*?)\n?```\s*$', re.DOTALL)
+
+
+def _strip_code_fences(content: str) -> str:
+    m = _CODE_FENCE_RE.match(content.strip())
+    return m.group(1).strip() if m else content
+
 
 DEFAULT_EXTRACTION_SYSTEM_PROMPT = (
     "You are a structured data extraction assistant. Extract information from the provided "
@@ -113,7 +122,7 @@ class LLMExtractor(DataExtractor):
         latency_ms = int((time.monotonic() - t0) * 1000)
 
         try:
-            raw = json.loads(result.content)
+            raw = json.loads(_strip_code_fences(result.content))
         except (json.JSONDecodeError, ValueError) as exc:
             raise ExtractionError(
                 f"Model returned non-JSON response: {result.content[:200]!r}"

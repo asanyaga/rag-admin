@@ -164,6 +164,26 @@ class TestLLMExtractorExtract:
         with pytest.raises(ExtractionError, match="non-JSON"):
             await e.extract(parsed_doc, schema, {})
 
+    async def test_strips_json_code_fence_from_response(self, parsed_doc):
+        from app.adapters.extraction.llm import LLMExtractor
+        raw = {"vendor": "Acme", "vendor__source": {"page_index": 0}}
+        fenced = f"```json\n{json.dumps(raw)}\n```"
+        adapter = _make_adapter(fenced)
+        e = LLMExtractor(adapter=adapter, provider="ollama_local")
+        schema = {"type": "object", "properties": {"vendor": {"type": "string"}}}
+        output = await e.extract(parsed_doc, schema, {})
+        assert output.structured_data == {"vendor": "Acme"}
+
+    async def test_strips_plain_code_fence_from_response(self, parsed_doc):
+        from app.adapters.extraction.llm import LLMExtractor
+        raw = {"total": 42}
+        fenced = f"```\n{json.dumps(raw)}\n```"
+        adapter = _make_adapter(fenced)
+        e = LLMExtractor(adapter=adapter, provider="ollama_local")
+        schema = {"type": "object", "properties": {"total": {"type": "number"}}}
+        output = await e.extract(parsed_doc, schema, {})
+        assert output.structured_data == {"total": 42}
+
     async def test_citations_populated_from_source_fields(self, parsed_doc):
         from app.adapters.extraction.llm import LLMExtractor
         schema = {"type": "object", "properties": {"vendor": {"type": "string"}}}
