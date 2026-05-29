@@ -6,7 +6,7 @@ from uuid import UUID
 
 from app.cdm import models as cdm_models
 from app.models.extraction_result import ExtractionResultStatus
-from app.ports.data_extraction import DataExtractor
+from app.ports.data_extraction import DataExtractor, ExtractionError
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.extraction_schema_repository import ExtractionSchemaRepository
 from app.repositories.extraction_result_repository import ExtractionResultRepository
@@ -248,11 +248,18 @@ async def process_extraction(
 
     except Exception as e:
         logger.exception("Extraction failed for result=%s", extraction_result_id)
+        raw_response: dict | None = None
+        metadata: dict | None = None
+        if isinstance(e, ExtractionError):
+            if e.raw_response is not None:
+                raw_response = {"raw_content": e.raw_response}
+            metadata = e.metadata
         try:
-            await result_repo.update_status(
+            await result_repo.update_failed(
                 extraction_result_id,
-                ExtractionResultStatus.failed,
-                str(e),
+                status_message=str(e),
+                extraction_metadata=metadata,
+                provider_response_raw=raw_response,
             )
         except Exception:
             logger.exception("Failed to update extraction result status for %s", extraction_result_id)
