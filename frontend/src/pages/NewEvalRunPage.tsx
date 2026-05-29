@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Play, Search, MessageSquare, AlertTriangle, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,16 +9,14 @@ import { Slider } from '@/components/ui/slider'
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useProject } from '@/contexts/ProjectContext'
 import { useGoldenSets } from '@/hooks/useGoldenSets'
-import { useEvalRuns, useLlmModels } from '@/hooks/useEvalRuns'
+import { useEvalRuns } from '@/hooks/useEvalRuns'
 import { useIndexes } from '@/hooks/useIndexes'
 import { getEvalRunConfig } from '@/api/eval-runs'
 import type { EvalRunConfig, EvalMode } from '@/types/eval-run'
@@ -37,7 +35,6 @@ export default function NewEvalRunPage() {
   const { goldenSets } = useGoldenSets(projectId)
   const { indexes } = useIndexes(projectId)
   const { createRun } = useEvalRuns(projectId)
-  const { models, isLoading: modelsLoading } = useLlmModels()
 
   const [goldenSetId, setGoldenSetId] = useState('')
   const [indexId, setIndexId] = useState('')
@@ -47,11 +44,19 @@ export default function NewEvalRunPage() {
   const [topK, setTopK] = useState(5)
   const [similarityThreshold, setSimilarityThreshold] = useState(0)
   const [mode, setMode] = useState<EvalMode | null>(null)
-  const [generationModel, setGenerationModel] = useState('')
-  const [judgeModel, setJudgeModel] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { promptConfig, setPromptConfig, setProvider: setPromptConfigProvider } = usePromptConfig()
   const [cloneSourceName, setCloneSourceName] = useState<string | null>(null)
+
+  const {
+    promptConfig: generationConfig,
+    setPromptConfig: setGenerationConfig,
+    setProvider: setGenerationProvider,
+  } = usePromptConfig()
+  const {
+    promptConfig: judgeConfig,
+    setPromptConfig: setJudgeConfig,
+    setProvider: setJudgeProvider,
+  } = usePromptConfig()
 
   // Clone: fetch source run config and pre-fill
   useEffect(() => {
@@ -75,22 +80,23 @@ export default function NewEvalRunPage() {
           if (runConfig.similarityThreshold != null) setSimilarityThreshold(runConfig.similarityThreshold as number)
         }
 
-        const genModel = config.generationModel as Record<string, string> | null
-        if (genModel?.provider && genModel?.modelId) {
-          setGenerationModel(`${genModel.provider}:${genModel.modelId}`)
+        const gc = config.generationConfig as Record<string, unknown> | null
+        if (gc) {
+          setGenerationConfig({
+            provider: gc.provider as string | undefined,
+            model: gc.model as string | undefined,
+            temperature: gc.temperature as number | undefined,
+            maxTokens: gc.max_tokens as number | undefined,
+            systemPrompt: gc.system_prompt as string | undefined,
+            topP: gc.top_p as number | undefined,
+          })
         }
-        const jModel = config.judgeModel as Record<string, string> | null
-        if (jModel?.provider && jModel?.modelId) {
-          setJudgeModel(`${jModel.provider}:${jModel.modelId}`)
-        }
-        if (config.llmConfig) {
-          const lc = config.llmConfig as Record<string, unknown>
-          setPromptConfig({
-            systemPrompt: lc.system_prompt as string | undefined,
-            provider: lc.provider as string | undefined,
-            model: lc.model as string | undefined,
-            temperature: lc.temperature as number | undefined,
-            maxTokens: lc.max_tokens as number | undefined,
+        const jc = config.judgeConfig as Record<string, unknown> | null
+        if (jc) {
+          setJudgeConfig({
+            provider: jc.provider as string | undefined,
+            model: jc.model as string | undefined,
+            temperature: jc.temperature as number | undefined,
           })
         }
       } catch {
@@ -100,36 +106,27 @@ export default function NewEvalRunPage() {
 
     loadConfig()
     return () => { cancelled = true }
-  }, [cloneRunId, projectId, setPromptConfig])
+  }, [cloneRunId, projectId, setGenerationConfig, setJudgeConfig])
 
   const readyIndexes = indexes.filter((i) => i.status === 'ready')
-
-  // Group models by provider for select
-  const modelsByProvider = useMemo(() => {
-    const grouped: Record<string, typeof models> = {}
-    for (const m of models) {
-      if (!grouped[m.provider]) grouped[m.provider] = []
-      grouped[m.provider].push(m)
-    }
-    return grouped
-  }, [models])
-
-  const parseModelValue = (val: string) => {
-    const [provider, ...rest] = val.split(':')
-    return { provider, modelId: rest.join(':') }
-  }
 
   const selectedGoldenSet = goldenSets.find((gs) => gs.id === goldenSetId)
   const queryCount = selectedGoldenSet?.queryCount ?? 0
 
   const sameModelWarning =
-    generationModel && judgeModel && generationModel === judgeModel
+    mode === 'retrieval_and_answer' &&
+    generationConfig.provider &&
+    generationConfig.provider === judgeConfig.provider &&
+    generationConfig.model === judgeConfig.model
 
   const canSubmit =
     goldenSetId &&
     indexId &&
     mode !== null &&
-    (mode === 'retrieval_only' || (generationModel && judgeModel))
+    (mode === 'retrieval_only' || (
+      generationConfig.provider && generationConfig.model &&
+      judgeConfig.provider && judgeConfig.model
+    ))
 
   const handleSubmit = async () => {
     if (!canSubmit || !mode) return
@@ -141,15 +138,8 @@ export default function NewEvalRunPage() {
         name: name.trim() || undefined,
         config: { searchType, topK, similarityThreshold },
         mode,
-        generationModel:
-          mode === 'retrieval_and_answer' && generationModel
-            ? parseModelValue(generationModel)
-            : undefined,
-        judgeModel:
-          mode === 'retrieval_and_answer' && judgeModel
-            ? parseModelValue(judgeModel)
-            : undefined,
-        llmConfig: mode === 'retrieval_and_answer' ? promptConfig : undefined,
+        generationConfig: mode === 'retrieval_and_answer' ? generationConfig : undefined,
+        judgeConfig: mode === 'retrieval_and_answer' ? judgeConfig : undefined,
         experimentId: experimentId || undefined,
         variantLabel: variantLabel.trim() || undefined,
       })
@@ -346,65 +336,7 @@ export default function NewEvalRunPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Answer Evaluation Config</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {models.length === 0 && !modelsLoading && (
-              <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span>
-                  No LLM providers configured.{' '}
-                  <a href="/settings" className="underline font-medium">
-                    Add API keys
-                  </a>{' '}
-                  for OpenAI or Anthropic.
-                </span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs">Generation Model</Label>
-                <Select value={generationModel} onValueChange={setGenerationModel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
-                      <SelectGroup key={provider}>
-                        <SelectLabel className="capitalize">{provider}</SelectLabel>
-                        {providerModels.map((m) => (
-                          <SelectItem key={m.id} value={`${m.provider}:${m.id}`}>
-                            {m.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs">Judge Model</Label>
-                <Select value={judgeModel} onValueChange={setJudgeModel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
-                      <SelectGroup key={provider}>
-                        <SelectLabel className="capitalize">{provider}</SelectLabel>
-                        {providerModels.map((m) => (
-                          <SelectItem key={m.id} value={`${m.provider}:${m.id}`}>
-                            {m.label}
-                            {m.tier === 'strong' ? ' (Recommended)' : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
+          <CardContent className="space-y-6">
             {sameModelWarning && (
               <div className="flex items-center gap-2 text-xs text-amber-600">
                 <AlertTriangle className="h-3 w-3" />
@@ -413,13 +345,26 @@ export default function NewEvalRunPage() {
             )}
 
             <div className="space-y-2">
-              <h3 className="text-sm font-medium">LLM Configuration</h3>
-              <PromptConfigEditor
-                value={promptConfig}
-                onChange={setPromptConfig}
-                onProviderChange={setPromptConfigProvider}
-                capabilities={{ thinking: true }}
-              />
+              <h3 className="text-sm font-medium">Generation Config</h3>
+              <div className="rounded-md border p-3">
+                <PromptConfigEditor
+                  value={generationConfig}
+                  onChange={setGenerationConfig}
+                  onProviderChange={setGenerationProvider}
+                  capabilities={{ thinking: true }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Judge Config</h3>
+              <div className="rounded-md border p-3">
+                <PromptConfigEditor
+                  value={judgeConfig}
+                  onChange={setJudgeConfig}
+                  onProviderChange={setJudgeProvider}
+                />
+              </div>
             </div>
 
             {queryCount > 0 && (
