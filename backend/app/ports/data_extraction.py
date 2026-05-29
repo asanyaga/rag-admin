@@ -6,7 +6,17 @@ from uuid import UUID
 
 
 class ExtractionError(Exception):
-    """Raised by LLM extraction adapters for recoverable extraction failures."""
+    """Raised by extractors; carries optional partial LLM data for the failure handler."""
+
+    def __init__(
+        self,
+        message: str,
+        raw_response: str | None = None,
+        metadata: dict | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.raw_response = raw_response
+        self.metadata = metadata
 
 
 @dataclass(frozen=True)

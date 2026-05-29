@@ -1,23 +1,18 @@
 """Protocol definition for LLM providers."""
+from typing import Protocol
 
-from typing import Protocol, AsyncIterator
-
-from app.services.llm.types import LLMConfig, CompletionResult
+from app.services.llm.types import LLMConfig, CompletionResult, StreamResponse
 
 
 class LLMPort(Protocol):
-    """Interface that all LLM adapters must implement.
-
-    Intentionally thin — no retry logic, rate limiting, or fallback chains.
-    Those concerns belong in a mature framework adopted later.
-    """
+    """Interface that all LLM adapters must implement."""
 
     async def stream_completion(
         self,
         messages: list[dict],
         config: LLMConfig,
-    ) -> AsyncIterator[str]:
-        """Yield content tokens as they arrive from the provider."""
+    ) -> StreamResponse:
+        """Return a StreamResponse whose async iteration yields content tokens."""
         ...
 
     async def complete(

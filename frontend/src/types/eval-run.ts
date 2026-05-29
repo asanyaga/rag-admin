@@ -7,11 +7,6 @@ export type EvalRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'pa
 
 export type EvalMode = 'retrieval_only' | 'retrieval_and_answer'
 
-export interface ModelConfig {
-  provider: string
-  modelId: string
-}
-
 export interface EvalRunConfig {
   searchType: 'semantic' | 'keyword' | 'hybrid'
   topK: number
@@ -41,8 +36,8 @@ export interface EvalRun {
   createdBy: string
   createdAt: string
   mode: EvalMode
-  generationModel: ModelConfig | null
-  judgeModel: ModelConfig | null
+  generationConfig: PromptConfig | null
+  judgeConfig: PromptConfig | null
   itemsCompleted: number
   failedItemCount: number
   experimentId?: string
@@ -56,9 +51,8 @@ export interface CreateEvalRunRequest {
   name?: string
   config: EvalRunConfig
   mode: EvalMode
-  generationModel?: ModelConfig
-  judgeModel?: ModelConfig
-  llmConfig?: PromptConfig
+  generationConfig?: PromptConfig
+  judgeConfig?: PromptConfig
   experimentId?: string
   variantLabel?: string
 }
@@ -105,7 +99,6 @@ export interface EvalRunResult {
   traceData?: import('../types/trace').QueryTrace | null
 }
 
-// Progress tracking
 export interface EvalRunProgress {
   status: string
   itemsTotal: number
@@ -113,15 +106,6 @@ export interface EvalRunProgress {
   failedItemCount: number
 }
 
-// LLM model options
-export interface LlmModelOption {
-  id: string
-  label: string
-  provider: string
-  tier: string
-}
-
-// Comparison types
 export interface QueryComparisonMetrics {
   precision: number
   recall: number

@@ -24,10 +24,17 @@ def resolve_llm_config(
             max_tokens=default_max_tokens,
         )
 
+    # Translate legacy json_mode / structured_output to structured_output_mode
+    structured_output_mode = None
+    if config.structured_output:
+        structured_output_mode = "json_schema"
+    elif config.json_mode:
+        structured_output_mode = "json_mode"
+
     return LLMConfig(
         provider=config.provider or default_provider,
         model=config.model or default_model,
         temperature=config.temperature if config.temperature is not None else default_temperature,
         max_tokens=config.max_tokens if config.max_tokens is not None else default_max_tokens,
-        json_mode=bool(config.structured_output) or config.json_mode,
+        structured_output_mode=structured_output_mode,
     )

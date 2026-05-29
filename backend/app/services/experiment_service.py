@@ -11,7 +11,7 @@ from app.schemas.experiment import (
     ExperimentDetailResponse,
     VariableDiff,
 )
-from app.schemas.eval_run import EvalRunResponse, ModelConfig
+from app.schemas.eval_run import EvalRunResponse
 from app.services.exceptions import NotFoundError
 
 logger = logging.getLogger(__name__)
@@ -113,9 +113,9 @@ class ExperimentService:
             'topK': lambda r: str(r.config.get('topK', 5)) if r.config else '5',
             'similarityThreshold': lambda r: str(r.config.get('similarityThreshold', 0)) if r.config else '0',
             'mode': lambda r: r.mode,
-            'generationModel': lambda r: f"{r.generation_model_provider}:{r.generation_model_id}" if r.generation_model_provider else '—',
-            'judgeModel': lambda r: f"{r.judge_model_provider}:{r.judge_model_id}" if r.judge_model_provider else '—',
-            'systemPrompt': lambda r: ((r.llm_config or {}).get('system_prompt') or '(default)')[:80],
+            'generationModel': lambda r: f"{(r.generation_config or {}).get('provider')}:{(r.generation_config or {}).get('model')}" if r.generation_config else '—',
+            'judgeModel': lambda r: f"{(r.judge_config or {}).get('provider')}:{(r.judge_config or {}).get('model')}" if r.judge_config else '—',
+            'systemPrompt': lambda r: ((r.generation_config or {}).get('system_prompt') or '(default)')[:80],
         }
 
         varying = {}
@@ -142,20 +142,6 @@ class ExperimentService:
         gs_name = run.golden_set.name if run.golden_set else ""
         idx_name = run.index.name if run.index else ""
 
-        gen_model = None
-        if run.generation_model_provider and run.generation_model_id:
-            gen_model = ModelConfig(
-                provider=run.generation_model_provider,
-                model_id=run.generation_model_id,
-            )
-
-        judge_model = None
-        if run.judge_model_provider and run.judge_model_id:
-            judge_model = ModelConfig(
-                provider=run.judge_model_provider,
-                model_id=run.judge_model_id,
-            )
-
         exp_name = None
         if run.experiment:
             exp_name = run.experiment.name
@@ -174,14 +160,13 @@ class ExperimentService:
             created_by=run.created_by,
             created_at=run.created_at,
             mode=run.mode,
-            generation_model=gen_model,
-            judge_model=judge_model,
+            generationConfig=run.generation_config,
+            judgeConfig=run.judge_config,
             items_completed=run.items_completed,
             failed_item_count=run.failed_item_count,
             experiment_id=run.experiment_id,
             experiment_name=exp_name,
             variant_label=run.variant_label,
-            llm_config=run.llm_config,
         )
 
     def _to_response(self, experiment, run_count: int = 0) -> ExperimentResponse:

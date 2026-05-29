@@ -9,7 +9,8 @@ from app.repositories.golden_set_repository import GoldenSetRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.provider_key_repository import ProviderKeyRepository
 from app.services.llm.types import LLMConfig
-from app.services.llm.openai_adapter import OpenAIAdapter
+from app.services.llm.factory import create_adapter
+from app.services.llm.port import LLMPort
 from app.services.exceptions import NotFoundError, ValidationError
 from app.utils.encryption import decrypt
 
@@ -110,7 +111,7 @@ class GoldenSetGenerationService:
                 return
 
             api_key = decrypt(key_record.api_key_encrypted)
-            adapter = OpenAIAdapter(api_key=api_key)
+            adapter = create_adapter(llm_provider, api_key, key_record.base_url)
 
             # Load documents and build windows
             all_windows: list[dict] = []
@@ -158,6 +159,7 @@ class GoldenSetGenerationService:
                         llm_model=llm_model,
                         temperature=temperature,
                         question_types=question_types,
+                        llm_provider=llm_provider,
                     )
                 except Exception as e:
                     logger.error("Error processing window for doc %s: %s", window["doc_id"], e)
@@ -188,10 +190,11 @@ class GoldenSetGenerationService:
         self,
         gs_id: UUID,
         window: dict,
-        adapter: OpenAIAdapter,
+        adapter: LLMPort,
         llm_model: str,
         temperature: float,
         question_types: list[str],
+        llm_provider: str = "openai",
     ) -> None:
         """Generate queries for a single page window."""
         messages = self._build_generation_prompt(
@@ -203,11 +206,11 @@ class GoldenSetGenerationService:
         )
 
         config = LLMConfig(
-            provider="openai",
+            provider=llm_provider,
             model=llm_model,
             temperature=temperature,
             max_tokens=4096,
-            json_mode=True,
+            structured_output_mode="json_mode",
         )
 
         result = await adapter.complete(messages, config)

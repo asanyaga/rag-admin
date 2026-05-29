@@ -9,7 +9,7 @@ from app.services.classification.assembler import (
 )
 from app.services.classification.port import ClassificationPort, ClassificationResult
 from app.services.classification.serializer import build_batches, serialize_pages
-from app.services.llm.registry import LLMRegistry
+from app.services.llm.port import LLMPort
 from app.services.llm.types import LLMConfig
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class _BatchLLMResponse(BaseModel):
 class LLMClassifier:
     def __init__(
         self,
-        llm_registry: LLMRegistry,
+        adapter: LLMPort,
         provider: str,
         model: str,
         batch_size: int = 10,
@@ -55,7 +55,7 @@ class LLMClassifier:
         temperature: float = 0.0,
         max_tokens: int = 4096,
     ) -> None:
-        self.llm_registry = llm_registry
+        self.adapter = adapter
         self.provider = provider
         self.model = model
         self.batch_size = batch_size
@@ -67,13 +67,12 @@ class LLMClassifier:
     async def classify(
         self, doc: ParsedDocument, labels: list[str]
     ) -> ClassificationResult:
-        adapter = self.llm_registry.get(self.provider)
         config = LLMConfig(
             provider=self.provider,
             model=self.model,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
-            json_mode=True,
+            structured_output_mode="json_mode",
         )
         labels_str = ", ".join(labels)
         batches = build_batches(doc.page_count, self.batch_size, self.batch_overlap)
@@ -93,7 +92,7 @@ class LLMClassifier:
                     ),
                 },
             ]
-            result = await adapter.complete(messages, config)
+            result = await self.adapter.complete(messages, config)
             total_input += result.usage.prompt_tokens
             total_output += result.usage.completion_tokens
 

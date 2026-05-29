@@ -112,11 +112,8 @@ async def _make_run(
     config=None,
     mode="retrieval_only",
     name="Test Run",
-    gen_provider=None,
-    gen_model_id=None,
-    judge_provider=None,
-    judge_model_id=None,
-    llm_config=None,
+    generation_config=None,
+    judge_config=None,
 ) -> EvalRun:
     run = await repo.create(
         project_id=project.id,
@@ -128,11 +125,8 @@ async def _make_run(
         mode=mode,
         experiment_id=experiment_id,
         variant_label=variant_label,
-        generation_model_provider=gen_provider,
-        generation_model_id=gen_model_id,
-        judge_model_provider=judge_provider,
-        judge_model_id=judge_model_id,
-        llm_config=llm_config,
+        generation_config=generation_config,
+        judge_config=judge_config,
     )
     return run
 
@@ -426,11 +420,11 @@ async def test_compute_variable_diff_different_models(
 ):
     run1 = await _make_run(
         eval_run_repo, test_project, test_golden_set, test_index, test_user,
-        name="GPT", gen_provider="openai", gen_model_id="gpt-4o",
+        name="GPT", generation_config={"provider": "openai", "model": "gpt-4o"},
     )
     run2 = await _make_run(
         eval_run_repo, test_project, test_golden_set, test_index, test_user,
-        name="Claude", gen_provider="anthropic", gen_model_id="claude-3-haiku",
+        name="Claude", generation_config={"provider": "anthropic", "model": "claude-3-haiku"},
     )
     r1 = await eval_run_repo.get_by_id(run1.id, test_project.id)
     r2 = await eval_run_repo.get_by_id(run2.id, test_project.id)

@@ -80,9 +80,14 @@ def get_extractor(
 
     if method == "llm":
         from app.adapters.extraction.llm import LLMExtractor
-        return LLMExtractor(
-            default_endpoint=credentials.get("endpoint"),
-            default_api_key=credentials.get("api_key"),
-        )
+        deps = dependencies or {}
+        adapter = deps.get("adapter")
+        if adapter is None:
+            raise ValueError(
+                "LLMExtractor requires 'adapter' in the dependencies dict. "
+                "Call create_adapter() in the router and pass the result as dependencies['adapter']."
+            )
+        provider = deps.get("provider", "ollama_local")
+        return LLMExtractor(adapter=adapter, provider=provider)
 
     raise ValueError(f"Unknown extraction method: {method!r}")

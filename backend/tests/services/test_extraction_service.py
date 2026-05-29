@@ -260,6 +260,118 @@ class TestProcessExtraction:
         assert call_kwargs["citations"][0]["field_path"] == "total"
 
     @pytest.mark.asyncio
+    async def test_saves_metadata_and_raw_response_on_extraction_error(self):
+        from app.ports.data_extraction import ExtractionError
+        parse_run_id = uuid4()
+        result_id = uuid4()
+        cdm_content = _make_cdm_doc(str(parse_run_id), str(uuid4())).model_dump()
+
+        mock_extraction_result = MagicMock()
+        mock_extraction_result.source_parse_run_id = parse_run_id
+        mock_extraction_result.schema_definition_snapshot = {"type": "object"}
+        mock_extraction_result.config = None
+
+        mock_orm_parsed_doc = MagicMock()
+        mock_orm_parsed_doc.content = cdm_content
+
+        mock_result_repo = AsyncMock()
+        mock_result_repo.get_by_id.return_value = mock_extraction_result
+        mock_parsed_doc_repo = AsyncMock()
+        mock_parsed_doc_repo.get_by_run.return_value = mock_orm_parsed_doc
+
+        meta = {"model": "llama3.2:8b", "provider": "ollama_local", "latency_ms": 200}
+        extractor = MagicMock()
+        extractor.extract = AsyncMock(side_effect=ExtractionError(
+            "non-JSON response", raw_response="not json content", metadata=meta,
+        ))
+
+        await process_extraction(
+            extraction_result_id=result_id,
+            result_repo=mock_result_repo,
+            parsed_document_repo=mock_parsed_doc_repo,
+            extractor=extractor,
+        )
+
+        mock_result_repo.update_failed.assert_called_once()
+        kwargs = mock_result_repo.update_failed.call_args.kwargs
+        assert kwargs["extraction_metadata"] == meta
+        assert kwargs["provider_response_raw"] == {"raw_content": "not json content"}
+        assert "non-JSON response" in kwargs["status_message"]
+
+    @pytest.mark.asyncio
+    async def test_saves_metadata_only_on_connection_error(self):
+        from app.ports.data_extraction import ExtractionError
+        parse_run_id = uuid4()
+        result_id = uuid4()
+        cdm_content = _make_cdm_doc(str(parse_run_id), str(uuid4())).model_dump()
+
+        mock_extraction_result = MagicMock()
+        mock_extraction_result.source_parse_run_id = parse_run_id
+        mock_extraction_result.schema_definition_snapshot = {"type": "object"}
+        mock_extraction_result.config = None
+
+        mock_orm_parsed_doc = MagicMock()
+        mock_orm_parsed_doc.content = cdm_content
+
+        mock_result_repo = AsyncMock()
+        mock_result_repo.get_by_id.return_value = mock_extraction_result
+        mock_parsed_doc_repo = AsyncMock()
+        mock_parsed_doc_repo.get_by_run.return_value = mock_orm_parsed_doc
+
+        meta = {"model": "gpt-4o", "provider": "openai"}
+        extractor = MagicMock()
+        extractor.extract = AsyncMock(side_effect=ExtractionError(
+            "Cannot connect to LLM provider 'openai'", metadata=meta,
+        ))
+
+        await process_extraction(
+            extraction_result_id=result_id,
+            result_repo=mock_result_repo,
+            parsed_document_repo=mock_parsed_doc_repo,
+            extractor=extractor,
+        )
+
+        mock_result_repo.update_failed.assert_called_once()
+        kwargs = mock_result_repo.update_failed.call_args.kwargs
+        assert kwargs["extraction_metadata"] == meta
+        assert kwargs["provider_response_raw"] is None
+
+    @pytest.mark.asyncio
+    async def test_saves_no_partial_data_on_generic_exception(self):
+        parse_run_id = uuid4()
+        result_id = uuid4()
+        cdm_content = _make_cdm_doc(str(parse_run_id), str(uuid4())).model_dump()
+
+        mock_extraction_result = MagicMock()
+        mock_extraction_result.source_parse_run_id = parse_run_id
+        mock_extraction_result.schema_definition_snapshot = {"type": "object"}
+        mock_extraction_result.config = None
+
+        mock_orm_parsed_doc = MagicMock()
+        mock_orm_parsed_doc.content = cdm_content
+
+        mock_result_repo = AsyncMock()
+        mock_result_repo.get_by_id.return_value = mock_extraction_result
+        mock_parsed_doc_repo = AsyncMock()
+        mock_parsed_doc_repo.get_by_run.return_value = mock_orm_parsed_doc
+
+        extractor = MagicMock()
+        extractor.extract = AsyncMock(side_effect=RuntimeError("unexpected crash"))
+
+        await process_extraction(
+            extraction_result_id=result_id,
+            result_repo=mock_result_repo,
+            parsed_document_repo=mock_parsed_doc_repo,
+            extractor=extractor,
+        )
+
+        mock_result_repo.update_failed.assert_called_once()
+        kwargs = mock_result_repo.update_failed.call_args.kwargs
+        assert kwargs["extraction_metadata"] is None
+        assert kwargs["provider_response_raw"] is None
+        assert "unexpected crash" in kwargs["status_message"]
+
+    @pytest.mark.asyncio
     async def test_marks_failed_when_parse_run_not_found(self):
         result_id = uuid4()
 

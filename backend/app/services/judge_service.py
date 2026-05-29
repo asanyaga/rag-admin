@@ -94,7 +94,7 @@ class JudgeService:
                 model=judge_config.model,
                 temperature=0.0,
                 max_tokens=2048,
-                json_mode=True,
+                structured_output_mode="json_mode",
             )
             result: CompletionResult = await judge_adapter.complete(messages, config)
             return self._parse_response(result.content)

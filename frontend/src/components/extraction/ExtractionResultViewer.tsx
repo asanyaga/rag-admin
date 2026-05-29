@@ -163,8 +163,20 @@ export function ExtractionResultViewer({
             <p className="text-sm text-muted-foreground">Extraction is in progress...</p>
           )}
 
-          {result.status === 'failed' && result.statusMessage && (
-            <p className="text-sm text-destructive">{result.statusMessage}</p>
+          {result.status === 'failed' && (
+            <div className="space-y-3">
+              {result.statusMessage && (
+                <p className="text-sm text-destructive">{result.statusMessage}</p>
+              )}
+              {typeof result.providerResponseRaw?.['raw_content'] === 'string' && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">LLM Response</p>
+                  <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto whitespace-pre-wrap max-h-64">
+                    {result.providerResponseRaw['raw_content'] as string}
+                  </pre>
+                </div>
+              )}
+            </div>
           )}
 
           {result.status === 'completed' && result.structuredData && (
@@ -193,7 +205,9 @@ export function ExtractionResultViewer({
         </Collapsible>
       )}
 
-      {result.providerResponseRaw && Object.keys(result.providerResponseRaw).length > 0 && (
+      {result.providerResponseRaw &&
+        Object.keys(result.providerResponseRaw).length > 0 &&
+        typeof result.providerResponseRaw['raw_content'] !== 'string' && (
         <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="outline" size="sm" className="w-full justify-between">

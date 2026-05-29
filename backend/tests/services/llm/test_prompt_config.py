@@ -33,16 +33,16 @@ def test_resolve_explicit_temperature_overrides_default():
     assert result.temperature == 0.9
 
 
-def test_resolve_structured_output_sets_json_mode():
+def test_resolve_structured_output_sets_json_schema_mode():
     config = PromptConfig(provider="openai", model="gpt-4o", structured_output={"type": "object"})
     result = resolve_llm_config(config)
-    assert result.json_mode is True
+    assert result.structured_output_mode == "json_schema"
 
 
 def test_resolve_json_mode_passthrough():
     config = PromptConfig(provider="openai", model="gpt-4o", json_mode=True)
     result = resolve_llm_config(config)
-    assert result.json_mode is True
+    assert result.structured_output_mode == "json_mode"
 
 
 def test_resolve_none_config_returns_defaults():

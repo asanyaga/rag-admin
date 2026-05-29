@@ -207,9 +207,8 @@ async def test_get_run_config(client: AsyncClient):
     assert config["config"]["searchType"] == "semantic"
     assert config["config"]["topK"] == 5
     assert config["mode"] == "retrieval_only"
-    assert config["generationModel"] is None
-    assert config["judgeModel"] is None
-    assert config["llmConfig"] is None
+    assert config["generationConfig"] is None
+    assert config["judgeConfig"] is None
     assert config["experimentId"] == exp_id
     assert config["variantLabel"] == "baseline"
 
@@ -225,3 +224,68 @@ async def test_get_run_config_not_found(client: AsyncClient):
     )
 
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Answer mode with PromptConfig fields
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_create_run_answer_mode_with_prompt_configs(client: AsyncClient):
+    """Creating a retrieval_and_answer run with generationConfig + judgeConfig succeeds."""
+    token = await create_user_and_login(client)
+    project_id = await create_project(client, token)
+    gs_id = await create_golden_set(client, token, project_id)
+    index_id = await create_index(client, token, project_id)
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/eval-runs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "goldenSetId": gs_id,
+            "indexId": index_id,
+            "name": "Answer Run",
+            "config": {"searchType": "semantic", "topK": 5, "similarityThreshold": 0},
+            "mode": "retrieval_and_answer",
+            "generationConfig": {
+                "provider": "ollama_local",
+                "model": "llama3.2",
+                "temperature": 0.0,
+                "maxTokens": 1024,
+            },
+            "judgeConfig": {
+                "provider": "ollama_local",
+                "model": "llama3.2",
+            },
+        },
+    )
+
+    assert resp.status_code == 201, resp.text
+    data = resp.json()
+    assert data["mode"] == "retrieval_and_answer"
+    assert data["generationConfig"]["provider"] == "ollama_local"
+    assert data["generationConfig"]["model"] == "llama3.2"
+    assert data["judgeConfig"]["provider"] == "ollama_local"
+    assert data["judgeConfig"]["model"] == "llama3.2"
+
+
+@pytest.mark.asyncio
+async def test_create_run_answer_mode_missing_generation_config_rejected(client: AsyncClient):
+    """Creating a retrieval_and_answer run without generationConfig is rejected."""
+    token = await create_user_and_login(client)
+    project_id = await create_project(client, token)
+    gs_id = await create_golden_set(client, token, project_id)
+    index_id = await create_index(client, token, project_id)
+
+    resp = await client.post(
+        f"/api/v1/projects/{project_id}/eval-runs",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "goldenSetId": gs_id,
+            "indexId": index_id,
+            "config": {"searchType": "semantic", "topK": 5, "similarityThreshold": 0},
+            "mode": "retrieval_and_answer",
+        },
+    )
+
+    assert resp.status_code == 422

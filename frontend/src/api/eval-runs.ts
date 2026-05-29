@@ -8,7 +8,6 @@ import type {
   EvalRunResult,
   EvalRunProgress,
   RunComparison,
-  LlmModelOption,
 } from '@/types/eval-run'
 
 export async function listEvalRuns(projectId: string): Promise<EvalRun[]> {
@@ -67,13 +66,6 @@ export async function getEvalRunProgress(
     `/projects/${projectId}/eval-runs/${runId}/progress`
   )
   return response.data
-}
-
-export async function fetchLlmModels(): Promise<LlmModelOption[]> {
-  const response = await apiClient.get<{ models: LlmModelOption[] }>(
-    '/settings/llm-models'
-  )
-  return response.data.models
 }
 
 export async function getEvalRunConfig(

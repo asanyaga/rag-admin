@@ -1,9 +1,11 @@
 """Generic LLM extraction adapter.
 
-Works with any OpenAI-compatible provider. Reads per-run LLM config from
-the 'llm_config' key in the config dict (a serialized PromptConfig).
+Receives a pre-built LLMPort adapter at construction time.
+The caller (router or test) is responsible for resolving credentials
+and calling create_adapter() before instantiating LLMExtractor.
 """
 import json
+import re
 import time
 from typing import Any
 from uuid import UUID
@@ -13,11 +15,25 @@ from app.adapters.extraction.llm_context import (
     build_extraction_context,
     strip_source_fields,
 )
-from app.adapters.extraction.openai_compat_mixin import OpenAICompatMixin
 from app.cdm.models import ParsedDocument
-from app.ports.data_extraction import DataExtractor, ExtractionOutput
+from app.ports.data_extraction import DataExtractor, ExtractionError, ExtractionOutput
 from app.schemas.prompt_config import PromptConfig
+from app.services.llm.port import LLMPort
 from app.services.llm.prompt_config import resolve_llm_config
+from app.services.llm.types import LLMConfig, LLMConnectionError
+
+_CODE_FENCE_RE = re.compile(r'```(?:json)?\s*\n?(.*?)\n?\s*```', re.DOTALL)
+
+
+def _strip_code_fences(content: str) -> str:
+    """Extract JSON from inside a code fence anywhere in the response.
+
+    Handles models that add preamble/trailing text around the fence.
+    Returns content unchanged if no fence is found.
+    """
+    m = _CODE_FENCE_RE.search(content.strip())
+    return m.group(1).strip() if m else content.strip()
+
 
 DEFAULT_EXTRACTION_SYSTEM_PROMPT = (
     "You are a structured data extraction assistant. Extract information from the provided "
@@ -43,19 +59,15 @@ where in the document you found the value.
 Return a single JSON object that conforms to the schema (including __source fields)."""
 
 
-class LLMExtractor(OpenAICompatMixin, DataExtractor):
-    """Structured extraction via any OpenAI-compatible LLM provider."""
+class LLMExtractor(DataExtractor):
+    """Structured extraction via any LLMPort adapter."""
 
     extractor_type = "llm"
     display_name = "LLM"
 
-    def __init__(
-        self,
-        default_endpoint: str | None = None,
-        default_api_key: str | None = None,
-    ) -> None:
-        self._default_endpoint = default_endpoint
-        self._default_api_key = default_api_key
+    def __init__(self, adapter: LLMPort, provider: str = "ollama_local") -> None:
+        self._adapter = adapter
+        self._provider = provider
 
     def _build_messages(
         self,
@@ -80,36 +92,62 @@ class LLMExtractor(OpenAICompatMixin, DataExtractor):
     ) -> ExtractionOutput:
         cfg = dict(config or {})
 
-        # Apply constructor defaults when not overridden per-run
-        if self._default_endpoint and "endpoint" not in cfg:
-            cfg["endpoint"] = self._default_endpoint
-        if self._default_api_key and "api_key" not in cfg:
-            cfg["api_key"] = self._default_api_key
-
-        # Resolve LLM config from PromptConfig stored in config["llm_config"]
         prompt_config: PromptConfig | None = None
         if cfg.get("llm_config"):
             prompt_config = PromptConfig.model_validate(cfg["llm_config"])
-        llm_config = resolve_llm_config(
+        resolved = resolve_llm_config(
             prompt_config,
-            default_provider="ollama_local",
+            default_provider=self._provider,
             default_model="llama3.2:8b",
+            default_max_tokens=4096,
         )
-        cfg["model"] = llm_config.model
-        cfg["temperature"] = llm_config.temperature
-        cfg["max_tokens"] = llm_config.max_tokens
         if prompt_config and prompt_config.system_prompt:
             cfg["system_prompt"] = prompt_config.system_prompt
 
-        context = build_extraction_context(
-            parsed_document, cfg.get("inject_block_ids", False)
-        )
+        structured_output_mode = cfg.get("structured_output_mode", "json_schema")
+        context = build_extraction_context(parsed_document, cfg.get("inject_block_ids", False))
         aug_schema = augment_schema_with_sources(schema)
         messages = self._build_messages(aug_schema, context, cfg)
 
+        llm_config = LLMConfig(
+            provider=resolved.provider,
+            model=resolved.model,
+            temperature=resolved.temperature,
+            max_tokens=resolved.max_tokens,
+            structured_output_mode=structured_output_mode,
+            structured_output_schema=aug_schema if structured_output_mode == "json_schema" else None,
+        )
+
         t0 = time.monotonic()
-        raw = await self._call_model(messages, aug_schema, cfg)
+        try:
+            result = await self._adapter.complete(messages, llm_config)
+        except LLMConnectionError as exc:
+            raise ExtractionError(
+                f"Cannot connect to LLM provider '{resolved.provider}': {exc}",
+                metadata={
+                    "model": llm_config.model,
+                    "provider": llm_config.provider,
+                },
+            ) from exc
         latency_ms = int((time.monotonic() - t0) * 1000)
+
+        try:
+            raw = json.loads(_strip_code_fences(result.content))
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise ExtractionError(
+                f"Model returned non-JSON response: {result.content[:200]!r}",
+                raw_response=result.content,
+                metadata={
+                    "model": llm_config.model,
+                    "provider": llm_config.provider,
+                    "latency_ms": latency_ms,
+                    "usage": {
+                        "prompt_tokens": result.usage.prompt_tokens,
+                        "completion_tokens": result.usage.completion_tokens,
+                        "total_tokens": result.usage.total_tokens,
+                    } if result.usage else None,
+                },
+            ) from exc
 
         structured_data, citations = strip_source_fields(raw, schema)
 
@@ -118,5 +156,14 @@ class LLMExtractor(OpenAICompatMixin, DataExtractor):
             source_parse_run_id=UUID(parsed_document.parse_run_id),
             citations=citations,
             provider_response_raw=raw,
-            extraction_metadata={"model": cfg.get("model"), "latency_ms": latency_ms},
+            extraction_metadata={
+                "model": llm_config.model,
+                "provider": llm_config.provider,
+                "latency_ms": latency_ms,
+                "usage": {
+                    "prompt_tokens": result.usage.prompt_tokens,
+                    "completion_tokens": result.usage.completion_tokens,
+                    "total_tokens": result.usage.total_tokens,
+                } if result.usage else None,
+            },
         )

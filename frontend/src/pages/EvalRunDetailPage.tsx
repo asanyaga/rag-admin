@@ -64,9 +64,9 @@ export default function EvalRunDetailPage() {
           <p className="text-sm text-muted-foreground">
             {run.indexName} &middot; {run.config.searchType} &middot; k=
             {run.config.topK} &middot; {run.goldenSetName}
-            {run.generationModel && (
+            {run.generationConfig?.model && (
               <>
-                {' '}&middot; Gen: {run.generationModel.modelId}
+                {' '}&middot; Gen: {run.generationConfig.provider}/{run.generationConfig.model}
               </>
             )}
           </p>

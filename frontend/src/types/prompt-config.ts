@@ -39,6 +39,11 @@ export const PROVIDER_MODEL_OPTIONS: Record<string, { value: string; label: stri
   ],
   ollama_cloud: [],
   ollama_local: [],
+  groq: [
+    { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
+    { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
+    { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
+  ],
 }
 
 export const PROVIDERS = [
@@ -46,6 +51,7 @@ export const PROVIDERS = [
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'ollama_cloud', label: 'Ollama Cloud' },
   { value: 'ollama_local', label: 'Ollama (Local)' },
+  { value: 'groq', label: 'Groq' },
 ]
 
 export const THINKING_PROVIDERS = new Set(['openai', 'anthropic', 'deepseek'])

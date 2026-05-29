@@ -1,27 +1,22 @@
 """Anthropic LLM adapter."""
-
 import re
 import time
 import logging
-from typing import AsyncIterator
+from typing import AsyncGenerator
 
-from anthropic import AsyncAnthropic, BadRequestError
+from anthropic import AsyncAnthropic, BadRequestError, APIConnectionError
 
-from app.services.llm.types import LLMConfig, TokenUsage, CompletionResult
+from app.services.llm.types import (
+    LLMConfig, TokenUsage, CompletionResult, StreamResponse, LLMConnectionError,
+)
 
 logger = logging.getLogger(__name__)
 
-# Matches Anthropic's deprecation message: "`param_name` is deprecated for this model."
 _DEPRECATED_PARAM_RE = re.compile(r"`(\w+)`\s+is deprecated")
+_JSON_INSTRUCTION = "\n\nRespond with valid JSON only. No markdown, no explanation."
 
 
 def _strip_deprecated(kwargs: dict, error_msg: str) -> dict | None:
-    """Return a copy of kwargs with the deprecated param removed.
-
-    Parses the param name directly from Anthropic's error message so any
-    future deprecations are handled automatically without code changes.
-    Returns None if the error doesn't name a param we can safely remove.
-    """
     match = _DEPRECATED_PARAM_RE.search(error_msg)
     if match:
         param = match.group(1)
@@ -36,50 +31,23 @@ class AnthropicAdapter:
     def __init__(self, api_key: str):
         self.client = AsyncAnthropic(api_key=api_key)
 
-    async def stream_completion(
-        self,
-        messages: list[dict],
-        config: LLMConfig,
-    ) -> AsyncIterator[str]:
-        """Stream content tokens from Anthropic.
-
-        Retries once without the offending parameter if Anthropic returns a
-        deprecation error (e.g. temperature not supported on newer models).
-        """
-        system_msg, user_messages = self._split_system(messages)
-        kwargs: dict = dict(
-            model=config.model,
-            messages=user_messages,
-            system=system_msg or "",
-            temperature=config.temperature,
-            max_tokens=config.max_tokens,
-        )
-        async for token in self._stream(kwargs):
-            yield token
-
-    async def _stream(self, kwargs: dict) -> AsyncIterator[str]:
-        try:
-            async with self.client.messages.stream(**kwargs) as stream:
-                async for text in stream.text_stream:
-                    yield text
-        except BadRequestError as e:
-            retried = _strip_deprecated(kwargs, str(e))
-            if retried is not None:
-                logger.warning("Anthropic deprecated param stripped, retrying: %s", e)
-                async with self.client.messages.stream(**retried) as stream:
-                    async for text in stream.text_stream:
-                        yield text
-            else:
-                raise
-
     async def complete(
         self,
         messages: list[dict],
         config: LLMConfig,
     ) -> CompletionResult:
         """Non-streaming completion with usage metadata."""
+        if config.structured_output_mode == "json_schema":
+            raise NotImplementedError(
+                "Anthropic does not support json_schema structured output mode. "
+                "Use 'json_mode' or 'prompt_only' instead."
+            )
+
         start = time.monotonic()
         system_msg, user_messages = self._split_system(messages)
+
+        if config.structured_output_mode == "json_mode":
+            system_msg = (system_msg or "") + _JSON_INSTRUCTION
 
         kwargs: dict = dict(
             model=config.model,
@@ -98,10 +66,11 @@ class AnthropicAdapter:
                 response = await self.client.messages.create(**retried)
             else:
                 raise
+        except APIConnectionError as exc:
+            raise LLMConnectionError(str(exc)) from exc
 
         latency = (time.monotonic() - start) * 1000
         content = response.content[0].text if response.content else ""
-
         return CompletionResult(
             content=content,
             usage=TokenUsage(
@@ -114,12 +83,63 @@ class AnthropicAdapter:
             provider="anthropic",
         )
 
+    async def stream_completion(
+        self,
+        messages: list[dict],
+        config: LLMConfig,
+    ) -> StreamResponse:
+        """Return a StreamResponse. Iterate it for tokens; read .usage after."""
+        if config.structured_output_mode == "json_schema":
+            raise NotImplementedError(
+                "Anthropic does not support json_schema structured output mode."
+            )
+
+        system_msg, user_messages = self._split_system(messages)
+        if config.structured_output_mode == "json_mode":
+            system_msg = (system_msg or "") + _JSON_INSTRUCTION
+
+        kwargs: dict = dict(
+            model=config.model,
+            messages=user_messages,
+            system=system_msg or "",
+            temperature=config.temperature,
+            max_tokens=config.max_tokens,
+        )
+        sr = StreamResponse()
+        sr._source = self._stream_tokens(kwargs, sr)
+        return sr
+
+    async def _stream_tokens(
+        self, kwargs: dict, sr: StreamResponse
+    ) -> AsyncGenerator[str, None]:
+        try:
+            async with self.client.messages.stream(**kwargs) as stream:
+                async for text in stream.text_stream:
+                    yield text
+                final_msg = await stream.get_final_message()
+                sr.usage = TokenUsage(
+                    prompt_tokens=final_msg.usage.input_tokens,
+                    completion_tokens=final_msg.usage.output_tokens,
+                    total_tokens=final_msg.usage.input_tokens + final_msg.usage.output_tokens,
+                )
+        except BadRequestError as e:
+            retried = _strip_deprecated(kwargs, str(e))
+            if retried is not None:
+                logger.warning("Anthropic deprecated param stripped, retrying: %s", e)
+                async with self.client.messages.stream(**retried) as stream:
+                    async for text in stream.text_stream:
+                        yield text
+                    final_msg = await stream.get_final_message()
+                    sr.usage = TokenUsage(
+                        prompt_tokens=final_msg.usage.input_tokens,
+                        completion_tokens=final_msg.usage.output_tokens,
+                        total_tokens=final_msg.usage.input_tokens + final_msg.usage.output_tokens,
+                    )
+        except APIConnectionError as exc:
+            raise LLMConnectionError(str(exc)) from exc
+
     @staticmethod
     def _split_system(messages: list[dict]) -> tuple[str | None, list[dict]]:
-        """Extract system message from the messages list.
-
-        Anthropic API takes system as a separate parameter, not in messages.
-        """
         system = None
         user_messages = []
         for msg in messages:

@@ -62,6 +62,13 @@ class ProviderKey(Base):
         nullable=False
     )
 
+    # Optional base URL for self-hosted / custom inference endpoints
+    base_url: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        default=None,
+    )
+
     # Audit
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
