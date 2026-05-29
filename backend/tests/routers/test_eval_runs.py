@@ -248,14 +248,14 @@ async def test_create_run_answer_mode_with_prompt_configs(client: AsyncClient):
             "config": {"searchType": "semantic", "topK": 5, "similarityThreshold": 0},
             "mode": "retrieval_and_answer",
             "generationConfig": {
-                "provider": "openai",
-                "model": "gpt-4o",
+                "provider": "ollama_local",
+                "model": "llama3.2",
                 "temperature": 0.0,
                 "maxTokens": 1024,
             },
             "judgeConfig": {
-                "provider": "openai",
-                "model": "gpt-4o",
+                "provider": "ollama_local",
+                "model": "llama3.2",
             },
         },
     )
@@ -263,10 +263,10 @@ async def test_create_run_answer_mode_with_prompt_configs(client: AsyncClient):
     assert resp.status_code == 201, resp.text
     data = resp.json()
     assert data["mode"] == "retrieval_and_answer"
-    assert data["generationConfig"]["provider"] == "openai"
-    assert data["generationConfig"]["model"] == "gpt-4o"
-    assert data["judgeConfig"]["provider"] == "openai"
-    assert data["judgeConfig"]["model"] == "gpt-4o"
+    assert data["generationConfig"]["provider"] == "ollama_local"
+    assert data["generationConfig"]["model"] == "llama3.2"
+    assert data["judgeConfig"]["provider"] == "ollama_local"
+    assert data["judgeConfig"]["model"] == "llama3.2"
 
 
 @pytest.mark.asyncio
