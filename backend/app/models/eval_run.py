@@ -66,11 +66,8 @@ class EvalRun(Base):
         String(30), nullable=False, default="retrieval_only",
         server_default="retrieval_only"
     )
-    generation_model_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    generation_model_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    judge_model_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    judge_model_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    llm_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    generation_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    judge_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     items_completed: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
