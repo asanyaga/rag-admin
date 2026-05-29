@@ -19,7 +19,6 @@ from app.schemas.eval_run import (
     EvalRunProgress,
     RunComparisonResponse,
 )
-from app.schemas.llm_models import LlmModelsResponse, get_available_chat_models
 from app.services.eval_service import EvalService
 from app.services.judge_service import JudgeService
 from app.services.query_service import QueryService
@@ -30,12 +29,6 @@ from app.services.exceptions import NotFoundError, ValidationError
 router = APIRouter(
     prefix="/projects/{project_id}/eval-runs",
     tags=["eval_runs"],
-)
-
-# Settings router for LLM models endpoint
-settings_router = APIRouter(
-    prefix="/settings",
-    tags=["settings"],
 )
 
 
@@ -81,8 +74,8 @@ async def execute_eval_run_background(
     project_id: UUID,
     user_id: UUID,
     mode: str = "retrieval_only",
-    generation_provider: str | None = None,
-    judge_provider: str | None = None,
+    generation_config: dict | None = None,
+    judge_config: dict | None = None,
 ) -> None:
     """Background task to execute an eval run."""
     eval_run_repo = EvalRunRepository(db)
@@ -97,20 +90,14 @@ async def execute_eval_run_background(
     judge_adapter = None
 
     if mode == "retrieval_and_answer":
-        if generation_provider:
-            creds = await resolve_provider_credentials(
-                generation_provider, user_id, project_id, db
-            )
-            generation_adapter = create_adapter(
-                generation_provider, creds.api_key, creds.base_url
-            )
-        if judge_provider:
-            creds = await resolve_provider_credentials(
-                judge_provider, user_id, project_id, db
-            )
-            judge_adapter = create_adapter(
-                judge_provider, creds.api_key, creds.base_url
-            )
+        if generation_config and generation_config.get("provider"):
+            provider = generation_config["provider"]
+            creds = await resolve_provider_credentials(provider, user_id, project_id, db)
+            generation_adapter = create_adapter(provider, creds.api_key, creds.base_url)
+        if judge_config and judge_config.get("provider"):
+            provider = judge_config["provider"]
+            creds = await resolve_provider_credentials(provider, user_id, project_id, db)
+            judge_adapter = create_adapter(provider, creds.api_key, creds.base_url)
 
     service = EvalService(
         eval_run_repo, golden_set_repo, query_service,
@@ -186,8 +173,8 @@ async def create_eval_run(
             project_id=project_id,
             user_id=current_user.id,
             mode=data.mode,
-            generation_provider=data.generation_model.provider if data.generation_model else None,
-            judge_provider=data.judge_model.provider if data.judge_model else None,
+            generation_config=data.generation_config.model_dump(by_alias=False, mode="json") if data.generation_config else None,
+            judge_config=data.judge_config.model_dump(by_alias=False, mode="json") if data.judge_config else None,
         )
 
         return run
@@ -274,20 +261,3 @@ async def get_eval_run_results(
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-
-# ---------------------------------------------------------------------------
-# Settings — LLM models
-# ---------------------------------------------------------------------------
-
-@settings_router.get("/llm-models", response_model=LlmModelsResponse)
-async def list_llm_models(
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Return available chat models filtered by configured provider keys."""
-    provider_key_repo = ProviderKeyRepository(db)
-    keys = await provider_key_repo.list_for_user(current_user.id)
-    configured_providers = {k.provider for k in keys}
-
-    models = get_available_chat_models(configured_providers)
-    return LlmModelsResponse(models=models)
