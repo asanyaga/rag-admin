@@ -1,9 +1,8 @@
 """Generic LLM extraction adapter.
 
-Works with any provider supported by create_adapter(). Reads per-run LLM
-config from the 'llm_config' key in the config dict (a serialized PromptConfig).
-Caller is responsible for pre-resolving credentials (provider, api_key, base_url)
-and placing them in the config dict before calling extract().
+Receives a pre-built LLMPort adapter at construction time.
+The caller (router or test) is responsible for resolving credentials
+and calling create_adapter() before instantiating LLMExtractor.
 """
 import json
 import time
@@ -18,7 +17,7 @@ from app.adapters.extraction.llm_context import (
 from app.cdm.models import ParsedDocument
 from app.ports.data_extraction import DataExtractor, ExtractionError, ExtractionOutput
 from app.schemas.prompt_config import PromptConfig
-from app.services.llm.factory import create_adapter
+from app.services.llm.port import LLMPort
 from app.services.llm.prompt_config import resolve_llm_config
 from app.services.llm.types import LLMConfig, LLMConnectionError
 
@@ -47,18 +46,14 @@ Return a single JSON object that conforms to the schema (including __source fiel
 
 
 class LLMExtractor(DataExtractor):
-    """Structured extraction via any LLM provider supported by create_adapter()."""
+    """Structured extraction via any LLMPort adapter."""
 
     extractor_type = "llm"
     display_name = "LLM"
 
-    def __init__(
-        self,
-        default_provider: str = "ollama_local",
-        default_api_key: str = "ollama",
-    ) -> None:
-        self._default_provider = default_provider
-        self._default_api_key = default_api_key
+    def __init__(self, adapter: LLMPort, provider: str = "ollama_local") -> None:
+        self._adapter = adapter
+        self._provider = provider
 
     def _build_messages(
         self,
@@ -83,18 +78,12 @@ class LLMExtractor(DataExtractor):
     ) -> ExtractionOutput:
         cfg = dict(config or {})
 
-        # Resolve provider and credentials from cfg (pre-resolved by caller)
-        provider = cfg.get("provider") or self._default_provider
-        api_key = cfg.get("api_key") or self._default_api_key
-        base_url: str | None = cfg.get("base_url")
-
-        # Resolve LLM config from PromptConfig stored in config["llm_config"]
         prompt_config: PromptConfig | None = None
         if cfg.get("llm_config"):
             prompt_config = PromptConfig.model_validate(cfg["llm_config"])
         resolved = resolve_llm_config(
             prompt_config,
-            default_provider=provider,
+            default_provider=self._provider,
             default_model="llama3.2:8b",
         )
         if prompt_config and prompt_config.system_prompt:
@@ -114,13 +103,13 @@ class LLMExtractor(DataExtractor):
             structured_output_schema=aug_schema if structured_output_mode == "json_schema" else None,
         )
 
-        adapter = create_adapter(resolved.provider, api_key, base_url)
-
         t0 = time.monotonic()
         try:
-            result = await adapter.complete(messages, llm_config)
+            result = await self._adapter.complete(messages, llm_config)
         except LLMConnectionError as exc:
-            raise ExtractionError(f"Cannot connect to LLM provider '{provider}': {exc}") from exc
+            raise ExtractionError(
+                f"Cannot connect to LLM provider '{resolved.provider}': {exc}"
+            ) from exc
         latency_ms = int((time.monotonic() - t0) * 1000)
 
         try:
