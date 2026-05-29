@@ -22,12 +22,17 @@ from app.services.llm.port import LLMPort
 from app.services.llm.prompt_config import resolve_llm_config
 from app.services.llm.types import LLMConfig, LLMConnectionError
 
-_CODE_FENCE_RE = re.compile(r'^```(?:json)?\s*\n?(.*?)\n?```\s*$', re.DOTALL)
+_CODE_FENCE_RE = re.compile(r'```(?:json)?\s*\n?(.*?)\n?\s*```', re.DOTALL)
 
 
 def _strip_code_fences(content: str) -> str:
-    m = _CODE_FENCE_RE.match(content.strip())
-    return m.group(1).strip() if m else content
+    """Extract JSON from inside a code fence anywhere in the response.
+
+    Handles models that add preamble/trailing text around the fence.
+    Returns content unchanged if no fence is found.
+    """
+    m = _CODE_FENCE_RE.search(content.strip())
+    return m.group(1).strip() if m else content.strip()
 
 
 DEFAULT_EXTRACTION_SYSTEM_PROMPT = (

@@ -184,6 +184,26 @@ class TestLLMExtractorExtract:
         output = await e.extract(parsed_doc, schema, {})
         assert output.structured_data == {"total": 42}
 
+    async def test_strips_code_fence_when_model_adds_preamble_text(self, parsed_doc):
+        from app.adapters.extraction.llm import LLMExtractor
+        raw = {"vendor": "Acme", "vendor__source": {"page_index": 0}}
+        preamble = f"Here is the extracted JSON:\n```json\n{json.dumps(raw)}\n```"
+        adapter = _make_adapter(preamble)
+        e = LLMExtractor(adapter=adapter, provider="ollama_local")
+        schema = {"type": "object", "properties": {"vendor": {"type": "string"}}}
+        output = await e.extract(parsed_doc, schema, {})
+        assert output.structured_data == {"vendor": "Acme"}
+
+    async def test_strips_code_fence_when_model_adds_trailing_text(self, parsed_doc):
+        from app.adapters.extraction.llm import LLMExtractor
+        raw = {"total": 99}
+        with_trailing = f"```json\n{json.dumps(raw)}\n```\n\nNote: field was found on page 1."
+        adapter = _make_adapter(with_trailing)
+        e = LLMExtractor(adapter=adapter, provider="ollama_local")
+        schema = {"type": "object", "properties": {"total": {"type": "number"}}}
+        output = await e.extract(parsed_doc, schema, {})
+        assert output.structured_data == {"total": 99}
+
     async def test_citations_populated_from_source_fields(self, parsed_doc):
         from app.adapters.extraction.llm import LLMExtractor
         schema = {"type": "object", "properties": {"vendor": {"type": "string"}}}
