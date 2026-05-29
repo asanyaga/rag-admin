@@ -9,7 +9,6 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user
 from app.models import User
@@ -32,6 +31,7 @@ from app.schemas.extraction_result import (
 from app.services.extraction_service import ExtractionService, process_extraction
 from app.services.exceptions import NotFoundError, ConflictError
 from app.services.provider_key_service import resolve_api_key
+from app.services.llm.factory import create_adapter
 from app.adapters.extraction.registry import get_extractor
 
 
@@ -48,41 +48,6 @@ def get_extraction_service(
         parsed_document_repo=ParsedDocumentRepository(db),
         document_repo=DocumentRepository(db),
     )
-
-
-async def _resolve_credentials_from_settings(
-    repo: ProviderKeyRepository,
-    user_id: UUID,
-    method: str,
-    provider: str | None = None,
-) -> dict:
-    """Resolve adapter credentials: DB first, env-var fallback.
-
-    For the 'llm' method, `provider` determines which endpoint + key to return.
-    The Ollama local endpoint URL is config (not a secret) and always comes from settings.
-    """
-    if method == "llamaextract":
-        key = await resolve_api_key(repo, user_id, "llama_cloud")
-        return {"api_key": key} if key else {}
-
-    if method == "llm":
-        effective_provider = provider or "ollama_local"
-
-        if effective_provider == "ollama_local":
-            return {"provider": "ollama_local"}
-
-        if effective_provider == "ollama_cloud":
-            key = await resolve_api_key(repo, user_id, "ollama_cloud")
-            return {"provider": "ollama_cloud", "api_key": key}
-
-        if effective_provider == "openai":
-            key = await resolve_api_key(repo, user_id, "openai")
-            return {"provider": "openai", "api_key": key}
-
-        # Unknown provider — return empty dict (extractor uses its own defaults)
-        return {}
-
-    return {}
 
 
 # --- Schema endpoints ---
@@ -198,21 +163,36 @@ async def run_extraction(
 ):
     try:
         provider_key_repo = ProviderKeyRepository(db)
-        llm_provider = body.llm_config.provider if body.llm_config else None
-        credentials = await _resolve_credentials_from_settings(
-            provider_key_repo,
-            current_user.id,
-            body.extraction_method,
-            provider=llm_provider,
-        )
-        extractor = get_extractor(
-            body.extraction_method,
-            credentials,
-            {
-                "source_document_repo": SourceDocumentRepository(db),
-                "storage_service": get_storage_service(),
-            },
-        )
+
+        if body.extraction_method == "llm":
+            provider = (body.llm_config.provider if body.llm_config else None) or "ollama_local"
+            api_key = await resolve_api_key(provider_key_repo, current_user.id, provider)
+            if api_key is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"No API key configured for provider '{provider}'",
+                )
+            adapter = create_adapter(provider, api_key)
+            extractor = get_extractor(
+                "llm",
+                {},
+                {
+                    "source_document_repo": SourceDocumentRepository(db),
+                    "storage_service": get_storage_service(),
+                    "adapter": adapter,
+                    "provider": provider,
+                },
+            )
+        else:
+            llama_key = await resolve_api_key(provider_key_repo, current_user.id, "llama_cloud")
+            extractor = get_extractor(
+                body.extraction_method,
+                {"api_key": llama_key} if llama_key else {},
+                {
+                    "source_document_repo": SourceDocumentRepository(db),
+                    "storage_service": get_storage_service(),
+                },
+            )
 
         result = await service.run_extraction(
             parse_run_id=body.parse_run_id,
