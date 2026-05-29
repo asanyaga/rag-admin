@@ -128,6 +128,13 @@ class TestLLMExtractorExtract:
         llm_config_arg = adapter.complete.call_args.args[1]
         assert llm_config_arg.max_tokens == 8192
 
+    async def test_default_max_tokens_high_enough_for_extraction(self, extractor, adapter, parsed_doc):
+        """Extraction responses include __source fields — default must be well above 1024."""
+        schema = {"type": "object", "properties": {}}
+        await extractor.extract(parsed_doc, schema, {})
+        llm_config_arg = adapter.complete.call_args.args[1]
+        assert llm_config_arg.max_tokens >= 4096
+
     async def test_structured_output_schema_passed_for_json_schema_mode(self, parsed_doc):
         from app.adapters.extraction.llm import LLMExtractor
         adapter = _make_adapter('{"total": 99}')

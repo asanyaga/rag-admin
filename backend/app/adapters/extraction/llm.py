@@ -99,6 +99,7 @@ class LLMExtractor(DataExtractor):
             prompt_config,
             default_provider=self._provider,
             default_model="llama3.2:8b",
+            default_max_tokens=4096,
         )
         if prompt_config and prompt_config.system_prompt:
             cfg["system_prompt"] = prompt_config.system_prompt
