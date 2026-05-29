@@ -123,3 +123,70 @@ class TestUpdateResultAcceptsProvenanceFields:
         await repo.update_result(result_id=mock_result.id, structured_data={"x": 1})
         assert mock_result.citations is None
         assert mock_result.provider_response_raw is None
+
+
+class TestUpdateFailed:
+    @pytest.mark.asyncio
+    async def test_sets_status_failed_and_message(self):
+        mock_result = _make_mock_result()
+        session = AsyncMock()
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        repo = ExtractionResultRepository(session)
+        repo.get_by_id = AsyncMock(return_value=mock_result)
+
+        await repo.update_failed(mock_result.id, "something went wrong")
+
+        assert mock_result.status == ExtractionResultStatus.failed
+        assert mock_result.status_message == "something went wrong"
+
+    @pytest.mark.asyncio
+    async def test_stores_extraction_metadata_when_provided(self):
+        mock_result = _make_mock_result()
+        session = AsyncMock()
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        repo = ExtractionResultRepository(session)
+        repo.get_by_id = AsyncMock(return_value=mock_result)
+
+        meta = {"model": "gpt-4o", "provider": "openai", "latency_ms": 500}
+        await repo.update_failed(mock_result.id, "parse failed", extraction_metadata=meta)
+
+        assert mock_result.extraction_metadata == meta
+
+    @pytest.mark.asyncio
+    async def test_stores_provider_response_raw_when_provided(self):
+        mock_result = _make_mock_result()
+        session = AsyncMock()
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        repo = ExtractionResultRepository(session)
+        repo.get_by_id = AsyncMock(return_value=mock_result)
+
+        raw = {"raw_content": "not json content here"}
+        await repo.update_failed(mock_result.id, "parse failed", provider_response_raw=raw)
+
+        assert mock_result.provider_response_raw == raw
+
+    @pytest.mark.asyncio
+    async def test_does_not_overwrite_existing_metadata_when_not_passed(self):
+        mock_result = _make_mock_result(extraction_metadata={"prior": "value"})
+        session = AsyncMock()
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        repo = ExtractionResultRepository(session)
+        repo.get_by_id = AsyncMock(return_value=mock_result)
+
+        await repo.update_failed(mock_result.id, "oops")
+
+        assert mock_result.extraction_metadata == {"prior": "value"}
+
+    @pytest.mark.asyncio
+    async def test_returns_none_when_result_not_found(self):
+        session = AsyncMock()
+        repo = ExtractionResultRepository(session)
+        repo.get_by_id = AsyncMock(return_value=None)
+
+        result = await repo.update_failed(uuid4(), "oops")
+
+        assert result is None

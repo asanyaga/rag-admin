@@ -98,6 +98,27 @@ class ExtractionResultRepository:
         await self.session.refresh(extraction_result)
         return extraction_result
 
+    async def update_failed(
+        self,
+        result_id: UUID,
+        status_message: str,
+        extraction_metadata: dict | None = None,
+        provider_response_raw: dict | None = None,
+    ) -> ExtractionResult | None:
+        """Mark as failed, preserving any partial LLM data already collected."""
+        extraction_result = await self.get_by_id(result_id)
+        if not extraction_result:
+            return None
+        extraction_result.status = ExtractionResultStatus.failed
+        extraction_result.status_message = status_message
+        if extraction_metadata is not None:
+            extraction_result.extraction_metadata = extraction_metadata
+        if provider_response_raw is not None:
+            extraction_result.provider_response_raw = provider_response_raw
+        await self.session.commit()
+        await self.session.refresh(extraction_result)
+        return extraction_result
+
     async def set_started(self, result_id: UUID) -> ExtractionResult | None:
         """Mark an extraction result as started."""
         extraction_result = await self.get_by_id(result_id)
