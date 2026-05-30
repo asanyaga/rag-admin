@@ -121,21 +121,6 @@ async def _seed_run_with_pdoc(
     return doc, pdoc
 
 
-def _full_markdown_config() -> dict:
-    return {
-        "parser": "llamaparse",
-        "parseConfigHash": "h" * 64,
-        "sourceRepresentation": "full_markdown",
-        "chunkingStrategy": "markdown_heading",
-        "chunkSize": 512,
-        "chunkOverlap": 0,
-        "splitHeadingLevel": 2,
-        "maxSectionChars": 4000,
-        "embeddingProvider": "openai",
-        "embeddingModel": "text-embedding-3-small",
-    }
-
-
 def _full_text_config() -> dict:
     return {
         "parser": "llamaparse",
@@ -183,12 +168,12 @@ async def test_preview_chunks_requires_parsed_document_id(
 
 
 @pytest.mark.asyncio
-async def test_preview_chunks_with_parsed_document_id_full_markdown(
+async def test_preview_chunks_rejects_full_markdown_config(
     client: AsyncClient, test_db: AsyncSession
 ):
-    """Happy path through the seam using parsedDocumentId → 200 with chunks."""
-    token = await _signup(client, "preview_pdoc@example.com")
-    user = await _user_by_email(test_db, "preview_pdoc@example.com")
+    """Submitting full_markdown source representation returns 422."""
+    token = await _signup(client, "preview_reject_markdown@example.com")
+    user = await _user_by_email(test_db, "preview_reject_markdown@example.com")
     project = await _make_project(test_db, user)
 
     _doc, pdoc = await _seed_run_with_pdoc(
@@ -196,7 +181,7 @@ async def test_preview_chunks_with_parsed_document_id_full_markdown(
         user=user,
         project=project,
         sha="a" * 64,
-        full_markdown="# Heading\n\nSome content for the preview.",
+        full_markdown="# Heading\n\nSome content.",
     )
     assert pdoc is not None
 
@@ -204,17 +189,22 @@ async def test_preview_chunks_with_parsed_document_id_full_markdown(
         f"/api/v1/projects/{project.id}/indexes/preview-chunks",
         json={
             "parsedDocumentId": str(pdoc.parse_run_id),
-            "config": _full_markdown_config(),
+            "config": {
+                "parser": "llamaparse",
+                "parseConfigHash": "h" * 64,
+                "sourceRepresentation": "full_markdown",
+                "chunkingStrategy": "markdown_heading",
+                "chunkSize": 512,
+                "chunkOverlap": 0,
+                "splitHeadingLevel": 2,
+                "maxSectionChars": 4000,
+                "embeddingProvider": "openai",
+                "embeddingModel": "text-embedding-3-small",
+            },
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["totalChunksEstimate"] >= 1
-    assert isinstance(body["previewChunks"], list)
-    assert len(body["previewChunks"]) >= 1
-    assert body["previewChunks"][0]["content"] != ""
-
+    assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -231,7 +221,8 @@ async def test_preview_chunks_parsed_document_outside_project_returns_404(
         user=user_b,
         project=project_b,
         sha="e" * 64,
-        full_markdown="# B content\n\nOwner B's document.",
+        full_text="Owner B's document.",
+        full_markdown=None,
     )
     assert pdoc_b is not None
 
@@ -245,7 +236,7 @@ async def test_preview_chunks_parsed_document_outside_project_returns_404(
         f"/api/v1/projects/{project_a.id}/indexes/preview-chunks",
         json={
             "parsedDocumentId": str(pdoc_b.parse_run_id),
-            "config": _full_markdown_config(),
+            "config": _full_text_config(),
         },
         headers={"Authorization": f"Bearer {token_a}"},
     )
