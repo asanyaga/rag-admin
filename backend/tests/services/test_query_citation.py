@@ -143,3 +143,30 @@ async def test_citation_resolution_block_missing_parse_run_degrades_gracefully(m
     assert cit.bboxes is None
     assert cit.confidence is None
     assert cit.source_type == "block"
+
+
+@pytest.mark.asyncio
+async def test_block_chunk_page_indices_converted_to_1based_page_numbers():
+    """Block chunks store 0-based page_indices; _to_result must expose them as
+    1-based page_numbers so eval precision/recall matching works correctly."""
+    svc = QueryService(
+        index_repo=AsyncMock(),
+        chunk_repo=AsyncMock(),
+        provider_key_repo=AsyncMock(),
+    )
+    # Simulate a block chunk from LlamaParse (page_index=0 → document page 1)
+    chunk = _chunk(
+        source_type="block",
+        chunk_metadata={
+            "block_ids": ["b1"],
+            "page_indices": [0, 1],  # 0-based: pages 1 and 2 in the document
+            "block_roles": ["paragraph"],
+            "bboxes": [None],
+        },
+    )
+    result = await svc._to_result(chunk, score=0.8, rank=1)
+
+    assert result.metadata.page_numbers == [1, 2], (
+        "page_indices [0, 1] must be converted to 1-based page_numbers [1, 2]"
+    )
+    assert result.metadata.page == 1

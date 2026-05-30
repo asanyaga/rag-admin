@@ -16,7 +16,6 @@ import IndexDetailPage from './pages/IndexDetailPage'
 import SettingsPage from './pages/SettingsPage'
 import EvaluationPage from './pages/EvaluationPage'
 import GoldenSetEditorPage from './pages/GoldenSetEditorPage'
-import GoldenSetGeneratePage from './pages/GoldenSetGeneratePage'
 import NewEvalRunPage from './pages/NewEvalRunPage'
 import EvalRunDetailPage from './pages/EvalRunDetailPage'
 import EvalResultDetailPage from './pages/EvalResultDetailPage'
@@ -163,11 +162,6 @@ const router = createBrowserRouter([
             path: 'evaluation/golden-sets/:goldenSetId',
             element: <GoldenSetEditorPage />,
             handle: { breadcrumb: 'Golden Set Editor' },
-          },
-          {
-            path: 'evaluation/golden-sets/:goldenSetId/generate',
-            element: <GoldenSetGeneratePage />,
-            handle: { breadcrumb: 'Auto-Generate' },
           },
           {
             path: 'evaluation/experiments/:experimentId',
