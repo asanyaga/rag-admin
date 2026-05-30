@@ -59,7 +59,7 @@ class ChunkingDispatcher:
                 config=config,
                 source_document_id=source_document_id,
                 source_filename=source_filename,
-                page_boundaries=None,
+                page_boundaries=source.page_boundaries or None,
             )
         if isinstance(source, BlocksSource):
             if config.chunking_strategy == "classified_block":

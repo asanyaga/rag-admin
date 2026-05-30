@@ -106,3 +106,44 @@ def test_dispatch_empty_text_returns_empty_list():
         source_document_id=str(uuid4()),
         source_filename=None,
     ) == []
+
+
+def test_text_source_with_page_boundaries_produces_chunks_with_page_numbers():
+    """Full-text chunks from a paged source must have page_numbers in metadata."""
+    # 200 chars on page 1 (0-199), 200 chars on page 2 (200-399)
+    text = "a " * 100 + "b " * 100        # 400 chars total
+    src = TextSource(
+        text=text,
+        page_boundaries=[
+            {"page": 1, "start_char": 0,   "end_char": 200},
+            {"page": 2, "start_char": 200, "end_char": 400},
+        ],
+    )
+    chunks = ChunkingDispatcher().dispatch(
+        source=src,
+        config=_config("full_text"),
+        source_document_id=str(uuid4()),
+        source_filename="paged.pdf",
+    )
+    assert chunks, "expected at least one chunk"
+    for chunk in chunks:
+        assert chunk.metadata.get("page_numbers"), (
+            f"chunk missing page_numbers: {chunk.metadata}"
+        )
+
+
+def test_text_source_without_page_boundaries_produces_chunks_without_page_numbers():
+    """Backward compat: empty page_boundaries → no page_numbers on chunks."""
+    text = "content " * 100
+    src = TextSource(text=text, page_boundaries=[])
+    chunks = ChunkingDispatcher().dispatch(
+        source=src,
+        config=_config("full_text"),
+        source_document_id=str(uuid4()),
+        source_filename="nopages.pdf",
+    )
+    assert chunks
+    for chunk in chunks:
+        assert not chunk.metadata.get("page_numbers"), (
+            f"unexpected page_numbers: {chunk.metadata}"
+        )

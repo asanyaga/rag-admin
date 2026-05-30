@@ -78,3 +78,18 @@ def test_empty_raw_produces_single_empty_page():
     assert doc.page_count == 1
     assert len(doc.pages) == 1
     assert len(doc.blocks) == 1
+
+
+def test_pages_carry_char_offsets_when_boundaries_provided():
+    doc = SimpleTextAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
+    assert doc.pages[0].start_char == 0
+    assert doc.pages[0].end_char == 20
+    assert doc.pages[1].start_char == 22
+    assert doc.pages[1].end_char == 40
+
+
+def test_fallback_page_carries_char_offsets_spanning_full_text():
+    raw = {"text": "some text", "page_count": 1, "page_boundaries": []}
+    doc = SimpleTextAdapter().adapt(raw, SOURCE_META)
+    assert doc.pages[0].start_char == 0
+    assert doc.pages[0].end_char == len("some text")
