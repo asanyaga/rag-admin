@@ -18,7 +18,7 @@ from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.services.exceptions import NotFoundError, ValidationError
 
 
-SourceRepresentation = Literal["full_text", "full_markdown", "block"]
+SourceRepresentation = Literal["full_text", "block"]
 
 
 @dataclass(frozen=True)
@@ -87,17 +87,6 @@ class SourceResolutionService:
                 )
             return TextSource(
                 text=parsed_doc.full_text,
-                page_boundaries=_extract_page_boundaries(content),
-            )
-
-        if source_representation == "full_markdown":
-            if parsed_doc.full_markdown is None:
-                raise ValidationError(
-                    f"Parsed document {parsed_document_id} has no full_markdown. "
-                    "Re-parse with a configuration that outputs markdown."
-                )
-            return TextSource(
-                text=parsed_doc.full_markdown,
                 page_boundaries=_extract_page_boundaries(content),
             )
 
