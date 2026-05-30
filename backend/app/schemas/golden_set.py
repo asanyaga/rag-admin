@@ -149,6 +149,7 @@ class GenerateGoldenSetRequest(BaseModel):
         alias="questionTypes",
     )
     temperature: float = Field(0.7, ge=0.0, le=2.0)
+    system_prompt: str | None = Field(None, alias="systemPrompt")
 
     model_config = ConfigDict(populate_by_name=True)
 

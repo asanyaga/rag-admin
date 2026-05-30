@@ -97,6 +97,7 @@ export interface GenerateRequest {
   queriesPerDocument: number
   questionTypes: QuestionType[]
   temperature: number
+  systemPrompt?: string
 }
 
 export interface BulkReviewRequest {

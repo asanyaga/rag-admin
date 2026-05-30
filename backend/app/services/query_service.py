@@ -391,7 +391,14 @@ class QueryService:
         else:
             doc_name = "Unknown"
 
-        page_numbers = (chunk.chunk_metadata or {}).get("page_numbers")
+        meta = chunk.chunk_metadata or {}
+        page_numbers = meta.get("page_numbers")
+        if page_numbers is None:
+            # Block chunks (CDM parsers) store 0-based "page_indices" instead of
+            # "page_numbers". Convert to 1-based so eval matching works correctly.
+            page_indices = meta.get("page_indices")
+            if page_indices is not None:
+                page_numbers = [pi + 1 for pi in page_indices]
         page = page_numbers[0] if page_numbers else None
 
         citation = await self._build_citation(chunk, doc_name)

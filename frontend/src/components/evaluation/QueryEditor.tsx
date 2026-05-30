@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Trash2, Plus, Check, X } from 'lucide-react'
+import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
@@ -161,6 +162,35 @@ export function QueryEditor({
         projectId={projectId}
         onAdd={(data) => onAddSource(query.id, data)}
       />
+
+      {/* Metadata footer */}
+      <Separator />
+      <div className="space-y-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-4">
+          <span>
+            <span className="font-medium">Origin:</span>{' '}
+            {query.sourceMethod === 'auto_generated'
+              ? 'Auto-generated'
+              : query.sourceMethod === 'imported'
+              ? 'Imported'
+              : 'Manual'}
+          </span>
+          <span>
+            <span className="font-medium">Created:</span>{' '}
+            {format(new Date(query.createdAt), 'MMM d, yyyy')}
+          </span>
+          {query.questionType && (
+            <span>
+              <span className="font-medium">Type:</span> {query.questionType}
+            </span>
+          )}
+        </div>
+        {query.reasoning && (
+          <div className="rounded bg-muted/50 p-2 leading-relaxed">
+            {query.reasoning}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

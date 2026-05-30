@@ -294,6 +294,7 @@ class GoldenSetService:
             review_status=review_status,
             reasoning=query.reasoning,
             question_type=query.question_type,
+            reference_answer=query.reference_answer,
             sources=sources,
             created_at=query.created_at,
             updated_at=query.updated_at,
