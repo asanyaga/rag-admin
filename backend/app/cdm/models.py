@@ -120,6 +120,8 @@ class Block(_Frozen):
 
 class Page(_Frozen):
     index: int
+    start_char: Optional[int] = None
+    end_char: Optional[int] = None
     width: Optional[float] = None
     height: Optional[float] = None
     unit: Optional[str] = None

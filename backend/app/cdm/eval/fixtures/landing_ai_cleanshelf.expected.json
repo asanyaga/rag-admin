@@ -1,5 +1,5 @@
 {
-  "id": "a343b40d-feef-4181-a256-beddbeda437d",
+  "id": "65451f09-8980-4dcb-807e-b8fe6a5abb49",
   "source_document_id": "structural-test-src",
   "parse_run_id": "structural-test-run",
   "source_filename": "cleanshelf-12-4-26.jpg",
@@ -7,6 +7,8 @@
   "pages": [
     {
       "index": 0,
+      "start_char": null,
+      "end_char": null,
       "width": null,
       "height": null,
       "unit": null,

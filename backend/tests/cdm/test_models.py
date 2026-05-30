@@ -112,6 +112,18 @@ def test_page_defaults():
     assert p.width is None
 
 
+def test_page_accepts_char_offsets():
+    page = Page(index=0, start_char=0, end_char=500)
+    assert page.start_char == 0
+    assert page.end_char == 500
+
+
+def test_page_char_offsets_default_to_none():
+    page = Page(index=0)
+    assert page.start_char is None
+    assert page.end_char is None
+
+
 def test_label_scope_defaults_to_document():
     lbl = Label(name="annual_report")
     assert lbl.scope == "document"

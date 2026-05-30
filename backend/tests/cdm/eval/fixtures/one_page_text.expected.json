@@ -94,6 +94,7 @@
         "src-eval:p0:b0",
         "src-eval:p0:b1"
       ],
+      "end_char": null,
       "height": 792.0,
       "index": 0,
       "parser_extras": {
@@ -105,6 +106,7 @@
         "notes": null
       },
       "rotation": 0,
+      "start_char": null,
       "unit": "points",
       "width": 612.0
     }
