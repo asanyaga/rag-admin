@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ChevronRight, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,7 +10,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { EvalStatusBadge } from './EvalStatusBadge'
-import { CreateGoldenSetDialog } from './CreateGoldenSetDialog'
 import type { GoldenSet, GoldenSetCreate } from '@/types/golden-set'
 
 interface GoldenSetsTabProps {
@@ -28,16 +26,10 @@ export function GoldenSetsTab({
   onDelete,
 }: GoldenSetsTabProps) {
   const navigate = useNavigate()
-  const [dialogOpen, setDialogOpen] = useState(false)
 
-  const handleCreate = async (data: GoldenSetCreate, method: 'manual' | 'auto-generate') => {
-    const gs = await onCreate(data)
-    setDialogOpen(false)
-    if (method === 'auto-generate') {
-      navigate(`/evaluation/golden-sets/${gs.id}/generate`)
-    } else {
-      navigate(`/evaluation/golden-sets/${gs.id}`)
-    }
+  const handleCreate = async () => {
+    const gs = await onCreate({ name: 'Untitled Golden Set' })
+    navigate(`/evaluation/golden-sets/${gs.id}`)
   }
 
   if (isLoading) {
@@ -51,7 +43,7 @@ export function GoldenSetsTab({
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
+        <Button size="sm" onClick={handleCreate}>
           <Plus className="mr-2 h-4 w-4" />
           New Golden Set
         </Button>
@@ -116,11 +108,6 @@ export function GoldenSetsTab({
         </Table>
       )}
 
-      <CreateGoldenSetDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onCreate={handleCreate}
-      />
     </div>
   )
 }
