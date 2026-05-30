@@ -200,6 +200,7 @@ async def generate_golden_set(
             queries_per_document=data.queries_per_document,
             question_types=data.question_types,
             temperature=data.temperature,
+            system_prompt=data.system_prompt,
         )
 
         # Execute in background

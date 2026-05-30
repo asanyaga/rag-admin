@@ -16,6 +16,27 @@ from app.utils.encryption import decrypt
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_GENERATION_SYSTEM_PROMPT = (
+    "You are an expert at creating evaluation queries for document retrieval systems. "
+    "Given document content, you generate realistic search queries that a user might ask, "
+    "along with the specific pages that contain the answer.\n\n"
+    "You MUST respond with valid JSON in this exact format:\n"
+    '{"queries": [\n'
+    '  {\n'
+    '    "query": "the search query text",\n'
+    '    "question_type": "factual|comparison|summarization",\n'
+    '    "relevant_pages": [page_numbers],\n'
+    '    "reasoning": "brief explanation of why these pages answer the query"\n'
+    '  }\n'
+    ']}\n\n'
+    "Rules:\n"
+    "- Each query must be answerable from the provided pages only\n"
+    "- Page numbers must be from the provided page range\n"
+    "- Queries should be diverse and realistic\n"
+    "- Each query should reference 1-3 specific pages\n"
+    "- Do not create questions that require external knowledge"
+)
+
 # Page windowing constants
 WINDOW_SIZE = 5
 WINDOW_OVERLAP = 1
@@ -45,6 +66,7 @@ class GoldenSetGenerationService:
         queries_per_document: int,
         question_types: list[str],
         temperature: float,
+        system_prompt: str | None = None,
     ) -> None:
         """Validate inputs, store config, set status=pending."""
         gs = await self.gs_repo.get_by_id(gs_id, project_id)
@@ -69,6 +91,7 @@ class GoldenSetGenerationService:
             "queries_per_document": queries_per_document,
             "question_types": question_types,
             "temperature": temperature,
+            "system_prompt": system_prompt,
         }
         await self.gs_repo.set_generation_config(gs_id, project_id, config)
         await self.gs_repo.update_generation_status(
@@ -98,6 +121,7 @@ class GoldenSetGenerationService:
             queries_per_document = config["queries_per_document"]
             question_types = config["question_types"]
             temperature = config["temperature"]
+            system_prompt = config.get("system_prompt")
 
             # Get API key
             key_record = await self.provider_key_repo.get_for_provider(
@@ -160,6 +184,7 @@ class GoldenSetGenerationService:
                         temperature=temperature,
                         question_types=question_types,
                         llm_provider=llm_provider,
+                        system_prompt=system_prompt,
                     )
                 except Exception as e:
                     logger.error("Error processing window for doc %s: %s", window["doc_id"], e)
@@ -195,6 +220,7 @@ class GoldenSetGenerationService:
         temperature: float,
         question_types: list[str],
         llm_provider: str = "openai",
+        system_prompt: str | None = None,
     ) -> None:
         """Generate queries for a single page window."""
         messages = self._build_generation_prompt(
@@ -203,6 +229,7 @@ class GoldenSetGenerationService:
             doc_title=window["doc_title"],
             queries_count=window["queries_per_window"],
             question_types=question_types,
+            system_prompt=system_prompt,
         )
 
         config = LLMConfig(
@@ -287,31 +314,13 @@ class GoldenSetGenerationService:
         doc_title: str,
         queries_count: int,
         question_types: list[str],
+        system_prompt: str | None = None,
     ) -> list[dict]:
         """Build system + user messages for the LLM."""
         type_desc = ", ".join(question_types)
         page_desc = ", ".join(str(p) for p in page_range)
 
-        system_msg = (
-            "You are an expert at creating evaluation queries for document retrieval systems. "
-            "Given document content, you generate realistic search queries that a user might ask, "
-            "along with the specific pages that contain the answer.\n\n"
-            "You MUST respond with valid JSON in this exact format:\n"
-            '{"queries": [\n'
-            '  {\n'
-            '    "query": "the search query text",\n'
-            '    "question_type": "factual|comparison|summarization",\n'
-            '    "relevant_pages": [page_numbers],\n'
-            '    "reasoning": "brief explanation of why these pages answer the query"\n'
-            '  }\n'
-            ']}\n\n'
-            "Rules:\n"
-            "- Each query must be answerable from the provided pages only\n"
-            "- Page numbers must be from the provided page range\n"
-            "- Queries should be diverse and realistic\n"
-            "- Each query should reference 1-3 specific pages\n"
-            "- Do not create questions that require external knowledge"
-        )
+        system_msg = system_prompt or DEFAULT_GENERATION_SYSTEM_PROMPT
 
         user_msg = (
             f"Document: {doc_title}\n"
