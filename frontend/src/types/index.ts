@@ -9,13 +9,12 @@ export type IndexStatus = 'created' | 'processing' | 'ready' | 'failed'
 export type IndexDocumentStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
 // CDM source representation
-export type SourceRepresentation = 'full_text' | 'full_markdown' | 'block'
+export type SourceRepresentation = 'full_text' | 'block'
 
 // Chunking strategy
 export type ChunkingStrategy =
   | 'fixed_size'
   | 'recursive_character'
-  | 'markdown_heading'
   | 'block'
   | 'classified_block'
 
@@ -79,7 +78,7 @@ export interface ChunkCitation {
   indexId: string
   indexVersion: number
   parseRunId: string | null
-  sourceType: 'raw_text' | 'full_text' | 'full_markdown' | 'block'
+  sourceType: 'raw_text' | 'full_text' | 'block'
 
   // Text-based
   startChar: number | null
