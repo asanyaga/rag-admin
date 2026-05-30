@@ -42,6 +42,8 @@ class SimpleTextAdapter:
                 pages.append(Page(
                     index=page_index,
                     block_ids=[block_id],
+                    start_char=start_char,
+                    end_char=end_char,
                 ))
         else:
             # Fallback: single page/block containing all text
@@ -56,6 +58,8 @@ class SimpleTextAdapter:
             pages = [Page(
                 index=0,
                 block_ids=[block_id],
+                start_char=0,
+                end_char=len(full_text),
             )]
 
         return ParsedDocument(
