@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { vi, test, expect } from 'vitest'
 import { QueryEditor } from './QueryEditor'
 import type { GoldenSetQuery } from '@/types/golden-set'
 

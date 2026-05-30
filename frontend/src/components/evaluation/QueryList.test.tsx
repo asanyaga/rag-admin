@@ -1,8 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react'
+import { vi, test, expect } from 'vitest'
 import { QueryList } from './QueryList'
-import type { GoldenSetQuery } from '@/types/golden-set'
+import type { GoldenSetQuery, SourceMethod } from '@/types/golden-set'
 
-const makeQuery = (id: string, text: string, sourceMethod = 'manual' as const): GoldenSetQuery => ({
+const makeQuery = (id: string, text: string, sourceMethod: SourceMethod = 'manual'): GoldenSetQuery => ({
   id,
   queryText: text,
   sourceMethod,
