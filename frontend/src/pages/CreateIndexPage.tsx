@@ -19,7 +19,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Slider } from '@/components/ui/slider'
 import { ParseConfigFamilySelector } from '@/components/indexes/ParseConfigFamilySelector'
 import { ParsedDocumentPicker } from '@/components/indexes/ParsedDocumentPicker'
 import { ChunkPreviewPanel } from '@/components/indexes/ChunkPreviewPanel'
@@ -42,7 +41,6 @@ const STEPS = [
 interface SelectedFamily {
   parser: string
   parseConfigHash: string
-  hasFullMarkdown: boolean
 }
 
 const DEFAULT_CONFIG: Partial<IndexConfig> = {
@@ -51,8 +49,6 @@ const DEFAULT_CONFIG: Partial<IndexConfig> = {
   chunkSize: 512,
   chunkOverlap: 50,
   chunkUnit: 'characters',
-  splitHeadingLevel: 2,
-  maxSectionChars: 4000,
   groupByHeading: true,
   maxBlocksPerChunk: 10,
   blockRoleFilter: null,
@@ -123,8 +119,7 @@ export default function CreateIndexPage() {
 
   const handleSourceRepresentationChange = (value: SourceRepresentation) => {
     updateConfig('sourceRepresentation', value)
-    if (value === 'full_markdown') updateConfig('chunkingStrategy', 'markdown_heading')
-    else if (value === 'full_text') updateConfig('chunkingStrategy', 'recursive_character')
+    if (value === 'full_text') updateConfig('chunkingStrategy', 'recursive_character')
     else if (value === 'block') updateConfig('chunkingStrategy', 'block')
     setSelectedParsedDocIds([])
     setPreviewDocId(null)
@@ -132,18 +127,10 @@ export default function CreateIndexPage() {
   }
 
   const handleFamilyChange = (f: { parser: string; parseConfigHash: string }) => {
-    const opt = parseConfigs.find(
-      (o) => o.parser === f.parser && o.parseConfigHash === f.parseConfigHash,
-    )
-    const hasMarkdown = opt?.hasFullMarkdown ?? false
-    setSelectedFamily({ ...f, hasFullMarkdown: hasMarkdown })
+    setSelectedFamily({ ...f })
     setSelectedParsedDocIds([])
     setPreviewDocId(null)
     setPreview(null)
-    if (config.sourceRepresentation === 'full_markdown' && !hasMarkdown) {
-      updateConfig('sourceRepresentation', 'full_text')
-      updateConfig('chunkingStrategy', 'recursive_character')
-    }
   }
 
   const canProceedFromStep = (step: number): boolean => {
@@ -331,22 +318,10 @@ export default function CreateIndexPage() {
                     <ToggleGroupItem value="full_text" aria-label="Full text">
                       Full text
                     </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="full_markdown"
-                      aria-label="Full Markdown"
-                      disabled={!selectedFamily?.hasFullMarkdown}
-                    >
-                      Full Markdown
-                    </ToggleGroupItem>
                     <ToggleGroupItem value="block" aria-label="Blocks">
                       Blocks
                     </ToggleGroupItem>
                   </ToggleGroup>
-                  {!selectedFamily?.hasFullMarkdown && (
-                    <p className="text-sm text-muted-foreground">
-                      Full Markdown is unavailable — the selected parse-config family does not produce markdown output.
-                    </p>
-                  )}
                 </div>
               </div>
             )}
@@ -384,39 +359,7 @@ export default function CreateIndexPage() {
               <div className="space-y-8">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Chunking</h3>
-                  {config.sourceRepresentation === 'full_markdown' ? (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Heading split level</Label>
-                        <ToggleGroup
-                          type="single"
-                          value={String(config.splitHeadingLevel ?? 2)}
-                          onValueChange={(v) => v && updateConfig('splitHeadingLevel', parseInt(v))}
-                          className="justify-start"
-                        >
-                          <ToggleGroupItem value="1">H1 only</ToggleGroupItem>
-                          <ToggleGroupItem value="2">H1 + H2</ToggleGroupItem>
-                          <ToggleGroupItem value="3">H1 + H2 + H3</ToggleGroupItem>
-                        </ToggleGroup>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label>Max section size</Label>
-                          <span className="text-sm text-muted-foreground">
-                            {(config.maxSectionChars ?? 4000).toLocaleString()} chars
-                          </span>
-                        </div>
-                        <Slider
-                          min={500} max={16000} step={500}
-                          value={[config.maxSectionChars ?? 4000]}
-                          onValueChange={([v]) => updateConfig('maxSectionChars', v)}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Sections larger than this are split further.
-                        </p>
-                      </div>
-                    </>
-                  ) : config.sourceRepresentation === 'block' ? (
+                  {config.sourceRepresentation === 'block' ? (
                     <BlockConfigPanel config={config} onUpdate={updateConfig} />
                   ) : (
                     <>

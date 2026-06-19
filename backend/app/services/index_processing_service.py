@@ -172,7 +172,7 @@ class IndexProcessingService:
                     logger.info(f"Processing document {doc_id} ({document.title})")
 
                     # Dispatch: source representation → chunks
-                    if config.source_representation in ("full_text", "full_markdown", "block"):
+                    if config.source_representation in ("full_text", "block"):
                         # CDM seam: shared with chunk preview.
                         source = await self.source_resolver.resolve(
                             parsed_document_id=index_doc.parse_run_id,

@@ -35,7 +35,7 @@ export async function listParsedDocuments(
   params: {
     parser?: string
     parseConfigHash?: string
-    representation?: 'full_text' | 'full_markdown' | 'block'
+    representation?: 'full_text' | 'block'
     latestPerSource?: boolean
   } = {},
 ): Promise<ParsedDocumentListItem[]> {

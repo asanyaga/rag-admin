@@ -23,7 +23,7 @@ class IndexConfig(BaseModel):
     # validator catches missing values uniformly.
     parser: str | None = Field(default=None)
     parse_config_hash: str | None = Field(default=None, alias="parseConfigHash")
-    source_representation: Literal["full_text", "full_markdown", "block"] = Field(
+    source_representation: Literal["full_text", "block"] = Field(
         default="full_text", alias="sourceRepresentation"
     )
 
@@ -31,7 +31,6 @@ class IndexConfig(BaseModel):
     chunking_strategy: Literal[
         "fixed_size",
         "recursive_character",
-        "markdown_heading",
         "block",
         "classified_block",
     ] = Field(
@@ -44,10 +43,6 @@ class IndexConfig(BaseModel):
     chunk_size: int = Field(default=512, ge=100, le=8000, alias="chunkSize")
     chunk_overlap: int = Field(default=50, ge=0, alias="chunkOverlap")
     chunk_unit: Literal["tokens", "characters"] = Field(default="characters", alias="chunkUnit")
-
-    # Markdown-based config (markdown_heading)
-    split_heading_level: int = Field(default=2, ge=1, le=3, alias="splitHeadingLevel")
-    max_section_chars: int = Field(default=4000, ge=500, le=16000, alias="maxSectionChars")
 
     # Block-based config (block, classified_block)
     group_by_heading: bool = Field(default=True, alias="groupByHeading")
@@ -90,7 +85,6 @@ class IndexConfig(BaseModel):
         text_strategies = {"fixed_size", "recursive_character"}
         allowed: dict[str, set[str]] = {
             "full_text": text_strategies,
-            "full_markdown": {"markdown_heading"},
             "block": {"block", "classified_block"},
         }
         if strategy not in allowed.get(rep, set()):

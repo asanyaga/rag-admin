@@ -160,20 +160,6 @@ async def test_create_index_rejects_family_mismatch(test_db):
 
 
 @pytest.mark.asyncio
-async def test_create_index_rejects_missing_segment(test_db):
-    user, project = await _seed_user_project(test_db)
-    pd = await _seed_parsed(test_db, user=user, project=project, sha="d" * 64, full_markdown=None)
-    svc = _service(test_db)
-
-    cfg = _config(source_rep="full_markdown", strategy="markdown_heading")
-    with pytest.raises(ValidationError, match="full_markdown"):
-        await svc.create_index(
-            project_id=project.id, user_id=user.id,
-            data=IndexCreate(name="i", config=cfg, parsed_document_ids=[pd.parse_run_id]),
-        )
-
-
-@pytest.mark.asyncio
 async def test_create_index_rejects_failed_parse_run(test_db):
     user, project = await _seed_user_project(test_db)
     pd = await _seed_parsed(test_db, user=user, project=project, sha="e" * 64, status="failed")

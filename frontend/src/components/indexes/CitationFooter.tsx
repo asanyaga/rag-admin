@@ -36,16 +36,6 @@ export function CitationFooter({ citation }: CitationFooterProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 mt-2">
-      {citation.sourceType === 'full_markdown' && citation.headingPath && citation.headingPath.length > 0 && (
-        <span className="flex items-center gap-1">
-          {citation.headingPath.map((h, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {i > 0 && <span className="text-zinc-300">›</span>}
-              <span>{h}</span>
-            </span>
-          ))}
-        </span>
-      )}
       {page && <span>{page}</span>}
       {role && <span>· {role}</span>}
       {lowConfidence && (

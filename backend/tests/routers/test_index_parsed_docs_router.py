@@ -90,8 +90,8 @@ async def _seed_index_with_parsed_doc(
     idx = Index(
         project_id=project.id, name="idx",
         config={
-            "source_representation": "full_markdown",
-            "chunking_strategy": "markdown_heading",
+            "source_representation": "full_text",
+            "chunking_strategy": "recursive_character",
             "parser": "llamaparse",
             "parse_config_hash": "h" * 64,
         },

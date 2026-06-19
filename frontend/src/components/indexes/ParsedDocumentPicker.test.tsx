@@ -49,7 +49,7 @@ const defaultProps = {
   projectId: 'proj-1',
   parser: 'llamaparse',
   parseConfigHash: 'abc',
-  representation: 'full_markdown' as const,
+  representation: 'block' as const,
   selectedIds: [],
   onChange: vi.fn(),
 }
@@ -68,7 +68,7 @@ describe('ParsedDocumentPicker', () => {
     expect(vi.mocked(listParsedDocuments)).toHaveBeenCalledWith('proj-1', {
       parser: 'llamaparse',
       parseConfigHash: 'abc',
-      representation: 'full_markdown',
+      representation: 'block',
       latestPerSource: true,
     })
   })
@@ -88,7 +88,7 @@ describe('ParsedDocumentPicker', () => {
       expect(vi.mocked(listParsedDocuments)).toHaveBeenCalledWith('proj-1', {
         parser: 'llamaparse',
         parseConfigHash: 'abc',
-        representation: 'full_markdown',
+        representation: 'block',
         latestPerSource: false,
       }),
     )

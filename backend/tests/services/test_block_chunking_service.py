@@ -218,3 +218,33 @@ def test_block_chunking_bbox_null_when_block_has_no_bbox():
 def test_block_chunking_empty_input_returns_empty():
     svc = BlockChunkingService()
     assert svc.chunk_blocks(blocks=[], config=_config()) == []
+
+
+def test_block_chunking_skips_chunk_when_heading_has_no_text():
+    """Adjacent headings where the first has no text must not produce an empty chunk."""
+    svc = BlockChunkingService()
+    blocks = [
+        _block("h1", BlockRole.HEADING, "", y0=0.0).model_dump(),   # empty text
+        _block("h2", BlockRole.HEADING, "Real Heading", y0=0.1).model_dump(),
+        _block("p1", BlockRole.PARAGRAPH, "content", y0=0.2).model_dump(),
+    ]
+    chunks = svc.chunk_blocks(blocks=blocks, config=_config())
+
+    assert all(c.content.strip() for c in chunks), "empty-content chunk produced"
+    assert len(chunks) == 1
+    assert "Real Heading" in chunks[0].content
+    assert "content" in chunks[0].content
+
+
+def test_block_chunking_skips_chunk_when_table_has_no_text():
+    """A TABLE with empty text appearing before any heading must not produce an empty chunk."""
+    svc = BlockChunkingService()
+    blocks = [
+        _block("t1", BlockRole.TABLE, "", y0=0.0).model_dump(),     # empty text
+        _block("p1", BlockRole.PARAGRAPH, "caption text", y0=0.1).model_dump(),
+    ]
+    chunks = svc.chunk_blocks(blocks=blocks, config=_config())
+
+    assert all(c.content.strip() for c in chunks), "empty-content chunk produced"
+    assert len(chunks) == 1
+    assert "caption text" in chunks[0].content

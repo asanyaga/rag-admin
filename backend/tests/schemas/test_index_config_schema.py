@@ -30,19 +30,19 @@ def test_index_config_rejects_legacy_raw_text():
         IndexConfig.model_validate(_valid_config_kwargs(source_representation="raw_text"))
 
 
+def test_index_config_rejects_full_markdown():
+    with pytest.raises(PydanticValidationError, match="source_representation"):
+        IndexConfig.model_validate(_valid_config_kwargs(
+            source_representation="full_markdown",
+            chunking_strategy="markdown_heading",
+        ))
+
+
 def test_index_config_requires_parser_and_parse_config_hash():
     with pytest.raises(PydanticValidationError, match="parser and parse_config_hash"):
         IndexConfig.model_validate(_valid_config_kwargs(parser=None))
     with pytest.raises(PydanticValidationError, match="parser and parse_config_hash"):
         IndexConfig.model_validate(_valid_config_kwargs(parse_config_hash=None))
-
-
-def test_index_config_full_markdown_requires_markdown_strategy():
-    with pytest.raises(PydanticValidationError, match="full_markdown"):
-        IndexConfig.model_validate(_valid_config_kwargs(
-            source_representation="full_markdown",
-            chunking_strategy="recursive_character",
-        ))
 
 
 def test_index_config_full_text_accepts_recursive_character():
@@ -66,45 +66,6 @@ def test_index_config_block_rejects_text_strategy():
         IndexConfig.model_validate(_valid_config_kwargs(
             source_representation="block",
             chunking_strategy="recursive_character",
-        ))
-
-
-def test_index_config_markdown_heading_defaults():
-    cfg = IndexConfig.model_validate(_valid_config_kwargs(
-        source_representation="full_markdown",
-        chunking_strategy="markdown_heading",
-    ))
-    assert cfg.split_heading_level == 2
-    assert cfg.max_section_chars == 4000
-
-
-def test_index_config_split_heading_level_range():
-    with pytest.raises(PydanticValidationError):
-        IndexConfig.model_validate(_valid_config_kwargs(
-            source_representation="full_markdown",
-            chunking_strategy="markdown_heading",
-            split_heading_level=0,
-        ))
-    with pytest.raises(PydanticValidationError):
-        IndexConfig.model_validate(_valid_config_kwargs(
-            source_representation="full_markdown",
-            chunking_strategy="markdown_heading",
-            split_heading_level=4,
-        ))
-
-
-def test_index_config_max_section_chars_range():
-    with pytest.raises(PydanticValidationError):
-        IndexConfig.model_validate(_valid_config_kwargs(
-            source_representation="full_markdown",
-            chunking_strategy="markdown_heading",
-            max_section_chars=499,
-        ))
-    with pytest.raises(PydanticValidationError):
-        IndexConfig.model_validate(_valid_config_kwargs(
-            source_representation="full_markdown",
-            chunking_strategy="markdown_heading",
-            max_section_chars=16001,
         ))
 
 

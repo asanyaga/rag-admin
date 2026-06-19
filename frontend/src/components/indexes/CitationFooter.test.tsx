@@ -30,25 +30,6 @@ describe('CitationFooter', () => {
     expect(screen.getByText(/table/i)).toBeInTheDocument()
   })
 
-  it('renders heading breadcrumb for markdown citations', () => {
-    render(
-      <CitationFooter
-        citation={{
-          ...baseCitation,
-          sourceType: 'full_markdown',
-          blockIds: null,
-          pageIndices: null,
-          blockRoles: null,
-          bboxes: null,
-          confidence: null,
-          headingPath: ['Financials', 'Q3 Results'],
-        }}
-      />
-    )
-    expect(screen.getByText('Financials')).toBeInTheDocument()
-    expect(screen.getByText('Q3 Results')).toBeInTheDocument()
-  })
-
   it('renders page number for text citations', () => {
     render(
       <CitationFooter

@@ -35,20 +35,6 @@ def test_dispatch_text_source_full_text_routes_to_chunking_service():
     assert "heading_path" not in chunks[0].metadata
 
 
-def test_dispatch_text_source_full_markdown_routes_to_markdown_service():
-    md = "# Title\n\nbody " * 200
-    src = TextSource(text=md)
-    config = _config("full_markdown", chunking_strategy="markdown_heading")
-    chunks = ChunkingDispatcher().dispatch(
-        source=src,
-        config=config,
-        source_document_id=str(uuid4()),
-        source_filename="acme.md",
-    )
-    assert chunks
-    assert chunks[0].metadata.get("heading_path") == ["Title"]
-
-
 def test_dispatch_text_source_passes_metadata_through():
     sdid = uuid4()
     src = TextSource(text="content " * 100)
