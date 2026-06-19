@@ -269,3 +269,141 @@ def test_low_confidence_spans():
     block = doc.blocks[0]
     assert block.quality is not None
     assert block.quality.low_confidence_spans == [(0, 4), (10, 19)]
+
+
+# ---------------------------------------------------------------------------
+# _detect_text_role unit tests
+# ---------------------------------------------------------------------------
+from app.cdm.adapters.landing_ai import _detect_text_role
+
+
+def test_detect_plain_text_is_paragraph():
+    assert _detect_text_role("Hello world.") == BlockRole.PARAGRAPH
+
+
+def test_detect_anchor_then_plain_text_is_paragraph():
+    assert _detect_text_role("<a id='x'></a>\n\nPlain paragraph.") == BlockRole.PARAGRAPH
+
+
+def test_detect_h1_is_title():
+    assert _detect_text_role("<a id='x'></a>\n\n# Main Title") == BlockRole.TITLE
+
+
+def test_detect_h1_with_body_is_title():
+    # heading + body text in one chunk — role is determined by the first content line
+    assert _detect_text_role("<a id='x'></a>\n\n# Main Title\n\nBody text here.") == BlockRole.TITLE
+
+
+def test_detect_h2_is_heading():
+    assert _detect_text_role("<a id='x'></a>\n\n## Section") == BlockRole.HEADING
+
+
+def test_detect_h3_is_heading():
+    assert _detect_text_role("<a id='x'></a>\n\n### Subsection\n\nContent.") == BlockRole.HEADING
+
+
+def test_detect_h4_is_heading():
+    assert _detect_text_role("#### Deep heading") == BlockRole.HEADING
+
+
+def test_detect_hash_without_space_is_paragraph():
+    # ##NoSpace is not a valid ATX heading; treat as paragraph
+    assert _detect_text_role("##NoSpace") == BlockRole.PARAGRAPH
+
+
+def test_detect_empty_markdown_is_paragraph():
+    assert _detect_text_role("") == BlockRole.PARAGRAPH
+
+
+def test_detect_anchor_only_is_paragraph():
+    assert _detect_text_role("<a id='x'></a>\n\n") == BlockRole.PARAGRAPH
+
+
+# ---------------------------------------------------------------------------
+# Heading role integration tests
+# ---------------------------------------------------------------------------
+
+def test_h1_chunk_gets_title_role():
+    raw = {
+        "chunks": [
+            {
+                "id": "chunk-title",
+                "type": "text",
+                "markdown": "<a id='chunk-title'></a>\n\n# Main Title\n\nIntro text.",
+                "grounding": {"page": 0, "box": {"left": 0.0, "top": 0.0, "right": 1.0, "bottom": 0.1}},
+            },
+        ],
+        "markdown": None, "metadata": {}, "splits": [], "grounding": {},
+    }
+    doc = LandingAIAdapter().adapt(raw, _META)
+    assert doc.blocks[0].role == BlockRole.TITLE
+
+
+def test_h2_chunk_gets_heading_role():
+    raw = {
+        "chunks": [
+            {
+                "id": "chunk-h2",
+                "type": "text",
+                "markdown": "<a id='chunk-h2'></a>\n\n## Section Heading",
+                "grounding": {"page": 0, "box": {"left": 0.0, "top": 0.0, "right": 1.0, "bottom": 0.1}},
+            },
+        ],
+        "markdown": None, "metadata": {}, "splits": [], "grounding": {},
+    }
+    doc = LandingAIAdapter().adapt(raw, _META)
+    assert doc.blocks[0].role == BlockRole.HEADING
+
+
+def test_plain_text_chunk_remains_paragraph():
+    raw = {
+        "chunks": [
+            {
+                "id": "chunk-para",
+                "type": "text",
+                "markdown": "<a id='chunk-para'></a>\n\nPlain paragraph text.",
+                "grounding": {"page": 0, "box": {"left": 0.0, "top": 0.0, "right": 1.0, "bottom": 0.1}},
+            },
+        ],
+        "markdown": None, "metadata": {}, "splits": [], "grounding": {},
+    }
+    doc = LandingAIAdapter().adapt(raw, _META)
+    assert doc.blocks[0].role == BlockRole.PARAGRAPH
+
+
+def test_mixed_roles_across_chunks():
+    raw = {
+        "chunks": [
+            {
+                "id": "c-title",
+                "type": "text",
+                "markdown": "<a id='c-title'></a>\n\n# Document Title",
+                "grounding": {"page": 0, "box": {"left": 0.0, "top": 0.0, "right": 1.0, "bottom": 0.05}},
+            },
+            {
+                "id": "c-h2",
+                "type": "text",
+                "markdown": "<a id='c-h2'></a>\n\n## Chapter One",
+                "grounding": {"page": 0, "box": {"left": 0.0, "top": 0.1, "right": 1.0, "bottom": 0.15}},
+            },
+            {
+                "id": "c-h3",
+                "type": "text",
+                "markdown": "<a id='c-h3'></a>\n\n### 1.1 Background\n\nSome body text.",
+                "grounding": {"page": 0, "box": {"left": 0.0, "top": 0.2, "right": 1.0, "bottom": 0.3}},
+            },
+            {
+                "id": "c-para",
+                "type": "text",
+                "markdown": "No anchor, no heading.",
+                "grounding": {"page": 0, "box": {"left": 0.0, "top": 0.3, "right": 1.0, "bottom": 0.4}},
+            },
+        ],
+        "markdown": None, "metadata": {}, "splits": [], "grounding": {},
+    }
+    doc = LandingAIAdapter().adapt(raw, _META)
+    by_id = {b.parser_extras["landing_ai_chunk_id"]: b for b in doc.blocks}
+    assert by_id["c-title"].role == BlockRole.TITLE
+    assert by_id["c-h2"].role == BlockRole.HEADING
+    assert by_id["c-h3"].role == BlockRole.HEADING
+    assert by_id["c-para"].role == BlockRole.PARAGRAPH

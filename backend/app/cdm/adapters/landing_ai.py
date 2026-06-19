@@ -5,6 +5,7 @@ keys: chunks, markdown, metadata, splits, grounding.
 """
 from __future__ import annotations
 
+import re
 import uuid
 from html.parser import HTMLParser
 from typing import Any, ClassVar, Dict, List, Optional
@@ -24,7 +25,6 @@ from app.cdm.models import (
 
 
 _ROLE_MAP: Dict[str, BlockRole] = {
-    "text":        BlockRole.PARAGRAPH,
     "table":       BlockRole.TABLE,
     "figure":      BlockRole.FIGURE,
     "logo":        BlockRole.FIGURE,
@@ -33,8 +33,35 @@ _ROLE_MAP: Dict[str, BlockRole] = {
     "marginalia":  BlockRole.MARGINALIA,
 }
 
+# Strips the per-chunk anchor LandingAI prepends to every markdown field:
+# <a id='UUID'></a>\n\n
+_ANCHOR_RE = re.compile(r"^<a\s[^>]*></a>\s*", re.MULTILINE)
 
-def _map_role(chunk_type: str) -> BlockRole:
+_HEADING_RE = re.compile(r"^(#{1,6}) ")
+
+
+def _first_content_line(markdown: str) -> str:
+    """Return the first non-empty line after stripping the leading anchor tag."""
+    stripped = _ANCHOR_RE.sub("", markdown, count=1).lstrip("\n")
+    for line in stripped.split("\n"):
+        line = line.strip()
+        if line:
+            return line
+    return ""
+
+
+def _detect_text_role(markdown: str) -> BlockRole:
+    """Map a text chunk's markdown to TITLE, HEADING, or PARAGRAPH."""
+    first = _first_content_line(markdown)
+    m = _HEADING_RE.match(first)
+    if not m:
+        return BlockRole.PARAGRAPH
+    return BlockRole.TITLE if len(m.group(1)) == 1 else BlockRole.HEADING
+
+
+def _map_role(chunk_type: str, markdown: str = "") -> BlockRole:
+    if chunk_type == "text":
+        return _detect_text_role(markdown)
     return _ROLE_MAP.get(chunk_type, BlockRole.OTHER)
 
 
@@ -170,7 +197,7 @@ class LandingAIAdapter:
             block_id = _mint_block_id(source_meta.source_document_id, page_index, ro)
             ro_by_page[page_index] = ro + 1
 
-            role = _map_role(chunk_type)
+            role = _map_role(chunk_type, chunk.get("markdown") or "")
             bbox = _make_bbox(chunk_grounding.get("box") or {})
 
             quality: Optional[Quality] = None
