@@ -31,7 +31,10 @@ class ChunkRepository:
                 chunk_index=chunk_data["chunk_index"],
                 token_count=chunk_data["token_count"],
                 char_count=chunk_data["char_count"],
-                chunk_metadata=chunk_data.get("chunk_metadata", {})
+                chunk_metadata=chunk_data.get("chunk_metadata", {}),
+                index_version=chunk_data.get("index_version", 1),
+                parse_run_id=chunk_data.get("parse_run_id"),
+                source_type=chunk_data.get("source_type", "raw_text"),
             )
             self.session.add(chunk)
             chunk_models.append(chunk)
