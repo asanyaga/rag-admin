@@ -189,3 +189,83 @@ def test_adapter_page_block_ids_in_reading_order():
         SourceMeta(source_document_id="src-1", parse_run_id="run-1"),
     )
     assert doc.pages[0].block_ids == [b.id for b in doc.blocks]
+
+
+# ---------------------------------------------------------------------------
+# Table text extraction
+# ---------------------------------------------------------------------------
+
+_TABLE_RAW = {
+    "items": {
+        "pages": [
+            {
+                "page_number": 1,
+                "page_width": 100.0,
+                "page_height": 200.0,
+                "items": [
+                    {
+                        "type": "table",
+                        "value": "",  # LlamaParse always leaves this empty for tables
+                        "md": "| Name | Date |\n| --- | --- |\n| Alice | 2024-01-01 |\n| Bob | 2024-06-01 |",
+                        "bbox": [{"x": 0, "y": 0, "w": 100, "h": 50}],
+                    },
+                ],
+            }
+        ]
+    },
+}
+
+
+def test_adapter_table_text_populated_from_markdown():
+    """Table blocks have empty 'value'; Block.text must be built from 'md'."""
+    doc = LlamaParseAdapter().adapt(
+        _TABLE_RAW,
+        SourceMeta(source_document_id="src-1", parse_run_id="run-1"),
+    )
+    block = doc.blocks[0]
+    assert block.role == BlockRole.TABLE
+    assert block.markdown == "| Name | Date |\n| --- | --- |\n| Alice | 2024-01-01 |\n| Bob | 2024-06-01 |"
+    assert "Name" in block.text
+    assert "Date" in block.text
+    assert "Alice" in block.text
+    assert "Bob" in block.text
+    assert "2024-01-01" in block.text
+
+
+def test_adapter_table_text_excludes_separator_rows():
+    """Markdown separator rows (| --- |) must not appear in Block.text."""
+    doc = LlamaParseAdapter().adapt(
+        _TABLE_RAW,
+        SourceMeta(source_document_id="src-1", parse_run_id="run-1"),
+    )
+    assert "---" not in doc.blocks[0].text
+
+
+def test_adapter_table_text_strips_html_br_tags():
+    """<br/> within table cells must be replaced so text is clean."""
+    raw = {
+        "items": {
+            "pages": [
+                {
+                    "page_number": 1,
+                    "page_width": 100.0,
+                    "page_height": 200.0,
+                    "items": [
+                        {
+                            "type": "table",
+                            "value": "",
+                            "md": "| Note | 2024<br/>KShs 000 |\n| --- | --- |\n| Revenue | 100 |",
+                            "bbox": [{"x": 0, "y": 0, "w": 100, "h": 50}],
+                        },
+                    ],
+                }
+            ]
+        },
+    }
+    doc = LlamaParseAdapter().adapt(
+        raw,
+        SourceMeta(source_document_id="src-1", parse_run_id="run-1"),
+    )
+    block = doc.blocks[0]
+    assert "<br/>" not in block.text
+    assert "KShs 000" in block.text

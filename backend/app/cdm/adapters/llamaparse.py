@@ -81,6 +81,28 @@ def _mint_block_id(source_document_id: str, page_index: int, reading_order: int)
     return f"{source_document_id}:p{page_index}:b{reading_order}"
 
 
+def _md_table_to_text(md: str) -> str:
+    """Flatten a GFM markdown table into a pipe-joined cell string for Block.text.
+
+    LlamaParse leaves Block.value empty for table items and puts all content
+    in the 'md' field. This extracts cell text so the chunker can embed it.
+    """
+    cells = []
+    for line in md.strip().splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # Skip separator rows — after removing pipes, spaces, dashes, colons, nothing remains
+        inner = stripped.strip("|").replace(" ", "").replace("-", "").replace(":", "").replace("|", "")
+        if not inner:
+            continue
+        for part in stripped.strip("|").split("|"):
+            cell = part.strip().replace("<br/>", " ").replace("<br>", " ").strip()
+            if cell:
+                cells.append(cell)
+    return " | ".join(cells)
+
+
 def _flatten_pages(value: Any, *, key: str) -> Optional[str]:
     """LlamaParse returns either a string (legacy) or a dict ``{"pages": [{key: ...}]}``
     (current SDK). Normalize both into a single string, joining pages on blank lines.
@@ -164,13 +186,21 @@ class LlamaParseAdapter:
                     children_ids = _walk(child_items, parent_id=block_id, depth=depth + 1) \
                         if child_items else []
 
+                    raw_value = str(item.get("value") or "")
+                    md_value = item.get("md")
+                    text = (
+                        _md_table_to_text(md_value)
+                        if native_type == "table" and not raw_value and md_value
+                        else raw_value
+                    )
+
                     block = Block(
                         id=block_id,
                         role=role,
                         native_type=native_type,
                         native_label=native_label,
-                        text=str(item.get("value") or ""),
-                        markdown=item.get("md"),
+                        text=text,
+                        markdown=md_value,
                         page_index=page_index,
                         bbox=block_bbox,
                         reading_order=reading_order - 1,
