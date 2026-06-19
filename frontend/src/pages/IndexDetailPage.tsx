@@ -262,15 +262,6 @@ export default function IndexDetailPage() {
 
   // ─── Config items for drawer ──────────────────────────────────────────────
 
-  const configItems = [
-    { label: 'Chunking Strategy', value: index.config.chunkingStrategy },
-    { label: 'Chunk Size', value: `${index.config.chunkSize} ${index.config.chunkUnit}` },
-    { label: 'Chunk Overlap', value: `${index.config.chunkOverlap} ${index.config.chunkUnit}` },
-    { label: 'Embedding Provider', value: index.config.embeddingProvider },
-    { label: 'Embedding Model', value: index.config.embeddingModel },
-    { label: 'Dimensions', value: index.config.embeddingDimensions ?? 'Auto' },
-  ]
-
   const tabs = [
     { id: 'content' as const, label: 'Content', icon: FileText },
     { id: 'playground' as const, label: 'Playground', icon: Play },
@@ -428,17 +419,107 @@ export default function IndexDetailPage() {
           </div>
         )}
 
-        {/* Config Drawer */}
+        {/* Config Panel */}
         {showConfig && (
-          <div className="mt-4 pt-4 border-t grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-            {configItems.map((item) => (
-              <div key={item.label}>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                  {item.label}
+          <div className="mt-4 pt-4 border-t space-y-4">
+            {/* Source */}
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Source
+              </p>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Parser</p>
+                  <p className="text-sm font-mono text-foreground">{index.config.parser ?? '—'}</p>
                 </div>
-                <div className="text-sm font-mono text-foreground">{item.value}</div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Parse Config</p>
+                  <p
+                    className="text-sm font-mono text-foreground"
+                    title={index.config.parseConfigHash ?? undefined}
+                  >
+                    {index.config.parseConfigHash?.slice(0, 8) ?? '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Representation</p>
+                  <p className="text-sm font-mono text-foreground">
+                    {index.config.sourceRepresentation}
+                  </p>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* Chunking */}
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Chunking
+              </p>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Strategy</p>
+                  <p className="text-sm font-mono text-foreground">{index.config.chunkingStrategy}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Chunk Size</p>
+                  <p className="text-sm font-mono text-foreground">
+                    {index.config.chunkSize} {index.config.chunkUnit}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Overlap</p>
+                  <p className="text-sm font-mono text-foreground">
+                    {index.config.chunkOverlap} {index.config.chunkUnit}
+                  </p>
+                </div>
+                {(index.config.chunkingStrategy === 'block' ||
+                  index.config.chunkingStrategy === 'classified_block') && (
+                  <>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-0.5">Group by heading</p>
+                      <p className="text-sm font-mono text-foreground">
+                        {index.config.groupByHeading ? 'Yes' : 'No'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-0.5">Max blocks/chunk</p>
+                      <p className="text-sm font-mono text-foreground">
+                        {index.config.maxBlocksPerChunk}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-0.5">Role filter</p>
+                      <p className="text-sm font-mono text-foreground">
+                        {index.config.blockRoleFilter?.join(', ') ?? 'all'}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Embedding */}
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Embedding
+              </p>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Provider</p>
+                  <p className="text-sm font-mono text-foreground">{index.config.embeddingProvider}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Model</p>
+                  <p className="text-sm font-mono text-foreground">{index.config.embeddingModel}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Dimensions</p>
+                  <p className="text-sm font-mono text-foreground">
+                    {index.config.embeddingDimensions ?? 'Auto'}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
