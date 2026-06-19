@@ -239,7 +239,7 @@ async def get_index(
     "/{index_id}",
     response_model=IndexResponse,
     summary="Update index",
-    description="Update an index's name and/or description. Only works for indexes in 'created' status.",
+    description="Update an index's name and/or description. Not permitted while the index is processing.",
 )
 async def update_index(
     project_id: UUID,
