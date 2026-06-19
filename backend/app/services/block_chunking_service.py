@@ -129,7 +129,7 @@ class BlockChunkingService:
             current.append(block)
 
         emit_current()
-        return chunks
+        return [c for c in chunks if c.content.strip()]
 
     def _build_chunk(
         self,
