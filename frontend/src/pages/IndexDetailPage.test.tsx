@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import IndexDetailPage from './IndexDetailPage'
+import { useIndexDetail, useIndexes } from '@/hooks/useIndexes'
 
 const { mockIndex, mockParsedDocs } = vi.hoisted(() => {
   const mockIndex = {
@@ -10,19 +11,24 @@ const { mockIndex, mockParsedDocs } = vi.hoisted(() => {
     name: 'My Index',
     description: null,
     config: {
-      sourceRepresentation: 'full_text',
+      sourceRepresentation: 'full_text' as const,
       parser: 'llamaparse',
-      parseConfigHash: 'abc123',
-      chunkingStrategy: 'recursive_character',
+      parseConfigHash: 'abc123def456',
+      chunkingStrategy: 'recursive_character' as const,
       chunkSize: 512,
       chunkOverlap: 50,
-      chunkUnit: 'characters',
+      chunkUnit: 'characters' as const,
+      splitHeadingLevel: 2,
+      maxSectionChars: 10000,
+      groupByHeading: true,
+      maxBlocksPerChunk: 10,
+      blockRoleFilter: null,
       embeddingProvider: 'openai',
       embeddingModel: 'text-embedding-3-small',
       embeddingDimensions: null,
     },
     stats: null,
-    status: 'ready',
+    status: 'ready' as const,
     version: 1,
     configDirty: false,
     errorMessage: null,
@@ -57,7 +63,12 @@ vi.mock('react-router-dom', async (importOriginal) => {
 })
 
 vi.mock('@/hooks/useIndexes', () => ({
-  useIndexDetail: () => ({
+  useIndexDetail: vi.fn(),
+  useIndexes: vi.fn(),
+}))
+
+beforeEach(() => {
+  vi.mocked(useIndexDetail).mockReturnValue({
     index: mockIndex,
     chunks: null,
     isLoading: false,
@@ -65,12 +76,21 @@ vi.mock('@/hooks/useIndexes', () => ({
     fetchIndex: vi.fn().mockResolvedValue(undefined),
     fetchChunks: vi.fn().mockResolvedValue(undefined),
     getChunk: vi.fn(),
-  }),
-  useIndexes: () => ({
+  })
+  vi.mocked(useIndexes).mockReturnValue({
+    indexes: [],
+    isLoading: false,
+    error: null,
+    fetchIndexes: vi.fn().mockResolvedValue(undefined),
+    createIndex: vi.fn(),
     updateIndex: vi.fn(),
+    deleteIndex: vi.fn(),
     processIndex: vi.fn(),
-  }),
-}))
+    retryIndex: vi.fn(),
+    getProcessingStatus: vi.fn(),
+    previewChunks: vi.fn(),
+  })
+})
 
 vi.mock('@/api/indexes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/indexes')>()
@@ -160,5 +180,185 @@ describe('IndexDetailPage — Parsed Documents tab', () => {
     await waitFor(() =>
       expect(screen.getByText('10')).toBeInTheDocument(),
     )
+  })
+})
+
+describe('IndexDetailPage — status gate and config button', () => {
+  it('shows the description placeholder when index is ready', async () => {
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+    expect(screen.getByText('Add a description...')).toBeInTheDocument()
+  })
+
+  it('does not show the description placeholder when index is processing', async () => {
+    vi.mocked(useIndexDetail).mockReturnValue({
+      index: { ...mockIndex, status: 'processing' as const },
+      chunks: null,
+      isLoading: false,
+      error: null,
+      fetchIndex: vi.fn().mockResolvedValue(undefined),
+      fetchChunks: vi.fn().mockResolvedValue(undefined),
+      getChunk: vi.fn(),
+    })
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+    expect(screen.queryByText('Add a description...')).not.toBeInTheDocument()
+  })
+
+  it('renders a "Config" button, not "Settings"', async () => {
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+    expect(screen.getByRole('button', { name: /config/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^settings$/i })).not.toBeInTheDocument()
+  })
+
+  it('shows a configDirty warning when configDirty is true', async () => {
+    vi.mocked(useIndexDetail).mockReturnValue({
+      index: { ...mockIndex, configDirty: true },
+      chunks: null,
+      isLoading: false,
+      error: null,
+      fetchIndex: vi.fn().mockResolvedValue(undefined),
+      fetchChunks: vi.fn().mockResolvedValue(undefined),
+      getChunk: vi.fn(),
+    })
+    renderPage()
+    await waitFor(() =>
+      expect(
+        screen.getByText(/document set has changed since last index build/i),
+      ).toBeInTheDocument(),
+    )
+  })
+
+  it('does not show configDirty warning when configDirty is false', async () => {
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+    expect(
+      screen.queryByText(/document set has changed since last index build/i),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe('IndexDetailPage — full config panel', () => {
+  it('shows Source, Chunking, Embedding section headings when Config is toggled', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+
+    await user.click(screen.getByRole('button', { name: /config/i }))
+
+    expect(screen.getByText('Source')).toBeInTheDocument()
+    expect(screen.getByText('Chunking')).toBeInTheDocument()
+    expect(screen.getByText('Embedding')).toBeInTheDocument()
+  })
+
+  it('shows parser, parse config hash (first 8 chars), and representation in Source section', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+
+    await user.click(screen.getByRole('button', { name: /config/i }))
+
+    expect(screen.getByText('llamaparse')).toBeInTheDocument()
+    // parseConfigHash 'abc123def456' truncated to 'abc123de'
+    expect(screen.getByText('abc123de')).toBeInTheDocument()
+    expect(screen.getByText('full_text')).toBeInTheDocument()
+  })
+
+  it('shows chunking strategy, chunk size with unit, and overlap with unit', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+
+    await user.click(screen.getByRole('button', { name: /config/i }))
+
+    expect(screen.getByText('recursive_character')).toBeInTheDocument()
+    expect(screen.getByText('512 characters')).toBeInTheDocument()
+    expect(screen.getByText('50 characters')).toBeInTheDocument()
+  })
+
+  it('shows embedding provider, model, and dimensions in Embedding section', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+
+    await user.click(screen.getByRole('button', { name: /config/i }))
+
+    expect(screen.getByText('openai')).toBeInTheDocument()
+    expect(screen.getByText('text-embedding-3-small')).toBeInTheDocument()
+    // embeddingDimensions is null → shows 'Auto'
+    expect(screen.getByText('Auto')).toBeInTheDocument()
+  })
+
+  it('shows block-specific fields for block chunking strategy', async () => {
+    const user = userEvent.setup()
+    vi.mocked(useIndexDetail).mockReturnValue({
+      index: {
+        ...mockIndex,
+        config: {
+          ...mockIndex.config,
+          sourceRepresentation: 'block' as const,
+          chunkingStrategy: 'block' as const,
+          groupByHeading: true,
+          maxBlocksPerChunk: 5,
+          blockRoleFilter: ['paragraph', 'heading'],
+        },
+      },
+      chunks: null,
+      isLoading: false,
+      error: null,
+      fetchIndex: vi.fn().mockResolvedValue(undefined),
+      fetchChunks: vi.fn().mockResolvedValue(undefined),
+      getChunk: vi.fn(),
+    })
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+
+    await user.click(screen.getByRole('button', { name: /config/i }))
+
+    expect(screen.getByText('Yes')).toBeInTheDocument()
+    expect(screen.getByText('5')).toBeInTheDocument()
+    expect(screen.getByText('paragraph, heading')).toBeInTheDocument()
+  })
+
+  it('shows "all" for role filter when blockRoleFilter is null', async () => {
+    const user = userEvent.setup()
+    vi.mocked(useIndexDetail).mockReturnValue({
+      index: {
+        ...mockIndex,
+        config: {
+          ...mockIndex.config,
+          sourceRepresentation: 'block' as const,
+          chunkingStrategy: 'classified_block' as const,
+          groupByHeading: false,
+          maxBlocksPerChunk: 10,
+          blockRoleFilter: null,
+        },
+      },
+      chunks: null,
+      isLoading: false,
+      error: null,
+      fetchIndex: vi.fn().mockResolvedValue(undefined),
+      fetchChunks: vi.fn().mockResolvedValue(undefined),
+      getChunk: vi.fn(),
+    })
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+
+    await user.click(screen.getByRole('button', { name: /config/i }))
+
+    expect(screen.getByText('all')).toBeInTheDocument()
+  })
+
+  it('does not show block-specific fields for recursive_character strategy', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+
+    await user.click(screen.getByRole('button', { name: /config/i }))
+
+    expect(screen.queryByText('Group by heading')).not.toBeInTheDocument()
+    expect(screen.queryByText('Max blocks/chunk')).not.toBeInTheDocument()
+    expect(screen.queryByText('Role filter')).not.toBeInTheDocument()
   })
 })

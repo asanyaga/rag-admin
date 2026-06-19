@@ -156,18 +156,17 @@ class IndexService:
 
         Raises:
         - NotFoundError: Index not found
-        - ValidationError: Cannot update index that's not in 'created' status
+        - ValidationError: Cannot update index while it is processing
         - ConflictError: New name conflicts with existing index
         """
         index = await self.index_repo.get_by_id(index_id, project_id)
         if not index:
             raise NotFoundError(f"Index {index_id} not found")
 
-        # Only allow updates when status is 'created'
-        if index.status != IndexStatus.created:
+        # Block updates only while actively processing
+        if index.status == IndexStatus.processing:
             raise ValidationError(
-                f"Cannot update index with status '{index.status.value}'. "
-                "Only indexes in 'created' status can be modified."
+                "Cannot update index while it is processing."
             )
 
         # Check for name conflicts if changing name
