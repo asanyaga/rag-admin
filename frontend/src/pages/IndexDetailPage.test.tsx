@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import IndexDetailPage from './IndexDetailPage'
+import { useIndexDetail, useIndexes } from '@/hooks/useIndexes'
 
 const { mockIndex, mockParsedDocs } = vi.hoisted(() => {
   const mockIndex = {
@@ -10,13 +11,18 @@ const { mockIndex, mockParsedDocs } = vi.hoisted(() => {
     name: 'My Index',
     description: null,
     config: {
-      sourceRepresentation: 'full_text',
+      sourceRepresentation: 'full_text' as const,
       parser: 'llamaparse',
-      parseConfigHash: 'abc123',
-      chunkingStrategy: 'recursive_character',
+      parseConfigHash: 'abc123def456',
+      chunkingStrategy: 'recursive_character' as const,
       chunkSize: 512,
       chunkOverlap: 50,
-      chunkUnit: 'characters',
+      chunkUnit: 'characters' as const,
+      splitHeadingLevel: 2,
+      maxSectionChars: 10000,
+      groupByHeading: true,
+      maxBlocksPerChunk: 10,
+      blockRoleFilter: null,
       embeddingProvider: 'openai',
       embeddingModel: 'text-embedding-3-small',
       embeddingDimensions: null,
@@ -57,7 +63,12 @@ vi.mock('react-router-dom', async (importOriginal) => {
 })
 
 vi.mock('@/hooks/useIndexes', () => ({
-  useIndexDetail: () => ({
+  useIndexDetail: vi.fn(),
+  useIndexes: vi.fn(),
+}))
+
+beforeEach(() => {
+  vi.mocked(useIndexDetail).mockReturnValue({
     index: mockIndex,
     chunks: null,
     isLoading: false,
@@ -65,12 +76,12 @@ vi.mock('@/hooks/useIndexes', () => ({
     fetchIndex: vi.fn().mockResolvedValue(undefined),
     fetchChunks: vi.fn().mockResolvedValue(undefined),
     getChunk: vi.fn(),
-  }),
-  useIndexes: () => ({
+  })
+  vi.mocked(useIndexes).mockReturnValue({
     updateIndex: vi.fn(),
     processIndex: vi.fn(),
-  }),
-}))
+  })
+})
 
 vi.mock('@/api/indexes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/indexes')>()
@@ -160,5 +171,61 @@ describe('IndexDetailPage — Parsed Documents tab', () => {
     await waitFor(() =>
       expect(screen.getByText('10')).toBeInTheDocument(),
     )
+  })
+})
+
+describe('IndexDetailPage — status gate and config button', () => {
+  it('shows the description placeholder when index is ready', async () => {
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+    expect(screen.getByText('Add a description...')).toBeInTheDocument()
+  })
+
+  it('does not show the description placeholder when index is processing', async () => {
+    vi.mocked(useIndexDetail).mockReturnValue({
+      index: { ...mockIndex, status: 'processing' },
+      chunks: null,
+      isLoading: false,
+      error: null,
+      fetchIndex: vi.fn().mockResolvedValue(undefined),
+      fetchChunks: vi.fn().mockResolvedValue(undefined),
+      getChunk: vi.fn(),
+    })
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+    expect(screen.queryByText('Add a description...')).not.toBeInTheDocument()
+  })
+
+  it('renders a "Config" button, not "Settings"', async () => {
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+    expect(screen.getByRole('button', { name: /config/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^settings$/i })).not.toBeInTheDocument()
+  })
+
+  it('shows a configDirty warning when configDirty is true', async () => {
+    vi.mocked(useIndexDetail).mockReturnValue({
+      index: { ...mockIndex, configDirty: true },
+      chunks: null,
+      isLoading: false,
+      error: null,
+      fetchIndex: vi.fn().mockResolvedValue(undefined),
+      fetchChunks: vi.fn().mockResolvedValue(undefined),
+      getChunk: vi.fn(),
+    })
+    renderPage()
+    await waitFor(() =>
+      expect(
+        screen.getByText(/document set has changed since last index build/i),
+      ).toBeInTheDocument(),
+    )
+  })
+
+  it('does not show configDirty warning when configDirty is false', async () => {
+    renderPage()
+    await waitFor(() => screen.getByText('My Index'))
+    expect(
+      screen.queryByText(/document set has changed since last index build/i),
+    ).not.toBeInTheDocument()
   })
 })

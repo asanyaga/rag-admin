@@ -105,7 +105,7 @@ export default function IndexDetailPage() {
     return () => clearInterval(interval)
   }, [index?.status, fetchIndex, fetchChunks, chunkPage, chunkSearch])
 
-  const canEdit = index?.status === 'created'
+  const canEdit = index?.status !== 'processing'
   const canManageDocs = index?.status === 'created' || index?.status === 'ready'
 
   // Parsed documents state
@@ -373,7 +373,7 @@ export default function IndexDetailPage() {
                 : 'border text-muted-foreground hover:bg-muted/50'
             )}
           >
-            <Settings className="h-4 w-4" /> Settings
+            <Settings className="h-4 w-4" /> Config
           </button>
         </div>
 
@@ -417,6 +417,14 @@ export default function IndexDetailPage() {
         {index.status === 'failed' && index.errorMessage && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400">
             {index.errorMessage}
+          </div>
+        )}
+
+        {/* configDirty warning */}
+        {index.configDirty && (
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-700 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-400 flex items-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            Document set has changed since last index build — re-index to apply.
           </div>
         )}
 
