@@ -33,6 +33,28 @@ _NEVER_SPLIT = {BlockRole.TABLE, BlockRole.FIGURE}
 _LAYOUT_SKIP = {BlockRole.HEADER, BlockRole.FOOTER, BlockRole.MARGINALIA}
 
 
+def _md_table_to_text(md: str) -> str:
+    """Flatten a GFM markdown table into a pipe-joined cell string.
+
+    Used when Block.text is empty but Block.markdown has content (LlamaParse
+    stores table data only in the markdown field, not in text/value).
+    """
+    cells = []
+    for line in md.strip().splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # Skip separator rows — after removing pipes, spaces, dashes, colons, nothing remains
+        inner = stripped.strip("|").replace(" ", "").replace("-", "").replace(":", "").replace("|", "")
+        if not inner:
+            continue
+        for part in stripped.strip("|").split("|"):
+            cell = part.strip().replace("<br/>", " ").replace("<br>", " ").strip()
+            if cell:
+                cells.append(cell)
+    return " | ".join(cells)
+
+
 class BlockChunkingService:
     """Groups CDM blocks into chunks per the block-chunking spec."""
 
@@ -140,7 +162,13 @@ class BlockChunkingService:
         source_document_id: str | None,
         source_filename: str | None,
     ) -> ChunkResult:
-        body = "\n\n".join(b.text for b in blocks if b.text)
+        parts = []
+        for b in blocks:
+            if b.text:
+                parts.append(b.text)
+            elif b.role == BlockRole.TABLE and b.markdown:
+                parts.append(_md_table_to_text(b.markdown))
+        body = "\n\n".join(parts)
         if context_heading:
             content = f"[context: {context_heading}]\n\n{body}"
         else:
