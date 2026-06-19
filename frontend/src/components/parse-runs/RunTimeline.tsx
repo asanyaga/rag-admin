@@ -1,13 +1,12 @@
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ExternalLink, RefreshCw } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import type { ParseRunListItem } from '@/types/cdm'
 
 interface RunTimelineProps {
   documentId: string
   runs: ParseRunListItem[]
-  onReparse: () => void
 }
 
 function formatDuration(ms: number | null): string {
@@ -25,7 +24,7 @@ function relTime(iso: string): string {
   return `${Math.round(s / 86400)}d ago`
 }
 
-export function RunTimeline({ documentId, runs, onReparse }: RunTimelineProps) {
+export function RunTimeline({ documentId, runs }: RunTimelineProps) {
   if (runs.length === 0) {
     return (
       <div className="text-sm text-muted-foreground py-2">
@@ -35,7 +34,7 @@ export function RunTimeline({ documentId, runs, onReparse }: RunTimelineProps) {
   }
   return (
     <ul className="divide-y rounded-md border">
-      {runs.map((r, idx) => (
+      {runs.map((r) => (
         <li key={r.id} className="flex items-center gap-3 px-3 py-2 text-sm">
           <Badge
             variant={
@@ -69,11 +68,6 @@ export function RunTimeline({ documentId, runs, onReparse }: RunTimelineProps) {
                 <ExternalLink className="h-3 w-3 mr-1" /> Open viewer
               </Link>
             </Button>
-            {idx === 0 && (
-              <Button size="sm" variant="ghost" onClick={onReparse}>
-                <RefreshCw className="h-3 w-3 mr-1" /> Re-parse
-              </Button>
-            )}
           </div>
         </li>
       ))}

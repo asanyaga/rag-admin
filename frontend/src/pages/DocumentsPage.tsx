@@ -374,7 +374,6 @@ export default function DocumentsPage(): JSX.Element {
                 <RunTimeline
                   documentId={viewDocumentId}
                   runs={parseRuns}
-                  onReparse={() => setReparseDialogOpen(true)}
                 />
               </section>
             )}

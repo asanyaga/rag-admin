@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { RunTimeline } from './RunTimeline'
 import type { ParseRunListItem } from '@/types/cdm'
@@ -31,7 +30,7 @@ describe('RunTimeline', () => {
   it('renders an empty state', () => {
     render(
       <MemoryRouter>
-        <RunTimeline documentId="d1" runs={[]} onReparse={vi.fn()} />
+        <RunTimeline documentId="d1" runs={[]} />
       </MemoryRouter>
     )
     expect(screen.getByText(/no parse runs/i)).toBeInTheDocument()
@@ -43,29 +42,11 @@ describe('RunTimeline', () => {
         <RunTimeline
           documentId="d1"
           runs={[run({ id: 'r1' }), run({ id: 'r2', status: 'failed' })]}
-          onReparse={vi.fn()}
         />
       </MemoryRouter>
     )
     const links = screen.getAllByRole('link', { name: /open viewer/i })
     expect(links).toHaveLength(2)
     expect(links[0].getAttribute('href')).toBe('/documents/d1/runs/r1')
-  })
-
-  it('shows Re-parse only on the latest row and triggers handler', async () => {
-    const onReparse = vi.fn()
-    render(
-      <MemoryRouter>
-        <RunTimeline
-          documentId="d1"
-          runs={[run({ id: 'newest' }), run({ id: 'older' })]}
-          onReparse={onReparse}
-        />
-      </MemoryRouter>
-    )
-    const reparseButtons = screen.getAllByRole('button', { name: /re-parse/i })
-    expect(reparseButtons).toHaveLength(1)
-    await userEvent.click(reparseButtons[0])
-    expect(onReparse).toHaveBeenCalled()
   })
 })
