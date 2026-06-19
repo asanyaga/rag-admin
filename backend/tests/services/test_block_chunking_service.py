@@ -248,3 +248,46 @@ def test_block_chunking_skips_chunk_when_table_has_no_text():
     assert all(c.content.strip() for c in chunks), "empty-content chunk produced"
     assert len(chunks) == 1
     assert "caption text" in chunks[0].content
+
+
+def test_block_chunking_table_uses_markdown_when_text_empty():
+    """TABLE with empty text but non-empty markdown (LlamaParse) must contribute content."""
+    svc = BlockChunkingService()
+    table_block = Block(
+        id="t1",
+        role=BlockRole.TABLE,
+        native_type="table",
+        page_index=0,
+        bbox=_bbox(y0=0.1),
+        text="",
+        markdown="| Name | Value |\n| --- | --- |\n| Revenue | 1,081,557 |",
+    ).model_dump()
+    blocks = [
+        _block("h1", BlockRole.HEADING, "Financials", y0=0.0).model_dump(),
+        table_block,
+    ]
+    chunks = svc.chunk_blocks(blocks=blocks, config=_config())
+
+    assert len(chunks) == 1
+    assert "Revenue" in chunks[0].content
+    assert "1,081,557" in chunks[0].content
+    assert "---" not in chunks[0].content
+
+
+def test_block_chunking_table_markdown_strips_html_br():
+    """<br/> tags within markdown table cells must not appear in chunk content."""
+    svc = BlockChunkingService()
+    table_block = Block(
+        id="t1",
+        role=BlockRole.TABLE,
+        native_type="table",
+        page_index=0,
+        bbox=_bbox(y0=0.0),
+        text="",
+        markdown="| Note | 2024<br/>KShs 000 |\n| --- | --- |\n| Revenue | 1,081,557 |",
+    ).model_dump()
+    chunks = svc.chunk_blocks(blocks=[table_block], config=_config(group_by_heading=False))
+
+    assert len(chunks) == 1
+    assert "<br/>" not in chunks[0].content
+    assert "KShs 000" in chunks[0].content
