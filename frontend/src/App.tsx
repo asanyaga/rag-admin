@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProjectProvider } from './contexts/ProjectContext'
 import { PrivateRoute } from './components/PrivateRoute'
@@ -14,7 +14,8 @@ import IndexPage from './pages/IndexPage'
 import CreateIndexPage from './pages/CreateIndexPage'
 import IndexDetailPage from './pages/IndexDetailPage'
 import SettingsPage from './pages/SettingsPage'
-import EvaluationPage from './pages/EvaluationPage'
+import RetrievalEvaluationPage from './pages/RetrievalEvaluationPage'
+import ExtractionEvaluationPage from './pages/ExtractionEvaluationPage'
 import GoldenSetEditorPage from './pages/GoldenSetEditorPage'
 import NewEvalRunPage from './pages/NewEvalRunPage'
 import EvalRunDetailPage from './pages/EvalRunDetailPage'
@@ -155,8 +156,17 @@ const router = createBrowserRouter([
           },
 {
             path: 'evaluation',
-            element: <EvaluationPage />,
-            handle: { breadcrumb: 'Evaluation' },
+            element: <Navigate to="/evaluation/retrieval" replace />,
+          },
+          {
+            path: 'evaluation/retrieval',
+            element: <RetrievalEvaluationPage />,
+            handle: { breadcrumb: 'Retrieval Evaluation' },
+          },
+          {
+            path: 'evaluation/extraction',
+            element: <ExtractionEvaluationPage />,
+            handle: { breadcrumb: 'Extraction Evaluation' },
           },
           {
             path: 'evaluation/golden-sets/:goldenSetId',
