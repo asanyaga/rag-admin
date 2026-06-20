@@ -53,7 +53,7 @@ export default function RunComparisonPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate('/evaluation')}
+          onClick={() => navigate('/evaluation/retrieval')}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>

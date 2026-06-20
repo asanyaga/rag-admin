@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
 import { useEvalRuns } from '@/hooks/useEvalRuns'
 import { useGoldenSets } from '@/hooks/useGoldenSets'
@@ -8,6 +9,8 @@ import { GoldenSetsTab } from '@/components/evaluation/GoldenSetsTab'
 import { ExperimentsTab } from '@/components/evaluation/ExperimentsTab'
 
 export default function RetrievalEvaluationPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') ?? 'runs'
   const { currentProject } = useProject()
   const projectId = currentProject?.id ?? null
 
@@ -33,7 +36,7 @@ export default function RetrievalEvaluationPage() {
           Measure and compare retrieval quality using golden sets.
         </p>
       </div>
-      <Tabs defaultValue="runs">
+      <Tabs value={activeTab} onValueChange={(tab) => setSearchParams({ tab })}>
         <TabsList>
           <TabsTrigger value="runs">Runs</TabsTrigger>
           <TabsTrigger value="experiments">Experiments</TabsTrigger>

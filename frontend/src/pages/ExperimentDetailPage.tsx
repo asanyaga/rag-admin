@@ -152,7 +152,7 @@ export default function ExperimentDetailPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate('/evaluation')}
+          onClick={() => navigate('/evaluation/retrieval?tab=experiments')}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>

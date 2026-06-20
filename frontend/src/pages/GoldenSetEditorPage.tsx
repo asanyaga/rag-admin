@@ -85,7 +85,7 @@ export default function GoldenSetEditorPage() {
     <div className="flex flex-col h-full gap-4">
       {/* Header */}
       <div className="flex items-center gap-4 shrink-0">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/evaluation')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/evaluation/retrieval?tab=golden-sets')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
