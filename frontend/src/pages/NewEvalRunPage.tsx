@@ -158,7 +158,7 @@ export default function NewEvalRunPage() {
           onClick={() =>
             experimentId
               ? navigate(`/evaluation/experiments/${experimentId}`)
-              : navigate('/evaluation')
+              : navigate('/evaluation/retrieval')
           }
         >
           <ArrowLeft className="h-4 w-4" />
@@ -389,7 +389,7 @@ export default function NewEvalRunPage() {
           onClick={() =>
             experimentId
               ? navigate(`/evaluation/experiments/${experimentId}`)
-              : navigate('/evaluation')
+              : navigate('/evaluation/retrieval')
           }
         >
           Cancel
