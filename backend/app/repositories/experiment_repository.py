@@ -36,11 +36,18 @@ class ExperimentRepository:
         result = await self.session.execute(
             select(Experiment)
             .options(
-                selectinload(Experiment.baseline_run),
+                selectinload(Experiment.baseline_run)
+                .selectinload(EvalRun.golden_set),
+                selectinload(Experiment.baseline_run)
+                .selectinload(EvalRun.index),
+                selectinload(Experiment.baseline_run)
+                .selectinload(EvalRun.experiment),
                 selectinload(Experiment.runs)
                 .selectinload(EvalRun.golden_set),
                 selectinload(Experiment.runs)
                 .selectinload(EvalRun.index),
+                selectinload(Experiment.runs)
+                .selectinload(EvalRun.experiment),
             )
             .where(
                 Experiment.id == experiment_id,
@@ -52,7 +59,14 @@ class ExperimentRepository:
     async def list_by_project(self, project_id: UUID) -> list[Experiment]:
         result = await self.session.execute(
             select(Experiment)
-            .options(selectinload(Experiment.baseline_run))
+            .options(
+                selectinload(Experiment.baseline_run)
+                .selectinload(EvalRun.golden_set),
+                selectinload(Experiment.baseline_run)
+                .selectinload(EvalRun.index),
+                selectinload(Experiment.baseline_run)
+                .selectinload(EvalRun.experiment),
+            )
             .where(Experiment.project_id == project_id)
             .order_by(Experiment.created_at.desc())
         )
