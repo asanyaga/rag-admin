@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProjectProvider } from './contexts/ProjectContext'
 import { PrivateRoute } from './components/PrivateRoute'
@@ -155,6 +155,10 @@ const router = createBrowserRouter([
             handle: { breadcrumb: 'Run Detail' },
           },
 {
+            path: 'evaluation',
+            element: <Navigate to="/evaluation/retrieval" replace />,
+          },
+          {
             path: 'evaluation/retrieval',
             element: <RetrievalEvaluationPage />,
             handle: { breadcrumb: 'Retrieval Evaluation' },
