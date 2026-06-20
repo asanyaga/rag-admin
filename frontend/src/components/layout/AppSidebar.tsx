@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { ChevronUp, LogOut, User } from 'lucide-react'
+import { ChevronUp, LogOut, User, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { navigationItems } from '@/config/navigation'
+import type { NavItem } from '@/config/navigation'
 import { cn } from '@/lib/utils'
 import { ProjectSwitcher } from '@/components/ProjectSwitcher'
 import {
@@ -14,6 +16,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -37,6 +42,46 @@ function getInitials(name?: string, email?: string): string {
     return email[0].toUpperCase()
   }
   return 'U'
+}
+
+function CollapsibleNavItem({ item, pathname }: { item: NavItem; pathname: string }) {
+  const children = item.children!
+  const isAnyChildActive = children.some((child) => pathname.startsWith(child.href))
+  const [isOpen, setIsOpen] = useState(isAnyChildActive)
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        onClick={() => setIsOpen((o) => !o)}
+        isActive={isAnyChildActive}
+        tooltip={item.label}
+        className={cn(
+          isAnyChildActive && `border-l-[3px] ${item.activeColor}`,
+          !isAnyChildActive && 'border-l-[3px] border-l-transparent'
+        )}
+      >
+        <item.icon />
+        <span>{item.label}</span>
+        <ChevronDown
+          className={cn('ml-auto h-4 w-4 transition-transform duration-200', isOpen && 'rotate-180')}
+        />
+      </SidebarMenuButton>
+      {isOpen && (
+        <SidebarMenuSub>
+          {children.map((child) => {
+            const isChildActive = pathname.startsWith(child.href)
+            return (
+              <SidebarMenuSubItem key={child.href}>
+                <SidebarMenuSubButton asChild isActive={isChildActive}>
+                  <NavLink to={child.href}>{child.label}</NavLink>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            )
+          })}
+        </SidebarMenuSub>
+      )}
+    </SidebarMenuItem>
+  )
 }
 
 export function AppSidebar() {
@@ -70,16 +115,32 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map((item) => {
+                if (item.children) {
+                  return (
+                    <CollapsibleNavItem
+                      key={item.label}
+                      item={item}
+                      pathname={location.pathname}
+                    />
+                  )
+                }
+
                 const isActive =
                   item.href === '/'
                     ? location.pathname === '/'
                     : location.pathname.startsWith(item.href)
+
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label} className={cn(
-                      isActive && `border-l-[3px] ${item.activeColor}`,
-                      !isActive && 'border-l-[3px] border-l-transparent'
-                    )}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.label}
+                      className={cn(
+                        isActive && `border-l-[3px] ${item.activeColor}`,
+                        !isActive && 'border-l-[3px] border-l-transparent'
+                      )}
+                    >
                       <NavLink to={item.href}>
                         <item.icon />
                         <span>{item.label}</span>
