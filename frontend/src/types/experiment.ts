@@ -41,3 +41,31 @@ export interface UpdateExperimentRequest {
   status?: ExperimentStatus
   baselineRunId?: string
 }
+
+export interface RunMeta {
+  id: string
+  name: string
+  variantLabel: string | null
+  avgF1: number | null
+}
+
+export interface PerRunMetrics {
+  precision: number
+  recall: number
+  f1: number
+  deltaF1: number | null
+}
+
+export interface ComparisonRow {
+  queryId: string
+  queryText: string
+  results: Record<string, PerRunMetrics>
+}
+
+export interface ExperimentComparison {
+  experimentId: string
+  experimentName: string
+  baselineRunId: string | null
+  runs: RunMeta[]
+  rows: ComparisonRow[]
+}

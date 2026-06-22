@@ -5,6 +5,7 @@ import apiClient from './client'
 import type {
   Experiment,
   ExperimentDetail,
+  ExperimentComparison,
   CreateExperimentRequest,
   UpdateExperimentRequest,
 } from '@/types/experiment'
@@ -54,4 +55,14 @@ export async function deleteExperiment(
   experimentId: string
 ): Promise<void> {
   await apiClient.delete(`/projects/${projectId}/experiments/${experimentId}`)
+}
+
+export async function compareExperiment(
+  projectId: string,
+  experimentId: string
+): Promise<ExperimentComparison> {
+  const response = await apiClient.get<ExperimentComparison>(
+    `/projects/${projectId}/experiments/${experimentId}/compare`
+  )
+  return response.data
 }

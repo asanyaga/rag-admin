@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
   Experiment,
   ExperimentDetail,
+  ExperimentComparison,
   CreateExperimentRequest,
   UpdateExperimentRequest,
 } from '@/types/experiment'
@@ -143,4 +144,43 @@ export function useExperimentDetail(
   }, [experiment, projectId, experimentId])
 
   return { experiment, isLoading, error, refresh, updateExperiment }
+}
+
+// ---------------------------------------------------------------------------
+// useExperimentComparison — multi-run per-query comparison for an experiment
+// ---------------------------------------------------------------------------
+
+interface UseExperimentComparisonReturn {
+  comparison: ExperimentComparison | null
+  isLoading: boolean
+  error: string | null
+}
+
+export function useExperimentComparison(
+  projectId: string | null,
+  experimentId: string | null
+): UseExperimentComparisonReturn {
+  const [comparison, setComparison] = useState<ExperimentComparison | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetch = useCallback(async () => {
+    if (!projectId || !experimentId) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await api.compareExperiment(projectId, experimentId)
+      setComparison(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load comparison')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [projectId, experimentId])
+
+  useEffect(() => {
+    fetch()
+  }, [fetch])
+
+  return { comparison, isLoading, error }
 }
