@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { Fragment, useState, useMemo } from 'react'
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { RunMeta, ComparisonRow } from '@/types/experiment'
+import type { RunColorSet } from '@/lib/runColors'
 
 type FilterMode = 'all' | 'better' | 'worse' | 'same'
 
@@ -17,12 +18,14 @@ interface ExperimentComparisonTableProps {
   runs: RunMeta[]
   rows: ComparisonRow[]
   baselineRunId: string | null
+  runColors: RunColorSet[]
 }
 
 export function ExperimentComparisonTable({
   runs,
   rows,
   baselineRunId,
+  runColors,
 }: ExperimentComparisonTableProps) {
   const [sortRunId, setSortRunId] = useState<string | null>(null)
   const [sortAsc, setSortAsc] = useState(false)
@@ -121,21 +124,27 @@ export function ExperimentComparisonTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[200px]">Query</TableHead>
-              {runs.map((run) => {
+              <TableHead className="min-w-[200px] sticky left-0 bg-background z-10 border-r">
+                Query
+              </TableHead>
+              {runs.map((run, i) => {
                 const isBaseline = run.id === baselineRunId
+                const color = runColors[i]
                 if (expanded) {
                   return (
-                    <>
-                      <TableHead key={`${run.id}-p`} className="text-right text-xs whitespace-nowrap">
+                    <Fragment key={run.id}>
+                      <TableHead
+                        className={`text-right text-xs whitespace-nowrap border-t-2 ${color.headerTop} border-l-2 ${color.groupBorder}`}
+                      >
                         {run.name} P
                       </TableHead>
-                      <TableHead key={`${run.id}-r`} className="text-right text-xs">
+                      <TableHead
+                        className={`text-right text-xs border-t-2 ${color.headerTop}`}
+                      >
                         R
                       </TableHead>
                       <TableHead
-                        key={`${run.id}-f1`}
-                        className="text-right text-xs cursor-pointer select-none"
+                        className={`text-right text-xs cursor-pointer select-none border-t-2 ${color.headerTop}`}
                         onClick={() => handleSortClick(run.id)}
                       >
                         <span className="flex items-center justify-end">
@@ -143,13 +152,13 @@ export function ExperimentComparisonTable({
                           {!isBaseline && <SortIcon runId={run.id} />}
                         </span>
                       </TableHead>
-                    </>
+                    </Fragment>
                   )
                 }
                 return (
                   <TableHead
                     key={run.id}
-                    className="text-right text-xs cursor-pointer select-none whitespace-nowrap"
+                    className={`text-right text-xs cursor-pointer select-none whitespace-nowrap border-t-2 ${color.headerTop}`}
                     onClick={() => handleSortClick(run.id)}
                   >
                     <span className="flex items-center justify-end">
@@ -174,21 +183,28 @@ export function ExperimentComparisonTable({
             ) : (
               sortedRows.map((row) => (
                 <TableRow key={row.queryId}>
-                  <TableCell className="text-sm max-w-[300px] truncate">
+                  <TableCell className="text-sm max-w-[300px] truncate sticky left-0 bg-background z-10 border-r">
                     {row.queryText}
                   </TableCell>
-                  {runs.map((run) => {
+                  {runs.map((run, i) => {
                     const m = row.results[run.id]
+                    const color = runColors[i]
                     if (expanded) {
                       return (
-                        <>
-                          <TableCell key={`${run.id}-p`} className="text-right font-mono text-sm">
+                        <Fragment key={run.id}>
+                          <TableCell
+                            className={`text-right font-mono text-sm ${color.cellBg} border-l-2 ${color.groupBorder}`}
+                          >
                             {m ? formatPct(m.precision) : '—'}
                           </TableCell>
-                          <TableCell key={`${run.id}-r`} className="text-right font-mono text-sm">
+                          <TableCell
+                            className={`text-right font-mono text-sm ${color.cellBg}`}
+                          >
                             {m ? formatPct(m.recall) : '—'}
                           </TableCell>
-                          <TableCell key={`${run.id}-f1`} className="text-right font-mono text-sm">
+                          <TableCell
+                            className={`text-right font-mono text-sm ${color.cellBg}`}
+                          >
                             {m ? (
                               <>
                                 {formatPct(m.f1)}
@@ -196,11 +212,14 @@ export function ExperimentComparisonTable({
                               </>
                             ) : '—'}
                           </TableCell>
-                        </>
+                        </Fragment>
                       )
                     }
                     return (
-                      <TableCell key={run.id} className="text-right font-mono text-sm">
+                      <TableCell
+                        key={run.id}
+                        className={`text-right font-mono text-sm ${color.cellBg}`}
+                      >
                         {m ? (
                           <>
                             {formatPct(m.f1)}
