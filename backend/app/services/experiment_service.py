@@ -2,6 +2,7 @@
 import logging
 from uuid import UUID
 
+from app.models.eval_run import EvalRunStatus
 from app.models.experiment import ExperimentStatus
 from app.repositories.experiment_repository import ExperimentRepository
 from app.schemas.experiment import (
@@ -12,6 +13,12 @@ from app.schemas.experiment import (
     VariableDiff,
 )
 from app.schemas.eval_run import EvalRunResponse
+from app.schemas.experiment_comparison import (
+    ExperimentComparisonResponse,
+    RunMeta,
+    PerRunMetrics,
+    ComparisonRow,
+)
 from app.services.exceptions import NotFoundError
 
 logger = logging.getLogger(__name__)
@@ -101,6 +108,89 @@ class ExperimentService:
         deleted = await self.repo.delete(experiment_id, project_id)
         if not deleted:
             raise NotFoundError(f"Experiment {experiment_id} not found")
+
+    async def compare(
+        self, experiment_id: UUID, project_id: UUID
+    ) -> ExperimentComparisonResponse:
+        experiment = await self.repo.get_for_comparison(experiment_id, project_id)
+        if not experiment:
+            raise NotFoundError(f"Experiment {experiment_id} not found")
+
+        completed_statuses = {EvalRunStatus.completed, EvalRunStatus.partial_failure}
+        completed_runs = [r for r in experiment.runs if r.status in completed_statuses]
+
+        baseline_id = experiment.baseline_run_id
+
+        def _sort_key(run):
+            is_baseline = 0 if run.id == baseline_id else 1
+            avg_f1 = run.metrics.get("avgF1") if run.metrics else None
+            return (is_baseline, -(avg_f1 or 0))
+
+        completed_runs.sort(key=_sort_key)
+
+        run_metas = [
+            RunMeta(
+                id=run.id,
+                name=run.name,
+                variant_label=run.variant_label,
+                avg_f1=run.metrics.get("avgF1") if run.metrics else None,
+            )
+            for run in completed_runs
+        ]
+
+        run_result_maps: dict[UUID, dict[UUID, object]] = {
+            run.id: {res.query_id: res for res in run.results}
+            for run in completed_runs
+        }
+
+        all_query_ids: set[UUID] = set()
+        for result_map in run_result_maps.values():
+            all_query_ids.update(result_map.keys())
+
+        query_texts: dict[UUID, str] = {}
+        for run in completed_runs:
+            for res in run.results:
+                if res.query_id not in query_texts and res.query:
+                    query_texts[res.query_id] = res.query.query_text
+
+        baseline_result_map = run_result_maps.get(baseline_id, {}) if baseline_id else {}
+
+        rows: list[ComparisonRow] = []
+        for qid in all_query_ids:
+            baseline_res = baseline_result_map.get(qid)
+            baseline_f1 = baseline_res.f1 if baseline_res else None
+
+            results_dict: dict[str, PerRunMetrics] = {}
+            for run in completed_runs:
+                res = run_result_maps[run.id].get(qid)
+                if res is None:
+                    continue
+                if baseline_id and run.id == baseline_id:
+                    delta = None
+                elif baseline_f1 is not None:
+                    delta = round(res.f1 - baseline_f1, 4)
+                else:
+                    delta = None
+                results_dict[str(run.id)] = PerRunMetrics(
+                    precision=res.precision,
+                    recall=res.recall,
+                    f1=res.f1,
+                    delta_f1=delta,
+                )
+
+            rows.append(ComparisonRow(
+                query_id=qid,
+                query_text=query_texts.get(qid, ""),
+                results=results_dict,
+            ))
+
+        return ExperimentComparisonResponse(
+            experiment_id=experiment.id,
+            experiment_name=experiment.name,
+            baseline_run_id=baseline_id,
+            runs=run_metas,
+            rows=rows,
+        )
 
     def _compute_variable_diff(self, runs) -> VariableDiff:
         """Compare config across runs to find what varies and what's constant."""
