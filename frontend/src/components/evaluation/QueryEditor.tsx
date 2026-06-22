@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, Plus, Check, X } from 'lucide-react'
+import { Trash2, Plus, Check, X, Lock } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -62,7 +62,15 @@ export function QueryEditor({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
-          {editingText !== null ? (
+          {query.hasResults ? (
+            <div className="space-y-1.5">
+              <p className="text-sm p-2 -m-2">{query.queryText}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                This query has evaluation results and cannot be modified
+              </p>
+            </div>
+          ) : editingText !== null ? (
             <div className="space-y-2">
               <Textarea
                 value={editingText}
@@ -88,14 +96,16 @@ export function QueryEditor({
             </p>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0 text-muted-foreground hover:text-destructive"
-          onClick={() => onDelete(query.id)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {!query.hasResults && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+            onClick={() => onDelete(query.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       <Separator />

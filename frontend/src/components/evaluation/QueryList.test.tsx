@@ -11,6 +11,7 @@ const makeQuery = (id: string, text: string, sourceMethod: SourceMethod = 'manua
   reasoning: null,
   questionType: null,
   referenceAnswer: null,
+  hasResults: false,
   sources: [],
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',

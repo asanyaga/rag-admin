@@ -49,7 +49,8 @@ class GoldenSetService:
         gs = await self.gs_repo.get_with_queries(gs_id, project_id)
         if not gs:
             raise NotFoundError(f"Golden set {gs_id} not found")
-        return self._to_detail_response(gs)
+        query_ids_with_results = await self.gs_repo.get_query_ids_with_results(gs_id)
+        return self._to_detail_response(gs, query_ids_with_results)
 
     async def list(self, project_id: UUID) -> list[GoldenSetResponse]:
         items = await self.gs_repo.list_by_project(project_id)
@@ -113,6 +114,12 @@ class GoldenSetService:
         # Determine review_status update
         review_status = data.review_status
         if data.query_text is not None:
+            # Block text edits on queries that have run results — changing the text
+            # would silently corrupt all historical metrics that reference this query.
+            if await self.gs_repo.query_has_results(query_id):
+                raise ValidationError(
+                    "Query text cannot be modified: this query has evaluation run results referencing it"
+                )
             # Auto-set "edited" when query text changes on an auto-generated query
             existing = await self.gs_repo.get_query(query_id)
             if existing and existing.source_method.value == "auto_generated" and review_status is None:
@@ -131,7 +138,8 @@ class GoldenSetService:
             raise NotFoundError(f"Query {query_id} not found")
         # Reload with sources
         query = await self.gs_repo.get_query(query_id)
-        return self._to_query_response(query)
+        has_results = await self.gs_repo.query_has_results(query_id)
+        return self._to_query_response(query, has_results=has_results)
 
     async def delete_query(
         self, gs_id: UUID, project_id: UUID, query_id: UUID
@@ -139,6 +147,12 @@ class GoldenSetService:
         gs = await self.gs_repo.get_by_id(gs_id, project_id)
         if not gs:
             raise NotFoundError(f"Golden set {gs_id} not found")
+        # Block deletion of queries with run results — the FK CASCADE would silently
+        # destroy all evaluation data for this query across every run.
+        if await self.gs_repo.query_has_results(query_id):
+            raise ValidationError(
+                "Query cannot be deleted: it has evaluation run results referencing it"
+            )
         deleted = await self.gs_repo.delete_query(query_id)
         if not deleted:
             raise NotFoundError(f"Query {query_id} not found")
@@ -236,11 +250,13 @@ class GoldenSetService:
             updated_at=gs.updated_at,
         )
 
-    def _to_detail_response(self, gs) -> GoldenSetDetailResponse:
+    def _to_detail_response(self, gs, query_ids_with_results: set | None = None) -> GoldenSetDetailResponse:
+        if query_ids_with_results is None:
+            query_ids_with_results = set()
         queries = []
         doc_ids = set()
         for q in (gs.queries or []):
-            queries.append(self._to_query_response(q))
+            queries.append(self._to_query_response(q, has_results=q.id in query_ids_with_results))
             for s in (q.sources or []):
                 doc_ids.add(s.document_id)
 
@@ -269,7 +285,7 @@ class GoldenSetService:
         )
 
     @staticmethod
-    def _to_query_response(query) -> QueryResponse:
+    def _to_query_response(query, has_results: bool = False) -> QueryResponse:
         sources = []
         for s in (query.sources or []):
             doc = s.document
@@ -295,6 +311,7 @@ class GoldenSetService:
             reasoning=query.reasoning,
             question_type=query.question_type,
             reference_answer=query.reference_answer,
+            has_results=has_results,
             sources=sources,
             created_at=query.created_at,
             updated_at=query.updated_at,

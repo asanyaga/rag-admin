@@ -33,6 +33,7 @@ export interface GoldenSetQuery {
   reasoning: string | null
   questionType: string | null
   referenceAnswer: string | null
+  hasResults: boolean
   sources: GoldenSetSource[]
   createdAt: string
   updatedAt: string
