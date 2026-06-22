@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import tempfile
 import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 from app.cdm.adapters.base import SourceMeta
 from app.cdm.adapters.docling import DoclingAdapter
@@ -159,14 +163,14 @@ async def run_docling(
     raw_payload: Optional[Dict[str, Any]] = None
     try:
         if len(raw_docs) == 1:
-            raw_payload = raw_docs[0].model_dump(mode="json")
+            raw_payload = json.loads(raw_docs[0].model_dump_json())
         else:
             raw_payload = {
                 "batch_count": len(raw_docs),
-                "batches": [doc.model_dump(mode="json") for doc in raw_docs],
+                "batches": [json.loads(doc.model_dump_json()) for doc in raw_docs],
             }
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("docling: failed to serialize raw_payload: %s", exc)
 
     run = ParseRun(
         id=run_id,
