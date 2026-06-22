@@ -14,6 +14,7 @@ from app.schemas.experiment import (
     ExperimentResponse,
     ExperimentDetailResponse,
 )
+from app.schemas.experiment_comparison import ExperimentComparisonResponse
 from app.services.experiment_service import ExperimentService
 from app.services.exceptions import NotFoundError
 
@@ -73,6 +74,21 @@ async def create_experiment(
 ):
     await verify_project_access(project_id, current_user, project_repo)
     return await service.create(project_id, current_user.id, data)
+
+
+@router.get("/{experiment_id}/compare", response_model=ExperimentComparisonResponse)
+async def compare_experiment(
+    project_id: UUID,
+    experiment_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ExperimentService = Depends(get_experiment_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.compare(experiment_id, project_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.get("/{experiment_id}", response_model=ExperimentDetailResponse)
