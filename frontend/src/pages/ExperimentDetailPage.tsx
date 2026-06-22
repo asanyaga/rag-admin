@@ -92,18 +92,6 @@ export default function ExperimentDetailPage() {
     navigate(`/evaluation/runs/new?${params.toString()}`)
   }
 
-  const handleCompare = () => {
-    if (!experiment) return
-    const completedRuns = experiment.runs.filter(
-      (r) => r.status === 'completed' || r.status === 'partial_failure'
-    )
-    if (completedRuns.length >= 2) {
-      navigate(
-        `/evaluation/compare?runs=${completedRuns[0].id},${completedRuns[1].id}`
-      )
-    }
-  }
-
   const formatMetric = (val: number | undefined | null) =>
     val != null ? (val * 100).toFixed(1) + '%' : '—'
 
@@ -224,9 +212,13 @@ export default function ExperimentDetailPage() {
           New Variant
         </Button>
         {completedCount >= 2 && (
-          <Button size="sm" variant="outline" onClick={handleCompare}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/evaluation/experiments/${experiment.id}/compare`)}
+          >
             <GitCompareArrows className="mr-2 h-4 w-4" />
-            Compare
+            Per-Query Analysis
           </Button>
         )}
         {experiment.status === 'active' && (

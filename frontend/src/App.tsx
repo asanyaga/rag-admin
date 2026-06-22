@@ -22,6 +22,7 @@ import EvalRunDetailPage from './pages/EvalRunDetailPage'
 import EvalResultDetailPage from './pages/EvalResultDetailPage'
 import RunComparisonPage from './pages/RunComparisonPage'
 import ExperimentDetailPage from './pages/ExperimentDetailPage'
+import ExperimentComparisonPage from './pages/ExperimentComparisonPage'
 import ExtractionPage from './pages/ExtractionPage'
 import AgentListPage from './pages/AgentListPage'
 import AgentComposerPage from './pages/AgentComposerPage'
@@ -177,6 +178,11 @@ const router = createBrowserRouter([
             path: 'evaluation/experiments/:experimentId',
             element: <ExperimentDetailPage />,
             handle: { breadcrumb: 'Experiment Detail' },
+          },
+          {
+            path: 'evaluation/experiments/:experimentId/compare',
+            element: <ExperimentComparisonPage />,
+            handle: { breadcrumb: 'Experiment Comparison' },
           },
           {
             path: 'evaluation/runs/new',
