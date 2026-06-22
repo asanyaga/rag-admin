@@ -4,7 +4,7 @@ from sqlalchemy import select, delete, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import GoldenSet, GoldenSetQuery, GoldenSetSource
+from app.models import GoldenSet, GoldenSetQuery, GoldenSetSource, EvalRunResult
 from app.models.golden_set import GenerationStatus, SourceMethod, ReviewStatus
 
 _UNSET = object()  # sentinel for distinguishing "not provided" from None
@@ -211,6 +211,25 @@ class GoldenSetRepository:
         )
         await self.session.commit()
         return result.rowcount > 0
+
+    async def get_query_ids_with_results(self, gs_id: UUID) -> set[UUID]:
+        """Return IDs of queries in this golden set that have at least one eval run result."""
+        result = await self.session.execute(
+            select(EvalRunResult.query_id)
+            .join(GoldenSetQuery, GoldenSetQuery.id == EvalRunResult.query_id)
+            .where(GoldenSetQuery.golden_set_id == gs_id)
+            .distinct()
+        )
+        return set(result.scalars().all())
+
+    async def query_has_results(self, query_id: UUID) -> bool:
+        """Return True if any eval run result references this query."""
+        result = await self.session.execute(
+            select(func.count())
+            .select_from(EvalRunResult)
+            .where(EvalRunResult.query_id == query_id)
+        )
+        return (result.scalar() or 0) > 0
 
     async def bulk_update_review_status(
         self, query_ids: list[UUID], review_status: str

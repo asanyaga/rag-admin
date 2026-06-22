@@ -390,6 +390,8 @@ async def update_query(
         return await service.update_query(gs_id, project_id, query_id, data)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 
 @router.delete("/{gs_id}/queries/{query_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -406,6 +408,8 @@ async def delete_query(
         await service.delete_query(gs_id, project_id, query_id)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 
 # ---------------------------------------------------------------------------

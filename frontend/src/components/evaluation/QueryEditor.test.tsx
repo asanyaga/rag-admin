@@ -11,6 +11,7 @@ const baseQuery: GoldenSetQuery = {
   reasoning: 'This tests the refund section.',
   questionType: 'factual',
   referenceAnswer: null,
+  hasResults: false,
   sources: [],
   createdAt: '2024-03-01T10:00:00Z',
   updatedAt: '2024-03-01T10:00:00Z',

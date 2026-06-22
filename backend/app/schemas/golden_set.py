@@ -74,6 +74,7 @@ class QueryResponse(BaseModel):
     reasoning: str | None = None
     question_type: str | None = Field(None, alias="questionType")
     reference_answer: str | None = Field(None, alias="referenceAnswer")
+    has_results: bool = Field(False, alias="hasResults")
     sources: list[SourceResponse] = Field(default_factory=list)
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
