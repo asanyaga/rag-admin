@@ -27,7 +27,8 @@ RUN apt-get update && \
         libmagic1 \
         tesseract-ocr \
         libgl1 \
-        libglib2.0-0 && \
+        libglib2.0-0 \
+        gosu && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

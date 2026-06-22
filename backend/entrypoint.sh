@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+# Docker named volumes are always root-owned on first creation. When docker-compose
+# sets user: root for this service, we fix the cache volume permissions here then
+# drop back to appuser before running anything else.
+if [ "$(id -u)" = "0" ]; then
+    chown -R appuser:appuser /home/appuser/.cache
+    exec gosu appuser "$0" "$@"
+fi
+
 echo "Waiting for PostgreSQL to be ready..."
 
 # Extract connection details from DATABASE_URL
