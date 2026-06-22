@@ -20,6 +20,7 @@ from app.ports.storage import StorageService
 from app.repositories.parse_run_repository import ParseRunCreate, ParseRunRepository
 from app.repositories.parsed_document_repository import ParsedDocumentCreate, ParsedDocumentRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
+from app.services.parsing.docling_runner import run_docling
 from app.services.parsing.errors import ParseFailedError, ParseRunError
 from app.services.parsing.landingai_runner import run_landingai
 from app.services.parsing.llamaparse_runner import run_llamaparse
@@ -31,7 +32,8 @@ logger = logging.getLogger(__name__)
 _RUNNERS: Dict[ParserKind, Callable] = {
     ParserKind.LLAMAPARSE: run_llamaparse,
     ParserKind.LANDING_AI: run_landingai,
-    ParserKind.SIMPLE: run_simple,
+    ParserKind.SIMPLE:     run_simple,
+    ParserKind.DOCLING:    run_docling,
 }
 
 
