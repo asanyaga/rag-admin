@@ -7,17 +7,21 @@ import { ScorePill } from '@/components/evaluation/ScorePill'
 import { ExperimentComparisonTable } from '@/components/evaluation/ExperimentComparisonTable'
 import { useProject } from '@/contexts/ProjectContext'
 import { useExperimentComparison } from '@/hooks/useExperiments'
+import { getRunColor, BASELINE_COLOR } from '@/lib/runColors'
 import type { RunMeta } from '@/types/experiment'
+import type { RunColorSet } from '@/lib/runColors'
 
 function RunSummaryCard({
   run,
   isBaseline,
+  colorSet,
 }: {
   run: RunMeta
   isBaseline: boolean
+  colorSet: RunColorSet
 }) {
   return (
-    <Card className={isBaseline ? 'border-primary/40 bg-primary/5' : ''}>
+    <Card className={`border-l-4 ${colorSet.card} ${isBaseline ? 'bg-primary/5' : ''}`}>
       <CardContent className="pt-4 pb-4 space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           {isBaseline && <Star className="h-4 w-4 text-amber-500 fill-amber-500 shrink-0" />}
@@ -63,6 +67,12 @@ export default function ExperimentComparisonPage() {
 
   if (!comparison) return null
 
+  let nonBaselineIndex = 0
+  const runColors = comparison.runs.map((run) => {
+    if (run.id === comparison.baselineRunId) return BASELINE_COLOR
+    return getRunColor(nonBaselineIndex++)
+  })
+
   return (
     <div className="space-y-6 max-w-7xl">
       <div className="flex items-center gap-4">
@@ -85,11 +95,12 @@ export default function ExperimentComparisonPage() {
           gridTemplateColumns: `repeat(${Math.min(comparison.runs.length, 6)}, minmax(150px, 1fr))`,
         }}
       >
-        {comparison.runs.map((run) => (
+        {comparison.runs.map((run, i) => (
           <RunSummaryCard
             key={run.id}
             run={run}
             isBaseline={run.id === comparison.baselineRunId}
+            colorSet={runColors[i]}
           />
         ))}
       </div>
@@ -98,6 +109,7 @@ export default function ExperimentComparisonPage() {
         runs={comparison.runs}
         rows={comparison.rows}
         baselineRunId={comparison.baselineRunId}
+        runColors={runColors}
       />
     </div>
   )
