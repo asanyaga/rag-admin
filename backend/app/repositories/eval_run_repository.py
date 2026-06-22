@@ -212,6 +212,7 @@ class EvalRunRepository:
                 selectinload(EvalRun.results).selectinload(EvalRunResult.query),
                 selectinload(EvalRun.golden_set),
                 selectinload(EvalRun.index),
+                selectinload(EvalRun.experiment),
             )
             .where(EvalRun.id == run_id_1, EvalRun.project_id == project_id)
         )
@@ -221,6 +222,7 @@ class EvalRunRepository:
                 selectinload(EvalRun.results).selectinload(EvalRunResult.query),
                 selectinload(EvalRun.golden_set),
                 selectinload(EvalRun.index),
+                selectinload(EvalRun.experiment),
             )
             .where(EvalRun.id == run_id_2, EvalRun.project_id == project_id)
         )

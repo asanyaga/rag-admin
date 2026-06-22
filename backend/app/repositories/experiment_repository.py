@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.experiment import Experiment
-from app.models.eval_run import EvalRun
+from app.models.eval_run import EvalRun, EvalRunResult
+from app.models.golden_set import GoldenSetQuery
 
 
 class ExperimentRepository:
@@ -119,3 +120,21 @@ class ExperimentRepository:
             select(func.count()).where(EvalRun.experiment_id == experiment_id)
         )
         return result.scalar() or 0
+
+    async def get_for_comparison(
+        self, experiment_id: UUID, project_id: UUID
+    ) -> Experiment | None:
+        """Load experiment with all runs and their per-query results for multi-run comparison."""
+        result = await self.session.execute(
+            select(Experiment)
+            .options(
+                selectinload(Experiment.runs)
+                .selectinload(EvalRun.results)
+                .selectinload(EvalRunResult.query),
+            )
+            .where(
+                Experiment.id == experiment_id,
+                Experiment.project_id == project_id,
+            )
+        )
+        return result.scalar_one_or_none()
