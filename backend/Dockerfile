@@ -48,6 +48,9 @@ RUN chmod +x /app/entrypoint.sh
 # Create data directory with proper ownership
 RUN mkdir -p /app/data/documents && chown -R appuser:appuser /app/data
 
+# Pre-create cache dir so Docker initialises the volume with correct ownership
+RUN mkdir -p /home/appuser/.cache && chown -R appuser:appuser /home/appuser/.cache
+
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
