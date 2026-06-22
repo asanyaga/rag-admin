@@ -17,6 +17,7 @@ class ParserKind(str, Enum):
     UNSTRUCTURED = "unstructured"
     LLAMAPARSE   = "llamaparse"
     LANDING_AI   = "landing_ai"
+    DOCLING      = "docling"
 
 
 class BlockRole(str, Enum):

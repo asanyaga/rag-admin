@@ -22,6 +22,10 @@ class SimpleRunError(ParseRunError):
     """Raised by simple_runner when local extraction fails."""
 
 
+class DoclingRunError(ParseRunError):
+    """Raised by docling_runner when conversion fails on any batch."""
+
+
 class ParseFailedError(RuntimeError):
     """Domain error raised by ParsingService to callers (routers) after
     a failed ParseRun has been persisted."""
