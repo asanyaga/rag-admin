@@ -19,11 +19,15 @@ FROM python:3.12-slim
 # Install system dependencies
 # - postgresql-client: for health checks and pg_isready
 # - libmagic1: required by python-magic for MIME type detection
+# - libgl1: required by opencv-python (pulled in by docling)
+# - libglib2.0-0: required by opencv-python
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         postgresql-client \
         libmagic1 \
-        tesseract-ocr && \
+        tesseract-ocr \
+        libgl1 \
+        libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
