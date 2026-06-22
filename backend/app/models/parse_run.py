@@ -22,6 +22,11 @@ class ParseRun(Base):
         ForeignKey("source_documents.id", ondelete="CASCADE"),
         nullable=False,
     )
+    project_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     parser: Mapped[str] = mapped_column(Text, nullable=False)
     parser_version: Mapped[str | None] = mapped_column(Text, nullable=True)
     representation_kind: Mapped[str] = mapped_column(Text, nullable=False)
@@ -59,4 +64,5 @@ class ParseRun(Base):
     __table_args__ = (
         sa.Index("ix_parse_runs_status", "status"),
         sa.Index("ix_parse_runs_source_document_id", "source_document_id"),
+        sa.Index("ix_parse_runs_project_id", "project_id"),
     )
