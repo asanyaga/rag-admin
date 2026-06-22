@@ -115,6 +115,7 @@ async def run_docling(
 
     adapter = DoclingAdapter()
     fragments: List[ParsedDocument] = []
+    raw_docs: List[Any] = []
 
     try:
         for i, batch_path in enumerate(batch_paths):
@@ -127,6 +128,7 @@ async def run_docling(
             )
             async with _DOCLING_SEMAPHORE:
                 result = await asyncio.to_thread(_convert, batch_path, config)
+            raw_docs.append(result.document)
             fragment = adapter.adapt(result.document, source_meta, page_offset=page_offset)
             fragments.append(fragment)
     except Exception as exc:
@@ -154,6 +156,18 @@ async def run_docling(
     duration_ms = int((time.perf_counter() - t0) * 1000)
     merged = _merge_fragments(fragments)
 
+    raw_payload: Optional[Dict[str, Any]] = None
+    try:
+        if len(raw_docs) == 1:
+            raw_payload = raw_docs[0].model_dump(mode="json")
+        else:
+            raw_payload = {
+                "batch_count": len(raw_docs),
+                "batches": [doc.model_dump(mode="json") for doc in raw_docs],
+            }
+    except Exception:
+        pass
+
     run = ParseRun(
         id=run_id,
         source_document_id=source.id,
@@ -164,5 +178,6 @@ async def run_docling(
         started_at=started_at,
         finished_at=finished_at,
         duration_ms=duration_ms,
+        raw_payload=raw_payload,
     )
     return run, merged
