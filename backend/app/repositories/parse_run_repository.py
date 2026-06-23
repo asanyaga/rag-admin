@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.document import Document as DocumentORM
 from app.models.parse_run import ParseRun
 from app.models.parsed_document import ParsedDocument
 from app.models.source_document import SourceDocument

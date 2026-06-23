@@ -145,7 +145,7 @@ async def source_and_doc(test_db: AsyncSession, user: User):
 @pytest.mark.asyncio
 async def test_get_latest_for_project_finds_run_in_same_project(repo, source_and_doc):
     sd, project_id = source_and_doc
-    run = await repo.create(make_dto(sd, config_hash="p" * 64))
+    run = await repo.create(make_dto(sd, config_hash="p" * 64, project_id=project_id))
     found = await repo.get_latest_for_project(
         source_document_id=sd.id,
         representation_kind="vector_light",
