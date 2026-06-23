@@ -4,8 +4,6 @@ import { act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ExtractionForm } from './ExtractionForm'
 import type { ExtractionSchema, ExtractorInfo } from '@/types/extraction'
-import * as extractionApi from '@/api/extraction'
-
 vi.mock('@/api/extraction', () => ({
   getLlmDefaults: vi.fn().mockResolvedValue({
     systemPrompt: 'Default system prompt text',
