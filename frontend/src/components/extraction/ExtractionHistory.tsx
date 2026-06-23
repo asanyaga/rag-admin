@@ -1,4 +1,4 @@
-import type { ExtractionResult, ExtractionResultListItem } from '@/types/extraction'
+import type { ExtractionResult, ExtractionResultListItem, ExtractionSchema } from '@/types/extraction'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,7 @@ interface ExtractionHistoryProps {
   isLoading: boolean
   selectedResult: ExtractionResult | null
   isLoadingResult?: boolean
+  schemas?: ExtractionSchema[]
   onSelectResult: (resultId: string) => void
   inProgressPhase?: InProgressPhase
 }
@@ -29,6 +30,7 @@ export function ExtractionHistory({
   results,
   isLoading,
   selectedResult,
+  schemas,
   onSelectResult,
   inProgressPhase,
 }: ExtractionHistoryProps) {
@@ -91,6 +93,7 @@ export function ExtractionHistory({
       {results.map((r) => {
         const isExpanded = selectedResult?.id === r.id
         const isPending = r.status === 'pending'
+        const schemaName = schemas?.find((s) => s.id === r.extractionSchemaId)?.name
 
         return (
           <Collapsible
@@ -100,18 +103,25 @@ export function ExtractionHistory({
           >
             <CollapsibleTrigger asChild>
               <Button variant="ghost" className="w-full justify-between h-auto py-2.5 px-3 hover:bg-muted/50">
-                <div className="flex items-center gap-2 text-left">
+                <div className="flex items-center gap-2 text-left min-w-0">
                   <ChevronRight className={`h-4 w-4 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                  <Badge variant="outline" className="text-[10px] font-normal">{r.extractionMethod}</Badge>
-                  <Badge
-                    variant={r.status === 'completed' ? 'default' : r.status === 'pending' ? 'secondary' : 'destructive'}
-                    className="text-[10px]"
-                  >
-                    {isPending && <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />}
-                    {r.status}
-                  </Badge>
+                  <div className="flex flex-col items-start gap-0.5 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      {schemaName && (
+                        <span className="text-xs font-medium truncate">{schemaName}</span>
+                      )}
+                      <Badge variant="outline" className="text-[10px] font-normal shrink-0">{r.extractionMethod}</Badge>
+                      <Badge
+                        variant={r.status === 'completed' ? 'default' : r.status === 'pending' ? 'secondary' : 'destructive'}
+                        className="text-[10px] shrink-0"
+                      >
+                        {isPending && <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />}
+                        {r.status}
+                      </Badge>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">{formatDate(r.createdAt)}</span>
+                  </div>
                 </div>
-                <span className="text-xs text-muted-foreground">{formatDate(r.createdAt)}</span>
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>

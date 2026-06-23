@@ -45,6 +45,7 @@ interface ParseMethodSelectorProps {
   onParserTypeChange: (type: string) => void
   onConfigChange: (config: ParseConfig) => void
   disabled?: boolean
+  compact?: boolean
 }
 
 export function ParseMethodSelector({
@@ -53,6 +54,7 @@ export function ParseMethodSelector({
   onParserTypeChange,
   onConfigChange,
   disabled = false,
+  compact = false,
 }: ParseMethodSelectorProps) {
   const handleParserChange = (newType: string) => {
     onParserTypeChange(newType)
@@ -60,11 +62,13 @@ export function ParseMethodSelector({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Parse Method</Label>
+    <div className="space-y-3">
+      <div className={compact ? 'flex items-center gap-2' : 'space-y-2'}>
+        <Label className={compact ? 'text-xs text-muted-foreground shrink-0' : undefined}>
+          Parse method
+        </Label>
         <Select value={parserType} onValueChange={handleParserChange} disabled={disabled}>
-          <SelectTrigger>
+          <SelectTrigger className={compact ? 'h-8 text-xs' : undefined}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -75,9 +79,11 @@ export function ParseMethodSelector({
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
-          {PARSER_REGISTRY[parserType]?.description}
-        </p>
+        {!compact && (
+          <p className="text-xs text-muted-foreground">
+            {PARSER_REGISTRY[parserType]?.description}
+          </p>
+        )}
       </div>
 
       {parserType === 'llamaparse' && (
