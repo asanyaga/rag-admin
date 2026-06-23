@@ -1,75 +1,68 @@
-# Extraction Schema System Prompt
+# Extraction LLM Prompt Visibility
 
 **Date:** 2026-06-23
 **Status:** Approved
 
 ## Overview
 
-Add a per-schema system prompt field to `ExtractionSchema`. When LLM extraction runs, this prompt overrides the hardcoded application default. Users view and edit it in the schema editor, where the hardcoded default text is shown as placeholder so they know exactly what they are overriding.
+When running LLM extraction, users cannot currently see the default system prompt or user prompt template — both fields show "leave blank to use the default" placeholder text. This means users cannot read the defaults before deciding to override them, making prompt variation comparison difficult.
+
+This feature makes both default prompts visible and editable per run. There is no persistence; schema-level or project-level default overrides are a later iteration.
 
 ## Scope
 
-- LLM extraction method only (`extractionMethod === 'llm'`). LlamaExtract is a third-party service and has no system prompt concept.
-- Per-schema granularity (not per-project or per-run).
-- The existing per-run `llmConfig.systemPrompt` field remains unchanged and continues to take highest priority.
+- LLM extraction method only. LlamaExtract has no prompt concept.
+- Per-run only — no persistence, no model changes, no migration.
+- Both the system prompt and user prompt template are pre-filled with their defaults.
+- Users can edit either field and run extractions with different prompt variations; the extraction history already records each run's config, enabling comparison.
 
-## Data Model
+## Backend
 
-Add one nullable column to `extraction_schemas`:
+Add one new endpoint:
 
-```sql
-ALTER TABLE extraction_schemas ADD COLUMN system_prompt TEXT NULL;
+```
+GET /extractors/llm/defaults
 ```
 
-Python model (`backend/app/models/extraction_schema.py`):
+Response:
 
-```python
-system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+```json
+{
+  "systemPrompt": "You are a structured data extraction assistant...",
+  "userPromptTemplate": "Extract structured data from the following document..."
+}
 ```
 
-Pydantic schemas (`backend/app/schemas/extraction_result.py`):
+The response body is the two constants already defined in `backend/app/adapters/extraction/llm.py`:
+- `DEFAULT_EXTRACTION_SYSTEM_PROMPT`
+- `DEFAULT_USER_PROMPT_TEMPLATE`
 
-- `ExtractionSchemaCreate` — `system_prompt: str | None = None` (alias `"systemPrompt"`)
-- `ExtractionSchemaUpdate` — `system_prompt: str | None = None` (alias `"systemPrompt"`)
-- `ExtractionSchemaResponse` — `system_prompt: str | None = None` (alias `"systemPrompt"`), populated in `from_orm_model`
+No auth required beyond the standard project-member check (same as other extractor endpoints). No query parameters. Response is effectively static but served from the backend so the frontend never duplicates the strings.
 
-Frontend types (`frontend/src/types/extraction.ts`):
+## Frontend
 
-- `ExtractionSchema` — `systemPrompt?: string`
-- `ExtractionSchemaCreate` — `systemPrompt?: string`
-- `ExtractionSchemaUpdate` — `systemPrompt?: string`
+**API layer** (`frontend/src/api/extraction.ts`): add `getLlmDefaults(): Promise<{ systemPrompt: string; userPromptTemplate: string }>` calling `GET /extractors/llm/defaults`.
 
-## Backend: Extraction Priority Chain
+**ExtractionForm** (`frontend/src/components/extraction/ExtractionForm.tsx`):
 
-`LLMExtractor._build_messages` selects the system prompt using this priority:
+- On mount (or when `extractionMethod` switches to `'llm'`), call `getLlmDefaults()` and store the result in local state.
+- Pre-fill `promptConfig.systemPrompt` with the fetched system prompt if it is currently unset.
+- Pre-fill `userPromptTemplate` with the fetched user prompt template if it is currently unset.
+- Both fields remain fully editable. The user can clear them or replace them for this run.
+- If the fetch fails, fall back silently — fields remain blank and the existing "leave blank" behaviour applies.
 
-1. **Per-run override** — `llm_config.system_prompt` (already supported via `PromptConfigEditor`)
-2. **Schema default** — `config["schema_system_prompt"]` injected by the router
-3. **Hardcoded fallback** — `DEFAULT_EXTRACTION_SYSTEM_PROMPT`
+No changes to `PromptConfigEditor`, `ExtractionHistory`, or any type definitions.
 
-The extraction router (`backend/app/routers/extraction.py`) already fetches the full `ExtractionSchema` record before dispatching. It injects `schema.system_prompt` into the `config` dict as `"schema_system_prompt"` when the field is non-null.
+## Priority Chain (unchanged)
 
-## UI: Schema Editor
-
-`ExtractionSchemaEditor` gets a new textarea below the JSON Schema field:
-
-- **Label:** `System Prompt (LLM extraction)`
-- **Description:** `Applies to LLM extraction only. Leave blank to use the application default.`
-- **Placeholder:** The full `DEFAULT_EXTRACTION_SYSTEM_PROMPT` text, so users can read the default before deciding to override it.
-- **Behaviour:** Pre-filled with `schema.systemPrompt` when editing an existing schema. Submitted as `systemPrompt: text || undefined` (empty string → omit field).
-
-No changes to `ExtractionForm`, `PromptConfigEditor`, or `ExtractionHistory`.
+`LLMExtractor` already uses: per-run `llm_config.system_prompt` → `DEFAULT_EXTRACTION_SYSTEM_PROMPT`. With pre-filling, users will typically send explicit values in both fields rather than relying on the backend fallback, but the fallback remains in place for API callers that omit the fields.
 
 ## Error Handling
 
-- Schema editor: no special validation — the system prompt is free text, any string is valid.
-- Backend: `schema_system_prompt` in config is treated as a plain string; the extractor does not validate its content.
-
-## Migration
-
-A single Alembic migration adds the nullable column with no backfill needed (existing schemas default to `NULL`, which falls through to the hardcoded default — no behaviour change for existing data).
+- Fetch failure: silent fallback, no visible error. The extraction can still run using backend defaults.
+- Empty string submitted: the backend treats an empty `userPromptTemplate` as "use default", which is consistent with current behaviour.
 
 ## Testing
 
-- Backend unit test: `LLMExtractor._build_messages` with (a) no config, (b) `schema_system_prompt` in config, (c) both `schema_system_prompt` and `llm_config.system_prompt` — verifies the priority chain.
-- Frontend: update `ExtractionSchemaEditor` tests to assert the system prompt field renders and submits correctly.
+- Backend: unit test for the new endpoint — assert both strings match the constants.
+- Frontend: update `ExtractionForm` tests to assert that when LLM method is selected, the system prompt and user prompt template fields are populated with the fetched defaults.
