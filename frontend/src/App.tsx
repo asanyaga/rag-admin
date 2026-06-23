@@ -10,6 +10,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import ProjectsPage from './pages/ProjectsPage'
 import DocumentsPage from './pages/DocumentsPage'
+import SourceDocumentsPage from './pages/SourceDocumentsPage'
 import IndexPage from './pages/IndexPage'
 import CreateIndexPage from './pages/CreateIndexPage'
 import IndexDetailPage from './pages/IndexDetailPage'
@@ -73,7 +74,12 @@ const router = createBrowserRouter([
           {
             path: 'documents',
             element: <DocumentsPage />,
-            handle: { breadcrumb: 'Documents' },
+            handle: { breadcrumb: 'Project Documents' },
+          },
+          {
+            path: 'source-documents',
+            element: <SourceDocumentsPage />,
+            handle: { breadcrumb: 'Source Documents' },
           },
           {
             path: 'documents/:documentId/runs/:runId',
