@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import type { ExtractionSchema, ExtractorInfo, RunExtractionRequest } from '@/types/extraction'
+import type { ExtractionSchema, ExtractorInfo, RunWithParseRequest } from '@/types/extraction'
+import type { ParseConfig } from '@/types/parsing'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -12,25 +13,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { Pencil, Play } from 'lucide-react'
 import { PromptConfigEditor } from '@/components/shared/PromptConfigEditor'
 import { usePromptConfig } from '@/hooks/usePromptConfig'
+import { ParseMethodSelector } from '@/components/documents/ParseMethodSelector'
+
+const REPRESENTATION_KIND = 'extract_rich'
 
 interface ExtractionFormProps {
-  parseRunId: string
+  defaultParser: string
+  defaultParserConfig: ParseConfig
   schemas: ExtractionSchema[]
   extractors: ExtractorInfo[]
-  onRun: (request: RunExtractionRequest) => Promise<void>
+  onRun: (request: RunWithParseRequest) => Promise<void>
   onEditSchema?: (schema: ExtractionSchema) => void
 }
 
 export function ExtractionForm({
-  parseRunId,
+  defaultParser,
+  defaultParserConfig,
   schemas,
   extractors,
   onRun,
   onEditSchema,
 }: ExtractionFormProps) {
+  const [parserType, setParserType] = useState(defaultParser)
+  const [parserConfig, setParserConfig] = useState<ParseConfig>(defaultParserConfig)
+
   const [schemaId, setSchemaId] = useState('')
   const [extractionMethod, setExtractionMethod] = useState('')
 
@@ -50,6 +60,12 @@ export function ExtractionForm({
 
   const [isRunning, setIsRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Reset parse config when defaults change (document selection changed)
+  useEffect(() => {
+    setParserType(defaultParser)
+    setParserConfig(defaultParserConfig)
+  }, [defaultParser, defaultParserConfig])
 
   useEffect(() => {
     if (schemas.length > 0 && !schemaId) setSchemaId(schemas[0].id)
@@ -77,58 +93,37 @@ export function ExtractionForm({
       return
     }
 
-    let config: Record<string, unknown>
+    const parseConfig = {
+      parser: parserType,
+      config: parserConfig as Record<string, unknown>,
+      representationKind: REPRESENTATION_KIND,
+    }
+
+    let extractionConfig: RunWithParseRequest['extractionConfig']
 
     if (extractionMethod === 'llamaextract') {
-      config = { extraction_mode: extractionMode }
+      const config: Record<string, unknown> = { extraction_mode: extractionMode }
       if (citeSources) config.cite_sources = true
       if (useReasoning) config.use_reasoning = true
       if (pageRange.trim()) config.page_range = pageRange.trim()
       config.extraction_target = extractionTarget
       if (confidenceScores) config.confidence_scores = true
-      setIsRunning(true)
-      try {
-        await onRun({
-          parseRunId,
-          extractionSchemaId: schemaId,
-          extractionMethod,
-          config,
-        })
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to run extraction')
-      } finally {
-        setIsRunning(false)
+      extractionConfig = { extractionSchemaId: schemaId, extractionMethod, config }
+    } else if (extractionMethod === 'llm') {
+      extractionConfig = {
+        extractionSchemaId: schemaId,
+        extractionMethod,
+        config: { structured_output_mode: structuredOutputMode, inject_block_ids: injectBlockIds },
+        llmConfig: promptConfig,
+        userPromptTemplate: userPromptTemplate.trim() || undefined,
       }
-      return
+    } else {
+      extractionConfig = { extractionSchemaId: schemaId, extractionMethod, config: {} }
     }
 
-    if (extractionMethod === 'llm') {
-      config = {
-        structured_output_mode: structuredOutputMode,
-        inject_block_ids: injectBlockIds,
-      }
-      setIsRunning(true)
-      try {
-        await onRun({
-          parseRunId,
-          extractionSchemaId: schemaId,
-          extractionMethod,
-          config,
-          llmConfig: promptConfig,
-          userPromptTemplate: userPromptTemplate.trim() || undefined,
-        })
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to run extraction')
-      } finally {
-        setIsRunning(false)
-      }
-      return
-    }
-
-    // Fallback for unknown methods
     setIsRunning(true)
     try {
-      await onRun({ parseRunId, extractionSchemaId: schemaId, extractionMethod, config: {} })
+      await onRun({ parseConfig, extractionConfig })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run extraction')
     } finally {
@@ -149,10 +144,24 @@ export function ExtractionForm({
     )
   }
 
-  const isRunDisabled = isRunning || !isConfigured
-
   return (
     <div className="space-y-4">
+      {/* Parse Configuration */}
+      <div className="space-y-3">
+        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Parse Configuration
+        </Label>
+        <ParseMethodSelector
+          parserType={parserType}
+          config={parserConfig}
+          onParserTypeChange={setParserType}
+          onConfigChange={setParserConfig}
+          disabled={isRunning}
+        />
+      </div>
+
+      <Separator />
+
       {/* Schema + Method row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
@@ -220,9 +229,7 @@ export function ExtractionForm({
             <div className="space-y-1.5">
               <Label className="text-xs">Mode</Label>
               <Select value={extractionMode} onValueChange={setExtractionMode}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="FAST">Fast</SelectItem>
                   <SelectItem value="BALANCED">Balanced</SelectItem>
@@ -231,25 +238,16 @@ export function ExtractionForm({
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-1.5">
               <Label className="text-xs">Page Range</Label>
-              <Input
-                value={pageRange}
-                onChange={(e) => setPageRange(e.target.value)}
-                placeholder="e.g. 1-5"
-                className="h-9"
-              />
+              <Input value={pageRange} onChange={(e) => setPageRange(e.target.value)} placeholder="e.g. 1-5" className="h-9" />
             </div>
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="extraction-target" className="text-xs">Target</Label>
               <Select value={extractionTarget} onValueChange={setExtractionTarget}>
-                <SelectTrigger id="extraction-target" className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger id="extraction-target" className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PER_DOC">Per Document</SelectItem>
                   <SelectItem value="PER_PAGE">Per Page</SelectItem>
@@ -258,38 +256,19 @@ export function ExtractionForm({
             </div>
             <div className="flex items-end pb-2">
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="confidence-scores"
-                  checked={confidenceScores}
-                  onCheckedChange={(checked) => setConfidenceScores(checked === true)}
-                />
-                <Label htmlFor="confidence-scores" className="text-xs font-normal">
-                  Confidence Scores
-                </Label>
+                <Checkbox id="confidence-scores" checked={confidenceScores} onCheckedChange={(c) => setConfidenceScores(c === true)} />
+                <Label htmlFor="confidence-scores" className="text-xs font-normal">Confidence Scores</Label>
               </div>
             </div>
           </div>
-
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
-              <Checkbox
-                id="cite-sources-inline"
-                checked={citeSources}
-                onCheckedChange={(checked) => setCiteSources(checked === true)}
-              />
-              <Label htmlFor="cite-sources-inline" className="text-xs font-normal">
-                Citations
-              </Label>
+              <Checkbox id="cite-sources-inline" checked={citeSources} onCheckedChange={(c) => setCiteSources(c === true)} />
+              <Label htmlFor="cite-sources-inline" className="text-xs font-normal">Citations</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox
-                id="use-reasoning-inline"
-                checked={useReasoning}
-                onCheckedChange={(checked) => setUseReasoning(checked === true)}
-              />
-              <Label htmlFor="use-reasoning-inline" className="text-xs font-normal">
-                Reasoning
-              </Label>
+              <Checkbox id="use-reasoning-inline" checked={useReasoning} onCheckedChange={(c) => setUseReasoning(c === true)} />
+              <Label htmlFor="use-reasoning-inline" className="text-xs font-normal">Reasoning</Label>
             </div>
           </div>
         </>
@@ -298,27 +277,14 @@ export function ExtractionForm({
       {/* LLM method config */}
       {extractionMethod === 'llm' && (
         <div className="space-y-4">
-          <PromptConfigEditor
-            value={promptConfig}
-            onChange={setPromptConfig}
-            onProviderChange={setProvider}
-            capabilities={{ thinking: true }}
-          />
-
+          <PromptConfigEditor value={promptConfig} onChange={setPromptConfig} onProviderChange={setProvider} capabilities={{ thinking: true }} />
           <div className="space-y-1.5">
             <Label className="text-xs">User prompt template</Label>
             <p className="text-[11px] text-muted-foreground">
-              Variables: <code>{'{schema_json}'}</code> and <code>{'{document_context}'}</code>.
-              Leave blank to use the default template.
+              Variables: <code>{'{schema_json}'}</code> and <code>{'{document_context}'}</code>. Leave blank to use the default.
             </p>
-            <Textarea
-              value={userPromptTemplate}
-              onChange={(e) => setUserPromptTemplate(e.target.value)}
-              className="font-mono text-xs min-h-[80px]"
-              placeholder="Extract structured data from the following document..."
-            />
+            <Textarea value={userPromptTemplate} onChange={(e) => setUserPromptTemplate(e.target.value)} className="font-mono text-xs min-h-[80px]" placeholder="Extract structured data from the following document..." />
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Output mode</Label>
@@ -333,14 +299,8 @@ export function ExtractionForm({
             </div>
             <div className="flex items-end pb-2">
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="inject-block-ids"
-                  checked={injectBlockIds}
-                  onCheckedChange={(v) => setInjectBlockIds(v === true)}
-                />
-                <Label htmlFor="inject-block-ids" className="text-xs font-normal">
-                  Inject block IDs
-                </Label>
+                <Checkbox id="inject-block-ids" checked={injectBlockIds} onCheckedChange={(v) => setInjectBlockIds(v === true)} />
+                <Label htmlFor="inject-block-ids" className="text-xs font-normal">Inject block IDs</Label>
               </div>
             </div>
           </div>
@@ -350,20 +310,14 @@ export function ExtractionForm({
       {/* Run button */}
       <div className="flex items-center justify-between">
         <div />
-        <Button onClick={handleRun} disabled={isRunDisabled} size="sm">
-          {isRunning ? (
-            'Running...'
-          ) : (
-            <>
-              <Play className="h-3.5 w-3.5 mr-1.5" />
-              Run Extraction
-            </>
+        <Button onClick={handleRun} disabled={isRunning || !isConfigured} size="sm">
+          {isRunning ? 'Running...' : (
+            <><Play className="h-3.5 w-3.5 mr-1.5" />Run Extraction</>
           )}
         </Button>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
-
       {!isConfigured && (
         <p className="text-xs text-amber-600">
           {selectedExtractor?.name ?? 'This extractor'} is not configured. Contact your administrator.

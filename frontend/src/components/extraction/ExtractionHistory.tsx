@@ -1,14 +1,20 @@
 import type { ExtractionResult, ExtractionResultListItem } from '@/types/extraction'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { Button } from '@/components/ui/button'
-import { ChevronRight, Loader2 } from 'lucide-react'
+import { AlertCircle, ChevronRight, Loader2, RefreshCw } from 'lucide-react'
 import { ExtractionResultViewer } from './ExtractionResultViewer'
+
+interface InProgressPhase {
+  phase: 'parsing' | 'extracting' | 'failed'
+  phaseError?: string | null
+  onRetry?: () => void
+}
 
 interface ExtractionHistoryProps {
   results: ExtractionResultListItem[]
@@ -16,6 +22,7 @@ interface ExtractionHistoryProps {
   selectedResult: ExtractionResult | null
   isLoadingResult?: boolean
   onSelectResult: (resultId: string) => void
+  inProgressPhase?: InProgressPhase
 }
 
 export function ExtractionHistory({
@@ -23,6 +30,7 @@ export function ExtractionHistory({
   isLoading,
   selectedResult,
   onSelectResult,
+  inProgressPhase,
 }: ExtractionHistoryProps) {
   if (isLoading) {
     return (
@@ -33,7 +41,18 @@ export function ExtractionHistory({
     )
   }
 
-  if (results.length === 0) {
+  // Show synthetic row when actively parsing/extracting and no real pending result exists yet
+  const hasPendingResult = results.some((r) => r.status === 'pending')
+  const showSyntheticRow =
+    inProgressPhase &&
+    (inProgressPhase.phase === 'parsing' ||
+      inProgressPhase.phase === 'extracting' ||
+      inProgressPhase.phase === 'failed') &&
+    !hasPendingResult
+
+  const isEmpty = results.length === 0 && !showSyntheticRow
+
+  if (isEmpty) {
     return (
       <p className="text-sm text-muted-foreground text-center py-6">
         No extractions yet. Run one above to get started.
@@ -43,6 +62,32 @@ export function ExtractionHistory({
 
   return (
     <div className="space-y-2">
+      {showSyntheticRow && inProgressPhase && (
+        <div className="rounded-md border px-3 py-2.5">
+          {inProgressPhase.phase === 'failed' ? (
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span className="text-sm">{inProgressPhase.phaseError ?? 'Failed'}</span>
+              </div>
+              {inProgressPhase.onRetry && (
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={inProgressPhase.onRetry}>
+                  <RefreshCw className="h-3 w-3" />
+                  Retry
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+              <span className="text-sm">
+                {inProgressPhase.phase === 'parsing' ? 'Parsing document…' : 'Extracting…'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {results.map((r) => {
         const isExpanded = selectedResult?.id === r.id
         const isPending = r.status === 'pending'
@@ -51,39 +96,22 @@ export function ExtractionHistory({
           <Collapsible
             key={r.id}
             open={isExpanded}
-            onOpenChange={(open) => {
-              if (open) onSelectResult(r.id)
-            }}
+            onOpenChange={(open) => { if (open) onSelectResult(r.id) }}
           >
             <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                className="w-full justify-between h-auto py-2.5 px-3 hover:bg-muted/50"
-              >
+              <Button variant="ghost" className="w-full justify-between h-auto py-2.5 px-3 hover:bg-muted/50">
                 <div className="flex items-center gap-2 text-left">
-                  <ChevronRight
-                    className={`h-4 w-4 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                  />
-                  <Badge variant="outline" className="text-[10px] font-normal">
-                    {r.extractionMethod}
-                  </Badge>
+                  <ChevronRight className={`h-4 w-4 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  <Badge variant="outline" className="text-[10px] font-normal">{r.extractionMethod}</Badge>
                   <Badge
-                    variant={
-                      r.status === 'completed'
-                        ? 'default'
-                        : r.status === 'pending'
-                          ? 'secondary'
-                          : 'destructive'
-                    }
+                    variant={r.status === 'completed' ? 'default' : r.status === 'pending' ? 'secondary' : 'destructive'}
                     className="text-[10px]"
                   >
                     {isPending && <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />}
                     {r.status}
                   </Badge>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {formatDate(r.createdAt)}
-                </span>
+                <span className="text-xs text-muted-foreground">{formatDate(r.createdAt)}</span>
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>
@@ -111,12 +139,9 @@ function formatDate(dateString: string): string {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
-
   if (diffMins < 1) return 'just now'
   if (diffMins < 60) return `${diffMins}m ago`
-
   const diffHours = Math.floor(diffMins / 60)
   if (diffHours < 24) return `${diffHours}h ago`
-
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }

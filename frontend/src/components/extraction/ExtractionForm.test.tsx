@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ExtractionForm } from './ExtractionForm'
 import type { ExtractionSchema, ExtractorInfo } from '@/types/extraction'
@@ -24,52 +24,37 @@ const extractor: ExtractorInfo = {
   configured: true,
 }
 
+const defaultProps = {
+  defaultParser: 'simple',
+  defaultParserConfig: {},
+  schemas: [schema],
+  extractors: [extractor],
+}
+
 describe('ExtractionForm', () => {
-  it('calls onRun with parseRunId in request', async () => {
+  it('calls onRun with parseConfig and extractionConfig in request', async () => {
     const user = userEvent.setup()
     const onRun = vi.fn().mockResolvedValue(undefined)
-    render(
-      <ExtractionForm
-        parseRunId="parse-run-123"
-        schemas={[schema]}
-        extractors={[extractor]}
-        onRun={onRun}
-      />
-    )
-    const runButton = await screen.findByRole('button', { name: /run extraction/i })
+    render(<ExtractionForm {...defaultProps} onRun={onRun} />)
+    const runButton = screen.getByRole('button', { name: /run extraction/i })
     await user.click(runButton)
-    await waitFor(() => {
-      expect(onRun).toHaveBeenCalledWith(
-        expect.objectContaining({ parseRunId: 'parse-run-123' })
-      )
-    })
+    expect(onRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parseConfig: expect.objectContaining({ parser: 'simple', representationKind: 'extract_rich' }),
+        extractionConfig: expect.objectContaining({ extractionSchemaId: 'schema-1' }),
+      })
+    )
   })
 
-  it('disables Run button and shows warning when selected extractor is not configured', async () => {
+  it('disables Run button and shows warning when selected extractor is not configured', () => {
     const unconfigured: ExtractorInfo = { ...extractor, configured: false }
-    render(
-      <ExtractionForm
-        parseRunId="run-1"
-        schemas={[schema]}
-        extractors={[unconfigured]}
-        onRun={vi.fn()}
-      />
-    )
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run extraction/i })).toBeDisabled()
-    })
+    render(<ExtractionForm {...defaultProps} extractors={[unconfigured]} onRun={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /run extraction/i })).toBeDisabled()
     expect(screen.getByText(/not configured/i)).toBeInTheDocument()
   })
 
   it('shows extraction target and confidence scores controls for llamaextract', () => {
-    render(
-      <ExtractionForm
-        parseRunId="run-1"
-        schemas={[schema]}
-        extractors={[extractor]}
-        onRun={vi.fn()}
-      />
-    )
+    render(<ExtractionForm {...defaultProps} onRun={vi.fn()} />)
     expect(screen.getByLabelText(/target/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/confidence scores/i)).toBeInTheDocument()
   })
@@ -77,43 +62,29 @@ describe('ExtractionForm', () => {
   it('includes confidence_scores in config when checked', async () => {
     const user = userEvent.setup()
     const onRun = vi.fn().mockResolvedValue(undefined)
-    render(
-      <ExtractionForm
-        parseRunId="run-1"
-        schemas={[schema]}
-        extractors={[extractor]}
-        onRun={onRun}
-      />
-    )
+    render(<ExtractionForm {...defaultProps} onRun={onRun} />)
     await user.click(screen.getByLabelText(/confidence scores/i))
     await user.click(screen.getByRole('button', { name: /run extraction/i }))
-    await waitFor(() => {
-      expect(onRun).toHaveBeenCalledWith(
-        expect.objectContaining({
+    expect(onRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extractionConfig: expect.objectContaining({
           config: expect.objectContaining({ confidence_scores: true }),
-        })
-      )
-    })
+        }),
+      })
+    )
   })
 
   it('includes extraction_target in config for llamaextract', async () => {
     const user = userEvent.setup()
     const onRun = vi.fn().mockResolvedValue(undefined)
-    render(
-      <ExtractionForm
-        parseRunId="run-1"
-        schemas={[schema]}
-        extractors={[extractor]}
-        onRun={onRun}
-      />
-    )
+    render(<ExtractionForm {...defaultProps} onRun={onRun} />)
     await user.click(screen.getByRole('button', { name: /run extraction/i }))
-    await waitFor(() => {
-      expect(onRun).toHaveBeenCalledWith(
-        expect.objectContaining({
+    expect(onRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extractionConfig: expect.objectContaining({
           config: expect.objectContaining({ extraction_target: 'PER_DOC' }),
-        })
-      )
-    })
+        }),
+      })
+    )
   })
 })

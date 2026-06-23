@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
 import { useDocuments } from '@/hooks/useDocuments'
@@ -10,8 +10,9 @@ import type {
   ExtractionSchemaCreate,
   ExtractionSchemaUpdate,
   ExtractorInfo,
-  RunExtractionRequest,
+  RunWithParseRequest,
 } from '@/types/extraction'
+import type { ParseConfig } from '@/types/parsing'
 import type { Document as AppDocument, DocumentUpload } from '@/types/document'
 import { ExtractionSchemaEditor } from '@/components/extraction/ExtractionSchemaEditor'
 import { ExtractionForm } from '@/components/extraction/ExtractionForm'
@@ -30,44 +31,45 @@ export default function ExtractionPage(): JSX.Element {
   const { currentProject } = useProject()
   const projectId = currentProject?.id || null
 
-  const {
-    documents,
-    isLoading: documentsLoading,
-    uploadDocument,
-  } = useDocuments(projectId)
-  const {
-    schemas,
-    error: schemasError,
-    createSchema,
-    updateSchema,
-    deleteSchema,
-  } = useExtractionSchemas(projectId)
+  const { documents, isLoading: documentsLoading, uploadDocument } = useDocuments(projectId)
+  const { schemas, error: schemasError, createSchema, updateSchema, deleteSchema } = useExtractionSchemas(projectId)
 
   const [searchParams, setSearchParams] = useSearchParams()
   const preselectedDocumentId = searchParams.get('documentId')
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(preselectedDocumentId)
 
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
-    preselectedDocumentId
-  )
   const {
     results,
     selectedResult,
     isLoading: resultsLoading,
     isLoadingResult,
     error: resultsError,
+    extractionPhase,
+    phaseError,
     selectResult,
-    runExtraction,
+    runExtractionWithParse,
   } = useExtractionResults(selectedDocumentId)
 
   const { parseRuns, isLoading: parseRunsLoading } = useParseRuns(selectedDocumentId)
-  const latestViableRun = parseRuns.find(
-    (r) => r.status === 'succeeded' || r.status === 'partial'
-  )
+
+  // Latest viable parse run drives form defaults
+  const latestViableRun = parseRuns.find((r) => r.status === 'succeeded' || r.status === 'partial')
+
+  // Strip the backend-added "parser" key from config before passing as default
+  const defaultParser: string = latestViableRun?.parser ?? 'simple'
+  const defaultParserConfig: ParseConfig = (() => {
+    if (!latestViableRun?.config) return {}
+    const { parser: _p, ...rest } = latestViableRun.config as Record<string, unknown>
+    return rest as ParseConfig
+  })()
 
   const [extractors, setExtractors] = useState<ExtractorInfo[]>([])
   const [schemaEditorOpen, setSchemaEditorOpen] = useState(false)
   const [editingSchema, setEditingSchema] = useState<ExtractionSchema | null>(null)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+
+  // Store last request for retry after parse failure
+  const lastRequestRef = useRef<RunWithParseRequest | null>(null)
 
   const fetchExtractors = useCallback(async () => {
     try {
@@ -78,9 +80,7 @@ export default function ExtractionPage(): JSX.Element {
     }
   }, [])
 
-  useEffect(() => {
-    fetchExtractors()
-  }, [fetchExtractors])
+  useEffect(() => { fetchExtractors() }, [fetchExtractors])
 
   const handleSelectDocument = (docId: string) => {
     setSelectedDocumentId(docId)
@@ -91,30 +91,19 @@ export default function ExtractionPage(): JSX.Element {
     })
   }
 
-  const handleCreateSchema = () => {
-    setEditingSchema(null)
-    setSchemaEditorOpen(true)
-  }
-
-  const handleEditSchema = (schema: ExtractionSchema) => {
-    setEditingSchema(schema)
-    setSchemaEditorOpen(true)
-  }
+  const handleCreateSchema = () => { setEditingSchema(null); setSchemaEditorOpen(true) }
+  const handleEditSchema = (schema: ExtractionSchema) => { setEditingSchema(schema); setSchemaEditorOpen(true) }
 
   const handleDeleteSchema = async (schemaId: string) => {
     try {
       await deleteSchema(schemaId)
       toast.success('Schema deleted')
     } catch (err) {
-      toast.error('Failed to delete schema', {
-        description: err instanceof Error ? err.message : 'An error occurred',
-      })
+      toast.error('Failed to delete schema', { description: err instanceof Error ? err.message : 'An error occurred' })
     }
   }
 
-  const handleSaveSchema = async (
-    data: ExtractionSchemaCreate | ExtractionSchemaUpdate
-  ) => {
+  const handleSaveSchema = async (data: ExtractionSchemaCreate | ExtractionSchemaUpdate) => {
     try {
       if (editingSchema) {
         await updateSchema(editingSchema.id, data as ExtractionSchemaUpdate)
@@ -124,32 +113,25 @@ export default function ExtractionPage(): JSX.Element {
         toast.success('Schema created')
       }
     } catch (err) {
-      toast.error('Failed to save schema', {
-        description: err instanceof Error ? err.message : 'An error occurred',
-      })
+      toast.error('Failed to save schema', { description: err instanceof Error ? err.message : 'An error occurred' })
       throw err
     }
   }
 
-  const handleRunExtraction = async (request: RunExtractionRequest) => {
-    try {
-      await runExtraction(request)
-      toast.success('Extraction started', {
-        description: 'Processing is in progress',
-      })
-    } catch (err) {
-      toast.error('Extraction failed', {
-        description: err instanceof Error ? err.message : 'An error occurred',
-      })
-      throw err
+  const handleRunExtraction = async (request: RunWithParseRequest) => {
+    lastRequestRef.current = request
+    await runExtractionWithParse(selectedDocumentId!, parseRuns, request)
+  }
+
+  const handleRetry = async () => {
+    if (lastRequestRef.current && selectedDocumentId) {
+      await runExtractionWithParse(selectedDocumentId, parseRuns, lastRequestRef.current)
     }
   }
 
   const handleUpload = async (data: DocumentUpload): Promise<AppDocument> => {
     const newDoc = await uploadDocument(data)
-    toast.success('Document uploaded', {
-      description: newDoc.status === 'processing' ? 'Processing in progress...' : undefined,
-    })
+    toast.success('Document uploaded', { description: newDoc.status === 'processing' ? 'Processing in progress...' : undefined })
     handleSelectDocument(newDoc.id)
     return newDoc
   }
@@ -157,15 +139,20 @@ export default function ExtractionPage(): JSX.Element {
   if (!currentProject) {
     return (
       <div className="space-y-6">
-        <Alert>
-          <AlertDescription>Loading project...</AlertDescription>
-        </Alert>
+        <Alert><AlertDescription>Loading project...</AlertDescription></Alert>
       </div>
     )
   }
 
   const selectedDocument = documents.find((d) => d.id === selectedDocumentId)
   const isDocumentReady = selectedDocument?.status === 'ready'
+
+  const inProgressPhase =
+    extractionPhase === 'parsing' || extractionPhase === 'extracting'
+      ? { phase: extractionPhase as 'parsing' | 'extracting' }
+      : extractionPhase === 'failed' && phaseError
+        ? { phase: 'failed' as const, phaseError, onRetry: handleRetry }
+        : undefined
 
   return (
     <div className="-m-6 flex flex-col h-[calc(100vh-3.5rem)]">
@@ -188,7 +175,7 @@ export default function ExtractionPage(): JSX.Element {
 
       {/* Two-panel layout */}
       <div className="flex flex-1 min-h-0">
-        {/* Left panel: Document selector */}
+        {/* Left panel */}
         <div className="w-72 border-r shrink-0 flex flex-col">
           <DocumentSelector
             documents={documents}
@@ -199,45 +186,27 @@ export default function ExtractionPage(): JSX.Element {
           />
         </div>
 
-        {/* Right panel: Extraction workspace */}
+        {/* Right panel */}
         <div className="flex-1 overflow-y-auto">
           {!selectedDocumentId ? (
-            /* Empty state */
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
               <FileSearch className="h-12 w-12 text-muted-foreground/40 mb-4" />
-              <h2 className="text-lg font-medium text-muted-foreground">
-                Select a document to get started
-              </h2>
+              <h2 className="text-lg font-medium text-muted-foreground">Select a document to get started</h2>
               <p className="text-sm text-muted-foreground/70 mt-1 max-w-sm">
                 Choose a document from the list, or upload a new one to begin extracting structured data.
               </p>
             </div>
           ) : (
             <div className="p-6 space-y-6 max-w-3xl">
-              {/* Schema management */}
-              <SchemaManager
-                schemas={schemas}
-                onEdit={handleEditSchema}
-                onDelete={handleDeleteSchema}
-                onCreate={handleCreateSchema}
-              />
+              <SchemaManager schemas={schemas} onEdit={handleEditSchema} onDelete={handleDeleteSchema} onCreate={handleCreateSchema} />
 
               <Separator />
 
-              {/* Document header */}
               {selectedDocument && (
                 <div className="flex items-center gap-3">
-                  <h2 className="text-base font-medium truncate">
-                    {selectedDocument.title}
-                  </h2>
+                  <h2 className="text-base font-medium truncate">{selectedDocument.title}</h2>
                   <Badge
-                    variant={
-                      selectedDocument.status === 'ready'
-                        ? 'outline'
-                        : selectedDocument.status === 'processing'
-                          ? 'secondary'
-                          : 'destructive'
-                    }
+                    variant={selectedDocument.status === 'ready' ? 'outline' : selectedDocument.status === 'processing' ? 'secondary' : 'destructive'}
                     className="shrink-0 text-xs"
                   >
                     {selectedDocument.status}
@@ -250,39 +219,27 @@ export default function ExtractionPage(): JSX.Element {
 
               {/* Run New Extraction */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-sm font-medium">Run New Extraction</h3>
-                  {(!isDocumentReady || (!parseRunsLoading && !latestViableRun)) && selectedDocument && (
-                    <span className="text-xs text-muted-foreground">
-                      {isDocumentReady ? '(parse document first)' : '(document must be ready)'}
-                    </span>
-                  )}
-                </div>
-                {isDocumentReady ? (
-                  parseRunsLoading ? (
-                    <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-                      Loading...
-                    </div>
-                  ) : latestViableRun ? (
-                    <div className="rounded-lg border p-4">
-                      <ExtractionForm
-                        parseRunId={latestViableRun.id}
-                        schemas={schemas}
-                        extractors={extractors}
-                        onRun={handleRunExtraction}
-                        onEditSchema={handleEditSchema}
-                      />
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-                      Parse the document first to enable extraction.
-                    </div>
-                  )
-                ) : (
+                <h3 className="text-sm font-medium mb-3">Run New Extraction</h3>
+                {!isDocumentReady ? (
                   <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                     {selectedDocument?.status === 'processing'
                       ? 'Document is still processing. Extraction will be available once it completes.'
                       : 'This document cannot be used for extraction.'}
+                  </div>
+                ) : parseRunsLoading ? (
+                  <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                    Loading...
+                  </div>
+                ) : (
+                  <div className="rounded-lg border p-4">
+                    <ExtractionForm
+                      defaultParser={defaultParser}
+                      defaultParserConfig={defaultParserConfig}
+                      schemas={schemas}
+                      extractors={extractors}
+                      onRun={handleRunExtraction}
+                      onEditSchema={handleEditSchema}
+                    />
                   </div>
                 )}
               </div>
@@ -294,9 +251,7 @@ export default function ExtractionPage(): JSX.Element {
                 <h3 className="text-sm font-medium mb-3">
                   Previous Extractions
                   {results.length > 0 && (
-                    <span className="text-muted-foreground font-normal ml-1.5">
-                      ({results.length})
-                    </span>
+                    <span className="text-muted-foreground font-normal ml-1.5">({results.length})</span>
                   )}
                 </h3>
                 <ExtractionHistory
@@ -305,6 +260,7 @@ export default function ExtractionPage(): JSX.Element {
                   selectedResult={selectedResult}
                   isLoadingResult={isLoadingResult}
                   onSelectResult={selectResult}
+                  inProgressPhase={inProgressPhase}
                 />
               </div>
             </div>
@@ -312,7 +268,6 @@ export default function ExtractionPage(): JSX.Element {
         </div>
       </div>
 
-      {/* Dialogs */}
       <ExtractionSchemaEditor
         open={schemaEditorOpen}
         onOpenChange={setSchemaEditorOpen}
