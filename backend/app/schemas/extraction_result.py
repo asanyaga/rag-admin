@@ -69,6 +69,8 @@ class RunExtractionRequest(BaseModel):
     config: dict | None = None
     llm_config: PromptConfig | None = Field(None, alias="llmConfig")
     user_prompt_template: str | None = Field(None, alias="userPromptTemplate")
+    preprocess: list[dict] | None = None
+    chunking: dict | None = None
 
     model_config = ConfigDict(populate_by_name=True)
 
