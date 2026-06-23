@@ -77,11 +77,3 @@ export interface BulkUploadResponse {
   results: BulkUploadItem[]
 }
 
-export type QueueItemStatus = 'pending' | 'uploading' | 'processing' | 'ready' | 'failed'
-
-export interface QueueItem {
-  file: File
-  status: QueueItemStatus
-  documentId: string | null
-  error: string | null
-}

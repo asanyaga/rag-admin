@@ -5,8 +5,6 @@ import {
   DocumentUpload,
   DocumentUpdate,
   DocumentStatus,
-  BulkDocumentUpload,
-  BulkUploadResponse,
 } from '@/types/document'
 import * as documentsApi from '@/api/documents'
 import { traceAsync } from '@/lib/instrumentation'
@@ -16,7 +14,6 @@ interface UseDocumentsReturn {
   isLoading: boolean
   error: string | null
   uploadDocument: (data: DocumentUpload) => Promise<Document>
-  uploadDocumentsBulk: (data: BulkDocumentUpload) => Promise<BulkUploadResponse>
   fetchDocuments: () => Promise<void>
   updateDocument: (id: string, data: DocumentUpdate) => Promise<Document>
   deleteDocument: (id: string) => Promise<void>
@@ -195,45 +192,6 @@ export function useDocuments(
     []
   )
 
-  const uploadDocumentsBulk = useCallback(
-    async (data: BulkDocumentUpload): Promise<BulkUploadResponse> => {
-      try {
-        const response = await documentsApi.bulkUploadDocuments(data)
-
-        response.results.forEach((item) => {
-          if (!item.document) return
-          const doc = item.document
-          setDocuments((prev) => [
-            {
-              id: doc.id,
-              projectId: doc.projectId,
-              folderId: doc.folderId,
-              sourceType: doc.sourceType,
-              title: doc.title,
-              description: doc.description,
-              status: doc.status,
-              statusMessage: doc.statusMessage,
-              createdAt: doc.createdAt,
-              updatedAt: doc.updatedAt,
-            },
-            ...prev,
-          ])
-          if (doc.status === 'processing') {
-            startPollingRef.current?.(doc.id)
-          }
-        })
-
-        return response
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to upload documents'
-        setError(errorMessage)
-        throw err
-      }
-    },
-    []
-  )
-
   const updateDocument = useCallback(
     async (id: string, data: DocumentUpdate): Promise<Document> => {
       return traceAsync('documents.update', async (span) => {
@@ -362,7 +320,6 @@ export function useDocuments(
     isLoading,
     error,
     uploadDocument,
-    uploadDocumentsBulk,
     fetchDocuments,
     updateDocument,
     deleteDocument,
