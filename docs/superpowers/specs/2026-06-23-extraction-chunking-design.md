@@ -90,8 +90,8 @@ when `chunking`/`preprocess` are present, and a bare `LLMExtractor` otherwise.
 
 ### `chunking/` package — `backend/app/adapters/extraction/chunking/`
 - `base.py` — `ChunkStrategy` protocol with
-  `split(parsed_doc, schema, config) -> list[DocumentChunk]`. `DocumentChunk`
-  is a page-subset `ParsedDocument` plus its set of page indices.
+  `split(parsed_doc, schema, config) -> list[DocumentChunk]`, plus the
+  `DocumentChunk` type (below).
 - `token_budget.py` — the `token_budget_pages` strategy (below).
 - `registry.py` — named strategies + `config_schema`, mirroring the extractor
   registry. Entries at ship: `none`, `token_budget_pages`.
@@ -110,6 +110,44 @@ fields (below).
 - `classifier` — registered name with documented interface and `config_schema`
   but raising `NotImplementedError` pointing to its future spec. Lets the UI
   list it as "coming soon" without backend rework.
+
+## DocumentChunk — a derived, non-destructive view
+
+`ParsedDocument` is the source of truth across all pipelines and is **never
+mutated or replaced**. It is a frozen Pydantic model (`backend/app/cdm/models.py`,
+`extra="forbid"`); the CDM already provides lineage fields for exactly this
+purpose:
+
+```python
+# models.py
+derived_from: Optional[str] = None   # source parse_run_id
+derivation:  Optional[str] = None    # e.g. "chunk:pages=1-3"
+```
+
+A chunk is therefore a **derived `ParsedDocument`**, not a new stripped-down
+type:
+
+```python
+class DocumentChunk(BaseModel):
+    document: ParsedDocument   # derived: subset of pages+blocks, lineage set
+    chunk_index: int           # deterministic merge ordering
+    page_indices: list[int]    # source page indices, for citation re-pathing
+```
+
+The splitter builds each `document` via `source.model_copy(update={...})`,
+selecting the subset of `pages`/`blocks` for the chunk's page range,
+recomputing `page_count`, and setting `derived_from` / `derivation`. The
+original instance is untouched (frozen), and chunks are transient,
+extraction-time inputs — never persisted as the canonical document.
+
+Consequences:
+
+- The **inner extractor needs no changes**: `LLMExtractor.extract()` receives a
+  `ParsedDocument` and runs `build_extraction_context()` as today — it simply
+  sees a smaller document.
+- **Preprocess filters** follow the same rule: `block_filter` returns a new
+  derived `ParsedDocument` with fewer blocks, never mutating its input.
+- Every chunk is traceable to its source via `derived_from`.
 
 ## Chunking: `token_budget_pages`
 
