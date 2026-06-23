@@ -152,3 +152,11 @@ class ExtractorInfoResponse(BaseModel):
     configured: bool = Field(False, alias="configured")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class LlmDefaultsResponse(BaseModel):
+    """Default prompts for LLM extraction."""
+    system_prompt: str = Field(..., alias="systemPrompt")
+    user_prompt_template: str = Field(..., alias="userPromptTemplate")
+
+    model_config = ConfigDict(populate_by_name=True)

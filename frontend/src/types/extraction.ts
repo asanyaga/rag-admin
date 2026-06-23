@@ -74,3 +74,21 @@ export interface ExtractorInfo {
   configSchema: Record<string, unknown> | null
   configured: boolean
 }
+
+export type ExtractionPhase = 'idle' | 'parsing' | 'extracting' | 'done' | 'failed'
+
+export interface RunWithParseRequest {
+  parseConfig: {
+    parser: string
+    /** Parser-specific fields (tier, expand, model, etc.) — does NOT include representationKind */
+    config: Record<string, unknown>
+    representationKind: string
+  }
+  extractionConfig: {
+    extractionSchemaId: string
+    extractionMethod: string
+    config?: Record<string, unknown>
+    llmConfig?: PromptConfig
+    userPromptTemplate?: string
+  }
+}

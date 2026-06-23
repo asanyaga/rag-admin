@@ -27,6 +27,7 @@ from app.schemas.extraction_result import (
     ExtractionResultResponse,
     ExtractionResultListResponse,
     ExtractorInfoResponse,
+    LlmDefaultsResponse,
 )
 from app.services.extraction_service import ExtractionService, process_extraction
 from app.services.exceptions import NotFoundError, ConflictError
@@ -263,3 +264,21 @@ async def list_extractors(
     service: ExtractionService = Depends(get_extraction_service),
 ):
     return await service.get_extractors()
+
+
+@router.get(
+    "/extractors/llm/defaults",
+    response_model=LlmDefaultsResponse,
+    summary="Get default LLM extraction prompts",
+)
+async def get_llm_extraction_defaults(
+    current_user: User = Depends(get_current_active_user),
+):
+    from app.adapters.extraction.llm import (
+        DEFAULT_EXTRACTION_SYSTEM_PROMPT,
+        DEFAULT_USER_PROMPT_TEMPLATE,
+    )
+    return LlmDefaultsResponse(
+        systemPrompt=DEFAULT_EXTRACTION_SYSTEM_PROMPT,
+        userPromptTemplate=DEFAULT_USER_PROMPT_TEMPLATE,
+    )

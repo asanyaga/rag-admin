@@ -93,3 +93,10 @@ export async function listExtractors(): Promise<ExtractorInfo[]> {
   const response = await apiClient.get<ExtractorInfo[]>('/extractors')
   return response.data
 }
+
+export async function getLlmDefaults(): Promise<{ systemPrompt: string; userPromptTemplate: string }> {
+  const response = await apiClient.get<{ systemPrompt: string; userPromptTemplate: string }>(
+    '/extractors/llm/defaults'
+  )
+  return response.data
+}

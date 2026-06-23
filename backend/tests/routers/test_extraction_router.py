@@ -89,3 +89,24 @@ async def test_run_extraction_rejects_document_id(client: AsyncClient):
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, \
         f"Expected 422 (missing parseRunId), got {response.status_code}: {response.json()}"
+
+
+@pytest.mark.asyncio
+async def test_get_llm_extraction_defaults(client: AsyncClient):
+    """GET /extractors/llm/defaults returns the two hardcoded prompt constants."""
+    from app.adapters.extraction.llm import (
+        DEFAULT_EXTRACTION_SYSTEM_PROMPT,
+        DEFAULT_USER_PROMPT_TEMPLATE,
+    )
+    from app.dependencies.auth import get_current_active_user
+
+    app.dependency_overrides[get_current_active_user] = lambda: _mock_user()
+    try:
+        response = await client.get("/api/v1/extractors/llm/defaults")
+    finally:
+        app.dependency_overrides.pop(get_current_active_user, None)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["systemPrompt"] == DEFAULT_EXTRACTION_SYSTEM_PROMPT
+    assert data["userPromptTemplate"] == DEFAULT_USER_PROMPT_TEMPLATE
