@@ -32,6 +32,11 @@ const PARSER_REGISTRY: Record<string, ParserMeta> = {
     description: 'Vision-based parsing. Best for images, shelf photos, and complex visual layouts.',
     defaultConfig: { model: 'dpt-2-latest' },
   },
+  docling: {
+    label: 'Docling',
+    description: 'Local PDF parsing. Rich layout extraction with tables, headings, and figures.',
+    defaultConfig: {},
+  },
 }
 
 interface ParseMethodSelectorProps {

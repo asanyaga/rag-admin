@@ -19,11 +19,16 @@ FROM python:3.12-slim
 # Install system dependencies
 # - postgresql-client: for health checks and pg_isready
 # - libmagic1: required by python-magic for MIME type detection
+# - libgl1: required by opencv-python (pulled in by docling)
+# - libglib2.0-0: required by opencv-python
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         postgresql-client \
         libmagic1 \
-        tesseract-ocr && \
+        tesseract-ocr \
+        libgl1 \
+        libglib2.0-0 \
+        gosu && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -43,6 +48,9 @@ RUN chmod +x /app/entrypoint.sh
 
 # Create data directory with proper ownership
 RUN mkdir -p /app/data/documents && chown -R appuser:appuser /app/data
+
+# Pre-create cache dir so Docker initialises the volume with correct ownership
+RUN mkdir -p /home/appuser/.cache && chown -R appuser:appuser /home/appuser/.cache
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH" \

@@ -15,7 +15,8 @@ interface ParseConfigFamilySelectorProps {
 
 const PARSER_NAMES: Record<string, string> = {
   llamaparse: 'LlamaParse',
-  landingai: 'LandingAI',
+  landing_ai: 'Landing AI',
+  docling: 'Docling',
 }
 
 function parserDisplayName(parser: string): string {

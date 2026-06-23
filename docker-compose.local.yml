@@ -56,6 +56,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: rag-admin-backend-local
+    user: root
     env_file:
       - .env.local
     ports:
@@ -64,6 +65,8 @@ services:
     volumes:
       # Persistent document storage
       - document_storage_local:/app/data
+      # Persist docling/HuggingFace model weights across container rebuilds
+      - docling_model_cache_local:/home/appuser/.cache
     depends_on:
       postgres:
         condition: service_healthy
@@ -110,4 +113,8 @@ volumes:
 
   # Document storage (uploaded files)
   document_storage_local:
+    driver: local
+
+  # Docling/HuggingFace model weights — persists across container rebuilds
+  docling_model_cache_local:
     driver: local

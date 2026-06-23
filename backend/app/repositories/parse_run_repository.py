@@ -34,6 +34,7 @@ class ParseRunCreate:
     status: str
     started_at: datetime
     id: UUID | None = None
+    project_id: UUID | None = None
     parser_version: str | None = None
     finished_at: datetime | None = None
     duration_ms: int | None = None
@@ -54,6 +55,7 @@ class ParseRunRepository:
     async def create(self, dto: ParseRunCreate) -> ParseRun:
         kwargs: dict[str, Any] = dict(
             source_document_id=dto.source_document_id,
+            project_id=dto.project_id,
             parser=dto.parser,
             parser_version=dto.parser_version,
             representation_kind=dto.representation_kind,
@@ -125,21 +127,15 @@ class ParseRunRepository:
     ) -> ParseRun | None:
         """Same-project reuse lookup.
 
-        Only returns a run if source_document_id is referenced by a Document
-        row belonging to project_id — enforces the same-project isolation
-        policy from the spec (§2.3).
+        Returns a succeeded/partial run only if it was originally created
+        for this project (parse_runs.project_id == project_id).
         """
-        in_project = (
-            select(DocumentORM.source_document_id)
-            .where(DocumentORM.project_id == project_id)
-            .where(DocumentORM.source_document_id.isnot(None))
-        )
         result = await self.session.execute(
             select(ParseRun)
             .where(ParseRun.source_document_id == source_document_id)
             .where(ParseRun.representation_kind == representation_kind)
             .where(ParseRun.config_hash == config_hash)
-            .where(ParseRun.source_document_id.in_(in_project))
+            .where(ParseRun.project_id == project_id)
             .order_by(ParseRun.created_at.desc())
             .limit(1)
         )

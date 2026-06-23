@@ -20,6 +20,7 @@ from app.ports.storage import StorageService
 from app.repositories.parse_run_repository import ParseRunCreate, ParseRunRepository
 from app.repositories.parsed_document_repository import ParsedDocumentCreate, ParsedDocumentRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
+from app.services.parsing.docling_runner import run_docling
 from app.services.parsing.errors import ParseFailedError, ParseRunError
 from app.services.parsing.landingai_runner import run_landingai
 from app.services.parsing.llamaparse_runner import run_llamaparse
@@ -31,7 +32,8 @@ logger = logging.getLogger(__name__)
 _RUNNERS: Dict[ParserKind, Callable] = {
     ParserKind.LLAMAPARSE: run_llamaparse,
     ParserKind.LANDING_AI: run_landingai,
-    ParserKind.SIMPLE: run_simple,
+    ParserKind.SIMPLE:     run_simple,
+    ParserKind.DOCLING:    run_docling,
 }
 
 
@@ -171,10 +173,10 @@ class ParsingService:
                 client=client,
             )
         except ParseRunError as err:
-            await self._persist_run(err.run, config_hash, source_uuid)
+            await self._persist_run(err.run, config_hash, source_uuid, project_id=project_id)
             raise ParseFailedError(str(err)) from err
 
-        orm_run = await self._persist_run(cdm_run, config_hash, source_uuid)
+        orm_run = await self._persist_run(cdm_run, config_hash, source_uuid, project_id=project_id)
         orm_doc = await self._parsed_doc_repo.create(ParsedDocumentCreate(
             parse_run_id=orm_run.id,
             source_document_id=source_uuid,
@@ -191,10 +193,13 @@ class ParsingService:
         cdm_run: ParseRunCDM,
         config_hash: str,
         source_uuid: UUID,
+        *,
+        project_id: UUID,
     ) -> ParseRunORM:
         return await self._parse_run_repo.create(ParseRunCreate(
             id=UUID(cdm_run.id),
             source_document_id=source_uuid,
+            project_id=project_id,
             parser=cdm_run.parser.value,
             parser_version=cdm_run.parser_version,
             representation_kind=cdm_run.representation_kind,
