@@ -4,10 +4,12 @@ Pure functions used by all LLM-based extraction adapters.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from app.cdm.models import ParsedDocument
 from app.ports.data_extraction import FieldCitation
+
+CitationLevel = Literal["full", "page_only", "off"]
 
 
 def build_extraction_context(
@@ -43,29 +45,50 @@ def build_extraction_context(
     return "\n\n".join(parts)
 
 
-def augment_schema_with_sources(schema: dict[str, Any]) -> dict[str, Any]:
-    """Add __source sibling fields to every leaf property in a JSON Schema."""
-    return _augment_recursive(schema)
+def augment_schema_with_sources(
+    schema: dict[str, Any], level: CitationLevel = "full"
+) -> dict[str, Any]:
+    """Add __source sibling fields to every leaf property in a JSON Schema.
+
+    level controls provenance granularity:
+      - "full": page_index + block_id (default)
+      - "page_only": page_index only
+      - "off": no __source fields (schema returned unchanged)
+    """
+    if level == "off":
+        return schema
+    return _augment_recursive(schema, level)
 
 
-def _augment_recursive(schema: dict[str, Any]) -> dict[str, Any]:
+def _source_schema(level: CitationLevel) -> dict[str, Any]:
+    if level == "page_only":
+        return {
+            "type": ["object", "null"],
+            "properties": {"page_index": {"type": "integer"}},
+            "required": ["page_index"],
+            "additionalProperties": False,
+        }
+    return {
+        "type": ["object", "null"],
+        "properties": {
+            "page_index": {"type": "integer"},
+            "block_id": {"type": ["string", "null"]},
+        },
+        "required": ["page_index", "block_id"],
+        "additionalProperties": False,
+    }
+
+
+def _augment_recursive(schema: dict[str, Any], level: CitationLevel) -> dict[str, Any]:
     if schema.get("type") == "object" and "properties" in schema:
         new_props: dict[str, Any] = {}
         new_required = list(schema.get("required") or [])
 
         for key, value in schema["properties"].items():
-            new_props[key] = _augment_recursive(value)
+            new_props[key] = _augment_recursive(value, level)
             if value.get("type") not in ("object", "array"):
                 source_key = f"{key}__source"
-                new_props[source_key] = {
-                    "type": ["object", "null"],
-                    "properties": {
-                        "page_index": {"type": "integer"},
-                        "block_id": {"type": ["string", "null"]},
-                    },
-                    "required": ["page_index", "block_id"],
-                    "additionalProperties": False,
-                }
+                new_props[source_key] = _source_schema(level)
                 if source_key not in new_required:
                     new_required.append(source_key)
 
@@ -75,7 +98,7 @@ def _augment_recursive(schema: dict[str, Any]) -> dict[str, Any]:
         return result
 
     if schema.get("type") == "array" and "items" in schema:
-        return {**schema, "items": _augment_recursive(schema["items"])}
+        return {**schema, "items": _augment_recursive(schema["items"], level)}
 
     return schema
 

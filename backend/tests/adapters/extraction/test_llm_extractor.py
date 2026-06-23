@@ -248,6 +248,30 @@ class TestLLMExtractorExtract:
         assert len(output.citations) == 1
         assert output.citations[0].field_path == "vendor"
 
+    async def test_truncated_response_raises_clear_error(self, parsed_doc):
+        from app.adapters.extraction.llm import LLMExtractor
+        from app.ports.data_extraction import ExtractionError
+        adapter = MagicMock()
+        adapter.complete = AsyncMock(return_value=CompletionResult(
+            content='{"products": [',
+            usage=TokenUsage(prompt_tokens=10, completion_tokens=4096, total_tokens=4106),
+            latency_ms=1.0, model="m", provider="anthropic", stop_reason="max_tokens",
+        ))
+        e = LLMExtractor(adapter=adapter, provider="anthropic")
+        schema = {"type": "object", "properties": {}}
+        with pytest.raises(ExtractionError) as exc:
+            await e.extract(parsed_doc, schema, {"structured_output_mode": "json_mode"})
+        assert "truncated" in str(exc.value).lower()
+
+    async def test_citation_level_off_skips_source_augmentation(self, parsed_doc):
+        from app.adapters.extraction.llm import LLMExtractor
+        adapter = _make_adapter('{"total": 5}')
+        e = LLMExtractor(adapter=adapter, provider="openai")
+        schema = {"type": "object", "properties": {"total": {"type": "number"}}}
+        await e.extract(parsed_doc, schema, {"citation_level": "off"})
+        sent_schema = adapter.complete.call_args.args[1].structured_output_schema
+        assert "total__source" not in sent_schema["properties"]
+
 
 # ---------------------------------------------------------------------------
 # Registry integration
