@@ -3,11 +3,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from app.services.llm.types import LLMConfig, TokenUsage
 
 
-def _make_response(text="ok"):
+def _make_response(text="ok", stop_reason="end_turn"):
     resp = MagicMock()
     resp.content = [MagicMock(text=text)]
     resp.usage.input_tokens = 10
     resp.usage.output_tokens = 20
+    resp.stop_reason = stop_reason
     return resp
 
 
@@ -76,6 +77,38 @@ async def test_complete_raises_llm_connection_error():
     config = LLMConfig(provider="anthropic", model="claude-3-5-sonnet-20241022")
     with pytest.raises(LLMConnectionError):
         await adapter.complete([{"role": "user", "content": "hi"}], config)
+
+
+@pytest.mark.asyncio
+async def test_complete_threads_stop_reason():
+    adapter = _make_adapter()
+    adapter.client.messages.create = AsyncMock(
+        return_value=_make_response("{}", stop_reason="max_tokens")
+    )
+    config = LLMConfig(
+        provider="anthropic", model="claude-3-5-sonnet-20241022",
+        structured_output_mode="json_mode",
+    )
+    result = await adapter.complete([{"role": "user", "content": "hi"}], config)
+    assert result.stop_reason == "max_tokens"
+
+
+@pytest.mark.asyncio
+async def test_complete_translates_429_to_rate_limit_error():
+    import anthropic
+    from app.services.llm.types import LLMRateLimitError
+    adapter = _make_adapter()
+    resp = MagicMock()
+    resp.headers = {"retry-after": "3"}
+    err = anthropic.RateLimitError("rate", response=resp, body=None)
+    adapter.client.messages.create = AsyncMock(side_effect=err)
+    config = LLMConfig(
+        provider="anthropic", model="claude-3-5-sonnet-20241022",
+        structured_output_mode="json_mode",
+    )
+    with pytest.raises(LLMRateLimitError) as exc:
+        await adapter.complete([{"role": "user", "content": "hi"}], config)
+    assert exc.value.retry_after == 3.0
 
 
 @pytest.mark.asyncio

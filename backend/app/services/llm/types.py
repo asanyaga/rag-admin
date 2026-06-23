@@ -32,6 +32,7 @@ class CompletionResult:
     latency_ms: float
     model: str
     provider: str
+    stop_reason: str | None = None
 
 
 class StreamResponse:
@@ -54,3 +55,11 @@ class StreamResponse:
 
 class LLMConnectionError(Exception):
     """Raised when an LLM provider endpoint cannot be reached."""
+
+
+class LLMRateLimitError(Exception):
+    """Raised when an LLM provider returns HTTP 429."""
+
+    def __init__(self, message: str, retry_after: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
