@@ -277,7 +277,7 @@ export default function DocumentsPage(): JSX.Element {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Documents</h1>
+          <h1 className="text-3xl font-bold">Project Documents</h1>
           <p className="text-muted-foreground mt-1">
             {currentProject.name}
           </p>
