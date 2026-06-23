@@ -59,8 +59,9 @@ export default function ExtractionPage(): JSX.Element {
   const defaultParser: string = latestViableRun?.parser ?? 'simple'
   const defaultParserConfig: ParseConfig = (() => {
     if (!latestViableRun?.config) return {}
-    const { parser: _p, ...rest } = latestViableRun.config as Record<string, unknown>
-    return rest as ParseConfig
+    const config = { ...(latestViableRun.config as Record<string, unknown>) }
+    delete config['parser']
+    return config as ParseConfig
   })()
 
   const [extractors, setExtractors] = useState<ExtractorInfo[]>([])
@@ -259,6 +260,7 @@ export default function ExtractionPage(): JSX.Element {
                   isLoading={resultsLoading}
                   selectedResult={selectedResult}
                   isLoadingResult={isLoadingResult}
+                  schemas={schemas}
                   onSelectResult={selectResult}
                   inProgressPhase={inProgressPhase}
                 />

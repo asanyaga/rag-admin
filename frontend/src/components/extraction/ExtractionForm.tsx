@@ -95,7 +95,7 @@ export function ExtractionForm({
     return () => {
       cancelled = true
     }
-  }, [extractionMethod])
+  }, [extractionMethod, setPromptConfig, setUserPromptTemplate])
 
   const selectedExtractor = extractors.find((e) => e.extractionMethod === extractionMethod)
   const isConfigured = selectedExtractor?.configured ?? true

@@ -198,7 +198,7 @@ export function useExtractionResults(
 
         const foundId = resolvedId as string
 
-        while (true) {
+        for (;;) {
           if (Date.now() - started > PARSE_TIMEOUT) {
             setExtractionPhase('failed')
             setPhaseError('Parse timed out')
