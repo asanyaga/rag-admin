@@ -60,3 +60,35 @@ async def test_get_or_create_reuses_when_present(repo: SourceDocumentRepository)
     assert second.id == first.id
     # Existing fields are NOT overwritten on reuse.
     assert second.filename == "first.pdf"
+
+
+@pytest.mark.asyncio
+async def test_list_all_returns_empty_when_no_source_documents(repo: SourceDocumentRepository):
+    result = await repo.list_all()
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_list_all_returns_source_documents_with_zero_project_count(repo: SourceDocumentRepository):
+    await repo.create(sha256="a" * 64, storage_uri="local://a.pdf", filename="alpha.pdf")
+    await repo.create(sha256="b" * 64, storage_uri="local://b.pdf", filename="beta.pdf")
+
+    result = await repo.list_all()
+
+    assert len(result) == 2
+    filenames = {sd.filename for sd, _ in result}
+    assert filenames == {"alpha.pdf", "beta.pdf"}
+    for _, count in result:
+        assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_list_all_orders_by_created_at_desc(repo: SourceDocumentRepository):
+    first = await repo.create(sha256="c" * 64, storage_uri="local://c.pdf", filename="first.pdf")
+    second = await repo.create(sha256="d" * 64, storage_uri="local://d.pdf", filename="second.pdf")
+
+    result = await repo.list_all()
+
+    # Most recently created first
+    assert result[0][0].id == second.id
+    assert result[1][0].id == first.id

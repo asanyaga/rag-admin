@@ -1,10 +1,11 @@
 """Repository for SourceDocument — content-addressed bytes layer."""
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, distinct, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.document import Document
 from app.models.source_document import SourceDocument
 
 
@@ -53,6 +54,20 @@ class SourceDocumentRepository:
         if row is not None:
             row.storage_uri = storage_uri
             await self.session.commit()
+
+    async def list_all(self) -> list[tuple[SourceDocument, int]]:
+        """Return all source documents with the number of distinct projects referencing each."""
+        stmt = (
+            select(
+                SourceDocument,
+                func.count(distinct(Document.project_id)).label("project_count"),
+            )
+            .outerjoin(Document, Document.source_document_id == SourceDocument.id)
+            .group_by(SourceDocument.id)
+            .order_by(SourceDocument.created_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return [(row.SourceDocument, row.project_count) for row in result]
 
     async def get_or_create_by_sha256(
         self,
