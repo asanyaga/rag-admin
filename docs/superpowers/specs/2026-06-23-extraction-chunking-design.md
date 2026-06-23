@@ -37,11 +37,43 @@ without modifying the extractor.
 
 ## Non-goals (this spec)
 
-- Classifier implementation — only a defined, registered seam.
+- `category_filter` (label-based page/block scoping from an upstream
+  classification run) — only a defined, registered seam; wiring deferred to a
+  follow-up spec.
 - Cross-distant-page stitching / reconciliation passes. Within-chunk alignment
   of SKU ↔ specs ↔ price is the target; HITL handles the last mile.
 - Saved/named pipeline presets — config is per-run only.
 - Prompt caching.
+
+## Pipeline topology
+
+Parse, classify, and extract are three independent, persisted stages. Each
+stage owns its own config; downstream stages reference upstream output by id.
+`ParsedDocument` is produced once and is the source of truth across all stages.
+
+```
+Parser ──▶ parse_run + ParsedDocument (persisted, source of truth)
+              │  parse config lives on the parse run
+              ▼
+Classifier ─▶ classification_run + regions  (persisted, reusable)
+              │  classify config + labels live on the classification run;
+              │  classification never mutates the ParsedDocument
+              ▼
+Extractor ──▶ extraction pipeline ──▶ result
+              │  chunking + preprocess config lives on the extraction request
+```
+
+| Config | Lives on | Extraction references it via |
+|---|---|---|
+| Parse | the parse run (upstream) | `parseRunId` (exists) |
+| Classify | the classification run (upstream, exists today) | `classificationRunId` (future — see `category_filter`) |
+| Chunking + light preprocess | the extraction request | `chunking` / `preprocess` (this spec) |
+
+Classification is **already** a first-class stage with its own runs, repository,
+and persisted regions (`backend/app/routers/classification.py`,
+`backend/app/services/classification/service.py`). This spec does **not** run
+classification inside extraction; it consumes classification output via the
+deferred `category_filter` stage (below).
 
 ## Pipeline config (request shape)
 
@@ -107,9 +139,16 @@ fields (below).
 - `base.py` — stage protocol `apply(parsed_doc, config) -> ParsedDocument`,
   plus a registry with `config_schema`.
 - `block_filter.py` — shipped stage; drops blocks by type/role.
-- `classifier` — registered name with documented interface and `config_schema`
-  but raising `NotImplementedError` pointing to its future spec. Lets the UI
-  list it as "coming soon" without backend rework.
+- `category_filter` — **seam only** (deferred to a follow-up spec). Registered
+  name with documented interface and `config_schema`, raising
+  `NotImplementedError`. When built, it will read an upstream
+  `classificationRunId`'s persisted regions and scope the `ParsedDocument` to
+  pages/blocks whose label is in the configured categories (e.g.
+  `["spec", "price list"]`), returning a derived `ParsedDocument` before
+  chunking. Classification itself is **not** run here — it is a separate
+  upstream stage that already exists. Defining the seam now lets the UI list it
+  as "coming soon" and reserves the `classificationRunId` request field without
+  backend rework.
 
 ## DocumentChunk — a derived, non-destructive view
 
@@ -239,8 +278,9 @@ additive optional field.
 
 ## Future work (out of scope)
 
-- Classifier preprocess stage (own spec) — page/region scoping via the existing
-  classification module (`backend/app/services/classification/`).
+- `category_filter` preprocess stage (own spec) — add `classificationRunId` to
+  the extraction request and scope pages/blocks by the existing classification
+  module's persisted regions (`backend/app/services/classification/`).
 - Saved pipeline presets/profiles.
 - Prompt caching for repeated passes over the same document.
 - Auto-retry of a truncated chunk with a smaller budget.
