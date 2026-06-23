@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { ExtractionSchema, ExtractorInfo, RunWithParseRequest } from '@/types/extraction'
 import type { ParseConfig } from '@/types/parsing'
+import { getLlmDefaults } from '@/api/extraction'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -78,6 +79,24 @@ export function ExtractionForm({
     }
   }, [extractors, extractionMethod])
 
+  useEffect(() => {
+    if (extractionMethod !== 'llm') return
+    let cancelled = false
+    getLlmDefaults()
+      .then((defaults) => {
+        if (cancelled) return
+        setPromptConfig((prev) => ({
+          ...prev,
+          systemPrompt: prev.systemPrompt || defaults.systemPrompt,
+        }))
+        setUserPromptTemplate((prev) => prev || defaults.userPromptTemplate)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [extractionMethod])
+
   const selectedExtractor = extractors.find((e) => e.extractionMethod === extractionMethod)
   const isConfigured = selectedExtractor?.configured ?? true
 
@@ -146,22 +165,6 @@ export function ExtractionForm({
 
   return (
     <div className="space-y-4">
-      {/* Parse Configuration */}
-      <div className="space-y-3">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Parse Configuration
-        </Label>
-        <ParseMethodSelector
-          parserType={parserType}
-          config={parserConfig}
-          onParserTypeChange={setParserType}
-          onConfigChange={setParserConfig}
-          disabled={isRunning}
-        />
-      </div>
-
-      <Separator />
-
       {/* Schema + Method row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
@@ -306,6 +309,18 @@ export function ExtractionForm({
           </div>
         </div>
       )}
+
+      <Separator />
+
+      {/* Parse Configuration — secondary */}
+      <ParseMethodSelector
+        parserType={parserType}
+        config={parserConfig}
+        onParserTypeChange={setParserType}
+        onConfigChange={setParserConfig}
+        disabled={isRunning}
+        compact
+      />
 
       {/* Run button */}
       <div className="flex items-center justify-between">

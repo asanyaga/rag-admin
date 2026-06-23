@@ -1,8 +1,17 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ExtractionForm } from './ExtractionForm'
 import type { ExtractionSchema, ExtractorInfo } from '@/types/extraction'
+import * as extractionApi from '@/api/extraction'
+
+vi.mock('@/api/extraction', () => ({
+  getLlmDefaults: vi.fn().mockResolvedValue({
+    systemPrompt: 'Default system prompt text',
+    userPromptTemplate: 'Default user prompt template text',
+  }),
+}))
 
 const schema: ExtractionSchema = {
   id: 'schema-1',
@@ -86,5 +95,21 @@ describe('ExtractionForm', () => {
         }),
       })
     )
+  })
+
+  it('pre-fills system prompt and user prompt template with fetched LLM defaults', async () => {
+    const llmExtractor: ExtractorInfo = {
+      extractionMethod: 'llm',
+      name: 'LLM',
+      description: 'Generic LLM extraction',
+      configSchema: null,
+      configured: true,
+    }
+    render(<ExtractionForm {...defaultProps} extractors={[llmExtractor]} onRun={vi.fn()} />)
+
+    await act(async () => {})
+
+    expect(screen.getByDisplayValue('Default system prompt text')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Default user prompt template text')).toBeInTheDocument()
   })
 })
