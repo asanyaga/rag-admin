@@ -141,6 +141,7 @@ class LLMExtractor(DataExtractor):
                     "model": llm_config.model,
                     "provider": llm_config.provider,
                     "latency_ms": latency_ms,
+                    "prompt_messages": messages,
                     "usage": {
                         "prompt_tokens": result.usage.prompt_tokens,
                         "completion_tokens": result.usage.completion_tokens,
@@ -160,6 +161,7 @@ class LLMExtractor(DataExtractor):
                 "model": llm_config.model,
                 "provider": llm_config.provider,
                 "latency_ms": latency_ms,
+                "prompt_messages": messages,
                 "usage": {
                     "prompt_tokens": result.usage.prompt_tokens,
                     "completion_tokens": result.usage.completion_tokens,
