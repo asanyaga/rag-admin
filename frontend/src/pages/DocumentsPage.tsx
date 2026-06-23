@@ -20,8 +20,7 @@ import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { RunTimeline } from '@/components/parse-runs/RunTimeline'
 import { useParseRuns } from '@/hooks/useParseRuns'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Plus, RotateCw, Files } from 'lucide-react'
-import type { BulkDocumentUpload, BulkUploadResponse } from '@/types/document'
+import { Plus, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { createParseRun } from '@/api/parseRuns'
@@ -38,7 +37,6 @@ export default function DocumentsPage(): JSX.Element {
     isLoading,
     error,
     uploadDocument,
-    uploadDocumentsBulk,
     updateDocument,
     deleteDocument,
     downloadDocument,
@@ -53,7 +51,6 @@ export default function DocumentsPage(): JSX.Element {
   } = useFolders(currentProject?.id || null)
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
-  const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
   const [viewDocumentId, setViewDocumentId] = useState<string | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -70,58 +67,6 @@ export default function DocumentsPage(): JSX.Element {
         </Alert>
       </div>
     )
-  }
-
-  const handleUpload = async (
-    file: File,
-    title: string,
-    description?: string,
-    parserType?: string,
-    parseConfig?: ParseConfig,
-    folderId?: string | null,
-  ) => {
-    try {
-      await uploadDocument({
-        projectId: currentProject.id,
-        title,
-        description,
-        file,
-        parserType,
-        parseConfig,
-        folderId: folderId ?? selectedFolderId ?? undefined,
-      })
-      toast.success('Document uploaded successfully', {
-        description: parserType === 'llamaparse'
-          ? 'LlamaParse processing is in progress'
-          : 'Text extraction is in progress',
-      })
-    } catch (err) {
-      toast.error('Upload failed', {
-        description: err instanceof Error ? err.message : 'An error occurred',
-      })
-      throw err
-    }
-  }
-
-  const handleBulkUpload = async (data: BulkDocumentUpload): Promise<BulkUploadResponse> => {
-    try {
-      const response = await uploadDocumentsBulk(data)
-      const successCount = response.results.filter((r) => r.document !== null).length
-      const failureCount = response.results.filter((r) => r.error !== null).length
-      if (failureCount === 0) {
-        toast.success(`${successCount} document${successCount !== 1 ? 's' : ''} uploaded`)
-      } else {
-        toast.success(`${successCount} uploaded`, {
-          description: `${failureCount} failed — check the queue for details`,
-        })
-      }
-      return response
-    } catch (err) {
-      toast.error('Bulk upload failed', {
-        description: err instanceof Error ? err.message : 'An error occurred',
-      })
-      throw err
-    }
   }
 
   const handleView = (documentId: string) => {
@@ -283,13 +228,9 @@ export default function DocumentsPage(): JSX.Element {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
-            <Files className="h-4 w-4 mr-2" />
-            Bulk Upload
-          </Button>
           <Button onClick={() => setUploadDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Upload Document
+            Upload Documents
           </Button>
         </div>
       </div>
@@ -412,21 +353,9 @@ export default function DocumentsPage(): JSX.Element {
       <DocumentUploadDialog
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
-        onUpload={handleUpload}
         projectId={currentProject.id}
-        folders={folders}
-        initialFolderId={selectedFolderId}
-      />
-
-      {/* Bulk Upload Dialog */}
-      <DocumentUploadDialog
-        open={bulkUploadOpen}
-        onOpenChange={setBulkUploadOpen}
-        onUpload={handleUpload}
-        onBulkUpload={handleBulkUpload}
+        onUpload={uploadDocument}
         documents={documents}
-        projectId={currentProject.id}
-        mode="bulk"
         folders={folders}
         initialFolderId={selectedFolderId}
       />

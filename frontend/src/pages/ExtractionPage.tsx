@@ -12,8 +12,7 @@ import type {
   ExtractorInfo,
   RunExtractionRequest,
 } from '@/types/extraction'
-import type { DocumentUpload } from '@/types/document'
-import type { ParseConfig } from '@/types/parsing'
+import type { Document as AppDocument, DocumentUpload } from '@/types/document'
 import { ExtractionSchemaEditor } from '@/components/extraction/ExtractionSchemaEditor'
 import { ExtractionForm } from '@/components/extraction/ExtractionForm'
 import { ExtractionHistory } from '@/components/extraction/ExtractionHistory'
@@ -146,29 +145,13 @@ export default function ExtractionPage(): JSX.Element {
     }
   }
 
-  const handleUpload = async (
-    file: File,
-    title: string,
-    description?: string,
-    parserType?: string,
-    parseConfig?: ParseConfig
-  ) => {
-    if (!projectId) return
-
-    const data: DocumentUpload = {
-      projectId,
-      title,
-      description,
-      file,
-      parserType,
-      parseConfig: parseConfig as Record<string, unknown>,
-    }
-
+  const handleUpload = async (data: DocumentUpload): Promise<AppDocument> => {
     const newDoc = await uploadDocument(data)
     toast.success('Document uploaded', {
       description: newDoc.status === 'processing' ? 'Processing in progress...' : undefined,
     })
     handleSelectDocument(newDoc.id)
+    return newDoc
   }
 
   if (!currentProject) {
