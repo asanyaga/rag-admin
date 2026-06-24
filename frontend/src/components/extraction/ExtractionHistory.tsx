@@ -23,6 +23,7 @@ interface ExtractionHistoryProps {
   isLoadingResult?: boolean
   schemas?: ExtractionSchema[]
   onSelectResult: (resultId: string) => void
+  onDeselectResult: () => void
   onDeleteResult: (resultId: string) => Promise<void>
   inProgressPhase?: InProgressPhase
 }
@@ -33,6 +34,7 @@ export function ExtractionHistory({
   selectedResult,
   schemas,
   onSelectResult,
+  onDeselectResult,
   onDeleteResult,
   inProgressPhase,
 }: ExtractionHistoryProps) {
@@ -101,7 +103,10 @@ export function ExtractionHistory({
           <Collapsible
             key={r.id}
             open={isExpanded}
-            onOpenChange={(open) => { if (open) onSelectResult(r.id) }}
+            onOpenChange={(open) => {
+              if (open) onSelectResult(r.id)
+              else onDeselectResult()
+            }}
           >
             <div className="flex items-center rounded-md hover:bg-muted/50 group">
               <CollapsibleTrigger asChild>

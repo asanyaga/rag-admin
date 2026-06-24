@@ -54,6 +54,7 @@ interface UseExtractionResultsReturn {
   phaseError: string | null
   fetchResults: () => Promise<void>
   selectResult: (resultId: string) => Promise<void>
+  clearSelection: () => void
   deleteResult: (resultId: string) => Promise<void>
   runExtractionWithParse: (
     documentId: string,
@@ -142,6 +143,10 @@ export function useExtractionResults(
     } finally {
       setIsLoadingResult(false)
     }
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedResult(null)
   }, [])
 
   const deleteResult = useCallback(async (resultId: string) => {
@@ -280,6 +285,7 @@ export function useExtractionResults(
     phaseError,
     fetchResults,
     selectResult,
+    clearSelection,
     deleteResult,
     runExtractionWithParse,
   }

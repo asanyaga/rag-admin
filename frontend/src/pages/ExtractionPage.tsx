@@ -47,6 +47,7 @@ export default function ExtractionPage(): JSX.Element {
     extractionPhase,
     phaseError,
     selectResult,
+    clearSelection,
     deleteResult,
     runExtractionWithParse,
   } = useExtractionResults(selectedDocumentId)
@@ -263,6 +264,7 @@ export default function ExtractionPage(): JSX.Element {
                   isLoadingResult={isLoadingResult}
                   schemas={schemas}
                   onSelectResult={selectResult}
+                  onDeselectResult={clearSelection}
                   onDeleteResult={deleteResult}
                   inProgressPhase={inProgressPhase}
                 />

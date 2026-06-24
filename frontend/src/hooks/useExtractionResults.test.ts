@@ -207,6 +207,32 @@ describe('runExtractionWithParse', () => {
   })
 })
 
+describe('clearSelection', () => {
+  it('sets selectedResult to null', async () => {
+    const fullResult = { ...fakeExtractionResult, id: 'result-1', status: 'completed' as const }
+    const listItem = {
+      id: 'result-1',
+      documentId: 'doc-1',
+      extractionSchemaId: 'schema-1',
+      extractionMethod: 'llm',
+      status: 'completed' as const,
+      statusMessage: null,
+      createdAt: '2026-06-24T00:00:00Z',
+    }
+    mockExtraction.listExtractionResults.mockResolvedValue([listItem])
+    mockExtraction.getExtractionResult.mockResolvedValue(fullResult)
+
+    const { result } = renderHook(() => useExtractionResults('doc-1'))
+    await act(async () => {})
+
+    await act(async () => { await result.current.selectResult('result-1') })
+    expect(result.current.selectedResult?.id).toBe('result-1')
+
+    act(() => { result.current.clearSelection() })
+    expect(result.current.selectedResult).toBeNull()
+  })
+})
+
 describe('deleteResult', () => {
   it('removes the deleted item from results state', async () => {
     const listItem = {
