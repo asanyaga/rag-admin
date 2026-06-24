@@ -84,3 +84,29 @@ def test_no_conflicts_key_absent_when_consistent():
         [_out({"currency": "EUR"}), _out({"currency": "EUR"})], _SCHEMA, dedupe_key=None,
     )
     assert "scalarConflicts" not in merged.extraction_metadata
+
+
+def test_model_provider_and_latency_propagated_from_chunks():
+    def _chunk(latency_ms: int) -> ExtractionOutput:
+        return ExtractionOutput(
+            structured_data={}, source_parse_run_id=_RUN,
+            citations=[], provider_response_raw=None,
+            extraction_metadata={
+                "usage": {"prompt_tokens": 1, "completion_tokens": 2, "total_tokens": 3},
+                "model": "claude-opus-4-7",
+                "provider": "anthropic",
+                "latency_ms": latency_ms,
+            },
+        )
+
+    merged = merge_outputs([_chunk(1000), _chunk(2000)], _SCHEMA, dedupe_key=None)
+    assert merged.extraction_metadata["model"] == "claude-opus-4-7"
+    assert merged.extraction_metadata["provider"] == "anthropic"
+    assert merged.extraction_metadata["latency_ms"] == 3000
+
+
+def test_model_provider_absent_when_not_in_chunk_metadata():
+    merged = merge_outputs([_out({}), _out({})], _SCHEMA, dedupe_key=None)
+    assert "model" not in merged.extraction_metadata
+    assert "provider" not in merged.extraction_metadata
+    assert "latency_ms" not in merged.extraction_metadata

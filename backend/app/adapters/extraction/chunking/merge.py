@@ -72,6 +72,18 @@ def merge_outputs(
     if scalar_conflicts:
         metadata["scalarConflicts"] = scalar_conflicts
 
+    first_meta = outputs[0].extraction_metadata or {}
+    if first_meta.get("model"):
+        metadata["model"] = first_meta["model"]
+    if first_meta.get("provider"):
+        metadata["provider"] = first_meta["provider"]
+    total_latency = sum(
+        int((out.extraction_metadata or {}).get("latency_ms", 0) or 0)
+        for out in outputs
+    )
+    if total_latency:
+        metadata["latency_ms"] = total_latency
+
     return ExtractionOutput(
         structured_data=merged_data,
         source_parse_run_id=outputs[0].source_parse_run_id,
