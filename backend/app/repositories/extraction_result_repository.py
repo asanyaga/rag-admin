@@ -130,3 +130,12 @@ class ExtractionResultRepository:
         await self.session.commit()
         await self.session.refresh(extraction_result)
         return extraction_result
+
+    async def delete(self, result_id: UUID) -> bool:
+        """Delete an extraction result. Returns True if deleted, False if not found."""
+        extraction_result = await self.get_by_id(result_id)
+        if not extraction_result:
+            return False
+        await self.session.delete(extraction_result)
+        await self.session.commit()
+        return True

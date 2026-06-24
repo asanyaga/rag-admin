@@ -190,3 +190,31 @@ class TestUpdateFailed:
         result = await repo.update_failed(uuid4(), "oops")
 
         assert result is None
+
+
+class TestDelete:
+    @pytest.mark.asyncio
+    async def test_delete_returns_true_when_found(self):
+        mock_result = _make_mock_result()
+        session = AsyncMock()
+        session.delete = AsyncMock()
+        session.commit = AsyncMock()
+        repo = ExtractionResultRepository(session)
+        repo.get_by_id = AsyncMock(return_value=mock_result)
+
+        result = await repo.delete(mock_result.id)
+
+        assert result is True
+        session.delete.assert_called_once_with(mock_result)
+        session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_delete_returns_false_when_not_found(self):
+        session = AsyncMock()
+        repo = ExtractionResultRepository(session)
+        repo.get_by_id = AsyncMock(return_value=None)
+
+        result = await repo.delete(uuid4())
+
+        assert result is False
+        session.delete.assert_not_called()
