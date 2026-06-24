@@ -7,7 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { AlertCircle, ChevronRight, Loader2, RefreshCw } from 'lucide-react'
+import { AlertCircle, ChevronRight, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import { ExtractionResultViewer } from './ExtractionResultViewer'
 
 interface InProgressPhase {
@@ -23,6 +23,7 @@ interface ExtractionHistoryProps {
   isLoadingResult?: boolean
   schemas?: ExtractionSchema[]
   onSelectResult: (resultId: string) => void
+  onDeleteResult: (resultId: string) => Promise<void>
   inProgressPhase?: InProgressPhase
 }
 
@@ -32,6 +33,7 @@ export function ExtractionHistory({
   selectedResult,
   schemas,
   onSelectResult,
+  onDeleteResult,
   inProgressPhase,
 }: ExtractionHistoryProps) {
   if (isLoading) {
@@ -101,29 +103,42 @@ export function ExtractionHistory({
             open={isExpanded}
             onOpenChange={(open) => { if (open) onSelectResult(r.id) }}
           >
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between h-auto py-2.5 px-3 hover:bg-muted/50">
-                <div className="flex items-center gap-2 text-left min-w-0">
-                  <ChevronRight className={`h-4 w-4 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                  <div className="flex flex-col items-start gap-0.5 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      {schemaName && (
-                        <span className="text-xs font-medium truncate">{schemaName}</span>
-                      )}
-                      <Badge variant="outline" className="text-[10px] font-normal shrink-0">{r.extractionMethod}</Badge>
-                      <Badge
-                        variant={r.status === 'completed' ? 'default' : r.status === 'pending' ? 'secondary' : 'destructive'}
-                        className="text-[10px] shrink-0"
-                      >
-                        {isPending && <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />}
-                        {r.status}
-                      </Badge>
+            <div className="flex items-center rounded-md hover:bg-muted/50 group">
+              <CollapsibleTrigger asChild>
+                <button className="flex-1 text-left py-2.5 pl-3 pr-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ChevronRight className={`h-4 w-4 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                    <div className="flex flex-col items-start gap-0.5 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {schemaName && (
+                          <span className="text-xs font-medium truncate">{schemaName}</span>
+                        )}
+                        <Badge variant="outline" className="text-[10px] font-normal shrink-0">{r.extractionMethod}</Badge>
+                        <Badge
+                          variant={r.status === 'completed' ? 'default' : r.status === 'pending' ? 'secondary' : 'destructive'}
+                          className="text-[10px] shrink-0"
+                        >
+                          {isPending && <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />}
+                          {r.status}
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">{formatDate(r.createdAt)}</span>
                     </div>
-                    <span className="text-[11px] text-muted-foreground">{formatDate(r.createdAt)}</span>
                   </div>
-                </div>
-              </Button>
-            </CollapsibleTrigger>
+                </button>
+              </CollapsibleTrigger>
+
+              {!isPending && (
+                <button
+                  className="shrink-0 px-2 py-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Delete extraction run"
+                  onClick={(e) => { e.stopPropagation(); onDeleteResult(r.id) }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
             <CollapsibleContent>
               <div className="ml-6 mr-3 mb-2 mt-1">
                 {selectedResult?.id === r.id ? (
