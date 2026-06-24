@@ -10,6 +10,26 @@ def get_known_extractors() -> list[dict]:
     """Catalogue of all known extraction adapters."""
     return [
         {
+            "extraction_method": "llm",
+            "name": "LLM",
+            "description": (
+                "Structured extraction via any LLM provider "
+                "(Ollama, OpenAI, Anthropic, Groq, …)"
+            ),
+            "config_schema": {
+                "type": "object",
+                "properties": {
+                    "structured_output_mode": {
+                        "type": "string",
+                        "enum": ["json_schema", "json_mode", "prompt_only"],
+                        "default": "json_schema",
+                    },
+                    "inject_block_ids": {"type": "boolean", "default": False},
+                    "user_prompt_template": {"type": "string"},
+                },
+            },
+        },
+        {
             "extraction_method": "llamaextract",
             "name": "LlamaExtract",
             "description": (
@@ -37,26 +57,6 @@ def get_known_extractors() -> list[dict]:
                     "use_reasoning": {"type": "boolean", "default": False},
                     "confidence_scores": {"type": "boolean", "default": False},
                     "page_range": {"type": "string"},
-                },
-            },
-        },
-        {
-            "extraction_method": "llm",
-            "name": "LLM",
-            "description": (
-                "Structured extraction via any LLM provider "
-                "(Ollama, OpenAI, Anthropic, Groq, …)"
-            ),
-            "config_schema": {
-                "type": "object",
-                "properties": {
-                    "structured_output_mode": {
-                        "type": "string",
-                        "enum": ["json_schema", "json_mode", "prompt_only"],
-                        "default": "json_schema",
-                    },
-                    "inject_block_ids": {"type": "boolean", "default": False},
-                    "user_prompt_template": {"type": "string"},
                 },
             },
         },
