@@ -26,6 +26,7 @@ import { Separator } from '@/components/ui/separator'
 import { FileSearch } from 'lucide-react'
 import { toast } from 'sonner'
 import * as extractionApi from '@/api/extraction'
+import { exportResultToCsv } from '@/lib/exportCsv'
 
 export default function ExtractionPage(): JSX.Element {
   const { currentProject } = useProject()
@@ -129,6 +130,21 @@ export default function ExtractionPage(): JSX.Element {
   const handleRetry = async () => {
     if (lastRequestRef.current && selectedDocumentId) {
       await runExtractionWithParse(selectedDocumentId, parseRuns, lastRequestRef.current)
+    }
+  }
+
+  const handleExportResult = async (resultId: string) => {
+    try {
+      const result =
+        selectedResult?.id === resultId
+          ? selectedResult
+          : await extractionApi.getExtractionResult(resultId)
+      if (!result.structuredData || Object.keys(result.structuredData).length === 0) return
+      const schema = schemas?.find((s) => s.id === result.extractionSchemaId)
+      const filename = `${schema?.name ?? 'extraction'}_${resultId.slice(0, 8)}.csv`
+      exportResultToCsv(result.structuredData, filename)
+    } catch {
+      toast.error('Failed to fetch result for export')
     }
   }
 
@@ -266,6 +282,7 @@ export default function ExtractionPage(): JSX.Element {
                   onSelectResult={selectResult}
                   onDeselectResult={clearSelection}
                   onDeleteResult={deleteResult}
+                  onExportResult={handleExportResult}
                   inProgressPhase={inProgressPhase}
                 />
               </div>
