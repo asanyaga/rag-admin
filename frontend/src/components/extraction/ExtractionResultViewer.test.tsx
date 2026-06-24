@@ -26,23 +26,164 @@ function buildResult(overrides: Partial<ExtractionResult> = {}): ExtractionResul
   }
 }
 
+function buildLlmResult(overrides: Partial<ExtractionResult> = {}): ExtractionResult {
+  return buildResult({
+    extractionMethod: 'llm',
+    extractionMetadata: {
+      model: 'claude-opus-4-7',
+      provider: 'anthropic',
+      latency_ms: 17794,
+      usage: { prompt_tokens: 3712, completion_tokens: 1830, total_tokens: 5542 },
+      prompt_messages: [
+        { role: 'system', content: 'You are an extraction assistant.' },
+        {
+          role: 'user',
+          content:
+            'Extract the following.\n<schema>{"type":"object"}</schema>\n<document>Invoice #001</document>',
+        },
+      ],
+    },
+    config: {
+      structured_output_mode: 'json_schema',
+      inject_block_ids: false,
+      chunking: { strategy: 'none', citationLevel: 'auto' },
+    },
+    providerResponseRaw: { id: 'msg_001', content: [{ type: 'text', text: '{}' }] },
+    ...overrides,
+  })
+}
+
+function buildChunkedResult(overrides: Partial<ExtractionResult> = {}): ExtractionResult {
+  return buildResult({
+    extractionMethod: 'llm',
+    extractionMetadata: {
+      chunkCount: 3,
+      usage: { total_tokens: 12000 },
+      scalarConflicts: [],
+      // no model, provider, latency_ms, prompt_messages
+    },
+    config: {
+      structured_output_mode: 'json_schema',
+      chunking: { strategy: 'token_budget_pages', config: { max_input_tokens: 4000 }, citationLevel: 'auto' },
+    },
+    providerResponseRaw: null,
+    ...overrides,
+  })
+}
+
 describe('ExtractionResultViewer', () => {
-  it('shows extraction metadata collapsible when extractionMetadata is present', () => {
+  // ── Run Config panel ──────────────────────────────────────────────────────
+  it('shows Run Config panel for all results', () => {
     render(<ExtractionResultViewer result={buildResult()} />)
-    expect(screen.getByText('Extraction Metadata')).toBeInTheDocument()
+    expect(screen.getByText('Run Config')).toBeInTheDocument()
   })
 
-  it('shows provider response collapsible when providerResponseRaw is present', () => {
+  it('shows model and provider in Run Config for LLM results', () => {
+    render(<ExtractionResultViewer result={buildLlmResult()} />)
+    expect(screen.getByText('claude-opus-4-7')).toBeInTheDocument()
+    expect(screen.getByText('anthropic')).toBeInTheDocument()
+  })
+
+  it('shows formatted latency in Run Config for LLM results', () => {
+    render(<ExtractionResultViewer result={buildLlmResult()} />)
+    expect(screen.getByText('17,794 ms')).toBeInTheDocument()
+  })
+
+  it('shows token counts in Run Config for LLM results', () => {
+    render(<ExtractionResultViewer result={buildLlmResult()} />)
+    expect(screen.getByText('3,712')).toBeInTheDocument()
+    expect(screen.getByText('1,830')).toBeInTheDocument()
+    expect(screen.getByText('5,542')).toBeInTheDocument()
+  })
+
+  it('shows chunked run placeholder for model when model is absent', () => {
+    render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    expect(screen.getAllByText('Not available for chunked runs').length).toBeGreaterThan(0)
+  })
+
+  it('shows chunk count in Run Config for chunked results', () => {
+    render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    expect(screen.getByText('3')).toBeInTheDocument()
+  })
+
+  it('shows chunking strategy in Run Config settings', () => {
+    render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    expect(screen.getByText('token_budget_pages')).toBeInTheDocument()
+  })
+
+  it('shows max input tokens when chunking strategy is not none', () => {
+    render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    expect(screen.getByText('4,000')).toBeInTheDocument()
+  })
+
+  // ── Prompt panel ──────────────────────────────────────────────────────────
+  it('shows Prompt panel for all results', () => {
+    render(<ExtractionResultViewer result={buildResult()} />)
+    expect(screen.getByText('Prompt')).toBeInTheDocument()
+  })
+
+  it('shows System and User tabs in Prompt panel for LLM results with prompt_messages', () => {
+    render(<ExtractionResultViewer result={buildLlmResult()} />)
+    expect(screen.getByRole('tab', { name: 'System' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'User' })).toBeInTheDocument()
+  })
+
+  it('shows system prompt content in System tab', () => {
+    render(<ExtractionResultViewer result={buildLlmResult()} />)
+    expect(screen.getByText('You are an extraction assistant.')).toBeInTheDocument()
+  })
+
+  it('shows chunking unavailable message in Prompt panel for chunked results', () => {
+    render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    expect(
+      screen.getByText(/Prompt not available.*chunking/i)
+    ).toBeInTheDocument()
+  })
+
+  // ── LLM Response panel ────────────────────────────────────────────────────
+  it('shows LLM Response panel when providerResponseRaw is present', () => {
     render(
       <ExtractionResultViewer
         result={buildResult({ providerResponseRaw: { data: { invoice_number: 'INV-001' } } })}
       />
     )
-    expect(screen.getByText('Provider Response')).toBeInTheDocument()
+    expect(screen.getByText('LLM Response')).toBeInTheDocument()
   })
 
-  it('does not show provider response collapsible when providerResponseRaw is null', () => {
+  it('does not show LLM Response panel when providerResponseRaw is null', () => {
     render(<ExtractionResultViewer result={buildResult({ providerResponseRaw: null })} />)
+    expect(screen.queryByText('LLM Response')).not.toBeInTheDocument()
+  })
+
+  it('does not show LLM Response panel for chunked runs', () => {
+    render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    expect(screen.queryByText('LLM Response')).not.toBeInTheDocument()
+  })
+
+  it('shows Raw label when providerResponseRaw contains raw_content string', () => {
+    render(
+      <ExtractionResultViewer
+        result={buildResult({
+          providerResponseRaw: { raw_content: 'this is not json' },
+        })}
+      />
+    )
+    expect(screen.getByText('Raw (non-JSON) response')).toBeInTheDocument()
+    expect(screen.getByText('this is not json')).toBeInTheDocument()
+  })
+
+  // ── Legacy panel absence ──────────────────────────────────────────────────
+  it('does not render old "Extraction Metadata" panel text', () => {
+    render(<ExtractionResultViewer result={buildResult()} />)
+    expect(screen.queryByText('Extraction Metadata')).not.toBeInTheDocument()
+  })
+
+  it('does not render old "Provider Response" panel text', () => {
+    render(
+      <ExtractionResultViewer
+        result={buildResult({ providerResponseRaw: { data: {} } })}
+      />
+    )
     expect(screen.queryByText('Provider Response')).not.toBeInTheDocument()
   })
 
