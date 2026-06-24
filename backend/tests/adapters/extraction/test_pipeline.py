@@ -115,3 +115,47 @@ async def test_rate_limit_exhausts_retries_and_raises():
     px = PipelineExtractor(inner=inner, preprocess=None, chunking=None, max_retries=1)
     with pytest.raises(LLMRateLimitError):
         await px.extract(_doc(1), _SCHEMA)
+
+
+import asyncio as _asyncio
+from app.adapters.extraction.pipeline import TpmThrottle
+
+
+async def test_tpm_throttle_allows_within_budget():
+    throttle = TpmThrottle(max_tpm=10_000)
+    r = await throttle.throttle(5_000)
+    assert r.tokens == 5_000
+
+
+async def test_tpm_throttle_blocks_when_budget_full():
+    """Second throttle call must block when the window is saturated."""
+    throttle = TpmThrottle(max_tpm=5_000)
+    await throttle.throttle(5_000)  # saturate window
+    with pytest.raises(_asyncio.TimeoutError):
+        await _asyncio.wait_for(throttle.throttle(1_000), timeout=0.05)
+
+
+async def test_tpm_throttle_oversized_chunk_fires_when_window_empty():
+    """A single chunk larger than max_tpm still fires (window is empty)."""
+    throttle = TpmThrottle(max_tpm=1_000)
+    r = await throttle.throttle(5_000)
+    assert r.tokens == 5_000
+
+
+async def test_tpm_throttle_replace_reservation_mutates_tokens():
+    throttle = TpmThrottle(max_tpm=10_000)
+    r = await throttle.throttle(5_000)
+    throttle.replace_reservation(r, 3_200)
+    assert r.tokens == 3_200
+
+
+async def test_tpm_throttle_rolling_estimate_starts_at_default():
+    throttle = TpmThrottle(max_tpm=30_000, default_estimate=8_000)
+    assert throttle.rolling_estimate == 8_000
+
+
+async def test_tpm_throttle_rolling_estimate_adapts_after_replacement():
+    throttle = TpmThrottle(max_tpm=30_000, default_estimate=8_000)
+    r = await throttle.throttle(8_000)
+    throttle.replace_reservation(r, 5_000)
+    assert throttle.rolling_estimate == 5_000
