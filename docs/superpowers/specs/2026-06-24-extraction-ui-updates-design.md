@@ -14,30 +14,15 @@ Two small UX fixes for the Extraction page.
 
 ### Problem
 
-The extractor registry lists `llamaextract` before `llm`. `ExtractionForm` picks the first configured extractor, so when a `LLAMA_CLOUD_KEY` is present both methods are configured and `llamaextract` wins. The desired default is always `llm`.
+The extractor registry lists `llamaextract` before `llm`. `ExtractionForm` seeds `extractionMethod` by picking the first configured extractor, so when a `LLAMA_CLOUD_KEY` is present both methods are configured and `llamaextract` wins. The desired default is always `llm`.
 
 ### Change
 
-**File:** `frontend/src/components/extraction/ExtractionForm.tsx`
+**File:** `backend/app/adapters/extraction/registry.py`
 
-The `useEffect` that seeds `extractionMethod` (lines 86–91) currently does:
+Swap the order of the two entries in `get_known_extractors()` so the `llm` dict comes before the `llamaextract` dict. That's it — the frontend `useEffect` already picks `firstConfigured`, and `llm` is always configured, so it becomes the default. The dropdown display order also changes to show LLM first, which is the right UX priority.
 
-```tsx
-const firstConfigured = extractors.find((e) => e.configured)
-setExtractionMethod(firstConfigured?.extractionMethod ?? extractors[0].extractionMethod)
-```
-
-Change to prefer `'llm'` first:
-
-```tsx
-const llmExtractor = extractors.find((e) => e.extractionMethod === 'llm' && e.configured)
-const firstConfigured = extractors.find((e) => e.configured)
-setExtractionMethod(
-  (llmExtractor ?? firstConfigured)?.extractionMethod ?? extractors[0].extractionMethod
-)
-```
-
-No backend changes. No test changes needed — the existing `ExtractionForm.test.tsx` covers the form; this logic has no standalone unit test today and is too shallow to warrant one.
+No frontend changes. No test changes needed.
 
 ---
 
