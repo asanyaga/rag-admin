@@ -49,7 +49,13 @@ def _maybe_wrap_pipeline(
     """Wrap inner extractor in a PipelineExtractor when pipeline config is present."""
     if not preprocess and not chunking:
         return inner
-    return PipelineExtractor(inner=inner, preprocess=preprocess, chunking=chunking)
+    max_tpm = (chunking or {}).get("maxTokensPerMinute")
+    return PipelineExtractor(
+        inner=inner,
+        preprocess=preprocess,
+        chunking=chunking,
+        max_tokens_per_minute=int(max_tpm) if max_tpm is not None else None,
+    )
 
 
 def get_extraction_service(

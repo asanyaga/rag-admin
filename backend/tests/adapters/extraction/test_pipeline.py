@@ -159,3 +159,17 @@ async def test_tpm_throttle_rolling_estimate_adapts_after_replacement():
     r = await throttle.throttle(8_000)
     throttle.replace_reservation(r, 5_000)
     assert throttle.rolling_estimate == 5_000
+
+
+async def test_pipeline_with_tpm_throttle_processes_all_chunks():
+    """TPM throttle enabled with a high budget must not affect output correctness."""
+    inner = _FakeInner()
+    px = PipelineExtractor(
+        inner=inner,
+        preprocess=None,
+        chunking={"strategy": "token_budget_pages", "config": {"maxInputTokens": 150}},
+        max_tokens_per_minute=100_000,
+    )
+    out = await px.extract(_doc(3), _SCHEMA)
+    assert len(inner.calls) == 3
+    assert {p["sku"] for p in out.structured_data["products"]} == {"p0", "p1", "p2"}

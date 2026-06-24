@@ -90,6 +90,12 @@ async def run_with_retry(
             await asyncio.sleep(delay)
 
 
+def _extract_total_tokens(output: ExtractionOutput) -> int:
+    meta = output.extraction_metadata or {}
+    usage = meta.get("usage") or {}
+    return int(usage.get("total_tokens") or 0)
+
+
 class PipelineExtractor(DataExtractor):
     """Wraps an inner DataExtractor with preprocess, chunking, and merge."""
 
@@ -102,12 +108,16 @@ class PipelineExtractor(DataExtractor):
         chunking: dict | None = None,
         max_concurrency: int = 3,
         max_retries: int = 3,
+        max_tokens_per_minute: int | None = None,
     ) -> None:
         self._inner = inner
         self._preprocess = preprocess or []
         self._chunking = chunking or {}
         self._max_concurrency = max_concurrency
         self._max_retries = max_retries
+        self._throttle: TpmThrottle | None = (
+            TpmThrottle(max_tokens_per_minute) if max_tokens_per_minute else None
+        )
 
     async def extract(
         self,
@@ -142,11 +152,20 @@ class PipelineExtractor(DataExtractor):
         sem = asyncio.Semaphore(self._max_concurrency)
 
         async def _run_chunk(chunk) -> ExtractionOutput:
+            reservation = None
+            estimated = 0
+            if self._throttle is not None:
+                estimated = self._throttle.rolling_estimate
+                reservation = await self._throttle.throttle(estimated)
             async with sem:
-                return await run_with_retry(
+                result = await run_with_retry(
                     lambda: self._inner.extract(chunk.document, schema, cfg),
                     self._max_retries,
                 )
+            if self._throttle is not None and reservation is not None:
+                actual = _extract_total_tokens(result)
+                self._throttle.replace_reservation(reservation, actual or estimated)
+            return result
 
         # asyncio.gather raises the first ExtractionError -> whole result fails.
         results = await asyncio.gather(*[_run_chunk(c) for c in chunks])
