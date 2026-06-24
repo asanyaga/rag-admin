@@ -117,7 +117,7 @@ New "Parse Configuration" section rendered above the schema selector:
 </div>
 ```
 
-`representationKind` is fixed to `"extract_rich"` and not exposed in the UI — same default as the documents parse form.
+`representationKind` is fixed to `"extract_rich"` — the documents parse form never sends it either, so all existing parse runs carry this value via the backend default. It is not a user-facing concept anywhere in the app and fixing it here keeps the match check consistent with existing parse runs.
 
 `onRun` callback type changes from `RunExtractionRequest` to `RunWithParseRequest`:
 
@@ -236,4 +236,4 @@ The Run Extraction button is disabled while `extractionPhase !== 'idle'`.
 - Existing extraction result polling behaviour
 - `ParseMethodSelector`, `LlamaParseConfig`, `LandingAIConfig` components — reused as-is
 - `useParseRuns` hook — read-only consumer, not involved in orchestration
-- The `representationKind` field — fixed to `"extract_rich"`, not configurable in this iteration
+- The `representationKind` field — fixed to `"extract_rich"`, consistent with how the documents parse form works (it never sends this field, relying on the backend default)
