@@ -321,7 +321,7 @@ export function ExtractionResultViewer({
       </Card>
 
       {/* ── Run Config panel ─────────────────────────────────────────────── */}
-      <Collapsible defaultOpen>
+      <Collapsible>
         <CollapsibleTrigger asChild>
           <Button variant="outline" size="sm" className="w-full justify-between">
             <span>Run Config</span>
@@ -417,7 +417,7 @@ export function ExtractionResultViewer({
       </Collapsible>
 
       {/* ── Prompt panel ─────────────────────────────────────────────────── */}
-      <Collapsible defaultOpen>
+      <Collapsible>
         <CollapsibleTrigger asChild>
           <Button variant="outline" size="sm" className="w-full justify-between">
             <span>Prompt</span>
@@ -459,7 +459,7 @@ export function ExtractionResultViewer({
 
       {/* ── LLM Response panel (hidden for chunked/null) ──────────────────── */}
       {hasProviderResponse && (
-        <Collapsible defaultOpen>
+        <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="outline" size="sm" className="w-full justify-between">
               <span>LLM Response</span>

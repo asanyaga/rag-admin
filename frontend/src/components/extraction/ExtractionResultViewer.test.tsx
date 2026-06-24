@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { ExtractionResultViewer } from './ExtractionResultViewer'
 import type { ExtractionResult } from '@/types/extraction'
 
@@ -78,41 +79,55 @@ describe('ExtractionResultViewer', () => {
     expect(screen.getByText('Run Config')).toBeInTheDocument()
   })
 
-  it('shows model and provider in Run Config for LLM results', () => {
+  it('shows model and provider in Run Config for LLM results', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildLlmResult()} />)
+    await user.click(screen.getByRole('button', { name: /run config/i }))
     expect(screen.getByText('claude-opus-4-7')).toBeInTheDocument()
     expect(screen.getByText('anthropic')).toBeInTheDocument()
   })
 
-  it('shows formatted latency in Run Config for LLM results', () => {
+  it('shows formatted latency in Run Config for LLM results', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildLlmResult()} />)
+    await user.click(screen.getByRole('button', { name: /run config/i }))
     expect(screen.getByText('17,794 ms')).toBeInTheDocument()
   })
 
-  it('shows token counts in Run Config for LLM results', () => {
+  it('shows token counts in Run Config for LLM results', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildLlmResult()} />)
+    await user.click(screen.getByRole('button', { name: /run config/i }))
     expect(screen.getByText('3,712')).toBeInTheDocument()
     expect(screen.getByText('1,830')).toBeInTheDocument()
     expect(screen.getByText('5,542')).toBeInTheDocument()
   })
 
-  it('shows chunked run placeholder for model when model is absent', () => {
+  it('shows chunked run placeholder for model when model is absent', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    await user.click(screen.getByRole('button', { name: /run config/i }))
     expect(screen.getAllByText('Not available for chunked runs').length).toBeGreaterThan(0)
   })
 
-  it('shows chunk count in Run Config for chunked results', () => {
+  it('shows chunk count in Run Config for chunked results', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    await user.click(screen.getByRole('button', { name: /run config/i }))
     expect(screen.getByText('3')).toBeInTheDocument()
   })
 
-  it('shows chunking strategy in Run Config settings', () => {
+  it('shows chunking strategy in Run Config settings', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    await user.click(screen.getByRole('button', { name: /run config/i }))
     expect(screen.getByText('token_budget_pages')).toBeInTheDocument()
   })
 
-  it('shows max input tokens when chunking strategy is not none', () => {
+  it('shows max input tokens when chunking strategy is not none', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    await user.click(screen.getByRole('button', { name: /run config/i }))
     expect(screen.getByText('4,000')).toBeInTheDocument()
   })
 
@@ -122,19 +137,25 @@ describe('ExtractionResultViewer', () => {
     expect(screen.getByText('Prompt')).toBeInTheDocument()
   })
 
-  it('shows System and User tabs in Prompt panel for LLM results with prompt_messages', () => {
+  it('shows System and User tabs in Prompt panel for LLM results with prompt_messages', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildLlmResult()} />)
+    await user.click(screen.getByRole('button', { name: /^prompt$/i }))
     expect(screen.getByRole('tab', { name: 'System' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'User' })).toBeInTheDocument()
   })
 
-  it('shows system prompt content in System tab', () => {
+  it('shows system prompt content in System tab', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildLlmResult()} />)
+    await user.click(screen.getByRole('button', { name: /^prompt$/i }))
     expect(screen.getByText('You are an extraction assistant.')).toBeInTheDocument()
   })
 
-  it('shows chunking unavailable message in Prompt panel for chunked results', () => {
+  it('shows chunking unavailable message in Prompt panel for chunked results', async () => {
+    const user = userEvent.setup()
     render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    await user.click(screen.getByRole('button', { name: /^prompt$/i }))
     expect(
       screen.getByText(/Prompt not available.*chunking/i)
     ).toBeInTheDocument()
@@ -160,7 +181,8 @@ describe('ExtractionResultViewer', () => {
     expect(screen.queryByText('LLM Response')).not.toBeInTheDocument()
   })
 
-  it('shows Raw label when providerResponseRaw contains raw_content string', () => {
+  it('shows Raw label when providerResponseRaw contains raw_content string', async () => {
+    const user = userEvent.setup()
     render(
       <ExtractionResultViewer
         result={buildResult({
@@ -168,6 +190,7 @@ describe('ExtractionResultViewer', () => {
         })}
       />
     )
+    await user.click(screen.getByRole('button', { name: /llm response/i }))
     expect(screen.getByText('Raw (non-JSON) response')).toBeInTheDocument()
     expect(screen.getByText('this is not json')).toBeInTheDocument()
   })
