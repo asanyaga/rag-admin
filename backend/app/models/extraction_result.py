@@ -53,6 +53,9 @@ class ExtractionResult(Base):
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    timeout_minutes: Mapped[int | None] = mapped_column(
+        sa.Integer(), nullable=True
+    )
     citations: Mapped[list | None] = mapped_column(JSON, nullable=True)
     provider_response_raw: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     source_parse_run_id: Mapped[UUID | None] = mapped_column(
