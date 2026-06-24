@@ -35,7 +35,8 @@ class _NoopMutationObserver {
   }
 }
 // Make prototype methods enumerable so Zone.js's `for (prop in instance)` finds them.
-;['observe', 'disconnect', 'takeRecords'].forEach((m) =>
+const _noopObserverMethods = ['observe', 'disconnect', 'takeRecords']
+_noopObserverMethods.forEach((m) =>
   Object.defineProperty(_NoopMutationObserver.prototype, m, { enumerable: true }),
 )
 global.MutationObserver = _NoopMutationObserver as unknown as typeof MutationObserver
