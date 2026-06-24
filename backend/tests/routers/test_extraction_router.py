@@ -110,3 +110,45 @@ async def test_get_llm_extraction_defaults(client: AsyncClient):
     data = response.json()
     assert data["systemPrompt"] == DEFAULT_EXTRACTION_SYSTEM_PROMPT
     assert data["userPromptTemplate"] == DEFAULT_USER_PROMPT_TEMPLATE
+
+
+@pytest.mark.asyncio
+async def test_delete_extraction_result_returns_204(client: AsyncClient):
+    """DELETE /extraction-results/{id} returns 204 when the result exists."""
+    from app.services.extraction_service import ExtractionService
+    from app.services.exceptions import NotFoundError
+
+    result_id = uuid4()
+    app.dependency_overrides[get_current_active_user] = _mock_user
+
+    try:
+        with patch.object(ExtractionService, "delete_result", new_callable=AsyncMock) as mock_delete:
+            mock_delete.return_value = None
+            response = await client.delete(
+                f"/api/v1/extraction-results/{result_id}",
+            )
+    finally:
+        app.dependency_overrides.pop(get_current_active_user, None)
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+@pytest.mark.asyncio
+async def test_delete_extraction_result_returns_404_when_not_found(client: AsyncClient):
+    """DELETE /extraction-results/{id} returns 404 when the result does not exist."""
+    from app.services.extraction_service import ExtractionService
+    from app.services.exceptions import NotFoundError
+
+    result_id = uuid4()
+    app.dependency_overrides[get_current_active_user] = _mock_user
+
+    try:
+        with patch.object(ExtractionService, "delete_result", new_callable=AsyncMock) as mock_delete:
+            mock_delete.side_effect = NotFoundError("not found")
+            response = await client.delete(
+                f"/api/v1/extraction-results/{result_id}",
+            )
+    finally:
+        app.dependency_overrides.pop(get_current_active_user, None)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -267,6 +267,22 @@ async def get_extraction_result(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+@router.delete(
+    "/extraction-results/{result_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete an extraction result",
+)
+async def delete_extraction_result(
+    result_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ExtractionService = Depends(get_extraction_service),
+):
+    try:
+        await service.delete_result(result_id, current_user.id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
 # --- Extractor info ---
 
 @router.get(
