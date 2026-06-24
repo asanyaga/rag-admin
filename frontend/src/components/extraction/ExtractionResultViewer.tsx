@@ -1,4 +1,5 @@
 import type { ExtractionResult } from '@/types/extraction'
+import { ChunkingSummary } from './ChunkingSummary'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -143,6 +144,7 @@ export function ExtractionResultViewer({
 
   return (
     <div className="space-y-4">
+      <ChunkingSummary metadata={result.extractionMetadata} />
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
