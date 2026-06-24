@@ -53,6 +53,7 @@ const fakeExtractionResult = {
   createdBy: 'user-1',
   createdAt: '2026-06-23T00:00:00Z',
   updatedAt: '2026-06-23T00:00:00Z',
+  timeoutMinutes: null,
 }
 
 const baseRequest = {
@@ -217,6 +218,7 @@ describe('clearSelection', () => {
       extractionMethod: 'llm',
       status: 'completed' as const,
       statusMessage: null,
+      timeoutMinutes: null,
       createdAt: '2026-06-24T00:00:00Z',
     }
     mockExtraction.listExtractionResults.mockResolvedValue([listItem])
@@ -242,6 +244,7 @@ describe('deleteResult', () => {
       extractionMethod: 'llm',
       status: 'completed' as const,
       statusMessage: null,
+      timeoutMinutes: null,
       createdAt: '2026-06-24T00:00:00Z',
     }
     mockExtraction.listExtractionResults.mockResolvedValue([listItem])
@@ -268,6 +271,7 @@ describe('deleteResult', () => {
       extractionMethod: 'llm',
       status: 'completed' as const,
       statusMessage: null,
+      timeoutMinutes: null,
       createdAt: '2026-06-24T00:00:00Z',
     }
     const fullResult = { ...fakeExtractionResult, id: 'result-1', status: 'completed' as const }
@@ -283,5 +287,60 @@ describe('deleteResult', () => {
 
     await act(async () => { await result.current.deleteResult('result-1') })
     expect(result.current.selectedResult).toBeNull()
+  })
+})
+
+describe('extraction polling timeout', () => {
+  // timeoutMinutes: 1 → deadline = 60000ms; interval = 3000ms
+  // interval fires at 3s, 6s, ..., 60s (20 times — all before deadline)
+  // interval fires at 63s (21st) — this one is past the deadline → timeout
+  const INTERVAL = 3_000
+  const ONE_MINUTE_MS = 60_000
+
+  it('uses timeoutMinutes from result when set — stops polling after that many minutes', async () => {
+    vi.useFakeTimers()
+
+    const pendingResult = { ...fakeExtractionResult, timeoutMinutes: 1 }
+    mockExtraction.listExtractionResults.mockResolvedValue([pendingResult])
+
+    const { result } = renderHook(() => useExtractionResults('doc-1'))
+    // Let initial fetch run and interval start
+    await act(async () => {})
+
+    // Advance to just before the timeout — still pending
+    act(() => { vi.advanceTimersByTime(ONE_MINUTE_MS - 1) })
+    await act(async () => {})
+    expect(result.current.results[0]?.status).toBe('pending')
+
+    // Advance past the timeout (next interval fires after 60s deadline)
+    act(() => { vi.advanceTimersByTime(INTERVAL + 1) })
+    await act(async () => {})
+
+    expect(result.current.results[0]?.status).toBe('failed')
+    expect(result.current.results[0]?.statusMessage).toBe('Processing timeout')
+
+    vi.useRealTimers()
+  })
+
+  it('falls back to 10-minute deadline when timeoutMinutes is null', async () => {
+    vi.useFakeTimers()
+
+    const pendingResult = { ...fakeExtractionResult, timeoutMinutes: null }
+    mockExtraction.listExtractionResults.mockResolvedValue([pendingResult])
+
+    const { result } = renderHook(() => useExtractionResults('doc-1'))
+    await act(async () => {})
+
+    // Still pending before 10-minute mark
+    act(() => { vi.advanceTimersByTime(10 * ONE_MINUTE_MS - 1) })
+    await act(async () => {})
+    expect(result.current.results[0]?.status).toBe('pending')
+
+    // Advance past the 10-minute timeout (next interval after 600s)
+    act(() => { vi.advanceTimersByTime(INTERVAL + 1) })
+    await act(async () => {})
+    expect(result.current.results[0]?.status).toBe('failed')
+
+    vi.useRealTimers()
   })
 })

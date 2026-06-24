@@ -43,6 +43,7 @@ export interface ExtractionResult {
   status: ExtractionResultStatus
   statusMessage: string | null
   startedAt: string | null
+  timeoutMinutes: number | null
   createdBy: string
   createdAt: string
   updatedAt: string
@@ -55,6 +56,7 @@ export interface ExtractionResultListItem {
   extractionMethod: string
   status: ExtractionResultStatus
   statusMessage: string | null
+  timeoutMinutes: number | null
   createdAt: string
 }
 
@@ -79,6 +81,7 @@ export interface RunExtractionRequest {
   userPromptTemplate?: string
   chunking?: ChunkingConfig
   preprocess?: PreprocessStage[]
+  timeoutMinutes?: number
 }
 
 export interface ExtractorInfo {
@@ -106,5 +109,6 @@ export interface RunWithParseRequest {
     userPromptTemplate?: string
     chunking?: ChunkingConfig
     preprocess?: PreprocessStage[]
+    timeoutMinutes?: number
   }
 }

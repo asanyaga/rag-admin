@@ -68,6 +68,7 @@ export function ExtractionForm({
   const [pageOverlap, setPageOverlap] = useState('0')
   const [dedupeKey, setDedupeKey] = useState('')
   const [maxTokensPerMinute, setMaxTokensPerMinute] = useState('')
+  const [timeoutMinutes, setTimeoutMinutes] = useState('')
   const [citationLevel, setCitationLevel] =
     useState<'auto' | 'full' | 'page_only' | 'off'>('auto')
 
@@ -159,6 +160,7 @@ export function ExtractionForm({
       } else if (citationLevel !== 'auto') {
         chunking = { strategy: 'none', citationLevel }
       }
+      const tm = parseInt(timeoutMinutes, 10)
       extractionConfig = {
         extractionSchemaId: schemaId,
         extractionMethod,
@@ -166,6 +168,7 @@ export function ExtractionForm({
         llmConfig: promptConfig,
         userPromptTemplate: userPromptTemplate.trim() || undefined,
         ...(chunking ? { chunking } : {}),
+        ...(!Number.isNaN(tm) && tm >= 1 ? { timeoutMinutes: Math.min(tm, 120) } : {}),
       }
     } else {
       extractionConfig = { extractionSchemaId: schemaId, extractionMethod, config: {} }
@@ -398,6 +401,18 @@ export function ExtractionForm({
                   </div>
                 </>
               )}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Timeout (minutes)</Label>
+                <Input
+                  type="number"
+                  value={timeoutMinutes}
+                  onChange={(e) => setTimeoutMinutes(e.target.value)}
+                  placeholder="10"
+                  min={1}
+                  max={120}
+                  className="h-9"
+                />
+              </div>
               <p className="text-[11px] text-muted-foreground">
                 {citationLevel === 'off'
                   ? 'No provenance will be captured.'
