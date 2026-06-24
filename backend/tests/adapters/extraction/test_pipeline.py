@@ -1,0 +1,117 @@
+import pytest
+from uuid import uuid4
+
+from app.adapters.extraction.pipeline import PipelineExtractor
+from app.ports.data_extraction import DataExtractor, ExtractionError, ExtractionOutput
+from app.services.llm.types import LLMRateLimitError
+from app.cdm.models import Block, BlockRole, Page, ParsedDocument
+
+_RUN = uuid4()
+_SCHEMA = {"type": "object", "properties": {
+    "products": {"type": "array", "items": {"type": "object",
+        "properties": {"sku": {"type": "string"}}}}}}
+
+
+def _doc(n_pages: int, chars=400):
+    pages, blocks = [], []
+    for i in range(n_pages):
+        blocks.append(Block(id=f"b{i}", role=BlockRole.PARAGRAPH, native_type="t",
+                            text="x" * chars, markdown="x" * chars, page_index=i))
+        pages.append(Page(index=i, block_ids=[f"b{i}"]))
+    return ParsedDocument(id="d", source_document_id="s", parse_run_id=str(_RUN),
+                          page_count=n_pages, pages=pages, blocks=blocks)
+
+
+class _FakeInner(DataExtractor):
+    extractor_type = "fake"
+
+    def __init__(self, behavior=None):
+        self.calls = []
+        self.docs = []
+        self._behavior = behavior or (lambda doc, cfg: ExtractionOutput(
+            structured_data={"products": [{"sku": f"p{doc.pages[0].index}"}]},
+            source_parse_run_id=_RUN, citations=[], provider_response_raw=None,
+            extraction_metadata={"usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}},
+        ))
+
+    async def extract(self, parsed_document, schema, config=None):
+        self.calls.append(config)
+        self.docs.append(parsed_document)
+        return self._behavior(parsed_document, config or {})
+
+
+async def test_none_strategy_is_single_call_passthrough():
+    inner = _FakeInner()
+    px = PipelineExtractor(inner=inner, preprocess=None, chunking=None)
+    out = await px.extract(_doc(3), _SCHEMA)
+    assert len(inner.calls) == 1
+    assert [p["sku"] for p in out.structured_data["products"]] == ["p0"]
+
+
+async def test_chunking_merges_multiple_chunks():
+    inner = _FakeInner()
+    px = PipelineExtractor(inner=inner, preprocess=None,
+                           chunking={"strategy": "token_budget_pages",
+                                     "config": {"maxInputTokens": 150}})
+    out = await px.extract(_doc(3), _SCHEMA)
+    assert len(inner.calls) == 3
+    assert {p["sku"] for p in out.structured_data["products"]} == {"p0", "p1", "p2"}
+
+
+async def test_resolved_citation_level_passed_to_inner():
+    inner = _FakeInner()
+    px = PipelineExtractor(inner=inner, preprocess=None,
+                           chunking={"strategy": "none", "citationLevel": "page_only"})
+    await px.extract(_doc(1), _SCHEMA)
+    assert inner.calls[0]["citation_level"] == "page_only"
+
+
+async def test_preprocess_runs_before_extraction():
+    inner = _FakeInner(behavior=lambda doc, cfg: ExtractionOutput(
+        structured_data={"products": []}, source_parse_run_id=_RUN, citations=[],
+        provider_response_raw=None, extraction_metadata={}))
+    px = PipelineExtractor(
+        inner=inner,
+        preprocess=[{"stage": "block_filter", "config": {"drop": ["paragraph"]}}],
+        chunking=None,
+    )
+    await px.extract(_doc(1), _SCHEMA)
+    # block_filter dropped the only (paragraph) block before the inner extractor ran
+    assert inner.docs[0].blocks == []
+
+
+async def test_failed_chunk_fails_whole_extraction():
+    def boom(doc, cfg):
+        if doc.pages[0].index == 1:
+            raise ExtractionError("truncated chunk")
+        return ExtractionOutput(structured_data={"products": []}, source_parse_run_id=_RUN,
+                                citations=[], provider_response_raw=None, extraction_metadata={})
+    inner = _FakeInner(behavior=boom)
+    px = PipelineExtractor(inner=inner, preprocess=None,
+                           chunking={"strategy": "token_budget_pages", "config": {"maxInputTokens": 150}})
+    with pytest.raises(ExtractionError):
+        await px.extract(_doc(3), _SCHEMA)
+
+
+async def test_retries_on_rate_limit_then_succeeds():
+    state = {"n": 0}
+    def flaky(doc, cfg):
+        state["n"] += 1
+        if state["n"] == 1:
+            raise LLMRateLimitError("429", retry_after=0)
+        return ExtractionOutput(structured_data={"products": [{"sku": "ok"}]},
+                                source_parse_run_id=_RUN, citations=[], provider_response_raw=None,
+                                extraction_metadata={})
+    inner = _FakeInner(behavior=flaky)
+    px = PipelineExtractor(inner=inner, preprocess=None, chunking=None, max_retries=2)
+    out = await px.extract(_doc(1), _SCHEMA)
+    assert out.structured_data["products"] == [{"sku": "ok"}]
+
+
+async def test_rate_limit_exhausts_retries_and_raises():
+    def always_429(doc, cfg):
+        raise LLMRateLimitError("429", retry_after=0)
+    inner = _FakeInner(behavior=always_429)
+    px = PipelineExtractor(inner=inner, preprocess=None, chunking=None, max_retries=1)
+    with pytest.raises(LLMRateLimitError):
+        await px.extract(_doc(1), _SCHEMA)

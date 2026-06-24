@@ -4,10 +4,11 @@ import time
 import logging
 from typing import AsyncGenerator
 
-from anthropic import AsyncAnthropic, BadRequestError, APIConnectionError
+from anthropic import AsyncAnthropic, BadRequestError, APIConnectionError, RateLimitError
 
 from app.services.llm.types import (
     LLMConfig, TokenUsage, CompletionResult, StreamResponse, LLMConnectionError,
+    LLMRateLimitError,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,12 @@ class AnthropicAdapter:
 
         try:
             response = await self.client.messages.create(**kwargs)
+        except RateLimitError as e:
+            retry_after = None
+            header = getattr(getattr(e, "response", None), "headers", {}) or {}
+            if header.get("retry-after"):
+                retry_after = float(header["retry-after"])
+            raise LLMRateLimitError(str(e), retry_after=retry_after) from e
         except BadRequestError as e:
             retried = _strip_deprecated(kwargs, str(e))
             if retried is not None:
@@ -81,6 +88,7 @@ class AnthropicAdapter:
             latency_ms=latency,
             model=config.model,
             provider="anthropic",
+            stop_reason=getattr(response, "stop_reason", None),
         )
 
     async def stream_completion(

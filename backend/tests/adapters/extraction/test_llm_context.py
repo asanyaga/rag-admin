@@ -201,6 +201,28 @@ class TestAugmentSchemaWithSources:
         item_props = aug["properties"]["items"]["items"]["properties"]
         assert "sku__source" in item_props
 
+    def test_full_level_includes_block_id(self):
+        from app.adapters.extraction.llm_context import augment_schema_with_sources
+        schema = {"type": "object", "properties": {"sku": {"type": "string"}}}
+        out = augment_schema_with_sources(schema, level="full")
+        props = out["properties"]["sku__source"]["properties"]
+        assert "page_index" in props and "block_id" in props
+
+    def test_page_only_level_drops_block_id(self):
+        from app.adapters.extraction.llm_context import augment_schema_with_sources
+        schema = {"type": "object", "properties": {"sku": {"type": "string"}}}
+        out = augment_schema_with_sources(schema, level="page_only")
+        props = out["properties"]["sku__source"]["properties"]
+        assert "page_index" in props and "block_id" not in props
+        assert out["properties"]["sku__source"]["required"] == ["page_index"]
+
+    def test_off_level_adds_no_sources(self):
+        from app.adapters.extraction.llm_context import augment_schema_with_sources
+        schema = {"type": "object", "properties": {"sku": {"type": "string"}}}
+        out = augment_schema_with_sources(schema, level="off")
+        assert "sku__source" not in out["properties"]
+        assert out == schema
+
 
 class TestStripSourceFields:
     def test_clean_data_and_citations_returned(self):

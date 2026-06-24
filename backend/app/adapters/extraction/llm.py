@@ -105,8 +105,9 @@ class LLMExtractor(DataExtractor):
             cfg["system_prompt"] = prompt_config.system_prompt
 
         structured_output_mode = cfg.get("structured_output_mode", "json_schema")
+        citation_level = cfg.get("citation_level", "full")
         context = build_extraction_context(parsed_document, cfg.get("inject_block_ids", False))
-        aug_schema = augment_schema_with_sources(schema)
+        aug_schema = augment_schema_with_sources(schema, level=citation_level)
         messages = self._build_messages(aug_schema, context, cfg)
 
         llm_config = LLMConfig(
@@ -130,6 +131,21 @@ class LLMExtractor(DataExtractor):
                 },
             ) from exc
         latency_ms = int((time.monotonic() - t0) * 1000)
+
+        if result.stop_reason == "max_tokens":
+            completion_tokens = result.usage.completion_tokens if result.usage else "?"
+            raise ExtractionError(
+                "LLM response truncated at max_tokens "
+                f"(completion_tokens={completion_tokens}). "
+                "Lower chunking maxInputTokens or raise max_tokens.",
+                raw_response=result.content,
+                metadata={
+                    "model": llm_config.model,
+                    "provider": llm_config.provider,
+                    "latency_ms": latency_ms,
+                    "stop_reason": result.stop_reason,
+                },
+            )
 
         try:
             raw = json.loads(_strip_code_fences(result.content))

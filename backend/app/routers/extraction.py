@@ -34,9 +34,22 @@ from app.services.exceptions import NotFoundError, ConflictError
 from app.services.provider_key_service import resolve_api_key
 from app.services.llm.factory import create_adapter
 from app.adapters.extraction.registry import get_extractor
+from app.adapters.extraction.pipeline import PipelineExtractor
+from app.ports.data_extraction import DataExtractor
 
 
 router = APIRouter(tags=["extraction"])
+
+
+def _maybe_wrap_pipeline(
+    inner: DataExtractor,
+    preprocess: list[dict] | None,
+    chunking: dict | None,
+) -> DataExtractor:
+    """Wrap inner extractor in a PipelineExtractor when pipeline config is present."""
+    if not preprocess and not chunking:
+        return inner
+    return PipelineExtractor(inner=inner, preprocess=preprocess, chunking=chunking)
 
 
 def get_extraction_service(
@@ -194,6 +207,8 @@ async def run_extraction(
                     "storage_service": get_storage_service(),
                 },
             )
+
+        extractor = _maybe_wrap_pipeline(extractor, body.preprocess, body.chunking)
 
         result = await service.run_extraction(
             parse_run_id=body.parse_run_id,
