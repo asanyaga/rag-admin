@@ -215,3 +215,102 @@ describe('ExtractionResultViewer', () => {
     expect(screen.queryByText(/citations \/ reasoning/i)).not.toBeInTheDocument()
   })
 })
+
+// ── Chunk Details fixtures ────────────────────────────────────────────────────
+
+function buildChunkedResultWithDetails(overrides: Partial<ExtractionResult> = {}): ExtractionResult {
+  return buildResult({
+    extractionMethod: 'llm',
+    extractionMetadata: {
+      chunkCount: 2,
+      usage: { total_tokens: 6400 },
+      model: 'claude-opus-4-7',
+      provider: 'anthropic',
+      latency_ms: 2700,
+      chunks: [
+        {
+          chunkIndex: 0,
+          pageIndices: [0, 1, 2],
+          promptMessages: [
+            { role: 'system', content: 'Shared system prompt.' },
+            {
+              role: 'user',
+              content:
+                'Extract.\n<schema>{"type":"object"}</schema>\n<document>Page 1 content</document>',
+            },
+          ],
+          providerResponseRaw: { id: 'r1', answer: 'chunk-1-response' },
+          structuredData: { invoice: 'INV-001' },
+          usage: { prompt_tokens: 3000, completion_tokens: 500, total_tokens: 3500 },
+          latencyMs: 1500,
+        },
+        {
+          chunkIndex: 1,
+          pageIndices: [3, 4],
+          promptMessages: [
+            { role: 'system', content: 'Shared system prompt.' },
+            {
+              role: 'user',
+              content:
+                'Extract.\n<schema>{"type":"object"}</schema>\n<document>Page 2 content</document>',
+            },
+          ],
+          providerResponseRaw: { id: 'r2', answer: 'chunk-2-response' },
+          structuredData: { invoice: 'INV-002' },
+          usage: { prompt_tokens: 2400, completion_tokens: 500, total_tokens: 2900 },
+          latencyMs: 1200,
+        },
+      ],
+    },
+    providerResponseRaw: null,
+    ...overrides,
+  })
+}
+
+describe('Chunk Details panel', () => {
+  it('does not show Chunk Details panel when no chunks in metadata', () => {
+    render(<ExtractionResultViewer result={buildChunkedResult()} />)
+    expect(screen.queryByRole('button', { name: /chunk details/i })).not.toBeInTheDocument()
+  })
+
+  it('shows Chunk Details panel trigger when chunks are present', () => {
+    render(<ExtractionResultViewer result={buildChunkedResultWithDetails()} />)
+    expect(screen.getByRole('button', { name: /chunk details/i })).toBeInTheDocument()
+  })
+
+  it('chunk list shows page range and token count for each chunk', async () => {
+    const user = userEvent.setup()
+    render(<ExtractionResultViewer result={buildChunkedResultWithDetails()} />)
+    await user.click(screen.getByRole('button', { name: /chunk details/i }))
+    expect(screen.getByText('Chunk 1')).toBeInTheDocument()
+    expect(screen.getByText(/pp\. 1–3/)).toBeInTheDocument()
+    expect(screen.getByText(/3,500 tokens/)).toBeInTheDocument()
+    expect(screen.getByText('Chunk 2')).toBeInTheDocument()
+    expect(screen.getByText(/pp\. 4–5/)).toBeInTheDocument()
+  })
+
+  it('system prompt section carries identical-across-all-chunks note', async () => {
+    const user = userEvent.setup()
+    render(<ExtractionResultViewer result={buildChunkedResultWithDetails()} />)
+    await user.click(screen.getByRole('button', { name: /chunk details/i }))
+    expect(screen.getByText(/Identical across all chunks/i)).toBeInTheDocument()
+  })
+
+  it('extracted pre-merge section carries raw-output note', async () => {
+    const user = userEvent.setup()
+    render(<ExtractionResultViewer result={buildChunkedResultWithDetails()} />)
+    await user.click(screen.getByRole('button', { name: /chunk details/i }))
+    expect(screen.getByText(/Raw output before conflict resolution/i)).toBeInTheDocument()
+  })
+
+  it('selecting a different chunk updates the detail pane', async () => {
+    const user = userEvent.setup()
+    render(<ExtractionResultViewer result={buildChunkedResultWithDetails()} />)
+    await user.click(screen.getByRole('button', { name: /chunk details/i }))
+    // Chunk 1 is selected by default
+    expect(screen.getByText('Page 1 content')).toBeInTheDocument()
+    // Click chunk 2 in the list
+    await user.click(screen.getByRole('button', { name: /chunk 2/i }))
+    expect(screen.getByText('Page 2 content')).toBeInTheDocument()
+  })
+})
