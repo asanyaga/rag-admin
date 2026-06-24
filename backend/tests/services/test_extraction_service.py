@@ -429,3 +429,26 @@ class TestRunExtractionConfigMerge:
             merged_config["user_prompt_template"] = user_prompt_template
         assert "llm_config" not in merged_config
         assert "user_prompt_template" not in merged_config
+
+
+class TestDeleteResult:
+    @pytest.mark.asyncio
+    async def test_delete_result_calls_repo_and_returns(self):
+        result_repo = AsyncMock()
+        result_repo.delete = AsyncMock(return_value=True)
+        service = _make_service(result_repo=result_repo)
+        result_id = uuid4()
+
+        await service.delete_result(result_id, uuid4())
+
+        result_repo.delete.assert_called_once_with(result_id)
+
+    @pytest.mark.asyncio
+    async def test_delete_result_raises_not_found_when_missing(self):
+        from app.services.exceptions import NotFoundError
+        result_repo = AsyncMock()
+        result_repo.delete = AsyncMock(return_value=False)
+        service = _make_service(result_repo=result_repo)
+
+        with pytest.raises(NotFoundError):
+            await service.delete_result(uuid4(), uuid4())

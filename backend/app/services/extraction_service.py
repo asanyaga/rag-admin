@@ -172,6 +172,12 @@ class ExtractionService:
         results = [await self._reap_stale(r) for r in results]
         return [ExtractionResultListResponse.from_orm_model(r) for r in results]
 
+    async def delete_result(self, result_id: UUID, user_id: UUID) -> None:
+        """Delete an extraction result. Raises NotFoundError if not found."""
+        deleted = await self.result_repo.delete(result_id)
+        if not deleted:
+            raise NotFoundError(f"Extraction result {result_id} not found")
+
     async def get_extractors(self) -> list[ExtractorInfoResponse]:
         """Return full catalogue with configured flag from current credential source.
 
