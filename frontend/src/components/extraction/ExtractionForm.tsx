@@ -67,6 +67,7 @@ export function ExtractionForm({
   const [maxInputTokens, setMaxInputTokens] = useState('8000')
   const [pageOverlap, setPageOverlap] = useState('0')
   const [dedupeKey, setDedupeKey] = useState('')
+  const [maxTokensPerMinute, setMaxTokensPerMinute] = useState('')
   const [citationLevel, setCitationLevel] =
     useState<'auto' | 'full' | 'page_only' | 'off'>('auto')
 
@@ -148,7 +149,13 @@ export function ExtractionForm({
         const overlap = parseInt(pageOverlap, 10)
         if (!Number.isNaN(overlap) && overlap > 0) cfg.pageOverlap = overlap
         if (dedupeKey.trim()) cfg.dedupeKey = dedupeKey.trim()
-        chunking = { strategy: chunkStrategy, config: cfg, citationLevel }
+        const tpm = parseInt(maxTokensPerMinute, 10)
+        chunking = {
+          strategy: chunkStrategy,
+          config: cfg,
+          citationLevel,
+          ...(!Number.isNaN(tpm) && tpm > 0 ? { maxTokensPerMinute: tpm } : {}),
+        }
       } else if (citationLevel !== 'auto') {
         chunking = { strategy: 'none', citationLevel }
       }
@@ -364,20 +371,32 @@ export function ExtractionForm({
                 </div>
               </div>
               {chunkStrategy === 'token_budget_pages' && (
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Max input tokens</Label>
-                    <Input type="number" value={maxInputTokens} onChange={(e) => setMaxInputTokens(e.target.value)} className="h-9" />
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Max input tokens</Label>
+                      <Input type="number" value={maxInputTokens} onChange={(e) => setMaxInputTokens(e.target.value)} className="h-9" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Page overlap</Label>
+                      <Input type="number" value={pageOverlap} onChange={(e) => setPageOverlap(e.target.value)} className="h-9" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dedupe key</Label>
+                      <Input value={dedupeKey} onChange={(e) => setDedupeKey(e.target.value)} placeholder="e.g. sku" className="h-9" />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Page overlap</Label>
-                    <Input type="number" value={pageOverlap} onChange={(e) => setPageOverlap(e.target.value)} className="h-9" />
+                    <Label className="text-xs">Rate limit (TPM)</Label>
+                    <Input
+                      type="number"
+                      value={maxTokensPerMinute}
+                      onChange={(e) => setMaxTokensPerMinute(e.target.value)}
+                      placeholder="e.g. 30000 for OpenAI tier 1"
+                      className="h-9"
+                    />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dedupe key</Label>
-                    <Input value={dedupeKey} onChange={(e) => setDedupeKey(e.target.value)} placeholder="e.g. sku" className="h-9" />
-                  </div>
-                </div>
+                </>
               )}
               <p className="text-[11px] text-muted-foreground">
                 {citationLevel === 'off'
