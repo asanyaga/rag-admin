@@ -14,6 +14,7 @@ def merge_outputs(
     outputs: list[ExtractionOutput],
     schema: dict[str, Any],
     dedupe_key: str | None,
+    chunks: list | None = None,
 ) -> ExtractionOutput:
     props = schema.get("properties") or {}
     array_fields = {k for k, v in props.items() if v.get("type") == "array"}
@@ -83,6 +84,20 @@ def merge_outputs(
     )
     if total_latency:
         metadata["latency_ms"] = total_latency
+
+    if chunks is not None:
+        metadata["chunks"] = [
+            {
+                "chunkIndex": chunk.chunk_index,
+                "pageIndices": chunk.page_indices,
+                "promptMessages": (out.extraction_metadata or {}).get("prompt_messages"),
+                "providerResponseRaw": out.provider_response_raw,
+                "structuredData": out.structured_data,
+                "usage": (out.extraction_metadata or {}).get("usage"),
+                "latencyMs": (out.extraction_metadata or {}).get("latency_ms"),
+            }
+            for chunk, out in zip(chunks, outputs)
+        ]
 
     return ExtractionOutput(
         structured_data=merged_data,
