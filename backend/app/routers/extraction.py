@@ -224,6 +224,7 @@ async def run_extraction(
             config=body.config,
             llm_config=body.llm_config,
             user_prompt_template=body.user_prompt_template,
+            timeout_minutes=body.timeout_minutes,
         )
 
         background_tasks.add_task(
