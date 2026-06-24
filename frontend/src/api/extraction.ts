@@ -100,3 +100,7 @@ export async function getLlmDefaults(): Promise<{ systemPrompt: string; userProm
   )
   return response.data
 }
+
+export async function deleteExtractionResult(resultId: string): Promise<void> {
+  await apiClient.delete(`/extraction-results/${resultId}`)
+}

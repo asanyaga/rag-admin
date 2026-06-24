@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import type {
   ExtractionResult,
   ExtractionResultListItem,
@@ -53,6 +54,7 @@ interface UseExtractionResultsReturn {
   phaseError: string | null
   fetchResults: () => Promise<void>
   selectResult: (resultId: string) => Promise<void>
+  deleteResult: (resultId: string) => Promise<void>
   runExtractionWithParse: (
     documentId: string,
     existingParseRuns: ParseRunListItem[],
@@ -139,6 +141,19 @@ export function useExtractionResults(
       setError(err instanceof Error ? err.message : 'Failed to fetch extraction result')
     } finally {
       setIsLoadingResult(false)
+    }
+  }, [])
+
+  const deleteResult = useCallback(async (resultId: string) => {
+    try {
+      await extractionApi.deleteExtractionResult(resultId)
+      setResults((prev) => prev.filter((r) => r.id !== resultId))
+      setSelectedResult((prev) => (prev?.id === resultId ? null : prev))
+      toast.success('Extraction deleted')
+    } catch (err) {
+      toast.error('Failed to delete extraction run', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
     }
   }, [])
 
@@ -265,6 +280,7 @@ export function useExtractionResults(
     phaseError,
     fetchResults,
     selectResult,
+    deleteResult,
     runExtractionWithParse,
   }
 }

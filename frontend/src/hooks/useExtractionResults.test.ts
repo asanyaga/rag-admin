@@ -206,3 +206,56 @@ describe('runExtractionWithParse', () => {
     )
   })
 })
+
+describe('deleteResult', () => {
+  it('removes the deleted item from results state', async () => {
+    const listItem = {
+      id: 'result-1',
+      documentId: 'doc-1',
+      extractionSchemaId: 'schema-1',
+      extractionMethod: 'llm',
+      status: 'completed' as const,
+      statusMessage: null,
+      createdAt: '2026-06-24T00:00:00Z',
+    }
+    mockExtraction.listExtractionResults.mockResolvedValue([listItem])
+    mockExtraction.deleteExtractionResult = vi.fn().mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useExtractionResults('doc-1'))
+    await act(async () => {})
+
+    expect(result.current.results).toHaveLength(1)
+
+    await act(async () => {
+      await result.current.deleteResult('result-1')
+    })
+
+    expect(result.current.results).toHaveLength(0)
+    expect(mockExtraction.deleteExtractionResult).toHaveBeenCalledWith('result-1')
+  })
+
+  it('clears selectedResult when the deleted item was selected', async () => {
+    const listItem = {
+      id: 'result-1',
+      documentId: 'doc-1',
+      extractionSchemaId: 'schema-1',
+      extractionMethod: 'llm',
+      status: 'completed' as const,
+      statusMessage: null,
+      createdAt: '2026-06-24T00:00:00Z',
+    }
+    const fullResult = { ...fakeExtractionResult, id: 'result-1', status: 'completed' as const }
+    mockExtraction.listExtractionResults.mockResolvedValue([listItem])
+    mockExtraction.getExtractionResult.mockResolvedValue(fullResult)
+    mockExtraction.deleteExtractionResult = vi.fn().mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useExtractionResults('doc-1'))
+    await act(async () => {})
+
+    await act(async () => { await result.current.selectResult('result-1') })
+    expect(result.current.selectedResult?.id).toBe('result-1')
+
+    await act(async () => { await result.current.deleteResult('result-1') })
+    expect(result.current.selectedResult).toBeNull()
+  })
+})
