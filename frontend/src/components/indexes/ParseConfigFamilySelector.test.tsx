@@ -15,7 +15,7 @@ const llamaOption: ParseConfigOption = {
 }
 
 const landingOption: ParseConfigOption = {
-  parser: 'landingai',
+  parser: 'landing_ai',
   parseConfigHash: 'def456',
   config: { model: 'default' },
   parsedDocumentCount: 1,
@@ -37,7 +37,7 @@ describe('ParseConfigFamilySelector', () => {
       />,
     )
     expect(screen.getByText('LlamaParse')).toBeInTheDocument()
-    expect(screen.getByText('LandingAI')).toBeInTheDocument()
+    expect(screen.getByText('Landing AI')).toBeInTheDocument()
     expect(screen.getByText('3 parsed documents')).toBeInTheDocument()
     expect(screen.getByText('1 parsed document')).toBeInTheDocument()
   })
@@ -104,7 +104,7 @@ describe('ParseConfigFamilySelector', () => {
       screen.getByRole('button', { name: /llamaparse/i }),
     ).toHaveAttribute('aria-pressed', 'true')
     expect(
-      screen.getByRole('button', { name: /landingai/i }),
+      screen.getByRole('button', { name: /landing ai/i }),
     ).toHaveAttribute('aria-pressed', 'false')
   })
 })
