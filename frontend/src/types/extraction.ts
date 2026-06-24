@@ -62,6 +62,7 @@ export interface ChunkingConfig {
   strategy: string
   config?: Record<string, unknown>
   citationLevel?: 'auto' | 'full' | 'page_only' | 'off'
+  maxTokensPerMinute?: number
 }
 
 export interface PreprocessStage {

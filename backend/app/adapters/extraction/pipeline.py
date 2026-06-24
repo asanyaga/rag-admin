@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import time
+from collections import deque
 from typing import Any, Awaitable, Callable
 
 from app.adapters.extraction.chunking.citation_policy import resolve_level
@@ -11,6 +13,64 @@ from app.adapters.extraction.chunking.token_budget import estimate_tokens
 from app.adapters.extraction.preprocess.base import apply_preprocess
 from app.ports.data_extraction import DataExtractor, ExtractionOutput
 from app.services.llm.types import LLMRateLimitError
+
+
+class _Reservation:
+    """Mutable entry in the TPM sliding window."""
+    __slots__ = ('ts', 'tokens')
+
+    def __init__(self, ts: float, tokens: int) -> None:
+        self.ts = ts
+        self.tokens = tokens
+
+
+class TpmThrottle:
+    """Sliding-window tokens-per-minute rate limiter for async chunk dispatch.
+
+    Call `await throttle(estimated)` before dispatching a chunk to reserve
+    capacity. Call `replace_reservation(r, actual)` once the chunk completes
+    to swap the estimate for real usage and keep the rolling average calibrated.
+    """
+
+    def __init__(self, max_tpm: int, default_estimate: int = 8_000) -> None:
+        self._max = max_tpm
+        self._default = default_estimate
+        self._log: deque[_Reservation] = deque()
+        self._lock = asyncio.Lock()
+        self._actuals: list[int] = []
+
+    @property
+    def rolling_estimate(self) -> int:
+        if not self._actuals:
+            return self._default
+        return int(sum(self._actuals) / len(self._actuals))
+
+    def _evict(self, now: float) -> None:
+        while self._log and now - self._log[0].ts >= 60.0:
+            self._log.popleft()
+
+    def _used(self) -> int:
+        return sum(r.tokens for r in self._log)
+
+    async def throttle(self, estimated_tokens: int) -> _Reservation:
+        """Block until capacity exists, then reserve estimated_tokens."""
+        while True:
+            async with self._lock:
+                now = time.monotonic()
+                self._evict(now)
+                if not self._log or self._used() + estimated_tokens <= self._max:
+                    r = _Reservation(now, estimated_tokens)
+                    self._log.append(r)
+                    return r
+                wait = max(0.1, 60.0 - (now - self._log[0].ts))
+            await asyncio.sleep(wait)
+
+    def replace_reservation(self, reservation: _Reservation, actual_tokens: int) -> None:
+        """Swap estimate for actual usage; update rolling average (capped at 10)."""
+        reservation.tokens = actual_tokens
+        self._actuals.append(actual_tokens)
+        if len(self._actuals) > 10:
+            self._actuals.pop(0)
 
 
 async def run_with_retry(
@@ -30,6 +90,12 @@ async def run_with_retry(
             await asyncio.sleep(delay)
 
 
+def _extract_total_tokens(output: ExtractionOutput) -> int:
+    meta = output.extraction_metadata or {}
+    usage = meta.get("usage") or {}
+    return int(usage.get("total_tokens") or 0)
+
+
 class PipelineExtractor(DataExtractor):
     """Wraps an inner DataExtractor with preprocess, chunking, and merge."""
 
@@ -42,12 +108,16 @@ class PipelineExtractor(DataExtractor):
         chunking: dict | None = None,
         max_concurrency: int = 3,
         max_retries: int = 3,
+        max_tokens_per_minute: int | None = None,
     ) -> None:
         self._inner = inner
         self._preprocess = preprocess or []
         self._chunking = chunking or {}
         self._max_concurrency = max_concurrency
         self._max_retries = max_retries
+        self._throttle: TpmThrottle | None = (
+            TpmThrottle(max_tokens_per_minute) if max_tokens_per_minute else None
+        )
 
     async def extract(
         self,
@@ -82,11 +152,20 @@ class PipelineExtractor(DataExtractor):
         sem = asyncio.Semaphore(self._max_concurrency)
 
         async def _run_chunk(chunk) -> ExtractionOutput:
+            reservation = None
+            estimated = 0
+            if self._throttle is not None:
+                estimated = self._throttle.rolling_estimate
+                reservation = await self._throttle.throttle(estimated)
             async with sem:
-                return await run_with_retry(
+                result = await run_with_retry(
                     lambda: self._inner.extract(chunk.document, schema, cfg),
                     self._max_retries,
                 )
+            if self._throttle is not None and reservation is not None:
+                actual = _extract_total_tokens(result)
+                self._throttle.replace_reservation(reservation, actual or estimated)
+            return result
 
         # asyncio.gather raises the first ExtractionError -> whole result fails.
         results = await asyncio.gather(*[_run_chunk(c) for c in chunks])
