@@ -1,7 +1,7 @@
 """Tests for ExtractionService CDM-based flow."""
 import dataclasses
 import pytest
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4, UUID
 
@@ -429,6 +429,48 @@ class TestRunExtractionConfigMerge:
             merged_config["user_prompt_template"] = user_prompt_template
         assert "llm_config" not in merged_config
         assert "user_prompt_template" not in merged_config
+
+
+class TestReapStale:
+    """_reap_stale uses per-job timeout_minutes, falling back to 10."""
+
+    def _make_result(self, *, minutes_old: int, timeout_minutes: int | None):
+        result = MagicMock()
+        result.status = ExtractionResultStatus.pending
+        result.timeout_minutes = timeout_minutes
+        result.started_at = None
+        result.created_at = datetime.utcnow() - timedelta(minutes=minutes_old)
+        return result
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("timeout_minutes,minutes_old,expect_reaped", [
+        (None, 11, True),   # NULL → default 10 min; 11 min old → reaped
+        (None, 9, False),   # NULL → default 10 min; 9 min old → not reaped
+        (5, 6, True),       # explicit 5 min; 6 min old → reaped
+        (5, 4, False),      # explicit 5 min; 4 min old → not reaped
+        (60, 45, False),    # explicit 60 min; 45 min old → not reaped
+        (60, 61, True),     # explicit 60 min; 61 min old → reaped
+    ])
+    async def test_reap_stale_uses_per_job_timeout(
+        self, timeout_minutes, minutes_old, expect_reaped
+    ):
+        result = self._make_result(
+            minutes_old=minutes_old, timeout_minutes=timeout_minutes
+        )
+        mock_result_repo = AsyncMock()
+        mock_result_repo.update_status.return_value = result
+
+        service = _make_service(result_repo=mock_result_repo)
+        await service._reap_stale(result)
+
+        if expect_reaped:
+            mock_result_repo.update_status.assert_called_once()
+            args = mock_result_repo.update_status.call_args
+            assert ExtractionResultStatus.failed == args[0][1]
+            expected_n = timeout_minutes or 10
+            assert f"exceeded {expected_n} minutes" in args[0][2]
+        else:
+            mock_result_repo.update_status.assert_not_called()
 
 
 class TestDeleteResult:

@@ -11,8 +11,7 @@ import * as extractionApi from '@/api/extraction'
 import { createParseRun, listParseRuns, getParseRun } from '@/api/parseRuns'
 
 const POLLING_INTERVAL = 3_000
-const EXTRACTION_POLLING_TIMEOUT = 5 * 60 * 1_000
-const PARSE_TIMEOUT = 10 * 60 * 1_000
+const PARSE_TIMEOUT_MS = 10 * 60 * 1_000
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -75,6 +74,7 @@ export function useExtractionResults(
   const [phaseError, setPhaseError] = useState<string | null>(null)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const pollingStartRef = useRef<number | null>(null)
+  const timeoutMsRef = useRef<number>(10 * 60 * 1_000)
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
@@ -98,11 +98,13 @@ export function useExtractionResults(
 
       const hasPending = data.some((r) => r.status === 'pending')
       if (hasPending && !pollingRef.current) {
+        const firstPending = data.find((r) => r.status === 'pending')
+        timeoutMsRef.current = (firstPending?.timeoutMinutes ?? 10) * 60 * 1_000
         pollingStartRef.current = Date.now()
         pollingRef.current = setInterval(async () => {
           if (
             pollingStartRef.current &&
-            Date.now() - pollingStartRef.current > EXTRACTION_POLLING_TIMEOUT
+            Date.now() - pollingStartRef.current > timeoutMsRef.current
           ) {
             setResults((prev) =>
               prev.map((r) =>
@@ -116,6 +118,7 @@ export function useExtractionResults(
           }
           try {
             const updated = await extractionApi.listExtractionResults(documentId)
+            if (!pollingStartRef.current) return  // polling was stopped while awaiting
             setResults(updated)
             if (!updated.some((r) => r.status === 'pending')) stopPolling()
           } catch {
@@ -199,7 +202,7 @@ export function useExtractionResults(
 
         let resolvedId: string | null = null
         while (resolvedId === null) {
-          if (Date.now() - started > PARSE_TIMEOUT) {
+          if (Date.now() - started > PARSE_TIMEOUT_MS) {
             setExtractionPhase('failed')
             setPhaseError('Parse timed out')
             return
@@ -219,7 +222,7 @@ export function useExtractionResults(
         const foundId = resolvedId as string
 
         for (;;) {
-          if (Date.now() - started > PARSE_TIMEOUT) {
+          if (Date.now() - started > PARSE_TIMEOUT_MS) {
             setExtractionPhase('failed')
             setPhaseError('Parse timed out')
             return
@@ -249,6 +252,7 @@ export function useExtractionResults(
           userPromptTemplate: extractionConfig.userPromptTemplate,
           chunking: extractionConfig.chunking,
           preprocess: extractionConfig.preprocess,
+          timeoutMinutes: extractionConfig.timeoutMinutes,
         })
         await fetchResults()
         setExtractionPhase('done')

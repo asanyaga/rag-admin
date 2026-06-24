@@ -71,6 +71,7 @@ class RunExtractionRequest(BaseModel):
     user_prompt_template: str | None = Field(None, alias="userPromptTemplate")
     preprocess: list[dict] | None = None
     chunking: dict | None = None
+    timeout_minutes: int | None = Field(default=None, ge=1, le=120)
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -91,6 +92,7 @@ class ExtractionResultResponse(BaseModel):
     status_message: str | None = Field(None, alias="statusMessage")
     started_at: datetime | None = Field(None, alias="startedAt")
     source_parse_run_id: UUID | None = Field(None, alias="sourceParseRunId")
+    timeout_minutes: int | None = Field(None, alias="timeoutMinutes")
     created_by: UUID = Field(..., alias="createdBy")
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
@@ -114,6 +116,7 @@ class ExtractionResultResponse(BaseModel):
             statusMessage=obj.status_message,
             startedAt=obj.started_at,
             sourceParseRunId=obj.source_parse_run_id,
+            timeoutMinutes=obj.timeout_minutes,
             createdBy=obj.created_by,
             createdAt=obj.created_at,
             updatedAt=obj.updated_at,
@@ -128,6 +131,7 @@ class ExtractionResultListResponse(BaseModel):
     extraction_method: str = Field(..., alias="extractionMethod")
     status: ExtractionResultStatus
     status_message: str | None = Field(None, alias="statusMessage")
+    timeout_minutes: int | None = Field(None, alias="timeoutMinutes")
     created_at: datetime = Field(..., alias="createdAt")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
@@ -141,6 +145,7 @@ class ExtractionResultListResponse(BaseModel):
             extractionMethod=obj.extraction_method,
             status=obj.status,
             statusMessage=obj.status_message,
+            timeoutMinutes=obj.timeout_minutes,
             createdAt=obj.created_at,
         )
 

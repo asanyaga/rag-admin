@@ -23,6 +23,7 @@ class ExtractionResultRepository:
         created_by: UUID,
         config: dict | None = None,
         source_parse_run_id: UUID | None = None,
+        timeout_minutes: int | None = None,
     ) -> ExtractionResult:
         """Create a new pending extraction result."""
         result = ExtractionResult(
@@ -33,6 +34,7 @@ class ExtractionResultRepository:
             config=config,
             created_by=created_by,
             source_parse_run_id=source_parse_run_id,
+            timeout_minutes=timeout_minutes,
             status=ExtractionResultStatus.pending,
         )
         self.session.add(result)
