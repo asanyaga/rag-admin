@@ -91,7 +91,7 @@ class PipelineExtractor(DataExtractor):
         # asyncio.gather raises the first ExtractionError -> whole result fails.
         results = await asyncio.gather(*[_run_chunk(c) for c in chunks])
         dedupe_key = self._chunking.get("config", {}).get("dedupeKey")
-        return merge_outputs(list(results), schema, dedupe_key)
+        return merge_outputs(list(results), schema, dedupe_key, chunks=chunks)
 
 
 def _doc_tokens(doc) -> int:

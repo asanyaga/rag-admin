@@ -31,6 +31,14 @@ const extractor: ExtractorInfo = {
   configured: true,
 }
 
+const llmExtractor: ExtractorInfo = {
+  extractionMethod: 'llm',
+  name: 'LLM',
+  description: 'Generic LLM extraction',
+  configSchema: null,
+  configured: true,
+}
+
 const defaultProps = {
   defaultParser: 'simple',
   defaultParserConfig: {},
@@ -96,18 +104,60 @@ describe('ExtractionForm', () => {
   })
 
   it('pre-fills system prompt and user prompt template with fetched LLM defaults', async () => {
-    const llmExtractor: ExtractorInfo = {
-      extractionMethod: 'llm',
-      name: 'LLM',
-      description: 'Generic LLM extraction',
-      configSchema: null,
-      configured: true,
-    }
     render(<ExtractionForm {...defaultProps} extractors={[llmExtractor]} onRun={vi.fn()} />)
 
     await act(async () => {})
 
     expect(screen.getByDisplayValue('Default system prompt text')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Default user prompt template text')).toBeInTheDocument()
+  })
+
+  it('omits chunking from the request when LLM defaults are unchanged', async () => {
+    const user = userEvent.setup()
+    const onRun = vi.fn().mockResolvedValue(undefined)
+    render(<ExtractionForm {...defaultProps} extractors={[llmExtractor]} onRun={onRun} />)
+    await act(async () => {})
+    await user.click(screen.getByRole('button', { name: /run extraction/i }))
+    const arg = onRun.mock.calls[0][0]
+    expect(arg.extractionConfig.chunking).toBeUndefined()
+  })
+
+  it('does not show Large document handling for llamaextract', () => {
+    render(<ExtractionForm {...defaultProps} onRun={vi.fn()} />)
+    expect(screen.queryByText(/large document handling/i)).not.toBeInTheDocument()
+  })
+
+  it('emits token_budget_pages chunking with default max input tokens', async () => {
+    const user = userEvent.setup()
+    const onRun = vi.fn().mockResolvedValue(undefined)
+    render(<ExtractionForm {...defaultProps} extractors={[llmExtractor]} onRun={onRun} />)
+    await act(async () => {})
+
+    await user.click(screen.getByRole('button', { name: /large document handling/i }))
+    await user.click(screen.getByRole('combobox', { name: /chunking strategy/i }))
+    await user.click(screen.getByRole('option', { name: /token-budgeted pages/i }))
+    await user.click(screen.getByRole('button', { name: /run extraction/i }))
+
+    const arg = onRun.mock.calls[0][0]
+    expect(arg.extractionConfig.chunking).toEqual({
+      strategy: 'token_budget_pages',
+      config: { maxInputTokens: 8000 },
+      citationLevel: 'auto',
+    })
+  })
+
+  it('emits citation-only chunking when only citation level changes', async () => {
+    const user = userEvent.setup()
+    const onRun = vi.fn().mockResolvedValue(undefined)
+    render(<ExtractionForm {...defaultProps} extractors={[llmExtractor]} onRun={onRun} />)
+    await act(async () => {})
+
+    await user.click(screen.getByRole('button', { name: /large document handling/i }))
+    await user.click(screen.getByRole('combobox', { name: /citation detail/i }))
+    await user.click(screen.getByRole('option', { name: /page only/i }))
+    await user.click(screen.getByRole('button', { name: /run extraction/i }))
+
+    const arg = onRun.mock.calls[0][0]
+    expect(arg.extractionConfig.chunking).toEqual({ strategy: 'none', citationLevel: 'page_only' })
   })
 })

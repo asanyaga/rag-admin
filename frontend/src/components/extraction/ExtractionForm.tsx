@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { ExtractionSchema, ExtractorInfo, RunWithParseRequest } from '@/types/extraction'
+import type { ExtractionSchema, ExtractorInfo, RunWithParseRequest, ChunkingConfig } from '@/types/extraction'
 import type { ParseConfig } from '@/types/parsing'
 import { getLlmDefaults } from '@/api/extraction'
 import { Button } from '@/components/ui/button'
@@ -14,8 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { Separator } from '@/components/ui/separator'
-import { Pencil, Play } from 'lucide-react'
+import { Pencil, Play, ChevronDown } from 'lucide-react'
 import { PromptConfigEditor } from '@/components/shared/PromptConfigEditor'
 import { usePromptConfig } from '@/hooks/usePromptConfig'
 import { ParseMethodSelector } from '@/components/documents/ParseMethodSelector'
@@ -58,6 +63,12 @@ export function ExtractionForm({
   const [userPromptTemplate, setUserPromptTemplate] = useState('')
   const [structuredOutputMode, setStructuredOutputMode] = useState('json_schema')
   const [injectBlockIds, setInjectBlockIds] = useState(false)
+  const [chunkStrategy, setChunkStrategy] = useState<'none' | 'token_budget_pages'>('none')
+  const [maxInputTokens, setMaxInputTokens] = useState('8000')
+  const [pageOverlap, setPageOverlap] = useState('0')
+  const [dedupeKey, setDedupeKey] = useState('')
+  const [citationLevel, setCitationLevel] =
+    useState<'auto' | 'full' | 'page_only' | 'off'>('auto')
 
   const [isRunning, setIsRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -129,12 +140,25 @@ export function ExtractionForm({
       if (confidenceScores) config.confidence_scores = true
       extractionConfig = { extractionSchemaId: schemaId, extractionMethod, config }
     } else if (extractionMethod === 'llm') {
+      let chunking: ChunkingConfig | undefined
+      if (chunkStrategy !== 'none') {
+        const cfg: Record<string, unknown> = {}
+        const max = parseInt(maxInputTokens, 10)
+        if (!Number.isNaN(max)) cfg.maxInputTokens = max
+        const overlap = parseInt(pageOverlap, 10)
+        if (!Number.isNaN(overlap) && overlap > 0) cfg.pageOverlap = overlap
+        if (dedupeKey.trim()) cfg.dedupeKey = dedupeKey.trim()
+        chunking = { strategy: chunkStrategy, config: cfg, citationLevel }
+      } else if (citationLevel !== 'auto') {
+        chunking = { strategy: 'none', citationLevel }
+      }
       extractionConfig = {
         extractionSchemaId: schemaId,
         extractionMethod,
         config: { structured_output_mode: structuredOutputMode, inject_block_ids: injectBlockIds },
         llmConfig: promptConfig,
         userPromptTemplate: userPromptTemplate.trim() || undefined,
+        ...(chunking ? { chunking } : {}),
       }
     } else {
       extractionConfig = { extractionSchemaId: schemaId, extractionMethod, config: {} }
@@ -307,6 +331,61 @@ export function ExtractionForm({
               </div>
             </div>
           </div>
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between px-0">
+                <span className="text-xs font-medium">Large document handling</span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Chunking</Label>
+                  <Select value={chunkStrategy} onValueChange={(v) => setChunkStrategy(v as 'none' | 'token_budget_pages')}>
+                    <SelectTrigger className="h-9" aria-label="Chunking strategy"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None (single-shot)</SelectItem>
+                      <SelectItem value="token_budget_pages">Token-budgeted pages</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Citation detail</Label>
+                  <Select value={citationLevel} onValueChange={(v) => setCitationLevel(v as 'auto' | 'full' | 'page_only' | 'off')}>
+                    <SelectTrigger className="h-9" aria-label="Citation detail"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto</SelectItem>
+                      <SelectItem value="full">Full</SelectItem>
+                      <SelectItem value="page_only">Page only</SelectItem>
+                      <SelectItem value="off">Off</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {chunkStrategy === 'token_budget_pages' && (
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Max input tokens</Label>
+                    <Input type="number" value={maxInputTokens} onChange={(e) => setMaxInputTokens(e.target.value)} className="h-9" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Page overlap</Label>
+                    <Input type="number" value={pageOverlap} onChange={(e) => setPageOverlap(e.target.value)} className="h-9" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Dedupe key</Label>
+                    <Input value={dedupeKey} onChange={(e) => setDedupeKey(e.target.value)} placeholder="e.g. sku" className="h-9" />
+                  </div>
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                {citationLevel === 'off'
+                  ? 'No provenance will be captured.'
+                  : 'Auto uses page-level provenance on large documents. Chunking splits big docs to avoid truncation and rate limits.'}
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       )}
 
