@@ -178,4 +178,31 @@ describe('runExtractionWithParse', () => {
 
     expect(result.current.extractionPhase).toBe('done')
   })
+
+  it('forwards chunking config to runExtraction', async () => {
+    const existingRun = makeParseRun({
+      id: 'run-match', parser: 'simple', config: { parser: 'simple' }, status: 'succeeded',
+    })
+    mockExtraction.runExtraction.mockResolvedValue(fakeExtractionResult)
+
+    const { result } = renderHook(() => useExtractionResults('doc-1'))
+
+    const requestWithChunking = {
+      ...baseRequest,
+      extractionConfig: {
+        ...baseRequest.extractionConfig,
+        chunking: { strategy: 'token_budget_pages', config: { maxInputTokens: 6000 }, citationLevel: 'auto' as const },
+      },
+    }
+
+    await act(async () => {
+      await result.current.runExtractionWithParse('doc-1', [existingRun], requestWithChunking)
+    })
+
+    expect(mockExtraction.runExtraction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chunking: { strategy: 'token_budget_pages', config: { maxInputTokens: 6000 }, citationLevel: 'auto' },
+      })
+    )
+  })
 })

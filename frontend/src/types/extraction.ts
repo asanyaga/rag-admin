@@ -58,6 +58,17 @@ export interface ExtractionResultListItem {
   createdAt: string
 }
 
+export interface ChunkingConfig {
+  strategy: string
+  config?: Record<string, unknown>
+  citationLevel?: 'auto' | 'full' | 'page_only' | 'off'
+}
+
+export interface PreprocessStage {
+  stage: string
+  config: Record<string, unknown>
+}
+
 export interface RunExtractionRequest {
   parseRunId: string
   extractionSchemaId: string
@@ -65,6 +76,8 @@ export interface RunExtractionRequest {
   config?: Record<string, unknown>
   llmConfig?: PromptConfig
   userPromptTemplate?: string
+  chunking?: ChunkingConfig
+  preprocess?: PreprocessStage[]
 }
 
 export interface ExtractorInfo {
@@ -90,5 +103,7 @@ export interface RunWithParseRequest {
     config?: Record<string, unknown>
     llmConfig?: PromptConfig
     userPromptTemplate?: string
+    chunking?: ChunkingConfig
+    preprocess?: PreprocessStage[]
   }
 }

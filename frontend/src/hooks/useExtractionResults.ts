@@ -227,6 +227,8 @@ export function useExtractionResults(
           config: extractionConfig.config,
           llmConfig: extractionConfig.llmConfig,
           userPromptTemplate: extractionConfig.userPromptTemplate,
+          chunking: extractionConfig.chunking,
+          preprocess: extractionConfig.preprocess,
         })
         await fetchResults()
         setExtractionPhase('done')
