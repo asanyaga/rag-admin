@@ -78,6 +78,83 @@ class TestExtractionResultResponse:
         assert resp.provider_response_raw is None
 
 
+class TestRunExtractionRequestTimeout:
+    def test_accepts_valid_timeout(self):
+        req = RunExtractionRequest.model_validate({
+            "parseRunId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            "extractionSchemaId": "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+            "extractionMethod": "llm",
+            "timeout_minutes": 30,
+        })
+        assert req.timeout_minutes == 30
+
+    def test_rejects_zero(self):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            RunExtractionRequest.model_validate({
+                "parseRunId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                "extractionSchemaId": "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+                "extractionMethod": "llm",
+                "timeout_minutes": 0,
+            })
+
+    def test_rejects_121(self):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            RunExtractionRequest.model_validate({
+                "parseRunId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                "extractionSchemaId": "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+                "extractionMethod": "llm",
+                "timeout_minutes": 121,
+            })
+
+    def test_omitted_timeout_is_none(self):
+        req = RunExtractionRequest.model_validate({
+            "parseRunId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            "extractionSchemaId": "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+            "extractionMethod": "llm",
+        })
+        assert req.timeout_minutes is None
+
+
+class TestExtractionResultResponseTimeout:
+    def _make_mock_orm(self, **kwargs):
+        from unittest.mock import MagicMock
+        from uuid import uuid4
+        from datetime import datetime, timezone
+        from app.models.extraction_result import ExtractionResultStatus
+        obj = MagicMock()
+        obj.id = uuid4()
+        obj.document_id = uuid4()
+        obj.source_parse_run_id = None
+        obj.extraction_schema_id = uuid4()
+        obj.schema_definition_snapshot = {}
+        obj.extraction_method = "llm"
+        obj.config = None
+        obj.structured_data = None
+        obj.citations = None
+        obj.provider_response_raw = None
+        obj.extraction_metadata = None
+        obj.status = ExtractionResultStatus.pending
+        obj.status_message = None
+        obj.started_at = None
+        obj.created_by = uuid4()
+        obj.created_at = datetime.now(timezone.utc)
+        obj.updated_at = datetime.now(timezone.utc)
+        obj.timeout_minutes = kwargs.get("timeout_minutes", None)
+        return obj
+
+    def test_timeout_minutes_serialised(self):
+        obj = self._make_mock_orm(timeout_minutes=45)
+        resp = ExtractionResultResponse.from_orm_model(obj)
+        assert resp.timeout_minutes == 45
+
+    def test_null_timeout_serialised(self):
+        obj = self._make_mock_orm(timeout_minutes=None)
+        resp = ExtractionResultResponse.from_orm_model(obj)
+        assert resp.timeout_minutes is None
+
+
 class TestRunExtractionRequestLLMFields:
     def test_accepts_llm_config_camelcase(self):
         from app.schemas.extraction_result import RunExtractionRequest

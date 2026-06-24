@@ -22,7 +22,6 @@ from app.services.exceptions import NotFoundError, ConflictError
 
 logger = logging.getLogger(__name__)
 
-STALE_TIMEOUT = timedelta(minutes=10)
 
 
 class ExtractionService:
@@ -106,6 +105,7 @@ class ExtractionService:
         config: dict | None = None,
         llm_config=None,           # PromptConfig | None
         user_prompt_template: str | None = None,
+        timeout_minutes: int | None = None,
     ) -> ExtractionResultResponse:
         """Create a pending extraction result anchored to a CDM ParsedDocument."""
         orm_parsed_doc = await self.parsed_document_repo.get_by_run(parse_run_id)
@@ -141,6 +141,7 @@ class ExtractionService:
             extraction_method=extraction_method,
             created_by=user_id,
             config=merged_config,
+            timeout_minutes=timeout_minutes,
         )
         return ExtractionResultResponse.from_orm_model(result)
 
@@ -153,10 +154,11 @@ class ExtractionService:
         if not reference_time:
             return result
         age = datetime.utcnow() - reference_time.replace(tzinfo=None)
-        if age > STALE_TIMEOUT:
+        effective_timeout = result.timeout_minutes or 10
+        if age > timedelta(minutes=effective_timeout):
             result = await self.result_repo.update_status(
                 result.id, ExtractionResultStatus.failed,
-                "Extraction job timed out (exceeded 10 minutes)",
+                f"Extraction job timed out (exceeded {effective_timeout} minutes)",
             )
         return result
 
