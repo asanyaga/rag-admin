@@ -1,8 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ExtractionResultViewer } from './ExtractionResultViewer'
 import type { ExtractionResult } from '@/types/extraction'
+
+vi.mock('@/lib/exportCsv', () => ({
+  exportResultToCsv: vi.fn(),
+}))
+
+import { exportResultToCsv } from '@/lib/exportCsv'
 
 function buildResult(overrides: Partial<ExtractionResult> = {}): ExtractionResult {
   return {
@@ -313,5 +319,56 @@ describe('Chunk Details panel', () => {
     // Click chunk 2 in the list
     await user.click(screen.getByRole('button', { name: /chunk 2/i }))
     expect(screen.getByText('Page 2 content')).toBeInTheDocument()
+  })
+})
+
+describe('Export CSV button', () => {
+  it('renders when result is completed with structuredData', () => {
+    render(<ExtractionResultViewer result={buildResult()} />)
+    expect(screen.getByRole('button', { name: /export csv/i })).toBeInTheDocument()
+  })
+
+  it('does not render when result is pending', () => {
+    render(<ExtractionResultViewer result={buildResult({ status: 'pending', structuredData: null })} />)
+    expect(screen.queryByRole('button', { name: /export csv/i })).not.toBeInTheDocument()
+  })
+
+  it('does not render when structuredData is null', () => {
+    render(<ExtractionResultViewer result={buildResult({ structuredData: null })} />)
+    expect(screen.queryByRole('button', { name: /export csv/i })).not.toBeInTheDocument()
+  })
+
+  it('does not render when structuredData is empty', () => {
+    render(<ExtractionResultViewer result={buildResult({ structuredData: {} })} />)
+    expect(screen.queryByRole('button', { name: /export csv/i })).not.toBeInTheDocument()
+  })
+
+  it('calls exportResultToCsv with structuredData and filename on click', async () => {
+    const user = userEvent.setup()
+    render(
+      <ExtractionResultViewer
+        result={buildResult({ id: 'abcdef12-0000-0000-0000-000000000000' })}
+        schemaName="My Schema"
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /export csv/i }))
+    expect(exportResultToCsv).toHaveBeenCalledWith(
+      { invoice_number: 'INV-001' },
+      'My Schema_abcdef12.csv'
+    )
+  })
+
+  it('uses "extraction" as fallback filename when schemaName is not provided', async () => {
+    const user = userEvent.setup()
+    render(
+      <ExtractionResultViewer
+        result={buildResult({ id: 'abcdef12-0000-0000-0000-000000000000' })}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /export csv/i }))
+    expect(exportResultToCsv).toHaveBeenCalledWith(
+      { invoice_number: 'INV-001' },
+      'extraction_abcdef12.csv'
+    )
   })
 })
