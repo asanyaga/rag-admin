@@ -59,7 +59,7 @@ test('source method filter narrows list', () => {
       onAdd={vi.fn()}
     />
   )
-  fireEvent.click(screen.getByRole('button', { name: /auto/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^Auto$/i }))
   expect(screen.getByText('How does the refund policy work?')).toBeInTheDocument()
   expect(screen.queryByText('What is the revenue for Q3?')).not.toBeInTheDocument()
 })

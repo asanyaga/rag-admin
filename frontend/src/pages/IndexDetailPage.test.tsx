@@ -186,7 +186,7 @@ describe('IndexDetailPage — Parsed Documents tab', () => {
 describe('IndexDetailPage — status gate and config button', () => {
   it('shows the description placeholder when index is ready', async () => {
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
     expect(screen.getByText('Add a description...')).toBeInTheDocument()
   })
 
@@ -201,13 +201,13 @@ describe('IndexDetailPage — status gate and config button', () => {
       getChunk: vi.fn(),
     })
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
     expect(screen.queryByText('Add a description...')).not.toBeInTheDocument()
   })
 
   it('renders a "Config" button, not "Settings"', async () => {
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
     expect(screen.getByRole('button', { name: /config/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^settings$/i })).not.toBeInTheDocument()
   })
@@ -232,7 +232,7 @@ describe('IndexDetailPage — status gate and config button', () => {
 
   it('does not show configDirty warning when configDirty is false', async () => {
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
     expect(
       screen.queryByText(/document set has changed since last index build/i),
     ).not.toBeInTheDocument()
@@ -243,7 +243,7 @@ describe('IndexDetailPage — full config panel', () => {
   it('shows Source, Chunking, Embedding section headings when Config is toggled', async () => {
     const user = userEvent.setup()
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
 
     await user.click(screen.getByRole('button', { name: /config/i }))
 
@@ -255,7 +255,7 @@ describe('IndexDetailPage — full config panel', () => {
   it('shows parser, parse config hash (first 8 chars), and representation in Source section', async () => {
     const user = userEvent.setup()
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
 
     await user.click(screen.getByRole('button', { name: /config/i }))
 
@@ -268,7 +268,7 @@ describe('IndexDetailPage — full config panel', () => {
   it('shows chunking strategy, chunk size with unit, and overlap with unit', async () => {
     const user = userEvent.setup()
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
 
     await user.click(screen.getByRole('button', { name: /config/i }))
 
@@ -280,12 +280,13 @@ describe('IndexDetailPage — full config panel', () => {
   it('shows embedding provider, model, and dimensions in Embedding section', async () => {
     const user = userEvent.setup()
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
 
     await user.click(screen.getByRole('button', { name: /config/i }))
 
     expect(screen.getByText('openai')).toBeInTheDocument()
-    expect(screen.getByText('text-embedding-3-small')).toBeInTheDocument()
+    // embeddingModel appears in both the stats row and the config panel
+    expect(screen.getAllByText('text-embedding-3-small')[0]).toBeInTheDocument()
     // embeddingDimensions is null → shows 'Auto'
     expect(screen.getByText('Auto')).toBeInTheDocument()
   })
@@ -312,7 +313,7 @@ describe('IndexDetailPage — full config panel', () => {
       getChunk: vi.fn(),
     })
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
 
     await user.click(screen.getByRole('button', { name: /config/i }))
 
@@ -343,7 +344,7 @@ describe('IndexDetailPage — full config panel', () => {
       getChunk: vi.fn(),
     })
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
 
     await user.click(screen.getByRole('button', { name: /config/i }))
 
@@ -353,7 +354,7 @@ describe('IndexDetailPage — full config panel', () => {
   it('does not show block-specific fields for recursive_character strategy', async () => {
     const user = userEvent.setup()
     renderPage()
-    await waitFor(() => screen.getByText('My Index'))
+    await waitFor(() => screen.getAllByText('My Index'))
 
     await user.click(screen.getByRole('button', { name: /config/i }))
 

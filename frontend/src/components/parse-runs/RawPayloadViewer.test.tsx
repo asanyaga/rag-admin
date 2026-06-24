@@ -39,7 +39,10 @@ describe('RawPayloadViewer', () => {
 
   it('copies JSON to clipboard on Copy click', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
-    Object.assign(navigator, { clipboard: { writeText } })
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
     render(<RawPayloadViewer payload={{ a: 1 }} />)
     await userEvent.click(screen.getByRole('button', { name: /copy/i }))
     expect(writeText).toHaveBeenCalledWith(

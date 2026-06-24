@@ -12,7 +12,7 @@ describe('ParseMethodSelector', () => {
 
   it('renders with simple selected by default', () => {
     render(<ParseMethodSelector {...defaultProps} />)
-    expect(screen.getByText('Parse Method')).toBeInTheDocument()
+    expect(screen.getByText('Parse method')).toBeInTheDocument()
     expect(
       screen.getByText('Basic text extraction. Works on clean text-based PDFs.')
     ).toBeInTheDocument()
