@@ -65,7 +65,7 @@ function buildChunkedResult(overrides: Partial<ExtractionResult> = {}): Extracti
     },
     config: {
       structured_output_mode: 'json_schema',
-      chunking: { strategy: 'token_budget_pages', config: { max_input_tokens: 4000 }, citationLevel: 'auto' },
+      chunking: { strategy: 'token_budget_pages', config: { maxInputTokens: 4000 }, citationLevel: 'auto' },
     },
     providerResponseRaw: null,
     ...overrides,

@@ -398,7 +398,7 @@ export function ExtractionResultViewer({
                   <ConfigRow
                     label="Max input tokens"
                     value={
-                      (chunkingConfig.config?.['max_input_tokens'] as number | undefined)?.toLocaleString() ??
+                      (chunkingConfig.config?.['maxInputTokens'] as number | undefined)?.toLocaleString() ??
                       '—'
                     }
                   />
