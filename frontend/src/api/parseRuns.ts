@@ -52,3 +52,7 @@ export async function createParseRun(
     { parser_type: parserType, config: config ?? null }
   )
 }
+
+export async function deleteParseRun(runId: string): Promise<void> {
+  await apiClient.delete(`/parse-runs/${runId}`)
+}
