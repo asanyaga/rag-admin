@@ -109,7 +109,7 @@ function RunMetricsStrip({ run }: { run: ParseRunListItem }) {
   )
 }
 
-function MetricsTab({ run }: { run: ParseRunListItem }) {
+export function MetricsTab({ run }: { run: ParseRunListItem }) {
   const rows: Array<[string, unknown]> = [
     ['Status', run.status],
     ['Parser', run.parser],
