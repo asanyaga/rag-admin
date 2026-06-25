@@ -1,10 +1,25 @@
+import json
 from pathlib import Path
 
+import fitz
+
 from app.cdm.adapters.local_pipeline.config import FitzConfig
-from app.cdm.adapters.local_pipeline.tools.fitz_tool import FitzTool
+from app.cdm.adapters.local_pipeline.tools.fitz_tool import FitzTool, _json_safe
 from app.cdm.models import BlockRole
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _make_image_pdf(path: Path) -> None:
+    """Write a one-page PDF containing an embedded raster image."""
+    src = fitz.open()
+    png = src.new_page().get_pixmap().tobytes("png")
+    src.close()
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_image(fitz.Rect(50, 50, 150, 150), stream=png)
+    doc.save(str(path))
+    doc.close()
 
 
 def test_fitz_tool_id():
@@ -50,3 +65,22 @@ def test_fitz_span_detail_on_records_spans():
     para = next(b for b in result.blocks if b.role == BlockRole.PARAGRAPH)
     assert "spans" in para.parser_extras
     assert isinstance(para.parser_extras["spans"], list)
+
+
+def test_json_safe_strips_bytes():
+    out = _json_safe({"image": b"\x00\x01", "nested": [{"x": b"ab"}], "n": 3})
+    assert isinstance(out["image"], str)
+    assert isinstance(out["nested"][0]["x"], str)
+    assert out["n"] == 3
+    json.dumps(out)  # must not raise
+
+
+def test_fitz_raw_is_json_serializable_with_images(tmp_path):
+    pdf = tmp_path / "with_image.pdf"
+    _make_image_pdf(pdf)
+    result = FitzTool().run(pdf)
+    # Sanity: an image block was extracted as a FIGURE.
+    assert any(b.role == BlockRole.FIGURE for b in result.blocks)
+    # The raw audit data must be JSON-serializable (no raw image bytes).
+    json.dumps(result.raw)
+    json.dumps(result.native_by_block)

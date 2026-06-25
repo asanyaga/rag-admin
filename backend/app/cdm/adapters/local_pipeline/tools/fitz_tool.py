@@ -16,6 +16,22 @@ from app.cdm.adapters.local_pipeline.tools.base import (
 from app.cdm.models import BBox, Block, BlockRole
 
 
+def _json_safe(obj: Any) -> Any:
+    """Recursively replace non-JSON-serializable bytes with a size marker.
+
+    fitz image blocks carry raw image bytes under the "image" key; these must
+    not reach the JSON ``raw_payload`` column. We don't need the raw bytes in
+    the audit trail — the bbox and image metadata are enough.
+    """
+    if isinstance(obj, bytes):
+        return f"<{len(obj)} bytes>"
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    return obj
+
+
 def _block_text(native_block: Dict[str, Any]) -> str:
     """Join span texts within a fitz text block into a single string."""
     parts: List[str] = []
@@ -65,7 +81,7 @@ class FitzTool:
                 page_meta[i] = PageMeta(
                     index=i, width=width, height=height, rotation=page.rotation
                 )
-                native_raw[i] = pd
+                native_raw[i] = _json_safe(pd)
 
                 char_count = 0
                 for bi, blk in enumerate(pd.get("blocks", [])):
@@ -97,7 +113,7 @@ class FitzTool:
                             parser_extras=extras,
                         )
                         blocks.append(block)
-                        native_by_block[prov_id] = blk
+                        native_by_block[prov_id] = _json_safe(blk)
                     elif btype == 1 and self.config.include_images:
                         block = Block(
                             id=prov_id,
@@ -108,7 +124,7 @@ class FitzTool:
                             parser_extras={"fitz_block_type": 1},
                         )
                         blocks.append(block)
-                        native_by_block[prov_id] = blk
+                        native_by_block[prov_id] = _json_safe(blk)
 
                 if char_count < self.config.min_chars_threshold:
                     warnings.append(

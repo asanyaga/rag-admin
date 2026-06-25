@@ -1,6 +1,8 @@
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import fitz
 import pytest
 
 from app.cdm.models import BlockRole, ParserKind
@@ -47,6 +49,32 @@ async def test_run_local_pipeline_fitz_only_succeeds():
     assert any(b.role == BlockRole.PARAGRAPH for b in doc.blocks)
     # every block id is namespaced to the source document
     assert all(b.id.startswith("doc-xyz:") for b in doc.blocks)
+
+
+@pytest.mark.asyncio
+async def test_run_local_pipeline_raw_payload_json_serializable_with_images(tmp_path):
+    """Regression: fitz image bytes must not break the JSON raw_payload column."""
+    pdf = tmp_path / "with_image.pdf"
+    src = fitz.open()
+    png = src.new_page().get_pixmap().tobytes("png")
+    src.close()
+    doc_pdf = fitz.open()
+    page = doc_pdf.new_page()
+    page.insert_image(fitz.Rect(50, 50, 150, 150), stream=png)
+    doc_pdf.save(str(pdf))
+    doc_pdf.close()
+
+    config = {"tools": [{"tool_id": "fitz", "config": {}}]}
+    run, _ = await run_local_pipeline(
+        source=_source(),
+        file_path=str(pdf),
+        representation_kind="extract_rich",
+        config=config,
+        client=None,
+    )
+    assert run.status == ParseRunStatus.SUCCEEDED
+    # Must serialize cleanly — this is what the parse_runs INSERT does.
+    json.dumps(run.raw_payload)
 
 
 @pytest.mark.asyncio
