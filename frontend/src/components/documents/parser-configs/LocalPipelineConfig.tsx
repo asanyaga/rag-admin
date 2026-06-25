@@ -121,32 +121,36 @@ export function LocalPipelineConfig({
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="camelot-edge-tol">edge_tol</Label>
-                <Input
-                  id="camelot-edge-tol"
-                  type="number"
-                  value={(camelot.config.edge_tol as number) ?? 50}
-                  onChange={(e) =>
-                    updateTool('camelot', { edge_tol: Number(e.target.value) })
-                  }
-                  disabled={disabled}
-                />
+            {/* edge_tol / row_tol only apply to stream flavor — camelot
+                rejects them for lattice. */}
+            {(camelot.config.flavor as string) === 'stream' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="camelot-edge-tol">edge_tol</Label>
+                  <Input
+                    id="camelot-edge-tol"
+                    type="number"
+                    value={(camelot.config.edge_tol as number) ?? 50}
+                    onChange={(e) =>
+                      updateTool('camelot', { edge_tol: Number(e.target.value) })
+                    }
+                    disabled={disabled}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="camelot-row-tol">row_tol</Label>
+                  <Input
+                    id="camelot-row-tol"
+                    type="number"
+                    value={(camelot.config.row_tol as number) ?? 2}
+                    onChange={(e) =>
+                      updateTool('camelot', { row_tol: Number(e.target.value) })
+                    }
+                    disabled={disabled}
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="camelot-row-tol">row_tol</Label>
-                <Input
-                  id="camelot-row-tol"
-                  type="number"
-                  value={(camelot.config.row_tol as number) ?? 2}
-                  onChange={(e) =>
-                    updateTool('camelot', { row_tol: Number(e.target.value) })
-                  }
-                  disabled={disabled}
-                />
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>

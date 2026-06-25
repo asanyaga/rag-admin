@@ -92,3 +92,35 @@ def test_run_maps_pages_arg_and_invokes_camelot(monkeypatch):
     assert len(result.blocks) == 1
     assert result.blocks[0].id == "camelot:1:0"
     assert result.blocks[0].id in result.native_by_block
+
+
+def test_run_lattice_omits_stream_only_kwargs(monkeypatch):
+    """camelot rejects edge_tol/row_tol with flavor='lattice'."""
+    calls = {}
+
+    def fake_read_pdf(path, **kwargs):
+        calls.update(kwargs)
+        return []
+
+    import app.cdm.adapters.local_pipeline.tools.camelot_tool as mod
+    monkeypatch.setattr(mod.camelot, "read_pdf", fake_read_pdf)
+
+    CamelotTool(config=CamelotConfig(flavor="lattice")).run("/tmp/x.pdf")
+    assert "edge_tol" not in calls
+    assert "row_tol" not in calls
+
+
+def test_run_stream_includes_tol_kwargs(monkeypatch):
+    """edge_tol/row_tol are valid (and useful) for flavor='stream'."""
+    calls = {}
+
+    def fake_read_pdf(path, **kwargs):
+        calls.update(kwargs)
+        return []
+
+    import app.cdm.adapters.local_pipeline.tools.camelot_tool as mod
+    monkeypatch.setattr(mod.camelot, "read_pdf", fake_read_pdf)
+
+    CamelotTool(config=CamelotConfig(flavor="stream", edge_tol=40, row_tol=3)).run("/tmp/x.pdf")
+    assert calls["edge_tol"] == 40
+    assert calls["row_tol"] == 3

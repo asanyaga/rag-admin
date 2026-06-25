@@ -102,9 +102,12 @@ class CamelotTool:
         read_kwargs: Dict[str, Any] = {
             "flavor": self.config.flavor,
             "pages": self._pages_arg(pages),
-            "edge_tol": self.config.edge_tol,
-            "row_tol": self.config.row_tol,
         }
+        # edge_tol/row_tol are stream-only knobs; camelot raises if they are
+        # passed with flavor="lattice".
+        if self.config.flavor == "stream":
+            read_kwargs["edge_tol"] = self.config.edge_tol
+            read_kwargs["row_tol"] = self.config.row_tol
         if self.config.copy_text:
             read_kwargs["copy_text"] = self.config.copy_text
 

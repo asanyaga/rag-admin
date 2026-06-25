@@ -55,6 +55,32 @@ describe('LocalPipelineConfig', () => {
     expect(screen.getByText('Flavor')).toBeInTheDocument()
   })
 
+  it('hides edge_tol/row_tol for lattice flavor', () => {
+    const withLattice = {
+      ...fitzOnly,
+      tools: [
+        ...fitzOnly.tools,
+        { tool_id: 'camelot', config: { flavor: 'lattice', edge_tol: 50, row_tol: 2 } },
+      ],
+    }
+    render(<LocalPipelineConfig config={withLattice} onChange={vi.fn()} />)
+    expect(screen.queryByText('edge_tol')).not.toBeInTheDocument()
+    expect(screen.queryByText('row_tol')).not.toBeInTheDocument()
+  })
+
+  it('shows edge_tol/row_tol for stream flavor', () => {
+    const withStream = {
+      ...fitzOnly,
+      tools: [
+        ...fitzOnly.tools,
+        { tool_id: 'camelot', config: { flavor: 'stream', edge_tol: 50, row_tol: 2 } },
+      ],
+    }
+    render(<LocalPipelineConfig config={withStream} onChange={vi.fn()} />)
+    expect(screen.getByText('edge_tol')).toBeInTheDocument()
+    expect(screen.getByText('row_tol')).toBeInTheDocument()
+  })
+
   it('shows a suggested-tools hint when a profile is provided', () => {
     render(
       <LocalPipelineConfig
