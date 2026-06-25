@@ -1,20 +1,12 @@
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 from app.cdm.adapters.local_pipeline.config import CamelotConfig
 from app.cdm.adapters.local_pipeline.tools.base import PageMeta
 from app.cdm.adapters.local_pipeline.tools.camelot_tool import CamelotTool
 from app.cdm.models import BlockRole
-
-
-class _FakeDF:
-    def to_html(self):
-        return "<table><tr><td>A</td></tr></table>"
-
-    @property
-    def shape(self):
-        return (1, 2)
 
 
 def _fake_cell(x1, y1, x2, y2, text):
@@ -25,7 +17,7 @@ def _fake_table():
     # camelot bottom-left origin; page is 792pt tall.
     return SimpleNamespace(
         page=2,
-        df=_FakeDF(),
+        df=pd.DataFrame([["A", "B"]]),  # 1 row, 2 cols
         parsing_report={"accuracy": 98.5, "order": 1, "page": 2, "whitespace": 12.0},
         _bbox=(72.0, 600.0, 540.0, 720.0),  # x1,y1,x2,y2 bottom-left
         cells=[[_fake_cell(72.0, 700.0, 300.0, 720.0, "A"),
@@ -66,11 +58,23 @@ def test_table_to_block_cells_and_html_and_extras():
     assert block.table is not None
     assert block.table.rows == 1
     assert block.table.cols == 2
-    assert block.table.html == "<table><tr><td>A</td></tr></table>"
+    assert "A" in block.table.html and "B" in block.table.html
     assert {c.text for c in block.table.cells} == {"A", "B"}
     assert block.parser_extras["camelot_accuracy"] == 98.5
     assert block.parser_extras["camelot_order"] == 1
     assert block.parser_extras["camelot_flavor"] == "stream"
+
+
+def test_table_to_block_populates_block_level_content():
+    """The TABLE block itself must carry text/markdown/html so it surfaces in
+    full_text / full_markdown (block.table alone is not rendered)."""
+    pm = PageMeta(index=1, width=612.0, height=792.0)
+    block = CamelotTool()._table_to_block(
+        _fake_table(), page_index=1, page_meta=pm, table_seq=0
+    )
+    assert "A" in block.text and "B" in block.text
+    assert block.markdown is not None and "A" in block.markdown
+    assert block.html is not None and "A" in block.html
 
 
 def test_run_maps_pages_arg_and_invokes_camelot(monkeypatch):

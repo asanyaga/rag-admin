@@ -66,22 +66,38 @@ class CamelotTool:
                 ))
         return cells
 
+    @staticmethod
+    def _df_to_text(df: Any) -> str:
+        """Plain-text rendering of the table — one row per line, cells joined."""
+        return "\n".join(
+            " | ".join("" if c is None else str(c) for c in row)
+            for row in df.values.tolist()
+        )
+
     def _table_to_block(
         self, table: Any, page_index: int, page_meta: Optional[PageMeta], table_seq: int
     ) -> Block:
         report = table.parsing_report or {}
-        rows, cols = table.df.shape
+        df = table.df
+        rows, cols = df.shape
+        html = df.to_html(index=False)
+        markdown = df.to_markdown(index=False)
+        text = self._df_to_text(df)
         cdm_table = Table(
             rows=int(rows),
             cols=int(cols),
             cells=self._cells(table, page_meta) if page_meta else [],
-            html=table.df.to_html(),
+            html=html,
+            markdown=markdown,
         )
         bbox = self._norm_bbox(table._bbox, page_meta) if page_meta else None
         return Block(
             id=f"camelot:{page_index}:{table_seq}",
             role=BlockRole.TABLE,
             native_type="table",
+            text=text,
+            markdown=markdown,
+            html=html,
             page_index=page_index,
             bbox=bbox,
             table=cdm_table,

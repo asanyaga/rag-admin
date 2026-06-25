@@ -46,6 +46,7 @@ class LocalPipelineAdapter:
             key=lambda b: (b.page_index, b.reading_order if b.reading_order is not None else 1e9),
         )
         full_text = "\n\n".join(b.text for b in ordered_blocks if b.text)
+        full_markdown = "\n\n".join(b.markdown for b in ordered_blocks if b.markdown)
 
         return ParsedDocument(
             id=str(uuid4()),
@@ -56,4 +57,5 @@ class LocalPipelineAdapter:
             pages=pages,
             blocks=ordered_blocks,
             full_text=full_text or None,
+            full_markdown=full_markdown or None,
         )

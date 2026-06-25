@@ -13,7 +13,8 @@ def _blocks():
         Block(id="doc1:0:0", role=BlockRole.PARAGRAPH, native_type="text",
               text="alpha", page_index=0, bbox=_bbox(0.1), reading_order=0),
         Block(id="doc1:0:1", role=BlockRole.TABLE, native_type="table",
-              text="", page_index=0, bbox=_bbox(0.5), reading_order=1),
+              text="A | B", markdown="| A | B |", page_index=0, bbox=_bbox(0.5),
+              reading_order=1),
         Block(id="doc1:1:0", role=BlockRole.PARAGRAPH, native_type="text",
               text="beta", page_index=1, bbox=_bbox(0.2), reading_order=0),
     ]
@@ -39,7 +40,9 @@ def test_adapter_builds_parsed_document():
     assert doc.parse_run_id == "run1"
     assert doc.page_count == 2
     assert len(doc.blocks) == 3
-    assert doc.full_text == "alpha\n\nbeta"
+    assert doc.full_text == "alpha\n\nA | B\n\nbeta"
+    # full_markdown is assembled from block.markdown (only the table here).
+    assert doc.full_markdown == "| A | B |"
 
 
 def test_adapter_page_block_ids_in_reading_order():
