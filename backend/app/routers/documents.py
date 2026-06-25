@@ -1,6 +1,9 @@
 """Documents API router."""
 import json
 import logging
+import os
+import tempfile
+from pathlib import Path
 from uuid import UUID
 from fastapi import (
     APIRouter,
@@ -38,6 +41,7 @@ from app.schemas.document import (
 from app.schemas.parse_run import ParseRunResponse
 from app.services.document_service import DocumentService, process_cdm_parsing, BulkUploadItemResult
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
+from app.cdm.adapters.local_pipeline.probe import DocumentProbe
 from pydantic import BaseModel as PydanticBaseModel
 
 
@@ -548,3 +552,38 @@ async def delete_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
+
+
+@router.post(
+    "/{document_id}/probe",
+    summary="Run DocumentProbe — classify PDF by page without parsing",
+)
+async def probe_document(
+    document_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    document_service: DocumentService = Depends(get_document_service),
+) -> dict:
+    """Classify a PDF by page using PyMuPDF — no parsing, no persistence."""
+    try:
+        content, _filename, _mime = await document_service.get_file_content(
+            document_id=document_id,
+            user_id=current_user.id,
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        profile = DocumentProbe().run(
+            pdf_path=Path(tmp_path),
+            source_document_id=str(document_id),
+        )
+    finally:
+        os.unlink(tmp_path)
+
+    return profile.model_dump(mode="json")
