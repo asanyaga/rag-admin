@@ -27,21 +27,21 @@ const baseRun: ParseRunListItem = {
 
 describe('RunHeader', () => {
   it('renders parser, status, and duration', () => {
-    render(<RunHeader run={baseRun} onReparse={vi.fn()} />)
+    render(<RunHeader run={baseRun} onReparse={vi.fn()} onDelete={vi.fn()} />)
     expect(screen.getByText(/llamaparse/i)).toBeInTheDocument()
     expect(screen.getByText(/succeeded/i)).toBeInTheDocument()
     expect(screen.getByText(/4\.2s|4200/)).toBeInTheDocument()
   })
 
   it('exposes config JSON when expanded', async () => {
-    render(<RunHeader run={baseRun} onReparse={vi.fn()} />)
+    render(<RunHeader run={baseRun} onReparse={vi.fn()} onDelete={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /config/i }))
     expect(screen.getByText(/"tier": "agentic"/)).toBeInTheDocument()
   })
 
-  it('triggers onReparse when the button is clicked', async () => {
+  it('triggers onReparse when the re-parse button is clicked', async () => {
     const onReparse = vi.fn()
-    render(<RunHeader run={baseRun} onReparse={onReparse} />)
+    render(<RunHeader run={baseRun} onReparse={onReparse} onDelete={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /re-parse/i }))
     expect(onReparse).toHaveBeenCalled()
   })
@@ -51,8 +51,16 @@ describe('RunHeader', () => {
       <RunHeader
         run={{ ...baseRun, status: 'failed', error: 'sdk down' }}
         onReparse={vi.fn()}
+        onDelete={vi.fn()}
       />
     )
     expect(screen.getByText(/sdk down/)).toBeInTheDocument()
+  })
+
+  it('triggers onDelete when the delete button is clicked', async () => {
+    const onDelete = vi.fn()
+    render(<RunHeader run={baseRun} onReparse={vi.fn()} onDelete={onDelete} />)
+    await userEvent.click(screen.getByRole('button', { name: /delete run/i }))
+    expect(onDelete).toHaveBeenCalled()
   })
 })
