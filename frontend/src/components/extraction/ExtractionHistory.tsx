@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ExtractionResult, ExtractionResultListItem, ExtractionSchema } from '@/types/extraction'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -7,7 +8,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { AlertCircle, ChevronRight, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { AlertCircle, ChevronRight, Download, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import { ExtractionResultViewer } from './ExtractionResultViewer'
 
 interface InProgressPhase {
@@ -25,6 +26,7 @@ interface ExtractionHistoryProps {
   onSelectResult: (resultId: string) => void
   onDeselectResult: () => void
   onDeleteResult: (resultId: string) => Promise<void>
+  onExportResult: (resultId: string) => Promise<void>
   inProgressPhase?: InProgressPhase
 }
 
@@ -36,8 +38,20 @@ export function ExtractionHistory({
   onSelectResult,
   onDeselectResult,
   onDeleteResult,
+  onExportResult,
   inProgressPhase,
 }: ExtractionHistoryProps) {
+  const [exportingId, setExportingId] = useState<string | null>(null)
+
+  const handleExport = async (resultId: string) => {
+    setExportingId(resultId)
+    try {
+      await onExportResult(resultId)
+    } finally {
+      setExportingId(null)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -134,20 +148,34 @@ export function ExtractionHistory({
               </CollapsibleTrigger>
 
               {!isPending && (
-                <button
-                  className="shrink-0 px-2 py-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Delete extraction run"
-                  onClick={(e) => { e.stopPropagation(); onDeleteResult(r.id) }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                <>
+                  <button
+                    className="shrink-0 px-2 py-2 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
+                    aria-label="Export as CSV"
+                    disabled={exportingId === r.id}
+                    onClick={(e) => { e.stopPropagation(); void handleExport(r.id) }}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    className="shrink-0 px-2 py-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Delete extraction run"
+                    onClick={(e) => { e.stopPropagation(); onDeleteResult(r.id) }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </>
               )}
             </div>
 
             <CollapsibleContent>
               <div className="ml-6 mr-3 mb-2 mt-1">
                 {selectedResult?.id === r.id ? (
-                  <ExtractionResultViewer result={selectedResult} isLoading={false} />
+                  <ExtractionResultViewer
+                    result={selectedResult}
+                    isLoading={false}
+                    schemaName={schemas?.find((s) => s.id === r.extractionSchemaId)?.name}
+                  />
                 ) : isExpanded ? (
                   <div className="space-y-2 p-3">
                     <Skeleton className="h-4 w-full" />

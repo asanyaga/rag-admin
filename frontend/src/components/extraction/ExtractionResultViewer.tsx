@@ -20,13 +20,15 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, Loader2 } from 'lucide-react'
+import { ChevronDown, Download, Loader2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { exportResultToCsv } from '@/lib/exportCsv'
 
 interface ExtractionResultViewerProps {
   result: ExtractionResult | null
   isLoading?: boolean
+  schemaName?: string
 }
 
 // ── Internal types for casting extractionMetadata and config ─────────────────
@@ -369,6 +371,7 @@ function parseUserContent(content: string): ParsedUserContent {
 export function ExtractionResultViewer({
   result,
   isLoading,
+  schemaName,
 }: ExtractionResultViewerProps) {
   if (isLoading) {
     return (
@@ -421,6 +424,24 @@ export function ExtractionResultViewer({
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Extraction Result</CardTitle>
             <div className="flex items-center gap-2">
+              {result.status === 'completed' &&
+                result.structuredData &&
+                Object.keys(result.structuredData).length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1.5"
+                    onClick={() =>
+                      exportResultToCsv(
+                        result.structuredData!,
+                        `${schemaName ?? 'extraction'}_${result.id.slice(0, 8)}.csv`
+                      )
+                    }
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export CSV
+                  </Button>
+                )}
               <Badge variant={statusColor}>
                 {result.status === 'pending' && (
                   <Loader2 className="h-3 w-3 mr-1 animate-spin" />
