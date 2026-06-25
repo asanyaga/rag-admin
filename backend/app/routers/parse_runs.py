@@ -138,3 +138,45 @@ async def get_raw_payload_for_run(
             detail="Not authorized to view this ParseRun",
         )
     return RawPayloadResponse(raw_payload=run.raw_payload)
+
+
+@router.delete(
+    "/{parse_run_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a ParseRun",
+    description=(
+        "Delete a ParseRun and its ParsedDocument (via DB cascade). "
+        "Returns 409 if any index documents, classification runs, or extraction results "
+        "still reference this run."
+    ),
+)
+async def delete_parse_run(
+    parse_run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    repo = ParseRunRepository(db)
+    run = await repo.get(parse_run_id)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ParseRun {parse_run_id} not found",
+        )
+    owns = await _user_owns_source(
+        db, source_document_id=run.source_document_id, user_id=current_user.id
+    )
+    if not owns:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this ParseRun",
+        )
+    blockers = await repo.get_blockers(parse_run_id)
+    if any(blockers.values()):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Parse run has dependent entities that must be removed first.",
+                "blockers": blockers,
+            },
+        )
+    await repo.delete(run)

@@ -7,7 +7,10 @@ from uuid import UUID
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.classification_run import ClassificationRun
 from app.models.document import Document as DocumentORM
+from app.models.extraction_result import ExtractionResult
+from app.models.index_document import IndexDocument
 from app.models.parse_run import ParseRun
 from app.models.parsed_document import ParsedDocument
 from app.models.source_document import SourceDocument
@@ -242,3 +245,27 @@ class ParseRunRepository:
         await self.session.commit()
         await self.session.refresh(run)
         return run
+
+    async def get_blockers(self, run_id: UUID) -> dict[str, int]:
+        """Count rows in dependent tables that would block deletion."""
+        index_count = (await self.session.execute(
+            select(func.count()).select_from(IndexDocument)
+            .where(IndexDocument.parse_run_id == run_id)
+        )).scalar_one()
+        classification_count = (await self.session.execute(
+            select(func.count()).select_from(ClassificationRun)
+            .where(ClassificationRun.parse_run_id == run_id)
+        )).scalar_one()
+        extraction_count = (await self.session.execute(
+            select(func.count()).select_from(ExtractionResult)
+            .where(ExtractionResult.source_parse_run_id == run_id)
+        )).scalar_one()
+        return {
+            "index_documents": index_count,
+            "classification_runs": classification_count,
+            "extraction_results": extraction_count,
+        }
+
+    async def delete(self, run: ParseRun) -> None:
+        await self.session.delete(run)
+        await self.session.commit()
