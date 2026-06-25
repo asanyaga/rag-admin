@@ -69,6 +69,7 @@ dependencies = [
     "docling>=2.105.0",
     "pypdf>=6.6.2",
     "pymupdf>=1.24.0", # fitz — PDF text/image/drawing extraction for DocumentProbe
+    "camelot-py>=2.0.0",
 ]
 
 [project.optional-dependencies]
