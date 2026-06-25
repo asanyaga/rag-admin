@@ -12,7 +12,7 @@
 1. Let a user open a parse run and see the parsed document blocks (bboxes) overlaid on the real PDF page.
 2. Click-through: clicking a block in the Pages tab highlights its bbox on the PDF and vice versa.
 3. All existing inspection surfaces (Markdown, Text, CDM JSON, Raw Payload, Metrics) remain accessible on the same page.
-4. The drawer (`ParsedDocumentViewer`) is unchanged except for a new "Open in Viewer" button.
+4. The drawer (`ParsedDocumentViewer`) is unchanged. Navigation to the detail page already exists via `RunTimeline`'s per-run "Open viewer" link.
 
 ---
 
@@ -136,11 +136,9 @@ Changes:
 
 Existing tests and callers unaffected (props are optional).
 
-### 4.4 `ParsedDocumentViewer` — one addition
+### 4.4 `ParsedDocumentViewer` — no changes required
 
-File: `frontend/src/components/documents/ParsedDocumentViewer.tsx`
-
-Add "Open in Viewer →" button to the header, visible when a run is selected. Navigates to `/documents/${documentId}/runs/${selectedRun.id}`. Uses `useNavigate` from react-router-dom.
+Navigation to the detail page is already handled by `RunTimeline.tsx`, which renders an "Open viewer" link per run row pointing to `/documents/${documentId}/runs/${r.id}`. No changes needed to the drawer.
 
 ---
 
