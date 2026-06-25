@@ -254,12 +254,18 @@ class LocalPipelineConfig(BaseModel):
 
 ### 6.3 Relation to existing patterns
 
-`LocalParseRunner` mirrors `llamaparse_runner.py`:
-- Same `SourceMeta` input
-- Same `(ParseRun, ParsedDocument)` return contract
-- Same `ParserKind` enum extended with `LOCAL_PIPELINE = "local_pipeline"`
+`LocalParseRunner` follows the same two-layer split as `llamaparse_runner.py`:
 
-It does **not** implement the `ParserAdapter` protocol (which is for adapting pre-existing raw output). The runner orchestrates its own tool invocations. A thin `LocalPipelineAdapter(ParserAdapter)` wrapper can be added later for uniform treatment if needed.
+```
+LocalParseRunner         — orchestrates tool invocations, creates ParseRun
+LocalPipelineAdapter     — implements ParserAdapter: adapt(raw, source_meta) → ParsedDocument
+```
+
+The runner runs FitzTool + CamelotTool, collects their `ToolResult`s, assembles `raw = {"fitz": fitz_result, "camelot": camelot_result}`, then calls `LocalPipelineAdapter().adapt(raw, source_meta)`. The adapter handles merge, eviction, bbox normalization, and block ID minting — the same pure-mapping responsibility the LlamaParse adapter has.
+
+`raw: Dict[str, ToolResult]` satisfies `adapt(raw: Any, ...)`. The adapter is stateless. `raw["fitz"].page_meta` provides page dimensions for camelot bbox normalization inside the adapter.
+
+`ParserKind.LOCAL_PIPELINE = "local_pipeline"` is added to the enum.
 
 ---
 
@@ -289,7 +295,8 @@ backend/app/cdm/
       __init__.py
       config.py          # LocalPipelineConfig, FitzConfig, CamelotConfig
       probe.py           # DocumentProbe, DocumentProfile, PageProfile
-      runner.py          # LocalParseRunner
+      adapter.py         # LocalPipelineAdapter (implements ParserAdapter protocol)
+      runner.py          # LocalParseRunner — orchestrates tools, creates ParseRun
       merger.py          # eviction logic, bbox overlap math, raw_output assembly
       tools/
         __init__.py
