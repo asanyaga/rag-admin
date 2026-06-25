@@ -7,11 +7,12 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import type { ParseRunListItem } from '@/types/cdm'
-import { ChevronDown, RefreshCw } from 'lucide-react'
+import { ChevronDown, RefreshCw, Trash2 } from 'lucide-react'
 
 interface RunHeaderProps {
   run: ParseRunListItem
   onReparse: () => void
+  onDelete: () => void
 }
 
 function formatDuration(ms: number | null): string {
@@ -35,7 +36,7 @@ function statusVariant(
   }
 }
 
-export function RunHeader({ run, onReparse }: RunHeaderProps) {
+export function RunHeader({ run, onReparse, onDelete }: RunHeaderProps) {
   const [configOpen, setConfigOpen] = useState(false)
   return (
     <div className="border-b bg-background sticky top-0 z-10">
@@ -63,14 +64,19 @@ export function RunHeader({ run, onReparse }: RunHeaderProps) {
             cost: {JSON.stringify(run.cost)}
           </span>
         )}
-        <Button
-          size="sm"
-          variant="outline"
-          className="ml-auto"
-          onClick={onReparse}
-        >
-          <RefreshCw className="h-3 w-3 mr-1" /> Re-parse
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={onReparse}>
+            <RefreshCw className="h-3 w-3 mr-1" /> Re-parse
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onDelete}
+            aria-label="Delete run"
+          >
+            <Trash2 className="h-3 w-3 mr-1" /> Delete
+          </Button>
+        </div>
       </div>
       {run.error && (
         <div className="px-4 py-2 text-xs text-destructive border-t bg-destructive/5">

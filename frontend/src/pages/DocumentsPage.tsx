@@ -315,6 +315,7 @@ export default function DocumentsPage(): JSX.Element {
                 <RunTimeline
                   documentId={viewDocumentId}
                   runs={parseRuns}
+                  onRunDeleted={refreshParseRuns}
                 />
               </section>
             )}

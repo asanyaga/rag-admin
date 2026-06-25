@@ -12,6 +12,7 @@ import { ParsedDocumentPane } from '@/components/parse-runs/ParsedDocumentPane'
 import { DocumentPdfViewer } from '@/components/parse-runs/DocumentPdfViewer'
 import { MetricsTab } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
+import { ParseRunDeleteDialog } from '@/components/parse-runs/ParseRunDeleteDialog'
 import { useParseRunDetail } from '@/hooks/useParseRunDetail'
 import { useParseRunRawPayload } from '@/hooks/useParseRunRawPayload'
 import * as parseRunsApi from '@/api/parseRuns'
@@ -25,6 +26,7 @@ export function ParseRunDetailPage() {
   }>()
   const navigate = useNavigate()
   const [reparseOpen, setReparseOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('pages')
 
@@ -112,7 +114,11 @@ export function ParseRunDetailPage() {
         </Button>
       </div>
 
-      <RunHeader run={run} onReparse={() => setReparseOpen(true)} />
+      <RunHeader
+        run={run}
+        onReparse={() => setReparseOpen(true)}
+        onDelete={() => setDeleteOpen(true)}
+      />
 
       <div
         className="flex-1 grid overflow-hidden"
@@ -215,6 +221,14 @@ export function ParseRunDetailPage() {
         onOpenChange={setReparseOpen}
         onReparse={handleReparse}
       />
+      {runId && (
+        <ParseRunDeleteDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          runId={runId}
+          onDeleted={() => navigate('/documents')}
+        />
+      )}
     </div>
   )
 }

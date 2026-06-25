@@ -1,12 +1,15 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Trash2 } from 'lucide-react'
 import type { ParseRunListItem } from '@/types/cdm'
+import { ParseRunDeleteDialog } from './ParseRunDeleteDialog'
 
 interface RunTimelineProps {
   documentId: string
   runs: ParseRunListItem[]
+  onRunDeleted?: () => void
 }
 
 function formatDuration(ms: number | null): string {
@@ -24,7 +27,9 @@ function relTime(iso: string): string {
   return `${Math.round(s / 86400)}d ago`
 }
 
-export function RunTimeline({ documentId, runs }: RunTimelineProps) {
+export function RunTimeline({ documentId, runs, onRunDeleted }: RunTimelineProps) {
+  const [deletingRunId, setDeletingRunId] = useState<string | null>(null)
+
   if (runs.length === 0) {
     return (
       <div className="text-sm text-muted-foreground py-2">
@@ -32,45 +37,70 @@ export function RunTimeline({ documentId, runs }: RunTimelineProps) {
       </div>
     )
   }
+
   return (
-    <ul className="divide-y rounded-md border">
-      {runs.map((r) => (
-        <li key={r.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-          <Badge
-            variant={
-              r.status === 'failed'
-                ? 'destructive'
-                : r.status === 'succeeded'
-                  ? 'default'
-                  : 'secondary'
-            }
-          >
-            {r.status}
-          </Badge>
-          <span className="font-medium">{r.parser}</span>
-          <span className="text-xs text-muted-foreground">
-            {r.representationKind}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {relTime(r.startedAt)}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {formatDuration(r.durationMs)}
-          </span>
-          {r.error && (
-            <span className="text-xs text-destructive truncate max-w-[20ch]">
-              {r.error}
+    <>
+      <ul className="divide-y rounded-md border">
+        {runs.map((r) => (
+          <li key={r.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+            <Badge
+              variant={
+                r.status === 'failed'
+                  ? 'destructive'
+                  : r.status === 'succeeded'
+                    ? 'default'
+                    : 'secondary'
+              }
+            >
+              {r.status}
+            </Badge>
+            <span className="font-medium">{r.parser}</span>
+            <span className="text-xs text-muted-foreground">
+              {r.representationKind}
             </span>
-          )}
-          <div className="ml-auto flex items-center gap-1">
-            <Button asChild size="sm" variant="ghost">
-              <Link to={`/documents/${documentId}/runs/${r.id}`}>
-                <ExternalLink className="h-3 w-3 mr-1" /> Open viewer
-              </Link>
-            </Button>
-          </div>
-        </li>
-      ))}
-    </ul>
+            <span className="text-xs text-muted-foreground">
+              {relTime(r.startedAt)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {formatDuration(r.durationMs)}
+            </span>
+            {r.error && (
+              <span className="text-xs text-destructive truncate max-w-[20ch]">
+                {r.error}
+              </span>
+            )}
+            <div className="ml-auto flex items-center gap-1">
+              <Button asChild size="sm" variant="ghost">
+                <Link to={`/documents/${documentId}/runs/${r.id}`}>
+                  <ExternalLink className="h-3 w-3 mr-1" /> Open viewer
+                </Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="Delete"
+                onClick={() => setDeletingRunId(r.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {deletingRunId && (
+        <ParseRunDeleteDialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setDeletingRunId(null)
+          }}
+          runId={deletingRunId}
+          onDeleted={() => {
+            setDeletingRunId(null)
+            onRunDeleted?.()
+          }}
+        />
+      )}
+    </>
   )
 }

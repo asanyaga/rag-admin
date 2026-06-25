@@ -1,8 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { RunTimeline } from './RunTimeline'
 import type { ParseRunListItem } from '@/types/cdm'
+
+vi.mock('@/api/parseRuns', () => ({
+  deleteParseRun: vi.fn(),
+}))
 
 const run = (over: Partial<ParseRunListItem> = {}): ParseRunListItem => ({
   id: 'r1',
@@ -48,5 +52,18 @@ describe('RunTimeline', () => {
     const links = screen.getAllByRole('link', { name: /open viewer/i })
     expect(links).toHaveLength(2)
     expect(links[0].getAttribute('href')).toBe('/documents/d1/runs/r1')
+  })
+
+  it('renders a delete button per run row', () => {
+    render(
+      <MemoryRouter>
+        <RunTimeline
+          documentId="d1"
+          runs={[run({ id: 'r1' }), run({ id: 'r2' })]}
+          onRunDeleted={vi.fn()}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getAllByRole('button', { name: /delete/i })).toHaveLength(2)
   })
 })
