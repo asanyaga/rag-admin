@@ -17,6 +17,7 @@ import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialo
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { ParsedDocumentViewer } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
+import { DocumentProbePanel } from '@/components/documents/DocumentProbePanel'
 import { RunTimeline } from '@/components/parse-runs/RunTimeline'
 import { useParseRuns } from '@/hooks/useParseRuns'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -309,6 +310,9 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           </SheetHeader>
           <div className="mt-6 space-y-6">
+            {viewDocumentId && (
+              <DocumentProbePanel documentId={viewDocumentId} />
+            )}
             {viewDocumentId && (
               <section>
                 <h3 className="text-sm font-medium mb-2">Parse runs</h3>
