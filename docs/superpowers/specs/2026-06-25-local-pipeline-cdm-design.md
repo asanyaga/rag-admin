@@ -350,4 +350,80 @@ Each iteration builds on the previous. The `ParseRun.raw_output` schema establis
 
 5. **MarkitdownTool** — can be added in iteration 2 as an optional final step: takes assembled `full_text` or block text and derives `block.markdown` / `full_markdown`. Depends on whether markitdown can operate on already-extracted text (rather than the raw PDF).
 
+---
+
+## 12. Manual Testing — Iteration 1
+
+These steps exercise the `DocumentProbe` end-to-end through the UI. Run them after backend tests pass.
+
+### 12.1 Prerequisites
+
+- Backend running: `uv run --directory backend uvicorn app.main:app --reload`
+- Frontend running: `npm --prefix frontend run dev`
+- Logged in to the app at http://localhost:5173
+- At least one project with at least one **uploaded PDF document**
+
+### 12.2 Test PDFs to cover the matrix
+
+To cover the probe's detection branches, upload (or have on hand) at least one PDF from each category. A small fixture set lives at `backend/tests/cdm/adapters/local_pipeline/fixtures/`.
+
+| PDF type | Expected probe result |
+|---|---|
+| Native text PDF (e.g. report exported from Word) | `has_text_layer: true`, `has_scanned_pages: false`, `page_type: text`, suggested tools: `["fitz"]` (plus `camelot` if any tables) |
+| PDF with a ruled table | At least one page with `table_signal: true`, suggested tools include `camelot` |
+| Scanned PDF (image-only, no text layer) | `has_text_layer: false`, `has_scanned_pages: true`, `page_type: scanned`, suggested tools: `["paddleocr"]` |
+| PDF with broken/embedded CID font (Private Use Area glyphs) | `has_cid_corruption: true`, `font_health: cid_corrupt` on affected pages |
+| Empty page (blank page in a longer PDF) | That page's `page_type: empty`, no `table_signal` |
+
+### 12.3 Golden path
+
+1. Open the documents page for a project, click a document to open the detail Sheet.
+2. Verify the **"Document probe"** section appears at the **top** of the Sheet, above the parse runs section. It shows a heading and a **"Run probe"** button with a scan-search icon.
+3. Click **"Run probe"**. Verify:
+   - The button label changes to "Probing…" and is disabled.
+   - Three skeleton placeholders appear briefly.
+4. After the probe finishes (typically <500ms for small PDFs), verify:
+   - Document-level flag badges render only when relevant (`CID corruption`, `Scanned pages`, `Table signal`, `No text layer`). For a clean text PDF, no badges should appear.
+   - **"Suggested tools:"** lists the recommended tools as a comma-separated string.
+   - A per-page table renders with columns: Page, Type, Chars, Font, Table?, Images.
+   - Each row shows page number (1-indexed in the UI even though `index` is 0-indexed), a colored badge for page type, char count with thousands separator, a colored badge for font health, ✓/— for table signal, and image count.
+   - The footer line reads `Probed in <N>ms · <N> page(s)` with correct pluralization.
+5. The button label changes to **"Re-probe"**. Click it. Verify the result refreshes (timestamp/duration updates).
+6. Close the Sheet and re-open the same document. Verify the probe panel resets — there is no persistence in iteration 1, so the panel starts in its initial "Run probe" state.
+
+### 12.4 Error paths
+
+1. **Document with no stored file path** — call the endpoint directly against a doc whose `source_metadata.file_path` is missing:
+   ```bash
+   curl -X POST -H "Authorization: Bearer $TOKEN" \
+     http://localhost:8000/documents/<id>/probe
+   ```
+   Expect HTTP 404 with detail `"File path not found in document metadata"`.
+
+2. **Non-existent document ID** — same call with a random UUID. Expect HTTP 404 with detail `"Document <id> not found"`.
+
+3. **Unauthorized user** — log in as user A, then attempt to probe a document owned by user B. Expect HTTP 404 (the repository enforces user scoping).
+
+4. **Probe failure surfaces in UI** — temporarily corrupt the stored PDF (e.g. truncate the file in the storage bucket), reload the Sheet, click "Run probe". Expect a red `Alert` with the error message; the button returns to its idle state.
+
+### 12.5 Signal-specific assertions
+
+For each PDF in the matrix in 12.2:
+
+| Assertion | How to verify |
+|---|---|
+| `char_count` is positive on text pages | Inspect the per-page table — Chars column |
+| `table_signal` triggers only on pages with axis-aligned lines/rects | Compare to the visible PDF; confirm tables → ✓ and prose pages → — |
+| `font_health: cid_corrupt` triggers on broken-font PDFs | Open the PDF in a viewer that exposes copy-paste; if pasted text contains � or PUA glyphs, the probe should flag it |
+| `page_type` reflects the dominant content (text/scanned/mixed/empty) | Spot-check pages |
+| `recommended_tools` reflects the document-level signals | A clean text PDF → `["fitz"]`; a clean PDF with tables → `["fitz", "camelot"]`; a scanned PDF → `["paddleocr"]`; a scanned PDF with tables → `["paddleocr", "paddleocr_pp_structure"]` |
+
+### 12.6 Performance sanity
+
+- Single-page PDF: `duration_ms` < 100ms typical
+- 10-page native text PDF: `duration_ms` < 500ms typical
+- 100-page mixed PDF: `duration_ms` < 5s typical
+
+If a probe takes noticeably longer, capture the PDF and file an issue — likely a pathological font/drawing structure that needs guarding against in the heuristics.
+
 6. **Tabula as CamelotTool alternative** — tabula-py covers similar ground to camelot with a different implementation (Java-based). Worth evaluating as an alternative for stream-mode tables. Could be a config option: `CamelotConfig(backend="camelot"|"tabula")`.
