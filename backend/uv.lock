@@ -387,6 +387,26 @@ wheels = [
 ]
 
 [[package]]
+name = "camelot-py"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "numpy" },
+    { name = "opencv-python-headless" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "pillow" },
+    { name = "playa-pdf" },
+    { name = "pypdfium2" },
+    { name = "tabulate" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4d/6c/3b6057077feb802ce6ef4e2ebd11a50c12b7065aeb946cc0d9296d195246/camelot_py-2.0.0.tar.gz", hash = "sha256:e96891d30707b3e2f1c08cb7ae15eea67abe72485ca92c7025b6308ba37bd3cd", size = 140937, upload-time = "2026-06-04T16:31:28.8Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/30/e220f65dda2cea102f538ae64f29d6a7a96884cc0ec2d286adf7d2c9dd3d/camelot_py-2.0.0-py3-none-any.whl", hash = "sha256:c2c6c7e4b0cb422b8050624c1d54026a8b3af1d86b7d7951eddeb18854fbcfb6", size = 113176, upload-time = "2026-06-04T16:31:27.422Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2578,6 +2598,24 @@ wheels = [
 ]
 
 [[package]]
+name = "opencv-python-headless"
+version = "4.13.0.92"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/42/2310883be3b8826ac58c3f2787b9358a2d46923d61f88fedf930bc59c60c/opencv_python_headless-4.13.0.92-cp37-abi3-macosx_13_0_arm64.whl", hash = "sha256:1a7d040ac656c11b8c38677cc8cccdc149f98535089dbe5b081e80a4e5903209", size = 46247192, upload-time = "2026-02-05T07:01:35.187Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/1e/6f9e38005a6f7f22af785df42a43139d0e20f169eb5787ce8be37ee7fcc9/opencv_python_headless-4.13.0.92-cp37-abi3-macosx_14_0_x86_64.whl", hash = "sha256:3e0a6f0a37994ec6ce5f59e936be21d5d6384a4556f2d2da9c2f9c5dc948394c", size = 32568914, upload-time = "2026-02-05T07:01:51.989Z" },
+    { url = "https://files.pythonhosted.org/packages/21/76/9417a6aef9def70e467a5bf560579f816148a4c658b7d525581b356eda9e/opencv_python_headless-4.13.0.92-cp37-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:5c8cfc8e87ed452b5cecb9419473ee5560a989859fe1d10d1ce11ae87b09a2cb", size = 33703709, upload-time = "2026-02-05T10:24:46.469Z" },
+    { url = "https://files.pythonhosted.org/packages/92/ce/bd17ff5772938267fd49716e94ca24f616ff4cb1ff4c6be13085108037be/opencv_python_headless-4.13.0.92-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:0525a3d2c0b46c611e2130b5fdebc94cf404845d8fa64d2f3a3b679572a5bd22", size = 56016764, upload-time = "2026-02-05T10:26:48.904Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/b4/b7bcbf7c874665825a8c8e1097e93ea25d1f1d210a3e20d4451d01da30aa/opencv_python_headless-4.13.0.92-cp37-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:eb60e36b237b1ebd40a912da5384b348df8ed534f6f644d8e0b4f103e272ba7d", size = 35010236, upload-time = "2026-02-05T10:28:11.031Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/33/b5db29a6c00eb8f50708110d8d453747ca125c8b805bc437b289dbdcc057/opencv_python_headless-4.13.0.92-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:0bd48544f77c68b2941392fcdf9bcd2b9cdf00e98cb8c29b2455d194763cf99e", size = 60391106, upload-time = "2026-02-05T10:30:14.236Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/c3/52cfea47cd33e53e8c0fbd6e7c800b457245c1fda7d61660b4ffe9596a7f/opencv_python_headless-4.13.0.92-cp37-abi3-win32.whl", hash = "sha256:a7cf08e5b191f4ebb530791acc0825a7986e0d0dee2a3c491184bd8599848a4b", size = 30812232, upload-time = "2026-02-05T07:02:29.594Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/90/b338326131ccb2aaa3c2c85d00f41822c0050139a4bfe723cfd95455bd2d/opencv_python_headless-4.13.0.92-cp37-abi3-win_amd64.whl", hash = "sha256:77a82fe35ddcec0f62c15f2ba8a12ecc2ed4207c17b0902c7a3151ae29f37fb6", size = 40070414, upload-time = "2026-02-05T07:02:26.448Z" },
+]
+
+[[package]]
 name = "openpyxl"
 version = "3.1.5"
 source = { registry = "https://pypi.org/simple" }
@@ -3040,6 +3078,37 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cf/86/0248f086a84f01b37aaec0fa567b397df1a119f73c16f6c7a9aac73ea309/platformdirs-4.5.1.tar.gz", hash = "sha256:61d5cdcc6065745cdd94f0f878977f8de9437be93de97c1c12f853c9c0cdcbda", size = 21715, upload-time = "2025-12-05T13:52:58.638Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cb/28/3bfe2fa5a7b9c46fe7e13c97bda14c895fb10fa2ebf1d0abb90e0cea7ee1/platformdirs-4.5.1-py3-none-any.whl", hash = "sha256:d03afa3963c806a9bed9d5125c8f4cb2fdaf74a55ab60e5d59b3fde758104d31", size = 18731, upload-time = "2025-12-05T13:52:56.823Z" },
+]
+
+[[package]]
+name = "playa-pdf"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mypy-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/af/d2/9575801a5e41fdffbac0fc356a7aae462e11f58473b3e78070185a9e7ced/playa_pdf-1.1.0.tar.gz", hash = "sha256:6414a0779fdcc96284588767738c2bd71ed3aa65a1a8fa647a4ab09dce4ff017", size = 8644947, upload-time = "2026-03-09T16:53:02.734Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/23/da/ab3528bd7496092bb011bd21a48f19496f07ea607660a720186d6e41c733/playa_pdf-1.1.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:56dbaccca34dfc0613bec658b67ed67fb0fb4efaf49aab86c60236bfd934ec89", size = 8542589, upload-time = "2026-03-09T16:52:12.368Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/29/cc729b12de1f0ca02e19aed463e42f58836824f6fc5e493bd6c3562e59ba/playa_pdf-1.1.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:4ac45f8ac08f8ec17ac834a189772293bc9d52aadb51c3c5eb839fa1c7e79fcb", size = 8524481, upload-time = "2026-03-09T16:52:15.053Z" },
+    { url = "https://files.pythonhosted.org/packages/25/28/7a4a4a0e898dfa45af62452ebe53ce449dac60d67c29cb6ad783e7098a7a/playa_pdf-1.1.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0ffa371cfa8e7b8b3f62eb8fa5cd85015095861a20d7d4943971dce7dd15461b", size = 9128263, upload-time = "2026-03-09T16:52:17.33Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/41/56995025d8aabd741974a79edc8518b67db5a46ce33e7852ef7378d0fa90/playa_pdf-1.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b27df269246e48946870817b3b7727fcc2e7cf12e605abb4df51efb0af12afee", size = 9219020, upload-time = "2026-03-09T16:52:19.906Z" },
+    { url = "https://files.pythonhosted.org/packages/61/94/65088538e5c218fefb52244f0a23f670378a55baf57af7e86904929adc2c/playa_pdf-1.1.0-cp312-cp312-win_amd64.whl", hash = "sha256:699799f656757aab1fdd923bbd0c4ae5438efa6458c943524a0b9a8e8f5e076b", size = 8238029, upload-time = "2026-03-09T16:52:22.168Z" },
+    { url = "https://files.pythonhosted.org/packages/02/d5/fb9b218f85cf84ec0941e26c5769578189036fcba328cc9eaa795db781eb/playa_pdf-1.1.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:c50a79c88e3ed52944f85a694f0d6b5867fbed5d4c9c4a3b84d876858608b854", size = 8541999, upload-time = "2026-03-09T16:52:24.119Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/a6/afc951b706d034e8dbf91250c5c9d81ce12a4af1dfad1c54a2925928be3b/playa_pdf-1.1.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:95335f17b96437d55e8e192e9c13f085db9ca84eef608ac706f177d5ade19a23", size = 8523735, upload-time = "2026-03-09T16:52:26.222Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/3c/d36b2e43cfe7f0299da48639b13530cc1735a12da1da2140e1d7bc99f540/playa_pdf-1.1.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8b6eed3179d42a5e2db99c33ff931ca89014c2af2d9104a787f6b9079dab4f71", size = 9122951, upload-time = "2026-03-09T16:52:28.455Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/da/6f309f16802cf77883a18390d5e22571922128393cc1533e7d769cfd80e8/playa_pdf-1.1.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:783b25ed0e5fa435e488ad11551c897d7c622b9ac8a1376ede6860c28eaf2c11", size = 9212307, upload-time = "2026-03-09T16:52:30.834Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/07/2c1b93ead3d094fa9a5a60817618d815ff6876fc28c04eb7acbd735d5562/playa_pdf-1.1.0-cp313-cp313-win_amd64.whl", hash = "sha256:a786292d382a768ee029ad3461b4ea92df04dea10879ee3f57a11c2388e89746", size = 8237909, upload-time = "2026-03-09T16:52:33.47Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/aa/861f2f855bdb174e21bbe82f924e686346b910cc73c69920bf9a0713c225/playa_pdf-1.1.0-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:50c5dcb8908c94127ccfde1af6490ecdec3ff2865447e36f178c1bdff77e3e8e", size = 8581750, upload-time = "2026-03-09T16:52:35.417Z" },
+    { url = "https://files.pythonhosted.org/packages/48/e2/0e4c84ec682304551676f7e3b7650eaf80cd8fb2c3017346a16267fd6336/playa_pdf-1.1.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:8827714630de811c35fe79f97b9934b411567d3a3b869a3c0df8704fd0850efd", size = 8521648, upload-time = "2026-03-09T16:52:37.968Z" },
+    { url = "https://files.pythonhosted.org/packages/b1/41/814ac75b62d3fce17ce22f491d093e6d1ee4b813e81bee1763006a4d08b0/playa_pdf-1.1.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e43afdc20cde1b77a9b4cb5804d9499d8c6966f34f3348abd4cd0541c591fe83", size = 9138846, upload-time = "2026-03-09T16:52:40.296Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/b3/e88f78d860b5a5d1a45719266af96acefe2a99192227ad1ca0e57e59770b/playa_pdf-1.1.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7afcd077ef47ea86455534ecdf692448ceb1af636d2a38583f8e203d252f2d85", size = 9226716, upload-time = "2026-03-09T16:52:42.798Z" },
+    { url = "https://files.pythonhosted.org/packages/54/ef/80b18e577fc4215b6e3382f8f1d804ea8c02f1f608960cd69701f396c109/playa_pdf-1.1.0-cp314-cp314-win_amd64.whl", hash = "sha256:4cd365fd111b1cb2354a6f6ec8da47e9e5d70c5a768fbe9534eee5247c7cacd2", size = 8444577, upload-time = "2026-03-09T16:52:45.062Z" },
+    { url = "https://files.pythonhosted.org/packages/23/22/28dd08a117897deaa41a233a0d1544b4b104f6249e17ae79ba9f5a2083e1/playa_pdf-1.1.0-cp314-cp314t-macosx_10_15_x86_64.whl", hash = "sha256:581a31bdf1bc9961addbd252050d0e9ed38dd1ad223a56c205680e90f7b72575", size = 8653957, upload-time = "2026-03-09T16:52:48.587Z" },
+    { url = "https://files.pythonhosted.org/packages/da/c1/0e39c952d689dc573f298e9aec7166996c8e0da1e2c78d4e6cb13ef5a4f9/playa_pdf-1.1.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:457edd5abb9fc43aadcdd812371705851906b1d532a077a6c04981546cda4260", size = 8595523, upload-time = "2026-03-09T16:52:51.203Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/24/5da4532afe99a9c30f23d2366e919b0f6e5e36b624ab5b36354db59445d3/playa_pdf-1.1.0-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:88b7ebf95cd7d02459a26a5a941411258b323f3202e33c13dcc867ae730abc73", size = 9486583, upload-time = "2026-03-09T16:52:53.701Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/9f/7f582cb7cadb5865ffff53f1710e49202436af7bf81fba74f3a9664e7302/playa_pdf-1.1.0-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e548a7542036f89a622f1c11c2a9c40b8476090b04f3abc335a8dd20142060aa", size = 9588033, upload-time = "2026-03-09T16:52:56.023Z" },
+    { url = "https://files.pythonhosted.org/packages/80/dc/525b0f415c2dc9f23eaec6a858c41ead974f4debe0fce7c2874a5050dea3/playa_pdf-1.1.0-cp314-cp314t-win_amd64.whl", hash = "sha256:c52597802d86fdd61a71a6e7f8e4b48fae51cc5ae38fcc727a14b6d4c075f6bd", size = 8556709, upload-time = "2026-03-09T16:52:58.444Z" },
 ]
 
 [[package]]
@@ -3705,6 +3774,7 @@ dependencies = [
     { name = "asyncpg" },
     { name = "authlib" },
     { name = "bcrypt" },
+    { name = "camelot-py" },
     { name = "cryptography" },
     { name = "docling" },
     { name = "email-validator" },
@@ -3742,6 +3812,7 @@ dependencies = [
     { name = "scipy" },
     { name = "slowapi" },
     { name = "sqlalchemy" },
+    { name = "tabulate" },
     { name = "tiktoken" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -3763,6 +3834,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.29.0" },
     { name = "authlib", specifier = ">=1.3.0" },
     { name = "bcrypt", specifier = ">=5.0.0" },
+    { name = "camelot-py", specifier = ">=2.0.0" },
     { name = "cryptography", specifier = ">=41.0.0" },
     { name = "docling", specifier = ">=2.105.0" },
     { name = "email-validator", specifier = ">=2.3.0" },
@@ -3803,6 +3875,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.11.0" },
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
+    { name = "tabulate", specifier = ">=0.10.0" },
     { name = "tiktoken", specifier = ">=0.5.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.27.0" },
 ]
