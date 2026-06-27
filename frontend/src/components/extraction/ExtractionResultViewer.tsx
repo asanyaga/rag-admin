@@ -482,7 +482,7 @@ export function ExtractionResultViewer({
             <CardTitle className="text-base">Extraction Result</CardTitle>
             <div className="flex items-center gap-2">
               {result.status === 'completed' && projectId && (
-                <Dialog open={transformOpen} onOpenChange={setTransformOpen}>
+                <Dialog open={transformOpen} onOpenChange={(open) => { setTransformOpen(open); if (!open) setMergeConfig(DEFAULT_MERGE_CONFIG); }}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
                       <Wand2 className="h-3.5 w-3.5" />

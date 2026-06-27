@@ -47,8 +47,8 @@ export function MergeRecordsConfigForm({ value, onChange }: Props) {
         <Input
           id="groupBy"
           placeholder="e.g. baseModel"
-          defaultValue={value.groupBy.join(', ')}
-          onBlur={(e) => handleGroupBy(e.target.value)}
+          value={value.groupBy.join(', ')}
+          onChange={(e) => handleGroupBy(e.target.value)}
         />
         <p className="text-xs text-muted-foreground">Comma-separated field names to group rows by.</p>
       </div>
@@ -58,8 +58,8 @@ export function MergeRecordsConfigForm({ value, onChange }: Props) {
         <Input
           id="spineFields"
           placeholder="e.g. sku"
-          defaultValue={value.spine.whereFieldsPresent.join(', ')}
-          onBlur={(e) => handleSpineFields(e.target.value)}
+          value={value.spine.whereFieldsPresent.join(', ')}
+          onChange={(e) => handleSpineFields(e.target.value)}
         />
         <p className="text-xs text-muted-foreground">Rows are "spine" rows when these fields are non-null.</p>
       </div>
