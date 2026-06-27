@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class TransformPreviewRequest(BaseModel):
-    source_result_ids: list[UUID] = Field(..., alias="sourceResultIds")
+    source_result_ids: list[UUID] = Field(..., alias="sourceResultIds", min_length=1)
     transform_type: str = Field(..., alias="transformType")
     config: dict
 
