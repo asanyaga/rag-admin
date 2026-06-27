@@ -53,6 +53,7 @@ async def test_preview_does_not_persist():
     assert len(out["rows"]) == 1
     assert out["rows"][0]["widthMm"] == 470
     assert repo.created is None
+    assert repo.updated is None
 
 
 @pytest.mark.asyncio
@@ -61,6 +62,7 @@ async def test_apply_persists_with_lineage():
     repo = _Repo([src])
     svc = ResultTransformService(result_repo=repo)
     await svc.apply([src.id], "merge_records", CFG, user_id=uuid4())
+    assert repo.created is not None
     lineage = repo.updated["extraction_metadata"]["lineage"]
     assert lineage["transform"]["type"] == "merge_records"
     assert str(src.id) in [str(x) for x in lineage["sourceResultIds"]]

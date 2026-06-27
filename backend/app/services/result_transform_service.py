@@ -25,12 +25,14 @@ class ResultTransformService:
             loaded.append((result, TransformInput(rows=rows, source_result_id=str(rid))))
         return loaded
 
-    async def preview(self, source_result_ids, transform_type, config) -> dict:
+    async def preview(self, source_result_ids: list[UUID], transform_type: str, config: dict) -> dict:
         loaded = await self._load_inputs(source_result_ids)
         out = build_transform(transform_type).apply([ti for _, ti in loaded], config)
         return {"rows": out.rows, "flags": out.flags}
 
-    async def apply(self, source_result_ids, transform_type, config, user_id, target_schema_id=None):
+    async def apply(self, source_result_ids: list[UUID], transform_type: str, config: dict, user_id: UUID, target_schema_id: UUID | None = None):
+        if not source_result_ids:
+            raise ValueError("source_result_ids must not be empty")
         loaded = await self._load_inputs(source_result_ids)
         primary, _ = loaded[0]
         out = build_transform(transform_type).apply([ti for _, ti in loaded], config)
