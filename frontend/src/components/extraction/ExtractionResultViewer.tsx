@@ -384,6 +384,7 @@ function parseUserContent(content: string): ParsedUserContent {
 
 const DEFAULT_MERGE_CONFIG: MergeRecordsConfig = {
   groupBy: [],
+  keyNormalize: { firstTokenOnly: false, stripTrailingLetters: [] },
   spine: { whereFieldsPresent: [] },
   conflict: 'prefer_spine',
   onGroupWithoutSpine: 'keep',
@@ -407,6 +408,7 @@ export function ExtractionResultViewer({
       transformType: 'merge_records',
       config: {
         groupBy: mergeConfig.groupBy,
+        keyNormalize: mergeConfig.keyNormalize,
         spine: mergeConfig.spine,
         conflict: mergeConfig.conflict,
         onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine,
@@ -421,6 +423,7 @@ export function ExtractionResultViewer({
       transformType: 'merge_records',
       config: {
         groupBy: mergeConfig.groupBy,
+        keyNormalize: mergeConfig.keyNormalize,
         spine: mergeConfig.spine,
         conflict: mergeConfig.conflict,
         onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine,
