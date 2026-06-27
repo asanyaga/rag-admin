@@ -284,6 +284,7 @@ export default function ExtractionPage(): JSX.Element {
                   onDeleteResult={deleteResult}
                   onExportResult={handleExportResult}
                   inProgressPhase={inProgressPhase}
+                  projectId={projectId ?? undefined}
                 />
               </div>
             </div>
