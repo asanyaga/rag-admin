@@ -10,8 +10,13 @@ from app.services.extraction.transforms.keys import normalize_key
 _META = "_provenance"
 
 
+def _is_empty(val) -> bool:
+    """Check if a value is considered empty (None, empty string, 0, or "0")."""
+    return val in (None, "", 0, "0")
+
+
 def _is_present(row: dict, fields: list[str]) -> bool:
-    return all(row.get(f) not in (None, "", 0) for f in fields)
+    return all(not _is_empty(row.get(f)) for f in fields)
 
 
 def _group_key(row: dict, group_by: list[str], norm_cfg: dict) -> str:
@@ -68,10 +73,10 @@ class MergeRecords:
                 for er, erid in enrich:
                     had_enrich = True
                     for k, v in er.items():
-                        if k == _META or v in (None, "", 0):
+                        if k == _META or _is_empty(v):
                             continue
                         cur = merged.get(k)
-                        if cur in (None, "", 0):
+                        if _is_empty(cur):
                             merged[k] = v
                             prov[k] = {"sourceResultId": erid, "sourcePage": er.get("sourcePage")}
                         elif cur != v and conflict == "first_non_null":
