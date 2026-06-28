@@ -23,3 +23,12 @@ class ExtractionResultTransform(Protocol):
     def transform_type(self) -> str: ...
 
     def apply(self, inputs: list[TransformInput], config: dict[str, Any]) -> TransformResult: ...
+
+
+class TransformValidationError(Exception):
+    """Raised by a primitive when config or input data fails structural validation."""
+
+    def __init__(self, code: str, detail: str):
+        self.code = code
+        self.detail = detail
+        super().__init__(f"{code}: {detail}")
