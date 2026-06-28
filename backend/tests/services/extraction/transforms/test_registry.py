@@ -25,3 +25,16 @@ def test_catalog_lists_normalize_field_with_config_schema():
 
 def test_build_normalize_field():
     assert build_transform("normalize_field").transform_type == "normalize_field"
+
+
+def test_catalog_lists_join_results_with_config_schema():
+    types = {t["transform_type"]: t for t in get_transforms()}
+    assert "join_results" in types
+    schema = types["join_results"]["config_schema"]
+    assert schema["type"] == "object"
+    assert "joinKey" in schema["properties"]
+    assert "joinType" in schema["properties"]
+
+
+def test_build_join_results():
+    assert build_transform("join_results").transform_type == "join_results"
