@@ -52,8 +52,10 @@ Downstream primitives (`strip_records`, `project_to_schema`) operate on `R_joine
 - `joinKey` — the field present in all input results used to match rows. Must exist in every result; validated before preview or apply.
 - `joinType` — `"left"` or `"inner"`.
   - `"left"`: all rows from the first (left) result are kept; rows with no match in a right result have that result's columns set to `null` and are flagged `unmatched`.
-  - `"inner"`: only rows with a matching row in every right result are kept.
+  - `"inner"`: only rows with a match in every right result are kept. Null-key left rows are still passed through and flagged `null_key` so the user can see and handle them in preview.
 - `resultIds` — ordered list of 2–5 result ids. The **first** id is the left (primary) result; the remaining are right (lookup) results. Order determines both join direction and output column order.
+
+**v1 constraint and forward path:** `joinKey` is a single field name in v1. Composite join keys (`joinKeys: string[]`) are anticipated as a future extension if a single key proves insufficient. Internally, matching treats `joinKey` as a single-element key tuple so the extension to N keys is additive — the API surface stays `joinKey: string` for v1; a future slice adds `joinKeys: string[]` as an alternative with both validated mutually exclusive.
 
 ### Output column order
 
@@ -72,10 +74,11 @@ The following conditions are checked during both `preview` and `apply`. If any c
 |---|---|
 | `joinKey` is absent from any input result's schema | `join_key_missing` — names the offending result(s) |
 | A non-join-key column name appears in 2+ input results | `column_conflict` — lists the conflicting column name(s) and which results contain them |
-| A right-side result has 2+ rows with the same `joinKey` value | `ambiguous_right_key` — names the result and the duplicated key value(s) |
 | `resultIds` contains fewer than 2 or more than 5 entries | `invalid_result_count` |
 
-These are hard errors. There is no automatic column renaming, no "keep first" fallback, and no silent data loss. The expected remedy is to fix the upstream extraction schemas so they are non-overlapping, or to add a `normalize_field` step upstream to rename the conflicting column before joining.
+These are hard errors. There is no automatic column renaming and no silent data loss. The expected remedy for `column_conflict` is to fix the upstream extraction schemas so they are non-overlapping, or to add a `normalize_field` step upstream to rename the conflicting column before joining.
+
+**Note:** a right-side result with duplicate `joinKey` values is not a hard error — it produces an `ambiguous_right` row flag (see below). The preview table surfaces it; the user decides whether to fix the upstream extraction or accept first-match behavior.
 
 ---
 
@@ -84,7 +87,8 @@ These are hard errors. There is no automatic column renaming, no "keep first" fa
 | Flag | Condition |
 |---|---|
 | `unmatched` | A left row's `joinKey` value had no matching row in one or more right results (`joinType: left` only). Right-side columns from the unmatched result(s) are `null`. |
-| `null_key` | A **left-result** row has a `null` value for `joinKey` (`joinType: left` only). The row is passed through with right-side columns `null` and flagged `null_key`. For `joinType: inner`, null-key left rows are excluded from output (consistent with inner join semantics — no match is possible). Right-side rows with a `null` `joinKey` are dead lookup entries that never match any left row; they produce no output row and no flag. |
+| `null_key` | A left-result row has a `null` value for `joinKey`. The row is passed through with right-side columns `null` and flagged `null_key` — for **both** `joinType: left` and `joinType: inner`. The row always appears in the output so the user can see and handle it in preview. Right-side rows with a `null` `joinKey` are dead lookup entries that never match; they produce no output row and no flag. |
+| `ambiguous_right` | A right result had 2+ rows with the same `joinKey` value; the first matching row's values were used. All left rows that matched this key are flagged. The user should inspect in preview and decide whether to fix the upstream extraction or accept first-match behavior. |
 
 Flags are attached to each output row (consistent with `merge_records` row-flag pattern) and are surfaced in the preview table's flag filter.
 
@@ -161,10 +165,10 @@ Both price rows match the single spec row on `series = "gp-30"`. The join key `s
 
 - **Config form:** `JoinResultsConfigForm.tsx`
   - Multi-select result picker for `resultIds` with drag-to-reorder (first = left/primary; visual label "Primary" vs "Lookup").
-  - `joinKey` field selector: text input, ideally with a dropdown populated from the intersection of all selected results' fields.
+  - `joinKey` field selector: text input, ideally with a dropdown populated from the intersection of all selected results' fields. Labelled as single-key for v1; composite key support is a future extension.
   - `joinType` radio: `left` (default) / `inner`.
   - Inline validation: surface `column_conflict` and `join_key_missing` errors as the user selects results, before they hit Preview.
-- **Preview table:** flag chips (`unmatched`, `null_key`) per row; source coloring per cell (which input result the value came from); filter/sort by flag.
+- **Preview table:** flag chips (`unmatched`, `null_key`, `ambiguous_right`) per row; source coloring per cell (which input result the value came from); filter/sort by flag. `ambiguous_right` chip should link to the right-side result and the duplicated key value to help the user diagnose the upstream extraction.
 - **Transform menu:** `join_results` added to the `Transform ▾` primitive selector in `ExtractionResultViewer`.
 - **`config_schema`:** registry entry includes a JSON Schema object for generic form generation.
 
@@ -178,12 +182,12 @@ Both price rows match the single spec row on `series = "gp-30"`. The join key `s
 4. **Validation errors (returned by both preview and apply, nothing persisted):**
    - `join_key_missing` when `joinKey` is absent from any input result's schema.
    - `column_conflict` when a non-join-key column name appears in 2+ input results.
-   - `ambiguous_right_key` when any right result has 2+ rows with the same `joinKey` value.
    - `invalid_result_count` when `resultIds` has fewer than 2 or more than 5 entries.
 5. `joinType: left` — all left rows appear in the output; rows with no match in a right result have that result's columns set to `null` and are flagged `unmatched`.
-6. `joinType: inner` — only rows with a match in every right result appear in the output; unmatched left rows are excluded entirely.
-7. Any row in any result with a `null` `joinKey` value is passed through with right-side columns `null` and flagged `null_key`, regardless of `joinType`.
-8. Provenance per cell: left-result cells carry their original `{sourceResultId, sourcePage}`; right-result cells carry the matched row's `{sourceResultId, sourcePage}`; `null`-filled cells carry `{sourceResultId: null, sourcePage: null}`.
-9. Worked example: R_price (sku, model, series, price) joined with R_spec (series, height, width, weight) on `series`, `joinType: left`, produces R_joined with all 7 columns and both price rows enriched with the single matching spec row.
-10. Unmatched and null-key rows produce the correct output and flags as shown in the second worked example.
-11. `JoinResultsConfigForm` renders result multi-select with drag-reorder, `joinKey` field input, `joinType` radio; `column_conflict` and `join_key_missing` errors are surfaced before Preview. Preview table shows flag chips and source coloring.
+6. `joinType: inner` — only rows with a match in every right result appear in the output, except null-key left rows (see AC 7).
+7. A left-result row with a `null` `joinKey` value is passed through with right-side columns `null` and flagged `null_key` for **both** `joinType: left` and `joinType: inner`. It always appears in the output.
+8. A right result with 2+ rows sharing the same `joinKey` value is not a hard error. The first matching row is used; all left rows that matched that key are flagged `ambiguous_right`.
+9. Provenance per cell: left-result cells carry their original `{sourceResultId, sourcePage}`; right-result cells carry the matched row's `{sourceResultId, sourcePage}`; `null`-filled cells carry `{sourceResultId: null, sourcePage: null}`.
+10. Worked example: R_price (sku, model, series, price) joined with R_spec (series, height, width, weight) on `series`, `joinType: left`, produces R_joined with all 7 columns and both price rows enriched with the single matching spec row.
+11. Unmatched, null-key, and ambiguous_right rows produce the correct output and flags as shown in the worked examples.
+12. `JoinResultsConfigForm` renders result multi-select with drag-reorder, `joinKey` field input, `joinType` radio; `column_conflict` and `join_key_missing` errors are surfaced before Preview. Preview table shows `unmatched`, `null_key`, and `ambiguous_right` flag chips with source coloring; `ambiguous_right` chip identifies the right-side result and duplicated key value.
