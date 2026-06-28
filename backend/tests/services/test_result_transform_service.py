@@ -1,7 +1,7 @@
 # backend/tests/services/test_result_transform_service.py
 import pytest
 from uuid import uuid4
-from app.services.result_transform_service import ResultTransformService
+from app.services.result_transform_service import ResultTransformService, _extract_rows
 from app.services.exceptions import NotFoundError
 
 
@@ -72,3 +72,34 @@ async def test_missing_source_raises():
     svc = ResultTransformService(result_repo=_Repo([]))
     with pytest.raises(NotFoundError):
         await svc.preview([uuid4()], "merge_records", CFG)
+
+
+# --- _extract_rows unit tests -----------------------------------------------
+
+def test_extract_rows_uses_records_key():
+    rows = [{"a": 1}]
+    assert _extract_rows({"records": rows}, {}) == rows
+
+
+def test_extract_rows_uses_schema_array_field():
+    rows = [{"modelName": "GP-40"}]
+    schema = {"properties": {"items": {"type": "array", "items": {}}}}
+    result = _extract_rows({"items": rows}, schema)
+    assert result == rows
+
+
+def test_extract_rows_prefers_records_over_schema_array():
+    records = [{"x": 1}]
+    items = [{"y": 2}]
+    schema = {"properties": {"items": {"type": "array", "items": {}}}}
+    assert _extract_rows({"records": records, "items": items}, schema) == records
+
+
+def test_extract_rows_fallback_to_first_list_of_dicts():
+    rows = [{"z": 3}]
+    assert _extract_rows({"data": rows}, {}) == rows
+
+
+def test_extract_rows_returns_empty_for_empty_data():
+    assert _extract_rows(None, {}) == []
+    assert _extract_rows({}, {}) == []
