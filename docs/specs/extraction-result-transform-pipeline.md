@@ -132,9 +132,8 @@ Every primitive operates on each result's `structured_data` (the rows array) and
 
 | `transform_type` | Inputs | Job |
 |---|---|---|
-| `strip_field_tokens` | 1 | Remove regex matches from a field (e.g. strip `\d+/\d+/\d+` from `modelName`); write in place or to a new field |
-| `derive_field` | 1 | Compute a field from another via rules (e.g. `baseModel` from `modelName`: strip power token, strip trailing option letters, apply aliases) |
-| `merge_records` | 1..N | Group rows by key field(s); collapse non-spine rows into spine rows; configurable conflict policy (the base↔variant / cross-run merge) |
+| `normalize_field` | 1 | Normalize a source field via a rule chain, writing the result to a new named column. The resulting `ExtractionResult` (with the added column) is the input for downstream transforms that assume pre-normalized reference fields (e.g. `merge_records groupBy`). Source field is never mutated. |
+| `merge_records` | 1..N | Group rows by key field(s); collapse non-spine rows into spine rows; configurable conflict policy (the base↔variant / cross-run merge). Expects fields to already be normalized — normalization is a pre-step via `normalize_field`. |
 | `strip_records` | 1 | Drop rows matching a predicate (e.g. leftover spec-only rows; null-SKU rows) |
 | `dedupe_records` | 1 | Drop duplicate rows by key |
 | `broadcast_field` | 1 | Fill a field across rows (e.g. `brand`) from a single value or the group's mode |
@@ -151,7 +150,6 @@ Covers both worked scenarios ("collapse the no-SKU row into the SKU row" and "me
 {
   "groupBy": ["baseModel"],
   "spine": { "whereFieldsPresent": ["sku"] },
-  "collapseInto": "spine",
   "conflict": "prefer_spine",
   "onGroupWithoutSpine": "keep"
 }
@@ -159,12 +157,91 @@ Covers both worked scenarios ("collapse the no-SKU row into the SKU row" and "me
 
 All field references in the config — `groupBy`, `spine.whereFieldsPresent` — are **arbitrary user-selected fields**, nothing hardcoded; `baseModel`/`sku` are merely this fixture's choices. Another project might group by `partNumber` and spine on `unitPrice`.
 
+**Empty/absent value definition:** a field is considered absent if its value is `null`, `""`, `0`, or `"0"`. This applies to both spine detection (`whereFieldsPresent`) and fill-from-non-spine logic.
+
 Behavior, per group:
-1. Output records = **spine** rows (those with `spine.whereFieldsPresent` non-null — the selected identity field(s), e.g. `sku` here).
-2. Fill each spine row's null fields from the group's non-spine rows; if both non-null and unequal, resolve by `conflict` (`prefer_spine` | `first_non_null` | `prefer_enrichment`) and record a `conflict` flag.
-3. A group with **no** spine row → keep its rows as standalone records (`keep`) or drop (`drop`).
-4. Pool spans **all input results**, so a price-only result + a spec-only result merge exactly like one mixed result.
-5. Provenance per surviving field = the source row's `{sourceResultId, sourcePage}`.
+0. A row whose every `groupBy` field is absent (by the definition above) cannot be grouped — it is output as-is with an `unjoinable` flag and excluded from all groups.
+1. Output records = **spine** rows (those where all `spine.whereFieldsPresent` fields are non-absent).
+2. Fill each spine row's absent fields from the group's non-spine rows; if both are non-absent and unequal, resolve by `conflict` (`prefer_spine` | `first_non_null`) and record a `conflict` flag. `prefer_spine` keeps the spine value; `first_non_null` also keeps the first non-absent value seen (which is the spine value, since it was processed first).
+3. A spine row that had no non-spine rows merge into it (i.e. no records contributed additional field values to it) is flagged `not_enriched`.
+4. A group with **no** spine row → keep its rows as standalone records (`keep`, flagged `no_spine`) or drop (`drop`).
+5. Pool spans **all input results**, so a price-only result + a spec-only result merge exactly like one mixed result.
+6. Provenance per surviving field = the source row's `{sourceResultId, sourcePage}`; updated when a field is filled from a non-spine row.
+
+---
+
+## Key primitive: `normalize_field`
+
+> **Design note (emerged during Slice 1):** `strip_field_tokens` (in-place field cleanup) and `derive_field` (compute new column from another) were originally two distinct primitives. Implementation revealed they serve the same purpose: produce a normalized version of a field for downstream consumption. Merged into `normalize_field`. The rule vocabulary below is unchanged. `merge_records` no longer does any inline normalization — it takes field names as-is and expects upstream `normalize_field` steps to have already produced the reference columns it groups by.
+
+`normalize_field` applies an ordered list of **rules** to a source field, writing the result to a **new named column** on every row. The source field is never mutated. The output is a new `ExtractionResult` with all original columns plus the new one — the starting point for any downstream transform that references that column.
+
+### Architectural pattern
+
+```
+R_n  (extraction result with raw fields)
+ │  normalize_field  outputField ← sourceField  (rule chain)
+ ▼
+R_n+1  all original fields preserved + new outputField column on every row
+ │  merge_records  groupBy: [outputField]  (field name taken as-is; no inline normalization)
+ ▼
+R_n+2  collapsed records
+```
+
+Downstream transforms (`merge_records`, future `merge_results`) only reference field names. They assume the column they are told to group or join on already contains the right value. Normalization is always a separate, explicit, inspectable step before them.
+
+### Rule vocabulary
+
+| Rule type | Config keys | What it does |
+|---|---|---|
+| `trim` | `chars?: string` | Strip leading/trailing whitespace (default) or any chars in `chars`. Almost always the first rule. |
+| `collapseWhitespace` | — | Collapse internal runs of whitespace (including ` `, `\t`, `\n`) to a single space. Fixes silent groupBy mismatches from multi-line extraction. |
+| `lowercase` / `uppercase` / `titlecase` | — | Normalize case. Apply before any pattern-based rule so patterns match predictably. |
+| `stripRegex` | `pattern: string` | Remove all substrings matching the regex. E.g. `"\\s+\\d+/\\d+/\\d+"` removes the power token from `"GP-40B 230/50/1 DD"`. |
+| `stripTrailingChars` | `chars: string[]` | Remove any trailing characters that are members of `chars` (applied repeatedly until stable). E.g. `["B","D","S","C"]` collapses `"GP-40B"` → `"GP-40"`. |
+| `stripPrefix` | `prefix: string` | Remove a fixed known prefix. E.g. `"Model: "` on `"Model: GP-40"` → `"GP-40"`. Simpler UX than regex for non-technical users. |
+| `stripSuffix` | `suffix: string` | Remove a fixed known suffix. |
+| `split` | `delimiter: string`, `index: int` | Split on `delimiter` and return the token at `index`. `split(" ", 0)` on `"GP-40B 230/50/1 DD"` → `"GP-40B"`. Friendlier than regex for token-based extraction. |
+| `regexExtract` | `pattern: string`, `group?: string\|int` | Return the first match (or the named/indexed capture group) rather than removing it. E.g. `"(\\d+\\.?\\d*)"` on `"1500W"` → `"1500"`. Use when you need a sub-value, not a cleaned whole. |
+| `replace` | `find: string`, `replacement: string` | Literal string substitution. Maps known noise (`"—"` → `""`, `"&amp;"` → `"&"`). Not regex. |
+| `alias` | `map: Record<string,string>` | After all stripping, apply an exact-match lookup map. The designated escape hatch for cases rule-based stripping cannot safely reach. `{"UX-50L": "UX-50 LITE"}` — applied last so the key is the already-stripped value. |
+| `nullifyIfIn` | `values: string[]` | If the current value (after prior rules) exactly matches any entry, set field to `null`. Sentinel cleanup at the field level: `["N/A", "-", "0", ""]`. Lighter than the whole-result `coalesce_sentinels` primitive. |
+
+**Rule application order guidance** (the config form should nudge this):
+
+```
+trim → collapseWhitespace → lowercase/case → [stripRegex | split | regexExtract | replace | stripPrefix/Suffix | stripTrailingChars] → alias → nullifyIfIn
+```
+
+Normalize before you extract; alias last so the lookup key is already clean.
+
+---
+
+### Config
+
+```json
+{
+  "sourceField": "modelName",
+  "outputField": "baseModel",
+  "rules": [
+    { "type": "trim" },
+    { "type": "collapseWhitespace" },
+    { "type": "stripRegex", "pattern": "\\s+\\d+/\\d+/\\d+" },
+    { "type": "stripTrailingChars", "chars": ["B", "D", "S", "C"] },
+    { "type": "alias", "map": { "UX-50L": "UX-50 LITE" } }
+  ]
+}
+```
+
+- `sourceField` — the field to read. Never mutated.
+- `outputField` — the new column written on every row. The preview table flags collisions with existing schema fields the human intends to keep.
+- `rules` — ordered list of rule objects (each has `"type"` plus rule-specific keys). Rules execute in declaration order on the string produced by the previous rule.
+
+Behavior: if `sourceField` is `null`, `outputField` is set to `null`.
+
+**Why `alias` is last:** by the time `alias` runs, stripping has already produced the canonical short form. The map key is therefore the post-strip value (`"UX-50L"`, not `"UX-50L 230/50/1 DD"`).
+
+**Why `L` is excluded from `stripTrailingChars`:** `UX-50L` is a model line (`→ UX-50 LITE`), not a variant suffix. Stripping `L` would wrongly collapse it into the bare `UX-50`. The `alias` map is the correct tool; `stripTrailingChars` handles only the option-letter suffixes (`B`, `D`, `S`, `C`) that are always variant codes, never model-line markers.
 
 ---
 
@@ -174,7 +251,7 @@ The human discovers this sequence interactively; it is not pre-declared:
 
 ```
 R0  (raw extraction: mixed spec + price rows; modelName e.g. "GP-40B 230/50/1 DD")
- │ derive_field  baseModel ← modelName  (stripPowerToken, stripTrailingLetters[B,D,S,C], aliases{UX-50L→UX-50 LITE})
+ │ normalize_field  baseModel ← modelName  (trim, stripRegex[powerToken], stripTrailingChars[B,D,S,C], alias{UX-50L→UX-50 LITE})
  ▼
 R1  every row now has baseModel ("GP-40", "GP-40", … ; "GP-40" for the spec row)
  │ merge_records  groupBy[baseModel], spine=has sku, conflict=prefer_spine, onGroupWithoutSpine=keep
@@ -229,7 +306,7 @@ Pattern: extend the existing result viewer; shadcn/ui + Tailwind; one hook per f
 - `TransformConfigPanel.tsx` — edit config; **Preview** calls `/preview`.
 - `TransformPreviewTable.tsx` — the rich result grid:
   - **source coloring** per cell (which source result / row supplied the value),
-  - **flag chips** per row (`conflict`, `unjoinable`, `no_specs`, `edited`),
+  - **flag chips** per row (`conflict`, `unjoinable`, `no_spine`, `not_enriched`, `edited`),
   - **filter/sort by flag**,
   - **provenance popover** per cell (source page number(s) + confidence; disabled "view in page" affordance for later wiring),
   - **merge inspector** — expand a record to see the spine row + the rows merged into it (spot bad merges).
@@ -244,22 +321,35 @@ Pattern: extend the existing result viewer; shadcn/ui + Tailwind; one hook per f
 1. `ExtractionResultTransform` port + registry exist; `build_transform` resolves a primitive; `get_transforms` returns the catalog with `config_schema`.
 2. Applying a primitive is **non-destructive**: inputs are unchanged; output is a new `ExtractionResult` whose `extraction_metadata.lineage` records `sourceResultIds` + `{type, config}`.
 3. `preview` returns the resulting rows + flags + provenance **without** persisting; `apply` persists.
-4. `strip_field_tokens` removes a regex (e.g. `\d+/\d+/\d+`) from a field.
-5. `derive_field` produces `baseModel` via stripPowerToken + stripTrailingLetters + aliases; `UX-50L → UX-50 LITE` (never bare `UX-50`).
-6. `merge_records` groups by key, collapses non-spine rows into spine rows (`whereFieldsPresent: ["sku"]`), resolves conflicts by policy (`prefer_spine`), and keeps/drops spine-less groups per config — across one **or multiple** input results identically.
-7. `broadcast_field` fills `brand` where null.
-8. `strip_records` / `project_to_schema` drop rows by predicate / restrict to target columns.
-9. Provenance `{sourceResultId, sourcePage}` is preserved through every primitive; a record exposes the union of its fields' pages.
-10. Applying the worked sequence (derive → merge → broadcast → strip_records → project) to the Sammic CSV fixture yields one record per saleable SKU with inherited specs (GP-40 → 4 records); Electrolux co-located rows pass through needing only a trivial sequence.
-11. A result's `/lineage` reconstructs its derivation chain; the UI shows the history and lets the user branch.
-12. UI: view a result → pick a primitive → edit config (from `config_schema`) → preview (with source coloring, flag filter, provenance popover, merge inspector) → apply → land on the new result.
+4. `normalize_field` applies a rule chain to `sourceField`, writes the result to a new `outputField` column on every row, and returns a new `ExtractionResult` with all original columns plus `outputField`. `sourceField` is never mutated. If `sourceField` is null, `outputField` is null.
+5. `merge_records groupBy` references field names as-is; it performs no normalization. Pre-normalized fields produced by a prior `normalize_field` step are the expected input.
+6. Rule vocabulary executes correctly in isolation and in composition (rules execute in declaration order):
+   - `trim` strips leading/trailing whitespace (default) or specified `chars`.
+   - `collapseWhitespace` collapses internal whitespace runs to a single space.
+   - `lowercase` / `uppercase` / `titlecase` normalize case.
+   - `stripRegex` removes all matches of `pattern` (e.g. `"\\s+\\d+/\\d+/\\d+"` removes the power token from `"GP-40B 230/50/1 DD"` → `"GP-40B"`).
+   - `stripTrailingChars` repeatedly removes trailing chars in `chars` until stable.
+   - `stripPrefix` / `stripSuffix` remove a fixed string from start/end.
+   - `split` splits on `delimiter` and returns token at `index`.
+   - `regexExtract` returns the first match or the named/indexed capture group.
+   - `replace` substitutes `find` with `replacement` (literal, not regex).
+   - `alias` applies an exact-match lookup map on the current value after prior rules.
+   - `nullifyIfIn` sets the field to null if the current value is in `values`.
+7. `normalize_field` on `modelName` → `baseModel` with rules `[trim, stripRegex(powerToken), stripTrailingChars([B,D,S,C]), alias({UX-50L: UX-50 LITE})]` produces correct base keys: `"GP-40B 230/50/1 DD"` → `"GP-40"`, `"UX-50L 230/50/1"` → `"UX-50 LITE"` (never `"UX-50"`).
+8. `merge_records` groups by key, collapses non-spine rows into spine rows (`whereFieldsPresent: ["sku"]`), resolves conflicts by policy (`prefer_spine` | `first_non_null`), and keeps/drops spine-less groups per config — across one **or multiple** input results identically. Rows with no non-absent `groupBy` values are flagged `unjoinable` and passed through ungrouped. Spine rows that had no non-spine rows contribute additional field values to them are flagged `not_enriched`.
+9. `broadcast_field` fills `brand` where null.
+10. `strip_records` / `project_to_schema` drop rows by predicate / restrict to target columns.
+11. Provenance `{sourceResultId, sourcePage}` is preserved through every primitive; a record exposes the union of its fields' pages.
+12. Applying the worked sequence (normalize_field → merge_records → broadcast_field → strip_records → project_to_schema) to the Sammic CSV fixture yields one record per saleable SKU with inherited specs (GP-40 → 4 records); Electrolux co-located rows pass through needing only a trivial sequence.
+13. A result's `/lineage` reconstructs its derivation chain; the UI shows the history and lets the user branch.
+14. UI: view a result → pick a primitive → edit config (from `config_schema`) → preview (with source coloring, flag filter, provenance popover, merge inspector) → apply → land on the new result.
 
 ## Delivery — Vertical Slices (one primitive per slice, each end-to-end)
 
 Each slice ships backend + frontend + tests and is independently demoable. Slice 1 carries the shared rails (port, registry, `apply`/`preview`/`catalog` API, the result-viewer transform action + preview table, lineage metadata); later slices are thin increments that add one primitive + its config form + tests.
 
-- **Slice 1 — Merge a single-shot result to one record per selected identity field** (`merge_records`, incl. shared rails). The current concrete problem: a master-schema extraction whose base rows must collapse into the identity-bearing rows. The group key and the spine/identity field(s) are **user-selected config** (this fixture uses model as the group key and `sku` as the identity field, but both are selectable). `merge_records` groups by a normalized key (`groupBy` accepts inline normalization — trim/casefold/regex strip of power token + option letters `{B,D,S,C}`), spine = rows where the selected identity field is present, `conflict: prefer_spine`. **Acceptance:** the GP-40 / GP-35 / GP-50 / AX-40 families in `price list_2f0e0d93.csv` each collapse to one record per priced SKU with inherited specs; Electrolux co-located rows pass through. (Model-line alias cases like `UX-50L → UX-50 LITE` are explicitly Slice 2.)
-- **Slice 2 — Derive / strip a field** (`derive_field`, `strip_field_tokens`): explicit, inspectable derived key columns + alias maps for cases inline normalization can't reach (`UX-50L → UX-50 LITE`).
+- **Slice 1 — Merge a single-shot result to one record per selected identity field** (`merge_records`, incl. shared rails). The current concrete problem: a master-schema extraction whose base rows must collapse into the identity-bearing rows. The group key and the spine/identity field(s) are **user-selected config** (this fixture uses model as the group key and `sku` as the identity field, but both are selectable). `merge_records groupBy` takes field names as-is — it assumes any normalization has already been applied by an upstream `normalize_field` step. Spine = rows where the selected identity field is present, `conflict: prefer_spine`. **Acceptance:** the GP-40 / GP-35 / GP-50 / AX-40 families in `price list_2f0e0d93.csv` each collapse to one record per priced SKU with inherited specs (using a pre-normalized groupBy field); Electrolux co-located rows pass through. (The `normalize_field` step that produces the groupBy key is Slice 2.)
+- **Slice 2 — Normalize a field to a new column** (`normalize_field`): a composable rule chain (`trim`, `collapseWhitespace`, `lowercase`/`uppercase`/`titlecase`, `stripRegex`, `stripTrailingChars`, `stripPrefix`, `stripSuffix`, `split`, `regexExtract`, `replace`, `alias`, `nullifyIfIn`) applied to a `sourceField`, written to a new `outputField` column. Source is never mutated. The output `ExtractionResult` (with the new column) feeds downstream transforms that assume pre-normalized reference fields. **Acceptance:** `normalize_field` on `modelName` → `baseModel` with stripRegex (power token) + stripTrailingChars `[B,D,S,C]` + alias `{UX-50L → UX-50 LITE}` produces the correct base keys; `UX-50L` is never collapsed to `UX-50`; all rules execute correctly in isolation and in composition; `sourceField: null` → `outputField: null`; config form driven by `config_schema`.
 - **Slice 3 — Broadcast a field** (`broadcast_field`): propagate `brand`/vendor where null (e.g. spec-only standalone rows).
 - **Slice 4 — Prune to target shape** (`strip_records`, `project_to_schema`): drop merged-away rows; restrict to target columns; export the result via the existing path.
 - **Slice 5 — Cross-run merge** (multi-select inputs): merge a price-only result with a spec-only result — `merge_records` over N inputs plus the multi-select UX.

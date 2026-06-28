@@ -5,6 +5,6 @@ import { TransformPreviewTable } from './TransformPreviewTable'
 it('renders a flag chip for a flagged row', () => {
   render(<TransformPreviewTable
     rows={[{ sku: 'X', modelName: 'GP-40' }]}
-    flags={[{ rowIndex: 0, flag: 'no_specs' }]} />)
-  expect(screen.getByText('no_specs')).toBeInTheDocument()
+    flags={[{ rowIndex: 0, flag: 'not_enriched' }]} />)
+  expect(screen.getByText('not_enriched')).toBeInTheDocument()
 })

@@ -2,7 +2,7 @@
 """merge_records: group rows by exact field values; collapse non-spine rows into spine rows.
 
 Assumes groupBy fields are already normalized upstream (e.g. via a derive_field transform).
-Flags emitted: unjoinable, no_spine, no_specs, conflict.
+Flags emitted: unjoinable, no_spine, not_enriched, conflict.
 """
 from __future__ import annotations
 
@@ -89,7 +89,7 @@ class MergeRecords:
                 merged[_META] = prov
                 out_rows.append(merged)
                 if not had_enrich:
-                    flags.append({"rowIndex": idx, "flag": "no_specs"})
+                    flags.append({"rowIndex": idx, "flag": "not_enriched"})
 
         return TransformResult(rows=out_rows, flags=flags)
 
