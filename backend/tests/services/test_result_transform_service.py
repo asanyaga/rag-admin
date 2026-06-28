@@ -36,11 +36,10 @@ class _Repo:
         return obj
 
 
-CFG = {"groupBy": ["modelName"], "keyNormalize": {"firstTokenOnly": True, "stripTrailingLetters": ["B"]},
-       "spine": {"whereFieldsPresent": ["sku"]}}
+CFG = {"groupBy": ["productFamily"], "spine": {"whereFieldsPresent": ["sku"]}}
 ROWS = [
-    {"sku": None, "modelName": "GP-40", "widthMm": 470, "sourcePage": "Page 6"},
-    {"sku": "1303050", "modelName": "GP-40 230/50/1", "listPrice": 1908, "sourcePage": "Page 7"},
+    {"sku": None, "productFamily": "GP-40", "modelName": "GP-40", "widthMm": 470, "sourcePage": "Page 6"},
+    {"sku": "1303050", "productFamily": "GP-40", "modelName": "GP-40 230/50/1", "listPrice": 1908, "sourcePage": "Page 7"},
 ]
 
 
