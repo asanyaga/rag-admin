@@ -46,3 +46,9 @@ export interface NormalizeFieldEntry {
 export interface NormalizeFieldConfig {
   fields: NormalizeFieldEntry[]
 }
+
+export interface JoinResultsConfig {
+  joinKey: string
+  joinType: 'left' | 'inner'
+  lookupResultIds: string[]
+}
