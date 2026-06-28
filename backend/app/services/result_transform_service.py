@@ -11,6 +11,35 @@ from app.services.extraction.transforms.registry import build_transform
 _RECORDS_KEY = "records"
 
 
+def _extract_rows(structured_data: dict | None, schema_snapshot: dict | None) -> list[dict]:
+    """Find the tabular row list from an extraction result's structured_data.
+
+    Priority:
+    1. Explicit 'records' key — written by a prior transform.
+    2. Single array field in the schema — raw extraction output.
+    3. First list-of-dicts value in the data — best-effort fallback.
+    """
+    data = structured_data or {}
+    if _RECORDS_KEY in data:
+        return data[_RECORDS_KEY]
+
+    properties = (schema_snapshot or {}).get("properties", {})
+    array_fields = [
+        k for k, v in properties.items()
+        if isinstance(v, dict) and v.get("type") == "array"
+    ]
+    if len(array_fields) == 1:
+        val = data.get(array_fields[0], [])
+        if isinstance(val, list):
+            return [r for r in val if isinstance(r, dict)]
+
+    for v in data.values():
+        if isinstance(v, list) and v and isinstance(v[0], dict):
+            return v
+
+    return []
+
+
 class ResultTransformService:
     def __init__(self, result_repo):
         self.result_repo = result_repo
@@ -21,7 +50,7 @@ class ResultTransformService:
             result = await self.result_repo.get_by_id(rid)
             if result is None:
                 raise NotFoundError(f"Extraction result {rid} not found")
-            rows = (result.structured_data or {}).get(_RECORDS_KEY, [])
+            rows = _extract_rows(result.structured_data, result.schema_definition_snapshot)
             loaded.append((result, TransformInput(rows=rows, source_result_id=str(rid))))
         return loaded
 

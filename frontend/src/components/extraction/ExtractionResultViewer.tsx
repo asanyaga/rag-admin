@@ -33,9 +33,18 @@ import { ChevronDown, Download, Loader2, Wand2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { exportResultToCsv } from '@/lib/exportCsv'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useResultTransform } from '@/hooks/useResultTransform'
 import { MergeRecordsConfigForm } from './transforms/MergeRecordsConfigForm'
 import type { MergeRecordsConfig } from './transforms/MergeRecordsConfigForm'
+import { NormalizeFieldConfigForm } from './transforms/NormalizeFieldConfigForm'
+import type { NormalizeFieldConfig } from '@/types/resultTransform'
 import { TransformPreviewTable } from './transforms/TransformPreviewTable'
 
 interface ExtractionResultViewerProps {
@@ -389,6 +398,10 @@ const DEFAULT_MERGE_CONFIG: MergeRecordsConfig = {
   onGroupWithoutSpine: 'keep',
 }
 
+const DEFAULT_NORMALIZE_CONFIG: NormalizeFieldConfig = {
+  fields: [{ sourceField: '', outputField: '', rules: [] }],
+}
+
 export function ExtractionResultViewer({
   result,
   isLoading,
@@ -397,35 +410,27 @@ export function ExtractionResultViewer({
 }: ExtractionResultViewerProps) {
   const navigate = useNavigate()
   const [transformOpen, setTransformOpen] = useState(false)
+  const [transformType, setTransformType] = useState<'normalize_field' | 'merge_records'>('normalize_field')
+  const [normalizeConfig, setNormalizeConfig] = useState<NormalizeFieldConfig>(DEFAULT_NORMALIZE_CONFIG)
   const [mergeConfig, setMergeConfig] = useState<MergeRecordsConfig>(DEFAULT_MERGE_CONFIG)
   const transform = useResultTransform(projectId ?? '')
 
   const handlePreview = async () => {
     if (!result) return
-    await transform.preview({
-      sourceResultIds: [result.id],
-      transformType: 'merge_records',
-      config: {
-        groupBy: mergeConfig.groupBy,
-        spine: mergeConfig.spine,
-        conflict: mergeConfig.conflict,
-        onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine,
-      },
-    })
+    const config =
+      transformType === 'normalize_field'
+        ? (normalizeConfig as unknown as Record<string, unknown>)
+        : { groupBy: mergeConfig.groupBy, spine: mergeConfig.spine, conflict: mergeConfig.conflict, onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine }
+    await transform.preview({ sourceResultIds: [result.id], transformType, config })
   }
 
   const handleApply = async () => {
     if (!result) return
-    const derived = await transform.apply({
-      sourceResultIds: [result.id],
-      transformType: 'merge_records',
-      config: {
-        groupBy: mergeConfig.groupBy,
-        spine: mergeConfig.spine,
-        conflict: mergeConfig.conflict,
-        onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine,
-      },
-    })
+    const config =
+      transformType === 'normalize_field'
+        ? (normalizeConfig as unknown as Record<string, unknown>)
+        : { groupBy: mergeConfig.groupBy, spine: mergeConfig.spine, conflict: mergeConfig.conflict, onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine }
+    const derived = await transform.apply({ sourceResultIds: [result.id], transformType, config })
     setTransformOpen(false)
     navigate(`/extraction?resultId=${derived.id}`)
   }
@@ -482,7 +487,7 @@ export function ExtractionResultViewer({
             <CardTitle className="text-base">Extraction Result</CardTitle>
             <div className="flex items-center gap-2">
               {result.status === 'completed' && projectId && (
-                <Dialog open={transformOpen} onOpenChange={(open) => { setTransformOpen(open); if (!open) setMergeConfig(DEFAULT_MERGE_CONFIG); }}>
+                <Dialog open={transformOpen} onOpenChange={(open) => { setTransformOpen(open); if (!open) { setTransformType('normalize_field'); setNormalizeConfig(DEFAULT_NORMALIZE_CONFIG); setMergeConfig(DEFAULT_MERGE_CONFIG) } }}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
                       <Wand2 className="h-3.5 w-3.5" />
@@ -491,10 +496,26 @@ export function ExtractionResultViewer({
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Merge Records Transform</DialogTitle>
+                      <DialogTitle>Transform Result</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
-                      <MergeRecordsConfigForm value={mergeConfig} onChange={setMergeConfig} />
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">Transform type</label>
+                        <Select value={transformType} onValueChange={(v) => setTransformType(v as typeof transformType)}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="normalize_field">Normalize field</SelectItem>
+                            <SelectItem value="merge_records">Merge records</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {transformType === 'normalize_field' ? (
+                        <NormalizeFieldConfigForm value={normalizeConfig} onChange={setNormalizeConfig} />
+                      ) : (
+                        <MergeRecordsConfigForm value={mergeConfig} onChange={setMergeConfig} />
+                      )}
                       {transform.error && (
                         <p className="text-sm text-destructive">{transform.error}</p>
                       )}
