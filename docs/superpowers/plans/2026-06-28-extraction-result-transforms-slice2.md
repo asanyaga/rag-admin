@@ -4,7 +4,7 @@
 
 **Goal:** Ship the `normalize_field` transform end-to-end — a composable rule chain that reads a source field, applies normalization rules in order, and writes the result to a new output column — plus the frontend config form and transform-type selector in the viewer.
 
-**Architecture:** A pure-function `NormalizeField` class under `app/services/extraction/transforms/` with a `_apply_rules` helper (stateless, no I/O); the existing registry, service, router, and API are untouched except to register the new primitive. The frontend extends the existing `Transform` dialog with a type selector and a new `NormalizeFieldConfigForm`. GitHub issue: #[TBD — create before starting].
+**Architecture:** A pure-function `NormalizeField` class under `app/services/extraction/transforms/` with a `_apply_rules` helper (stateless, no I/O); the existing registry, service, router, and API are untouched except to register the new primitive. The frontend extends the existing `Transform` dialog with a type selector and a new `NormalizeFieldConfigForm`. GitHub issue: #123.
 
 **Tech Stack:** Python 3.12, pytest; React 18, TypeScript, Vite, shadcn/ui, Tailwind, vitest.
 
@@ -366,7 +366,7 @@ Expected: all PASS
 
 ```bash
 git add backend/app/services/extraction/transforms/normalize_field.py backend/tests/services/extraction/transforms/test_normalize_field.py
-git commit -m "feat(transforms): normalize_field primitive with full rule vocabulary (#[issue])"
+git commit -m "feat(transforms): normalize_field primitive with full rule vocabulary (#123)"
 ```
 
 ---
@@ -504,7 +504,7 @@ Expected: all PASS (including existing merge_records and base tests)
 
 ```bash
 git add backend/app/services/extraction/transforms/registry.py backend/tests/services/extraction/transforms/test_registry.py
-git commit -m "feat(transforms): register normalize_field in catalog (#[issue])"
+git commit -m "feat(transforms): register normalize_field in catalog (#123)"
 ```
 
 ---
@@ -564,7 +564,7 @@ Expected: clean build (no TypeScript errors)
 
 ```bash
 git add frontend/src/types/resultTransform.ts
-git commit -m "feat(transforms): NormalizeFieldConfig + NormalizeFieldRule types (#[issue])"
+git commit -m "feat(transforms): NormalizeFieldConfig + NormalizeFieldRule types (#123)"
 ```
 
 ---
@@ -868,7 +868,7 @@ Expected: clean.
 
 ```bash
 git add frontend/src/components/extraction/transforms/NormalizeFieldConfigForm.tsx frontend/src/components/extraction/transforms/NormalizeFieldConfigForm.test.tsx
-git commit -m "feat(transforms): NormalizeFieldConfigForm with full rule vocabulary (#[issue])"
+git commit -m "feat(transforms): NormalizeFieldConfigForm with full rule vocabulary (#123)"
 ```
 
 ---
@@ -1015,7 +1015,7 @@ Expected: all PASS
 
 ```bash
 git add frontend/src/components/extraction/ExtractionResultViewer.tsx
-git commit -m "feat(transforms): transform type selector in viewer; wire normalize_field (#[issue])"
+git commit -m "feat(transforms): transform type selector in viewer; wire normalize_field (#123)"
 ```
 
 ---
