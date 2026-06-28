@@ -8,15 +8,6 @@ _MERGE_RECORDS_SCHEMA = {
     "type": "object",
     "properties": {
         "groupBy": {"type": "array", "items": {"type": "string"}},
-        "keyNormalize": {
-            "type": "object",
-            "properties": {
-                "firstTokenOnly": {"type": "boolean", "default": False},
-                "stripTrailingLetters": {"type": "array", "items": {"type": "string"}},
-                "stripPatterns": {"type": "array", "items": {"type": "string"}},
-                "casefold": {"type": "boolean", "default": True},
-            },
-        },
         "spine": {
             "type": "object",
             "properties": {"whereFieldsPresent": {"type": "array", "items": {"type": "string"}}},

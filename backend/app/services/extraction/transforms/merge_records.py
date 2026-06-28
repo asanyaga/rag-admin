@@ -1,17 +1,20 @@
 # backend/app/services/extraction/transforms/merge_records.py
-"""merge_records: group rows by a normalized key; collapse non-spine rows into spine rows."""
+"""merge_records: group rows by exact field values; collapse non-spine rows into spine rows.
+
+Assumes groupBy fields are already normalized upstream (e.g. via a derive_field transform).
+Flags emitted: unjoinable, no_spine, no_specs, conflict.
+"""
 from __future__ import annotations
 
 from typing import Any
 
 from app.services.extraction.transforms.base import TransformInput, TransformResult
-from app.services.extraction.transforms.keys import normalize_key
 
 _META = "_provenance"
 
 
 def _is_empty(val) -> bool:
-    """Check if a value is considered empty (None, empty string, 0, or "0")."""
+    """Treat None, empty string, 0, and "0" (CSV zero) as absent."""
     return val in (None, "", 0, "0")
 
 
@@ -19,8 +22,8 @@ def _is_present(row: dict, fields: list[str]) -> bool:
     return all(not _is_empty(row.get(f)) for f in fields)
 
 
-def _group_key(row: dict, group_by: list[str], norm_cfg: dict) -> str:
-    return "|".join(normalize_key(row.get(f), norm_cfg) for f in group_by)
+def _group_key(row: dict, group_by: list[str]) -> str:
+    return "|".join(str(row.get(f) or "") for f in group_by)
 
 
 class MergeRecords:
@@ -28,7 +31,6 @@ class MergeRecords:
 
     def apply(self, inputs: list[TransformInput], config: dict[str, Any]) -> TransformResult:
         group_by = config["groupBy"]
-        norm_cfg = config.get("keyNormalize", {})
         spine_fields = config["spine"]["whereFieldsPresent"]
         conflict = config.get("conflict", "prefer_spine")
         on_no_spine = config.get("onGroupWithoutSpine", "keep")
@@ -43,8 +45,8 @@ class MergeRecords:
         flags: list[dict] = []
 
         for row, rid in pooled:
-            key = _group_key(row, group_by, norm_cfg)
-            if key == "" or key == "|".join([""] * len(group_by)):
+            key = _group_key(row, group_by)
+            if not any(str(row.get(f) or "") for f in group_by):
                 idx = len(out_rows)
                 out_rows.append({**{k: v for k, v in row.items() if k != _META},
                                  _META: self._prov(row, rid)})
