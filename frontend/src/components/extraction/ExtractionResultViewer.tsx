@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { ExtractionResult } from '@/types/extraction'
 import { ChunkingSummary } from './ChunkingSummary'
 import { FormattedJson } from '@/components/shared/FormattedJson'
@@ -20,15 +21,28 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, Download, Loader2 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { ChevronDown, Download, Loader2, Wand2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { exportResultToCsv } from '@/lib/exportCsv'
+import { useResultTransform } from '@/hooks/useResultTransform'
+import { MergeRecordsConfigForm } from './transforms/MergeRecordsConfigForm'
+import type { MergeRecordsConfig } from './transforms/MergeRecordsConfigForm'
+import { TransformPreviewTable } from './transforms/TransformPreviewTable'
 
 interface ExtractionResultViewerProps {
   result: ExtractionResult | null
   isLoading?: boolean
   schemaName?: string
+  projectId?: string
 }
 
 // ── Internal types for casting extractionMetadata and config ─────────────────
@@ -368,11 +382,54 @@ function parseUserContent(content: string): ParsedUserContent {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+const DEFAULT_MERGE_CONFIG: MergeRecordsConfig = {
+  groupBy: [],
+  spine: { whereFieldsPresent: [] },
+  conflict: 'prefer_spine',
+  onGroupWithoutSpine: 'keep',
+}
+
 export function ExtractionResultViewer({
   result,
   isLoading,
   schemaName,
+  projectId,
 }: ExtractionResultViewerProps) {
+  const navigate = useNavigate()
+  const [transformOpen, setTransformOpen] = useState(false)
+  const [mergeConfig, setMergeConfig] = useState<MergeRecordsConfig>(DEFAULT_MERGE_CONFIG)
+  const transform = useResultTransform(projectId ?? '')
+
+  const handlePreview = async () => {
+    if (!result) return
+    await transform.preview({
+      sourceResultIds: [result.id],
+      transformType: 'merge_records',
+      config: {
+        groupBy: mergeConfig.groupBy,
+        spine: mergeConfig.spine,
+        conflict: mergeConfig.conflict,
+        onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine,
+      },
+    })
+  }
+
+  const handleApply = async () => {
+    if (!result) return
+    const derived = await transform.apply({
+      sourceResultIds: [result.id],
+      transformType: 'merge_records',
+      config: {
+        groupBy: mergeConfig.groupBy,
+        spine: mergeConfig.spine,
+        conflict: mergeConfig.conflict,
+        onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine,
+      },
+    })
+    setTransformOpen(false)
+    navigate(`/extraction?resultId=${derived.id}`)
+  }
+
   if (isLoading) {
     return (
       <Card>
@@ -424,6 +481,53 @@ export function ExtractionResultViewer({
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Extraction Result</CardTitle>
             <div className="flex items-center gap-2">
+              {result.status === 'completed' && projectId && (
+                <Dialog open={transformOpen} onOpenChange={(open) => { setTransformOpen(open); if (!open) setMergeConfig(DEFAULT_MERGE_CONFIG); }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+                      <Wand2 className="h-3.5 w-3.5" />
+                      Transform
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Merge Records Transform</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      <MergeRecordsConfigForm value={mergeConfig} onChange={setMergeConfig} />
+                      {transform.error && (
+                        <p className="text-sm text-destructive">{transform.error}</p>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={transform.isLoading}
+                        onClick={handlePreview}
+                      >
+                        {transform.isLoading && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                        Preview
+                      </Button>
+                      {transform.previewData && (
+                        <TransformPreviewTable
+                          rows={transform.previewData.rows}
+                          flags={transform.flags}
+                        />
+                      )}
+                    </div>
+                    <DialogFooter>
+                      <Button variant="ghost" onClick={() => setTransformOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        disabled={!transform.previewData || transform.isLoading}
+                        onClick={handleApply}
+                      >
+                        Apply
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
               {result.status === 'completed' &&
                 result.structuredData &&
                 Object.keys(result.structuredData).length > 0 && (

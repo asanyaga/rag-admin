@@ -8,6 +8,23 @@ vi.mock('@/lib/exportCsv', () => ({
   exportResultToCsv: vi.fn(),
 }))
 
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+}))
+
+vi.mock('@/hooks/useResultTransform', () => ({
+  useResultTransform: () => ({
+    catalog: [],
+    loadCatalog: vi.fn(),
+    preview: vi.fn(),
+    apply: vi.fn(),
+    previewData: null,
+    flags: [],
+    isLoading: false,
+    error: null,
+  }),
+}))
+
 import { exportResultToCsv } from '@/lib/exportCsv'
 
 function buildResult(overrides: Partial<ExtractionResult> = {}): ExtractionResult {

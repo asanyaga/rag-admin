@@ -28,6 +28,7 @@ interface ExtractionHistoryProps {
   onDeleteResult: (resultId: string) => Promise<void>
   onExportResult: (resultId: string) => Promise<void>
   inProgressPhase?: InProgressPhase
+  projectId?: string
 }
 
 export function ExtractionHistory({
@@ -40,6 +41,7 @@ export function ExtractionHistory({
   onDeleteResult,
   onExportResult,
   inProgressPhase,
+  projectId,
 }: ExtractionHistoryProps) {
   const [exportingId, setExportingId] = useState<string | null>(null)
 
@@ -175,6 +177,7 @@ export function ExtractionHistory({
                     result={selectedResult}
                     isLoading={false}
                     schemaName={schemas?.find((s) => s.id === r.extractionSchemaId)?.name}
+                    projectId={projectId}
                   />
                 ) : isExpanded ? (
                   <div className="space-y-2 p-3">
