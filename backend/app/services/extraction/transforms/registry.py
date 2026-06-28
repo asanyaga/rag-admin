@@ -11,7 +11,7 @@ _RULE_TYPES = [
     "split", "regexExtract", "replace", "alias", "nullifyIfIn",
 ]
 
-_NORMALIZE_FIELD_SCHEMA = {
+_FIELD_ENTRY_SCHEMA = {
     "type": "object",
     "properties": {
         "sourceField": {"type": "string", "description": "Field to read. Never mutated."},
@@ -39,6 +39,19 @@ _NORMALIZE_FIELD_SCHEMA = {
         },
     },
     "required": ["sourceField", "outputField", "rules"],
+}
+
+_NORMALIZE_FIELD_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": _FIELD_ENTRY_SCHEMA,
+            "description": "Ordered list of field normalizations. All run in one apply call producing one ExtractionResult.",
+        },
+    },
+    "required": ["fields"],
 }
 
 _MERGE_RECORDS_SCHEMA = {

@@ -75,30 +75,30 @@ class NormalizeField:
         if len(inputs) != 1:
             raise ValueError("normalize_field requires exactly one input")
 
-        source_field: str = config["sourceField"]
-        output_field: str = config["outputField"]
-        rules: list[dict] = config.get("rules", [])
-
+        fields: list[dict] = config["fields"]
         inp = inputs[0]
         out_rows: list[dict] = []
 
         for row in inp.rows:
             new_row = dict(row)
-            raw = row.get(source_field)
-            if raw is None:
-                new_row[output_field] = None
-            else:
-                new_row[output_field] = _apply_rules(str(raw), rules)
+            prov = dict(row.get(_META) or {})
 
-            # Carry provenance forward; tag outputField with sourceField's provenance
-            existing_prov = dict(row.get(_META) or {})
-            src_prov = existing_prov.get(
-                source_field,
-                {"sourceResultId": inp.source_result_id, "sourcePage": row.get("sourcePage")},
-            )
-            existing_prov[output_field] = src_prov
-            new_row[_META] = existing_prov
+            for field_cfg in fields:
+                source_field: str = field_cfg["sourceField"]
+                output_field: str = field_cfg["outputField"]
+                rules: list[dict] = field_cfg.get("rules", [])
 
+                # Read from new_row so a later field can use a prior field's output
+                raw = new_row.get(source_field)
+                new_row[output_field] = None if raw is None else _apply_rules(str(raw), rules)
+
+                src_prov = prov.get(
+                    source_field,
+                    {"sourceResultId": inp.source_result_id, "sourcePage": row.get("sourcePage")},
+                )
+                prov[output_field] = src_prov
+
+            new_row[_META] = prov
             out_rows.append(new_row)
 
         return TransformResult(rows=out_rows, flags=[])

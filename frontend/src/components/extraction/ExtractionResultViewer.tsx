@@ -399,9 +399,7 @@ const DEFAULT_MERGE_CONFIG: MergeRecordsConfig = {
 }
 
 const DEFAULT_NORMALIZE_CONFIG: NormalizeFieldConfig = {
-  sourceField: '',
-  outputField: '',
-  rules: [],
+  fields: [{ sourceField: '', outputField: '', rules: [] }],
 }
 
 export function ExtractionResultViewer({
@@ -421,7 +419,7 @@ export function ExtractionResultViewer({
     if (!result) return
     const config =
       transformType === 'normalize_field'
-        ? { sourceField: normalizeConfig.sourceField, outputField: normalizeConfig.outputField, rules: normalizeConfig.rules }
+        ? (normalizeConfig as unknown as Record<string, unknown>)
         : { groupBy: mergeConfig.groupBy, spine: mergeConfig.spine, conflict: mergeConfig.conflict, onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine }
     await transform.preview({ sourceResultIds: [result.id], transformType, config })
   }
@@ -430,7 +428,7 @@ export function ExtractionResultViewer({
     if (!result) return
     const config =
       transformType === 'normalize_field'
-        ? { sourceField: normalizeConfig.sourceField, outputField: normalizeConfig.outputField, rules: normalizeConfig.rules }
+        ? (normalizeConfig as unknown as Record<string, unknown>)
         : { groupBy: mergeConfig.groupBy, spine: mergeConfig.spine, conflict: mergeConfig.conflict, onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine }
     const derived = await transform.apply({ sourceResultIds: [result.id], transformType, config })
     setTransformOpen(false)

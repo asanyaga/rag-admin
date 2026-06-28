@@ -35,23 +35,37 @@ Downstream transforms (`merge_records`) only reference field names. They assume 
 
 ```json
 {
-  "sourceField": "modelName",
-  "outputField": "baseModel",
-  "rules": [
-    { "type": "trim" },
-    { "type": "collapseWhitespace" },
-    { "type": "stripRegex", "pattern": "\\s+\\d+/\\d+/\\d+" },
-    { "type": "stripTrailingChars", "chars": ["B", "D", "S", "C"] },
-    { "type": "alias", "map": { "UX-50L": "UX-50 LITE" } }
+  "fields": [
+    {
+      "sourceField": "modelName",
+      "outputField": "baseModel",
+      "rules": [
+        { "type": "trim" },
+        { "type": "collapseWhitespace" },
+        { "type": "stripRegex", "pattern": "\\s+\\d+/\\d+/\\d+" },
+        { "type": "stripTrailingChars", "chars": ["B", "D", "S", "C"] },
+        { "type": "alias", "map": { "UX-50L": "UX-50 LITE" } }
+      ]
+    },
+    {
+      "sourceField": "price",
+      "outputField": "normalizedPrice",
+      "rules": [
+        { "type": "trim" },
+        { "type": "stripPrefix", "prefix": "$" }
+      ]
+    }
   ]
 }
 ```
 
-- `sourceField` — the field to read. Never mutated.
-- `outputField` — the new column written on every row. A collision with an existing field name is flagged in the preview table (the user is warned, but the write proceeds).
-- `rules` — ordered list of rule objects (each has `"type"` plus rule-specific keys). Rules execute in declaration order on the string produced by the previous rule.
+- `fields` — ordered list of field normalization configs. All field normalizations execute within a single `apply()` call and produce one `ExtractionResult`. Fields execute in declaration order; a later field can reference an `outputField` written by an earlier field as its own `sourceField`.
+- Per field entry:
+  - `sourceField` — the field to read. Never mutated.
+  - `outputField` — the new column written on every row. A collision with an existing field name is flagged in the preview table (the user is warned, but the write proceeds).
+  - `rules` — ordered list of rule objects (each has `"type"` plus rule-specific keys). Rules execute in declaration order on the string produced by the previous rule.
 
-**Null behavior:** if `sourceField` is `null` (value is `None`) on a row, `outputField` is set to `null` on that row.
+**Null behavior:** if `sourceField` is `null` (value is `None`) on a row, `outputField` is set to `null` on that row. Null does not propagate across field entries — only within a single field's rule chain.
 
 ### Rule vocabulary
 
@@ -95,14 +109,18 @@ Input: raw extraction result R0 where `modelName` = `"GP-40B 230/50/1 DD"`, `"UX
 Config:
 ```json
 {
-  "sourceField": "modelName",
-  "outputField": "baseModel",
-  "rules": [
-    { "type": "trim" },
-    { "type": "collapseWhitespace" },
-    { "type": "stripRegex", "pattern": "\\s+\\d+/\\d+/\\d+" },
-    { "type": "stripTrailingChars", "chars": ["B", "D", "S", "C"] },
-    { "type": "alias", "map": { "UX-50L": "UX-50 LITE" } }
+  "fields": [
+    {
+      "sourceField": "modelName",
+      "outputField": "baseModel",
+      "rules": [
+        { "type": "trim" },
+        { "type": "collapseWhitespace" },
+        { "type": "stripRegex", "pattern": "\\s+\\d+/\\d+/\\d+" },
+        { "type": "stripTrailingChars", "chars": ["B", "D", "S", "C"] },
+        { "type": "alias", "map": { "UX-50L": "UX-50 LITE" } }
+      ]
+    }
   ]
 }
 ```
@@ -124,7 +142,7 @@ The resulting R1 (all original columns + `baseModel`) is the direct input to `me
 
 ## Frontend
 
-- **Config form:** `NormalizeFieldConfigForm.tsx` — text inputs for `sourceField` and `outputField`; dynamic rule list where each entry has a type selector and type-specific parameter fields; add/remove buttons per rule.
+- **Config form:** `NormalizeFieldConfigForm.tsx` — a list of field entries, each with text inputs for `sourceField` and `outputField` and a dynamic rule list; add/remove buttons per field and per rule. At least one field entry is always present.
 - **Transform action:** The existing `Transform` button in `ExtractionResultViewer` must be extended to let the user pick between `normalize_field` and `merge_records` (and future primitives), showing the appropriate config form.
 - **`config_schema`:** The registry entry for `normalize_field` must include a `config_schema` JSON Schema object that the UI could use for generic form generation.
 
@@ -154,4 +172,5 @@ The resulting R1 (all original columns + `baseModel`) is the direct input to `me
    - `"UX-50L 230/50/1"` with the above rules + `alias({UX-50L: UX-50 LITE})` → `"UX-50 LITE"` (never `"UX-50"`).
 8. `null` propagates: a `null` value at any point in the rule chain causes subsequent rules to be skipped, and `outputField` is `null`.
 9. The registry entry includes a `config_schema` JSON Schema object (type `object`).
-10. The frontend `NormalizeFieldConfigForm` renders `sourceField`, `outputField`, and a dynamic rule list; the `Transform` dialog supports selecting between `normalize_field` and `merge_records`.
+10. The frontend `NormalizeFieldConfigForm` renders a list of field entries, each with `sourceField`, `outputField`, and a dynamic rule list; add/remove buttons operate at both field and rule level; the `Transform` dialog supports selecting between `normalize_field` and `merge_records`.
+11. A single `normalize_field` apply call with N field entries produces exactly one `ExtractionResult` containing all N new output columns.

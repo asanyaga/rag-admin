@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Trash2, Plus } from 'lucide-react'
-import type { NormalizeFieldConfig, NormalizeFieldRule } from '@/types/resultTransform'
+import type { NormalizeFieldConfig, NormalizeFieldEntry, NormalizeFieldRule } from '@/types/resultTransform'
 
 const RULE_TYPES = [
   'trim', 'collapseWhitespace', 'lowercase', 'uppercase', 'titlecase',
@@ -151,67 +151,114 @@ function RuleRow({ rule, onChange, onRemove }: RuleRowProps) {
   )
 }
 
+const EMPTY_ENTRY: NormalizeFieldEntry = { sourceField: '', outputField: '', rules: [] }
+
+interface FieldEntryProps {
+  entry: NormalizeFieldEntry
+  index: number
+  canRemove: boolean
+  onChange: (e: NormalizeFieldEntry) => void
+  onRemove: () => void
+}
+
+function FieldEntry({ entry, index, canRemove, onChange, onRemove }: FieldEntryProps) {
+  const updateRule = (i: number, rule: NormalizeFieldRule) => {
+    const rules = [...entry.rules]
+    rules[i] = rule
+    onChange({ ...entry, rules })
+  }
+  const removeRule = (i: number) => {
+    onChange({ ...entry, rules: entry.rules.filter((_, idx) => idx !== i) })
+  }
+  const addRule = () => {
+    onChange({ ...entry, rules: [...entry.rules, { type: 'trim' }] })
+  }
+
+  return (
+    <div className="border rounded-lg p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Field {index + 1}
+        </span>
+        {canRemove && (
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRemove} title="Remove field">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Source field</Label>
+          <Input
+            placeholder="e.g. modelName"
+            value={entry.sourceField}
+            onChange={(e) => onChange({ ...entry, sourceField: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Output field</Label>
+          <Input
+            placeholder="e.g. baseModel"
+            value={entry.outputField}
+            onChange={(e) => onChange({ ...entry, outputField: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Rules</Label>
+          <Button variant="outline" size="sm" className="h-6 text-xs gap-1" onClick={addRule}>
+            <Plus className="h-3 w-3" />
+            Add rule
+          </Button>
+        </div>
+        {entry.rules.length === 0 && (
+          <p className="text-xs text-muted-foreground italic">No rules yet.</p>
+        )}
+        {entry.rules.map((rule, i) => (
+          <RuleRow key={i} rule={rule} onChange={(r) => updateRule(i, r)} onRemove={() => removeRule(i)} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 interface Props {
   value: NormalizeFieldConfig
   onChange: (v: NormalizeFieldConfig) => void
 }
 
 export function NormalizeFieldConfigForm({ value, onChange }: Props) {
-  const updateRule = (i: number, rule: NormalizeFieldRule) => {
-    const rules = [...value.rules]
-    rules[i] = rule
-    onChange({ ...value, rules })
+  const updateEntry = (i: number, entry: NormalizeFieldEntry) => {
+    const fields = [...value.fields]
+    fields[i] = entry
+    onChange({ fields })
   }
-  const removeRule = (i: number) => {
-    const rules = value.rules.filter((_, idx) => idx !== i)
-    onChange({ ...value, rules })
+  const removeEntry = (i: number) => {
+    onChange({ fields: value.fields.filter((_, idx) => idx !== i) })
   }
-  const addRule = () => {
-    onChange({ ...value, rules: [...value.rules, { type: 'trim' }] })
+  const addEntry = () => {
+    onChange({ fields: [...value.fields, { ...EMPTY_ENTRY }] })
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="sourceField">Source field</Label>
-        <Input
-          id="sourceField"
-          placeholder="e.g. modelName"
-          value={value.sourceField}
-          onChange={(e) => onChange({ ...value, sourceField: e.target.value })}
+    <div className="space-y-3">
+      {value.fields.map((entry, i) => (
+        <FieldEntry
+          key={i}
+          entry={entry}
+          index={i}
+          canRemove={value.fields.length > 1}
+          onChange={(e) => updateEntry(i, e)}
+          onRemove={() => removeEntry(i)}
         />
-        <p className="text-xs text-muted-foreground">The field to read. Its value is never modified.</p>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="outputField">Output field</Label>
-        <Input
-          id="outputField"
-          placeholder="e.g. baseModel"
-          value={value.outputField}
-          onChange={(e) => onChange({ ...value, outputField: e.target.value })}
-        />
-        <p className="text-xs text-muted-foreground">New column written to every row.</p>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Rules</Label>
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addRule}>
-            <Plus className="h-3 w-3" />
-            Add rule
-          </Button>
-        </div>
-        {value.rules.length === 0 && (
-          <p className="text-xs text-muted-foreground italic">No rules yet — add at least one.</p>
-        )}
-        {value.rules.map((rule, i) => (
-          <RuleRow key={i} rule={rule} onChange={(r) => updateRule(i, r)} onRemove={() => removeRule(i)} />
-        ))}
-        <p className="text-xs text-muted-foreground">
-          Rules execute in order: trim → collapseWhitespace → case → strip → alias → nullifyIfIn
-        </p>
-      </div>
+      ))}
+      <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1.5" onClick={addEntry}>
+        <Plus className="h-3.5 w-3.5" />
+        Add field
+      </Button>
     </div>
   )
 }

@@ -19,9 +19,8 @@ def test_catalog_lists_normalize_field_with_config_schema():
     assert "normalize_field" in types
     schema = types["normalize_field"]["config_schema"]
     assert schema["type"] == "object"
-    assert "sourceField" in schema["properties"]
-    assert "outputField" in schema["properties"]
-    assert "rules" in schema["properties"]
+    assert "fields" in schema["properties"]
+    assert schema["properties"]["fields"]["type"] == "array"
 
 
 def test_build_normalize_field():

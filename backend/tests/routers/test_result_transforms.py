@@ -122,9 +122,9 @@ async def test_preview_normalize_field_on_raw_extraction_result(client, test_db)
             "sourceResultIds": [str(result.id)],
             "transformType": "normalize_field",
             "config": {
-                "sourceField": "modelName",
-                "outputField": "baseModel",
-                "rules": [{"type": "lowercase"}],
+                "fields": [
+                    {"sourceField": "modelName", "outputField": "baseModel", "rules": [{"type": "lowercase"}]},
+                ]
             },
         },
     )

@@ -3,38 +3,70 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { NormalizeFieldConfigForm } from './NormalizeFieldConfigForm'
 import type { NormalizeFieldConfig } from '@/types/resultTransform'
 
-const DEFAULT: NormalizeFieldConfig = { sourceField: '', outputField: '', rules: [] }
+const DEFAULT: NormalizeFieldConfig = { fields: [{ sourceField: '', outputField: '', rules: [] }] }
 
 describe('NormalizeFieldConfigForm', () => {
-  it('renders sourceField and outputField inputs', () => {
+  it('renders source field and output field inputs for first entry', () => {
     render(<NormalizeFieldConfigForm value={DEFAULT} onChange={() => {}} />)
-    expect(screen.getByLabelText(/source field/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/output field/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/modelName/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/baseModel/i)).toBeInTheDocument()
   })
 
   it('calls onChange when sourceField is edited', () => {
     const onChange = vi.fn()
     render(<NormalizeFieldConfigForm value={DEFAULT} onChange={onChange} />)
-    fireEvent.change(screen.getByLabelText(/source field/i), { target: { value: 'modelName' } })
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ sourceField: 'modelName' }))
+    fireEvent.change(screen.getByPlaceholderText(/modelName/i), { target: { value: 'myField' } })
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fields: expect.arrayContaining([expect.objectContaining({ sourceField: 'myField' })]),
+      }),
+    )
   })
 
-  it('renders Add rule button and adds a trim rule when clicked', async () => {
+  it('Add field button appends a new field entry', () => {
+    const onChange = vi.fn()
+    render(<NormalizeFieldConfigForm value={DEFAULT} onChange={onChange} />)
+    fireEvent.click(screen.getByRole('button', { name: /add field/i }))
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ fields: expect.arrayContaining([expect.any(Object), expect.any(Object)]) }),
+    )
+  })
+
+  it('Add rule button on an entry appends a rule to that entry', () => {
     const onChange = vi.fn()
     render(<NormalizeFieldConfigForm value={DEFAULT} onChange={onChange} />)
     fireEvent.click(screen.getByRole('button', { name: /add rule/i }))
     expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ rules: [expect.objectContaining({ type: 'trim' })] }),
+      expect.objectContaining({
+        fields: [expect.objectContaining({ rules: [expect.objectContaining({ type: 'trim' })] })],
+      }),
     )
   })
 
-  it('renders existing rules as comboboxes', () => {
+  it('renders multiple field entries with their own comboboxes', () => {
     const value: NormalizeFieldConfig = {
-      sourceField: 'modelName',
-      outputField: 'baseModel',
-      rules: [{ type: 'trim' }, { type: 'lowercase' }],
+      fields: [
+        { sourceField: 'a', outputField: 'a_out', rules: [{ type: 'trim' }, { type: 'lowercase' }] },
+        { sourceField: 'b', outputField: 'b_out', rules: [{ type: 'uppercase' }] },
+      ],
     }
     render(<NormalizeFieldConfigForm value={value} onChange={() => {}} />)
-    expect(screen.getAllByRole('combobox')).toHaveLength(2)
+    expect(screen.getAllByRole('combobox')).toHaveLength(3)
+  })
+
+  it('remove field button is hidden when only one entry exists', () => {
+    render(<NormalizeFieldConfigForm value={DEFAULT} onChange={() => {}} />)
+    expect(screen.queryByTitle('Remove field')).not.toBeInTheDocument()
+  })
+
+  it('remove field button is visible when multiple entries exist', () => {
+    const value: NormalizeFieldConfig = {
+      fields: [
+        { sourceField: 'a', outputField: 'a_out', rules: [] },
+        { sourceField: 'b', outputField: 'b_out', rules: [] },
+      ],
+    }
+    render(<NormalizeFieldConfigForm value={value} onChange={() => {}} />)
+    expect(screen.getAllByTitle('Remove field')).toHaveLength(2)
   })
 })

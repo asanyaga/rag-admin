@@ -37,8 +37,12 @@ export interface NormalizeFieldRule {
   values?: string[]
 }
 
-export interface NormalizeFieldConfig {
+export interface NormalizeFieldEntry {
   sourceField: string
   outputField: string
   rules: NormalizeFieldRule[]
+}
+
+export interface NormalizeFieldConfig {
+  fields: NormalizeFieldEntry[]
 }

@@ -147,7 +147,7 @@ _RULES = [
     {"type": "stripTrailingChars", "chars": ["B", "D", "S", "C"]},
     {"type": "alias", "map": {"UX-50L": "UX-50 LITE"}},
 ]
-_CFG = {"sourceField": "modelName", "outputField": "baseModel", "rules": _RULES}
+_CFG = {"fields": [{"sourceField": "modelName", "outputField": "baseModel", "rules": _RULES}]}
 _ROWS = [
     {"modelName": "GP-40 230/50/1", "sku": "1303050", "sourcePage": "Page 7"},
     {"modelName": "GP-40B 230/50/1 DD", "sku": "1303056", "sourcePage": "Page 7"},
@@ -201,3 +201,30 @@ def test_row_count_unchanged():
 def test_no_flags_emitted():
     out = NormalizeField().apply([TransformInput(rows=_ROWS, source_result_id="r1")], _CFG)
     assert out.flags == []
+
+
+def test_multi_field_produces_all_output_columns():
+    cfg = {
+        "fields": [
+            {"sourceField": "modelName", "outputField": "baseModel", "rules": _RULES},
+            {"sourceField": "sku", "outputField": "skuLower", "rules": [{"type": "lowercase"}]},
+        ]
+    }
+    rows = [{"modelName": "GP-40B 230/50/1", "sku": "1303050"}]
+    out = NormalizeField().apply([TransformInput(rows=rows, source_result_id="r1")], cfg)
+    assert out.rows[0]["baseModel"] == "GP-40"
+    assert out.rows[0]["skuLower"] == "1303050"
+    assert out.rows[0]["modelName"] == "GP-40B 230/50/1"  # source untouched
+
+
+def test_later_field_can_read_earlier_fields_output():
+    cfg = {
+        "fields": [
+            {"sourceField": "raw", "outputField": "cleaned", "rules": [{"type": "trim"}]},
+            {"sourceField": "cleaned", "outputField": "final", "rules": [{"type": "uppercase"}]},
+        ]
+    }
+    rows = [{"raw": "  hello  "}]
+    out = NormalizeField().apply([TransformInput(rows=rows, source_result_id="r1")], cfg)
+    assert out.rows[0]["cleaned"] == "hello"
+    assert out.rows[0]["final"] == "HELLO"
