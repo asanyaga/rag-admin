@@ -72,9 +72,9 @@ const router = createBrowserRouter([
             handle: { breadcrumb: 'Projects' },
           },
           {
-            path: 'documents',
+            path: 'parse',
             element: <DocumentsPage />,
-            handle: { breadcrumb: 'Project Documents' },
+            handle: { breadcrumb: 'Parse' },
           },
           {
             path: 'source-documents',
@@ -82,7 +82,7 @@ const router = createBrowserRouter([
             handle: { breadcrumb: 'Source Documents' },
           },
           {
-            path: 'documents/:documentId/runs/:runId',
+            path: 'parse/:documentId/runs/:runId',
             element: <ParseRunDetailPage />,
             handle: { breadcrumb: 'Parse Run' },
           },
@@ -102,9 +102,9 @@ const router = createBrowserRouter([
             handle: { breadcrumb: 'Index Details' },
           },
           {
-            path: 'extraction',
+            path: 'extract',
             element: <ExtractionPage />,
-            handle: { breadcrumb: 'Extraction' },
+            handle: { breadcrumb: 'Extract' },
           },
           {
             path: 'classify',

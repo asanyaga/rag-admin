@@ -120,7 +120,7 @@ export default function DocumentsPage(): JSX.Element {
   }
 
   const handleExtract = (documentId: string) => {
-    navigate(`/extraction?documentId=${documentId}`)
+    navigate(`/extract?documentId=${documentId}`)
   }
 
   const handleDownload = async (documentId: string, title: string) => {

@@ -93,7 +93,7 @@ export function ParseRunDetailPage() {
       // The new CDM ParseRun is created asynchronously by a background task,
       // so we route the user back to the document where the timeline will
       // surface the pending run as it transitions through statuses.
-      navigate('/documents')
+      navigate('/parse')
     },
     [documentId, navigate],
   )
@@ -226,7 +226,7 @@ export function ParseRunDetailPage() {
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
           runId={runId}
-          onDeleted={() => navigate('/documents')}
+          onDeleted={() => navigate('/parse')}
         />
       )}
     </div>
