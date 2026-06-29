@@ -32,6 +32,7 @@ import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { DocumentProbePanel } from '@/components/documents/DocumentProbePanel'
 import { DocumentStatusBadge } from '@/components/documents/DocumentStatusBadge'
 import { FolderEditPopover } from '@/components/documents/FolderEditPopover'
+import { SourceDocumentBrowser } from '@/components/documents/SourceDocumentBrowser'
 import { RunTimeline } from '@/components/parse-runs/RunTimeline'
 import { useParseRuns } from '@/hooks/useParseRuns'
 import {
@@ -55,12 +56,14 @@ export default function DocumentsPage(): JSX.Element {
 
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [documentSearch, setDocumentSearch] = useState('')
+  const [fromSourceOpen, setFromSourceOpen] = useState(false)
 
   const {
     documents,
     isLoading,
     error,
     uploadDocument,
+    addDocumentFromSource,
     updateDocument,
     deleteDocument,
     downloadDocument,
@@ -211,6 +214,24 @@ export default function DocumentsPage(): JSX.Element {
     return matchesFolder && matchesSearch
   })
 
+  const existingSourceIds = new Set(
+    documents.flatMap((d) => (d.sourceDocumentId ? [d.sourceDocumentId] : [])),
+  )
+
+  const handleFromSourceAdd = async (
+    sourceDocumentId: string,
+    parserType: string,
+    parseConfig?: ParseConfig,
+  ) => {
+    const doc = await addDocumentFromSource({
+      projectId: currentProject.id,
+      sourceDocumentId,
+      parserType,
+      parseConfig,
+    })
+    setViewDocumentId(doc.id)
+  }
+
   return (
     <div className="-m-6 flex h-[calc(100vh-3.5rem)]">
       {/* Left panel */}
@@ -310,7 +331,7 @@ export default function DocumentsPage(): JSX.Element {
             variant="outline"
             className="w-full"
             size="sm"
-            disabled
+            onClick={() => setFromSourceOpen(true)}
           >
             <Library className="h-4 w-4 mr-2" />
             From Source
@@ -428,6 +449,12 @@ export default function DocumentsPage(): JSX.Element {
         open={reparseDialogOpen}
         onOpenChange={setReparseDialogOpen}
         onReparse={handleReparse}
+      />
+      <SourceDocumentBrowser
+        open={fromSourceOpen}
+        onOpenChange={setFromSourceOpen}
+        existingSourceDocumentIds={existingSourceIds}
+        onAdd={handleFromSourceAdd}
       />
     </div>
   )

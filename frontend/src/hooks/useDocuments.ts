@@ -7,6 +7,7 @@ import {
   DocumentStatus,
 } from '@/types/document'
 import * as documentsApi from '@/api/documents'
+import type { AddFromSourceRequest } from '@/api/documents'
 import { traceAsync } from '@/lib/instrumentation'
 
 interface UseDocumentsReturn {
@@ -14,6 +15,7 @@ interface UseDocumentsReturn {
   isLoading: boolean
   error: string | null
   uploadDocument: (data: DocumentUpload) => Promise<Document>
+  addDocumentFromSource: (data: AddFromSourceRequest) => Promise<Document>
   fetchDocuments: () => Promise<void>
   updateDocument: (id: string, data: DocumentUpdate) => Promise<Document>
   deleteDocument: (id: string) => Promise<void>
@@ -192,6 +194,38 @@ export function useDocuments(
     []
   )
 
+  const addDocumentFromSource = useCallback(
+    async (data: AddFromSourceRequest): Promise<Document> => {
+      try {
+        const newDocument = await documentsApi.addDocumentFromSource(data)
+        setDocuments((prev) => [
+          {
+            id: newDocument.id,
+            projectId: newDocument.projectId,
+            folderId: newDocument.folderId,
+            sourceDocumentId: newDocument.sourceDocumentId,
+            sourceType: newDocument.sourceType,
+            title: newDocument.title,
+            description: newDocument.description,
+            status: newDocument.status,
+            statusMessage: newDocument.statusMessage,
+            createdAt: newDocument.createdAt,
+            updatedAt: newDocument.updatedAt,
+          },
+          ...prev,
+        ])
+        if (newDocument.status === 'processing') {
+          startPollingRef.current?.(newDocument.id)
+        }
+        return newDocument
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to add document from source')
+        throw err
+      }
+    },
+    [],
+  )
+
   const updateDocument = useCallback(
     async (id: string, data: DocumentUpdate): Promise<Document> => {
       return traceAsync('documents.update', async (span) => {
@@ -320,6 +354,7 @@ export function useDocuments(
     isLoading,
     error,
     uploadDocument,
+    addDocumentFromSource,
     fetchDocuments,
     updateDocument,
     deleteDocument,
