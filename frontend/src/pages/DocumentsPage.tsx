@@ -8,9 +8,21 @@ import type { ParseConfig } from '@/types/parsing'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { DocumentsTable } from '@/components/documents/DocumentsTable'
-import { FolderSidebar } from '@/components/documents/FolderSidebar'
-import { BulkActionBar } from '@/components/documents/BulkActionBar'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { DocumentTextViewer } from '@/components/documents/DocumentTextViewer'
 import { DocumentEditDialog } from '@/components/documents/DocumentEditDialog'
 import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialog'
@@ -18,20 +30,31 @@ import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialo
 import { ParsedDocumentViewer } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
 import { DocumentProbePanel } from '@/components/documents/DocumentProbePanel'
+import { DocumentStatusBadge } from '@/components/documents/DocumentStatusBadge'
+import { FolderEditPopover } from '@/components/documents/FolderEditPopover'
 import { RunTimeline } from '@/components/parse-runs/RunTimeline'
 import { useParseRuns } from '@/hooks/useParseRuns'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Plus, RotateCw } from 'lucide-react'
+import {
+  Plus,
+  RotateCw,
+  Search,
+  Library,
+  FileText,
+  Settings,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Download,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { useNavigate } from 'react-router-dom'
 import { createParseRun } from '@/api/parseRuns'
 
 export default function DocumentsPage(): JSX.Element {
-  const navigate = useNavigate()
   const { currentProject } = useProject()
 
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [documentSearch, setDocumentSearch] = useState('')
 
   const {
     documents,
@@ -41,7 +64,6 @@ export default function DocumentsPage(): JSX.Element {
     updateDocument,
     deleteDocument,
     downloadDocument,
-    bulkMoveDocuments,
   } = useDocuments(currentProject?.id || null, undefined, selectedFolderId)
 
   const {
@@ -68,10 +90,6 @@ export default function DocumentsPage(): JSX.Element {
         </Alert>
       </div>
     )
-  }
-
-  const handleView = (documentId: string) => {
-    setViewDocumentId(documentId)
   }
 
   const handleEdit = (documentId: string) => {
@@ -110,6 +128,7 @@ export default function DocumentsPage(): JSX.Element {
   const handleDeleteConfirm = async (documentId: string) => {
     try {
       await deleteDocument(documentId)
+      if (viewDocumentId === documentId) setViewDocumentId(null)
       toast.success('Document deleted successfully')
     } catch (err) {
       toast.error('Delete failed', {
@@ -117,10 +136,6 @@ export default function DocumentsPage(): JSX.Element {
       })
       throw err
     }
-  }
-
-  const handleExtract = (documentId: string) => {
-    navigate(`/extract?documentId=${documentId}`)
   }
 
   const handleDownload = async (documentId: string, title: string) => {
@@ -138,41 +153,10 @@ export default function DocumentsPage(): JSX.Element {
     if (!viewDocumentId) return
     try {
       await createParseRun(viewDocumentId, parserType, config)
-      toast.success('Re-parse started', {
-        description: 'Parsing is in progress',
-      })
+      toast.success('Re-parse started', { description: 'Parsing is in progress' })
       refreshParseRuns()
     } catch (err) {
       toast.error('Re-parse failed', {
-        description: err instanceof Error ? err.message : 'An error occurred',
-      })
-      throw err
-    }
-  }
-
-  const handleToggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  const handleToggleSelectAll = () => {
-    if (selectedIds.size === documents.length) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(documents.map((d) => d.id)))
-    }
-  }
-
-  const handleBulkMove = async (folderId: string | null) => {
-    try {
-      const count = await bulkMoveDocuments(Array.from(selectedIds), folderId)
-      toast.success(`${count} document${count !== 1 ? 's' : ''} moved`)
-    } catch (err) {
-      toast.error('Move failed', {
         description: err instanceof Error ? err.message : 'An error occurred',
       })
       throw err
@@ -216,88 +200,143 @@ export default function DocumentsPage(): JSX.Element {
     }
   }
 
+  void handleUpdateFolder
+  void handleDeleteFolder
+
   const viewedDocument = documents.find((d) => d.id === viewDocumentId)
 
+  const filteredDocuments = documents.filter((doc) => {
+    const matchesFolder = selectedFolderId === null || doc.folderId === selectedFolderId
+    const matchesSearch = doc.title.toLowerCase().includes(documentSearch.toLowerCase())
+    return matchesFolder && matchesSearch
+  })
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Project Documents</h1>
-          <p className="text-muted-foreground mt-1">
-            {currentProject.name}
-          </p>
+    <div className="-m-6 flex h-[calc(100vh-3.5rem)]">
+      {/* Left panel */}
+      <div className="w-72 border-r shrink-0 flex flex-col">
+        {/* Folder filter + management */}
+        <div className="p-3 border-b flex items-center gap-2">
+          <Select
+            value={selectedFolderId ?? '__all__'}
+            onValueChange={(v) => {
+              setSelectedFolderId(v === '__all__' ? null : v)
+              setViewDocumentId(null)
+            }}
+          >
+            <SelectTrigger className="h-8 text-sm flex-1">
+              <SelectValue placeholder="All folders" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All folders</SelectItem>
+              {folders.map((f) => (
+                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FolderEditPopover
+            trigger={
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                <Settings className="h-3.5 w-3.5" />
+              </Button>
+            }
+            onSave={handleCreateFolder}
+          />
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setUploadDialogOpen(true)}>
+
+        {/* Search */}
+        <div className="p-3 border-b">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search documents..."
+              value={documentSearch}
+              onChange={(e) => setDocumentSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+        </div>
+
+        {/* Document list */}
+        <ScrollArea className="flex-1">
+          <div className="p-2">
+            {error && (
+              <p className="text-xs text-destructive text-center py-4">{error}</p>
+            )}
+            {isLoading ? (
+              <div className="space-y-2 p-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : filteredDocuments.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                {documentSearch ? 'No documents match your search' : 'No documents yet'}
+              </p>
+            ) : (
+              filteredDocuments.map((doc) => (
+                <button
+                  key={doc.id}
+                  onClick={() => setViewDocumentId(doc.id)}
+                  className={cn(
+                    'w-full text-left rounded-md px-3 py-2.5 mb-1 transition-colors',
+                    'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    viewDocumentId === doc.id && 'bg-muted',
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="text-sm truncate flex-1">{doc.title}</span>
+                    <DocumentStatusBadge status={doc.status} />
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Actions */}
+        <div className="p-3 border-t space-y-2">
+          <Button
+            variant="outline"
+            className="w-full"
+            size="sm"
+            onClick={() => setUploadDialogOpen(true)}
+          >
             <Plus className="h-4 w-4 mr-2" />
-            Upload Documents
+            Upload New
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            size="sm"
+            disabled
+          >
+            <Library className="h-4 w-4 mr-2" />
+            From Source
           </Button>
         </div>
       </div>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Two-column layout: folder sidebar + documents */}
-      <div className="flex gap-6">
-        <FolderSidebar
-          folders={folders}
-          selectedFolderId={selectedFolderId}
-          onSelectFolder={(id) => {
-            setSelectedFolderId(id)
-            setSelectedIds(new Set())
-          }}
-          onCreateFolder={handleCreateFolder}
-          onUpdateFolder={handleUpdateFolder}
-          onDeleteFolder={handleDeleteFolder}
-        />
-
-        <div className="flex-1 min-w-0 space-y-3">
-          {selectedIds.size > 0 && (
-            <BulkActionBar
-              selectedCount={selectedIds.size}
-              folders={folders}
-              onMove={handleBulkMove}
-              onClearSelection={() => setSelectedIds(new Set())}
-            />
-          )}
-
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : (
-            <DocumentsTable
-              documents={documents}
-              folders={folders}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              onToggleSelectAll={handleToggleSelectAll}
-              onView={handleView}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onDownload={handleDownload}
-              onExtract={handleExtract}
-              onUploadClick={() => setUploadDialogOpen(true)}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* View Document Sheet */}
-      <Sheet open={viewDocumentId !== null} onOpenChange={(open) => !open && setViewDocumentId(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
-            <div className="flex items-center justify-between pr-8">
-              <SheetTitle>{viewedDocument?.title}</SheetTitle>
-              {viewDocumentId && (
+      {/* Right panel */}
+      <div className="flex-1 overflow-y-auto">
+        {!viewDocumentId ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            <p className="text-sm">Select a document to view parse runs</p>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6 max-w-3xl">
+            {/* Document header with actions */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">{viewedDocument?.title}</h2>
+                {viewedDocument && (
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(viewedDocument.createdAt).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -306,27 +345,52 @@ export default function DocumentsPage(): JSX.Element {
                   <RotateCw className="h-4 w-4 mr-2" />
                   Re-parse
                 </Button>
-              )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEdit(viewDocumentId)}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        viewedDocument &&
+                        handleDownload(viewedDocument.id, viewedDocument.title)
+                      }
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => handleDelete(viewDocumentId)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          </SheetHeader>
-          <div className="mt-6 space-y-6">
-            {viewDocumentId && (
-              <DocumentProbePanel documentId={viewDocumentId} />
-            )}
-            {viewDocumentId && (
-              <section>
-                <h3 className="text-sm font-medium mb-2">Parse runs</h3>
-                <RunTimeline
-                  documentId={viewDocumentId}
-                  runs={parseRuns}
-                  onRunDeleted={refreshParseRuns}
-                />
-              </section>
-            )}
-            {viewDocumentId && (
-              <ParsedDocumentViewer documentId={viewDocumentId} />
-            )}
-            {viewDocumentId && viewedDocument && (
+
+            <DocumentProbePanel documentId={viewDocumentId} />
+
+            <section>
+              <h3 className="text-sm font-medium mb-2">Parse runs</h3>
+              <RunTimeline
+                documentId={viewDocumentId}
+                runs={parseRuns}
+                onRunDeleted={refreshParseRuns}
+              />
+            </section>
+
+            <ParsedDocumentViewer documentId={viewDocumentId} />
+
+            {viewedDocument && (
               <DocumentTextViewer
                 documentId={viewDocumentId}
                 documentTitle={viewedDocument.title}
@@ -334,10 +398,10 @@ export default function DocumentsPage(): JSX.Element {
               />
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        )}
+      </div>
 
-      {/* Edit Dialog */}
+      {/* Dialogs */}
       <DocumentEditDialog
         document={selectedDocument}
         open={editDialogOpen}
@@ -345,16 +409,12 @@ export default function DocumentsPage(): JSX.Element {
         onSave={handleEditSave}
         folders={folders}
       />
-
-      {/* Delete Dialog */}
       <DocumentDeleteDialog
         document={selectedDocument}
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
       />
-
-      {/* Upload Dialog */}
       <DocumentUploadDialog
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
@@ -364,8 +424,6 @@ export default function DocumentsPage(): JSX.Element {
         folders={folders}
         initialFolderId={selectedFolderId}
       />
-
-      {/* Re-parse Dialog */}
       <ReParseDialog
         open={reparseDialogOpen}
         onOpenChange={setReparseDialogOpen}
