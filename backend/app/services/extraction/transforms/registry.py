@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from app.services.extraction.transforms.base import ExtractionResultTransform
+from app.services.extraction.transforms.join_results import JoinResults
 from app.services.extraction.transforms.merge_records import MergeRecords
 from app.services.extraction.transforms.normalize_field import NormalizeField
 
@@ -70,6 +71,24 @@ _MERGE_RECORDS_SCHEMA = {
 }
 
 
+_JOIN_RESULTS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "joinKey": {
+            "type": "string",
+            "description": "Field present in all inputs used to match rows.",
+        },
+        "joinType": {
+            "type": "string",
+            "enum": ["left", "inner"],
+            "default": "left",
+            "description": "left: keep all left rows; inner: only matched rows (null-key rows always pass through).",
+        },
+    },
+    "required": ["joinKey"],
+}
+
+
 def get_transforms() -> list[dict]:
     return [
         {
@@ -77,6 +96,12 @@ def get_transforms() -> list[dict]:
             "name": "Normalize field",
             "description": "Apply a rule chain to a source field and write the result to a new output column.",
             "config_schema": _NORMALIZE_FIELD_SCHEMA,
+        },
+        {
+            "transform_type": "join_results",
+            "name": "Join results",
+            "description": "Assemble target records from 2–5 focused single-schema extractions joined on a shared key column.",
+            "config_schema": _JOIN_RESULTS_SCHEMA,
         },
         {
             "transform_type": "merge_records",
@@ -90,6 +115,8 @@ def get_transforms() -> list[dict]:
 def build_transform(transform_type: str) -> ExtractionResultTransform:
     if transform_type == "normalize_field":
         return NormalizeField()
+    if transform_type == "join_results":
+        return JoinResults()
     if transform_type == "merge_records":
         return MergeRecords()
     raise ValueError(f"Unknown transform type: {transform_type!r}")

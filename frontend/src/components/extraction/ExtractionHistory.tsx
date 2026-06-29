@@ -178,6 +178,7 @@ export function ExtractionHistory({
                     isLoading={false}
                     schemaName={schemas?.find((s) => s.id === r.extractionSchemaId)?.name}
                     projectId={projectId}
+                    availableResults={results}
                   />
                 ) : isExpanded ? (
                   <div className="space-y-2 p-3">

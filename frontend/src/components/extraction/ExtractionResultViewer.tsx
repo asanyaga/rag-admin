@@ -44,14 +44,17 @@ import { useResultTransform } from '@/hooks/useResultTransform'
 import { MergeRecordsConfigForm } from './transforms/MergeRecordsConfigForm'
 import type { MergeRecordsConfig } from './transforms/MergeRecordsConfigForm'
 import { NormalizeFieldConfigForm } from './transforms/NormalizeFieldConfigForm'
-import type { NormalizeFieldConfig } from '@/types/resultTransform'
+import { JoinResultsConfigForm } from './transforms/JoinResultsConfigForm'
+import type { NormalizeFieldConfig, JoinResultsConfig } from '@/types/resultTransform'
 import { TransformPreviewTable } from './transforms/TransformPreviewTable'
+import type { ExtractionResultListItem } from '@/types/extraction'
 
 interface ExtractionResultViewerProps {
   result: ExtractionResult | null
   isLoading?: boolean
   schemaName?: string
   projectId?: string
+  availableResults?: ExtractionResultListItem[]
 }
 
 // ── Internal types for casting extractionMetadata and config ─────────────────
@@ -402,35 +405,57 @@ const DEFAULT_NORMALIZE_CONFIG: NormalizeFieldConfig = {
   fields: [{ sourceField: '', outputField: '', rules: [] }],
 }
 
+const DEFAULT_JOIN_CONFIG: JoinResultsConfig = {
+  joinKey: '',
+  joinType: 'left',
+  lookupResultIds: [],
+}
+
 export function ExtractionResultViewer({
   result,
   isLoading,
   schemaName,
   projectId,
+  availableResults = [],
 }: ExtractionResultViewerProps) {
   const navigate = useNavigate()
   const [transformOpen, setTransformOpen] = useState(false)
-  const [transformType, setTransformType] = useState<'normalize_field' | 'merge_records'>('normalize_field')
+  const [transformType, setTransformType] = useState<'normalize_field' | 'merge_records' | 'join_results'>('normalize_field')
   const [normalizeConfig, setNormalizeConfig] = useState<NormalizeFieldConfig>(DEFAULT_NORMALIZE_CONFIG)
   const [mergeConfig, setMergeConfig] = useState<MergeRecordsConfig>(DEFAULT_MERGE_CONFIG)
+  const [joinConfig, setJoinConfig] = useState<JoinResultsConfig>(DEFAULT_JOIN_CONFIG)
   const transform = useResultTransform(projectId ?? '')
+
+  function resetTransformDialog(open: boolean) {
+    setTransformOpen(open)
+    if (!open) {
+      setTransformType('normalize_field')
+      setNormalizeConfig(DEFAULT_NORMALIZE_CONFIG)
+      setMergeConfig(DEFAULT_MERGE_CONFIG)
+      setJoinConfig(DEFAULT_JOIN_CONFIG)
+    }
+  }
+
+  function buildConfig(): Record<string, unknown> {
+    if (transformType === 'normalize_field') return normalizeConfig as unknown as Record<string, unknown>
+    if (transformType === 'merge_records') return { groupBy: mergeConfig.groupBy, spine: mergeConfig.spine, conflict: mergeConfig.conflict, onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine }
+    return { joinKey: joinConfig.joinKey, joinType: joinConfig.joinType }
+  }
+
+  function buildSourceResultIds(): string[] {
+    if (!result) return []
+    if (transformType === 'join_results') return [result.id, ...joinConfig.lookupResultIds]
+    return [result.id]
+  }
 
   const handlePreview = async () => {
     if (!result) return
-    const config =
-      transformType === 'normalize_field'
-        ? (normalizeConfig as unknown as Record<string, unknown>)
-        : { groupBy: mergeConfig.groupBy, spine: mergeConfig.spine, conflict: mergeConfig.conflict, onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine }
-    await transform.preview({ sourceResultIds: [result.id], transformType, config })
+    await transform.preview({ sourceResultIds: buildSourceResultIds(), transformType, config: buildConfig() })
   }
 
   const handleApply = async () => {
     if (!result) return
-    const config =
-      transformType === 'normalize_field'
-        ? (normalizeConfig as unknown as Record<string, unknown>)
-        : { groupBy: mergeConfig.groupBy, spine: mergeConfig.spine, conflict: mergeConfig.conflict, onGroupWithoutSpine: mergeConfig.onGroupWithoutSpine }
-    const derived = await transform.apply({ sourceResultIds: [result.id], transformType, config })
+    const derived = await transform.apply({ sourceResultIds: buildSourceResultIds(), transformType, config: buildConfig() })
     setTransformOpen(false)
     navigate(`/extraction?resultId=${derived.id}`)
   }
@@ -487,7 +512,7 @@ export function ExtractionResultViewer({
             <CardTitle className="text-base">Extraction Result</CardTitle>
             <div className="flex items-center gap-2">
               {result.status === 'completed' && projectId && (
-                <Dialog open={transformOpen} onOpenChange={(open) => { setTransformOpen(open); if (!open) { setTransformType('normalize_field'); setNormalizeConfig(DEFAULT_NORMALIZE_CONFIG); setMergeConfig(DEFAULT_MERGE_CONFIG) } }}>
+                <Dialog open={transformOpen} onOpenChange={resetTransformDialog}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
                       <Wand2 className="h-3.5 w-3.5" />
@@ -507,13 +532,23 @@ export function ExtractionResultViewer({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="normalize_field">Normalize field</SelectItem>
+                            <SelectItem value="join_results">Join results</SelectItem>
                             <SelectItem value="merge_records">Merge records</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      {transformType === 'normalize_field' ? (
+                      {transformType === 'normalize_field' && (
                         <NormalizeFieldConfigForm value={normalizeConfig} onChange={setNormalizeConfig} />
-                      ) : (
+                      )}
+                      {transformType === 'join_results' && result && (
+                        <JoinResultsConfigForm
+                          value={joinConfig}
+                          onChange={setJoinConfig}
+                          primaryResultId={result.id}
+                          availableResults={availableResults}
+                        />
+                      )}
+                      {transformType === 'merge_records' && (
                         <MergeRecordsConfigForm value={mergeConfig} onChange={setMergeConfig} />
                       )}
                       {transform.error && (

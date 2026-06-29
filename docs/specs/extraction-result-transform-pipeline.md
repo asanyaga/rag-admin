@@ -133,6 +133,7 @@ Every primitive operates on each result's `structured_data` (the rows array) and
 | `transform_type` | Inputs | Job |
 |---|---|---|
 | `normalize_field` | 1 | Normalize a source field via a rule chain, writing the result to a new named column. The resulting `ExtractionResult` (with the added column) is the input for downstream transforms that assume pre-normalized reference fields (e.g. `merge_records groupBy`). Source field is never mutated. |
+| `join_results` | 2..5 | Assemble the target record from N clean, focused single-schema extractions by joining on a shared key column. Each input result is authoritative for its own columns — no spine detection or conflict resolution needed. The composition step for the focused-extraction architecture (extract price schema → extract spec schema → join). → See [join_results spec](extraction-result-transforms-join-results.md) |
 | `merge_records` | 1..N | Group rows by key field(s); collapse non-spine rows into spine rows; configurable conflict policy (the base↔variant / cross-run merge). Expects fields to already be normalized — normalization is a pre-step via `normalize_field`. |
 | `strip_records` | 1 | Drop rows matching a predicate (e.g. leftover spec-only rows; null-SKU rows) |
 | `dedupe_records` | 1 | Drop duplicate rows by key |
@@ -245,6 +246,28 @@ Behavior: if `sourceField` is `null`, `outputField` is set to `null`.
 
 ---
 
+## Primitive: `join_results`
+
+Joins 2–5 `ExtractionResult` inputs on a shared key column, producing a wider result whose columns are the union of all input schemas. Each input result is authoritative for its own columns — there is no spine detection, conflict policy, or row collapse. Columns are expected to be non-overlapping by design.
+
+This is the composition primitive for the **focused-extraction architecture**: run one small, fast, accurate extraction per schema, then join. It replaces the multi-input `merge_records` cross-run use case (Slice 5) for projects that deliberately split extraction by schema rather than extracting everything in a single shot.
+
+```json
+{
+  "joinKey": "series",
+  "joinType": "left",
+  "resultIds": ["<price_result_id>", "<spec_result_id>"]
+}
+```
+
+- `joinKey` — field present in all inputs used to match rows across results.
+- `joinType` — `left` (keep all rows from the first result; fill columns from others where matched) or `inner` (only rows with a match across all inputs).
+- `resultIds` — 2 to 5 source result ids, ordered left-to-right (first = primary/left side).
+
+→ Full spec: [extraction-result-transforms-join-results.md](extraction-result-transforms-join-results.md)
+
+---
+
 ## Worked composition — Sammic GP-40 (base↔variant)
 
 The human discovers this sequence interactively; it is not pre-declared:
@@ -352,7 +375,7 @@ Each slice ships backend + frontend + tests and is independently demoable. Slice
 - **Slice 2 — Normalize a field to a new column** (`normalize_field`): a composable rule chain (`trim`, `collapseWhitespace`, `lowercase`/`uppercase`/`titlecase`, `stripRegex`, `stripTrailingChars`, `stripPrefix`, `stripSuffix`, `split`, `regexExtract`, `replace`, `alias`, `nullifyIfIn`) applied to a `sourceField`, written to a new `outputField` column. Source is never mutated. The output `ExtractionResult` (with the new column) feeds downstream transforms that assume pre-normalized reference fields. **Acceptance:** `normalize_field` on `modelName` → `baseModel` with stripRegex (power token) + stripTrailingChars `[B,D,S,C]` + alias `{UX-50L → UX-50 LITE}` produces the correct base keys; `UX-50L` is never collapsed to `UX-50`; all rules execute correctly in isolation and in composition; `sourceField: null` → `outputField: null`; config form driven by `config_schema`. → **[Slice 2 spec](extraction-result-transforms-slice2-normalize-field.md)**
 - **Slice 3 — Broadcast a field** (`broadcast_field`): propagate `brand`/vendor where null (e.g. spec-only standalone rows).
 - **Slice 4 — Prune to target shape** (`strip_records`, `project_to_schema`): drop merged-away rows; restrict to target columns; export the result via the existing path.
-- **Slice 5 — Cross-run merge** (multi-select inputs): merge a price-only result with a spec-only result — `merge_records` over N inputs plus the multi-select UX.
+- **Slice 5 — Join focused single-schema extractions** (`join_results`): assemble the target record from N clean, single-schema extraction results joined on a shared key column. Replaces the multi-input `merge_records` cross-run approach — see [extraction-result-transforms-join-results.md](extraction-result-transforms-join-results.md) for the full spec.
 - **Slice 6 — Lineage & rich viz polish:** full lineage panel + branch; source coloring, merge inspector, provenance popover.
 - **Future (not v1):** record/replay a lineage as an autonomous pipeline; recipe + config suggestion. HITL first, then automation.
 

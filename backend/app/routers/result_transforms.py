@@ -15,6 +15,7 @@ from app.schemas.result_transform import (
     TransformPreviewResponse,
 )
 from app.services.exceptions import NotFoundError
+from app.services.extraction.transforms.base import TransformValidationError
 from app.services.extraction.transforms.registry import get_transforms
 from app.services.result_transform_service import ResultTransformService
 
@@ -48,6 +49,11 @@ async def preview_transform(
         return TransformPreviewResponse(**out)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except TransformValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": e.code, "detail": e.detail},
+        )
 
 
 @router.post(
@@ -73,3 +79,8 @@ async def apply_transform(
         return ExtractionResultResponse.from_orm_model(result)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except TransformValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": e.code, "detail": e.detail},
+        )
