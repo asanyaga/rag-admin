@@ -11,10 +11,22 @@ export interface SchemaField {
   properties?: SchemaField[]
 }
 
-const KNOWN_KEYWORDS = new Set(['type', 'properties', 'required', 'description', 'enum', 'items'])
+// Root keywords the builder handles natively — not stored as extra props
+const NATIVE_ROOT_KEYWORDS = new Set(['type', 'properties', 'required'])
+
+// Composition keywords the builder cannot render — trigger the warning banner
+const COMPOSITION_KEYWORDS = new Set(['$ref', 'allOf', 'anyOf', 'oneOf', 'if', 'then', 'else', 'not'])
+
+export function extractExtraRootProps(schema: Record<string, unknown>): Record<string, unknown> {
+  const extra: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(schema)) {
+    if (!NATIVE_ROOT_KEYWORDS.has(k)) extra[k] = v
+  }
+  return extra
+}
 
 export function hasUnknownKeywords(schema: Record<string, unknown>): boolean {
-  return Object.keys(schema).some(k => !KNOWN_KEYWORDS.has(k))
+  return Object.keys(schema).some(k => COMPOSITION_KEYWORDS.has(k))
 }
 
 export function newBlankField(): SchemaField {

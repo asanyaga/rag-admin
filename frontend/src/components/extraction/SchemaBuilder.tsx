@@ -11,6 +11,7 @@ import {
   newBlankField,
   getDuplicateKeys,
   hasUnknownKeywords,
+  extractExtraRootProps,
   validateFields,
 } from '@/lib/schemaBuilder'
 
@@ -28,6 +29,8 @@ export function SchemaBuilder({ value, onChange, onValidChange }: SchemaBuilderP
   const [parseError, setParseError] = useState<string | null>(null)
   const [unknownKeywords, setUnknownKeywords] = useState(() => hasUnknownKeywords(value))
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Extra root-level props (e.g. additionalProperties) not modeled in fields — preserved on round-trips
+  const extraRootPropsRef = useRef<Record<string, unknown>>(extractExtraRootProps(value))
 
   useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
@@ -36,9 +39,9 @@ export function SchemaBuilder({ value, onChange, onValidChange }: SchemaBuilderP
   const applyFields = useCallback(
     (next: SchemaField[]) => {
       setFields(next)
-      const schema = fieldsToSchema(next)
+      const schema = { ...extraRootPropsRef.current, ...fieldsToSchema(next) }
       setJsonText(JSON.stringify(schema, null, 2))
-      setUnknownKeywords(false)
+      setUnknownKeywords(hasUnknownKeywords(schema))
       onChange(schema)
       onValidChange?.(validateFields(next) === null)
     },
@@ -51,6 +54,7 @@ export function SchemaBuilder({ value, onChange, onValidChange }: SchemaBuilderP
     debounceRef.current = setTimeout(() => {
       try {
         const parsed = JSON.parse(text) as Record<string, unknown>
+        extraRootPropsRef.current = extractExtraRootProps(parsed)
         const next = schemaToFields(parsed)
         setFields(next)
         setUnknownKeywords(hasUnknownKeywords(parsed))

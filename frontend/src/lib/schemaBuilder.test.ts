@@ -4,6 +4,7 @@ import {
   schemaToFields,
   fieldsToSchema,
   hasUnknownKeywords,
+  extractExtraRootProps,
   validateFields,
   newBlankField,
   getDuplicateKeys,
@@ -183,12 +184,36 @@ describe('round-trip fidelity', () => {
 })
 
 describe('hasUnknownKeywords', () => {
-  it('returns false for standard keywords', () => {
-    expect(hasUnknownKeywords({ type: 'object', properties: {}, required: [], description: 'x', enum: [], items: {} })).toBe(false)
+  it('returns false for standard root keywords', () => {
+    expect(hasUnknownKeywords({ type: 'object', properties: {}, required: [] })).toBe(false)
+  })
+
+  it('returns false for additionalProperties (well-known, preserved silently)', () => {
+    expect(hasUnknownKeywords({ type: 'object', properties: {}, additionalProperties: false })).toBe(false)
   })
 
   it('returns true for $ref', () => {
     expect(hasUnknownKeywords({ type: 'object', $ref: '#/x' })).toBe(true)
+  })
+
+  it('returns true for allOf', () => {
+    expect(hasUnknownKeywords({ type: 'object', allOf: [] })).toBe(true)
+  })
+})
+
+describe('extractExtraRootProps', () => {
+  it('returns empty object for native-only schema', () => {
+    expect(extractExtraRootProps({ type: 'object', properties: {}, required: [] })).toEqual({})
+  })
+
+  it('extracts additionalProperties', () => {
+    const schema = { type: 'object', properties: {}, additionalProperties: false }
+    expect(extractExtraRootProps(schema)).toEqual({ additionalProperties: false })
+  })
+
+  it('extracts multiple extra props', () => {
+    const schema = { type: 'object', properties: {}, additionalProperties: false, title: 'My Schema' }
+    expect(extractExtraRootProps(schema)).toEqual({ additionalProperties: false, title: 'My Schema' })
   })
 })
 
