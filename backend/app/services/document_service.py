@@ -241,6 +241,47 @@ class DocumentService:
                 results.append(BulkUploadItemResult(filename=filename, error=str(e)))
         return results
 
+    async def add_from_source(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+        source_document_id: UUID,
+        source_doc_filename: str | None,
+        source_doc_storage_uri: str,
+        source_doc_sha256: str,
+        source_doc_byte_size: int | None,
+        source_doc_mime_type: str | None,
+    ) -> DocumentResponse:
+        """Create a project Document from an existing SourceDocument (no file transfer).
+
+        The caller is responsible for kicking off parse as a background task.
+        """
+        project = await self.project_repo.get_by_id(project_id, user_id)
+        if not project:
+            raise NotFoundError(f"Project {project_id} not found")
+
+        source_metadata = {
+            "filename": source_doc_filename,
+            "file_path": source_doc_storage_uri,
+            "file_size": source_doc_byte_size,
+            "mime_type": source_doc_mime_type,
+            "checksum": source_doc_sha256,
+        }
+        try:
+            document = await self.document_repo.create(
+                project_id=project_id,
+                user_id=user_id,
+                source_type="upload",
+                source_identifier=source_doc_sha256,
+                title=source_doc_filename or "Untitled",
+                description=None,
+                source_metadata=source_metadata,
+                source_document_id=source_document_id,
+            )
+        except IntegrityError:
+            raise ConflictError("This source document is already in this project")
+        return DocumentResponse.model_validate(document)
+
     async def get_document(
         self,
         document_id: UUID,

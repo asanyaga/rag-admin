@@ -87,3 +87,11 @@ class BulkMoveResponse(BaseModel):
     moved_count: int = Field(..., alias="movedCount")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class DocumentFromSourceRequest(BaseModel):
+    """Request body for adding an existing source document to a project."""
+    project_id: UUID
+    source_document_id: UUID
+    parser_type: str = "simple"
+    parse_config: dict | None = None
