@@ -6,16 +6,12 @@
 ## Overview
 
 Refactor the documents/parse UX to make the parse step explicit in the nav and across the pipeline.
-Three rename/reorder changes plus a shared document picker component that unifies how Classify and
-Extract select their input document.
-
-Delivered as three independent workstreams: Parse → Classify → Extract.
+Delivered as three sequential workstreams. Workstream 1 (Parse) is fully specified here.
+Workstreams 2 and 3 will be designed after Parse ships.
 
 ---
 
-## Workstream 1: Parse (Nav + Rename)
-
-Pure frontend refactor. No new components, no backend changes.
+## Workstream 1: Parse (Nav + Two-Panel Refactor)
 
 ### Route changes
 
@@ -25,7 +21,8 @@ Pure frontend refactor. No new components, no backend changes.
 | `/documents/:documentId/runs/:runId` | `/parse/:documentId/runs/:runId` |
 | `/extraction` | `/extract` |
 
-Update `App.tsx` path strings directly. No redirects needed — internal tool with no external link consumers.
+Update `App.tsx` path strings directly. No redirects needed — internal tool with no external
+link consumers.
 
 ### Navigation order (`navigation.ts`)
 
@@ -44,72 +41,66 @@ Evaluation
 Settings
 ```
 
-### Touch points
+### Parse page — two-panel layout
 
-- `frontend/src/config/navigation.ts` — labels, hrefs, order
-- `frontend/src/App.tsx` — route `path` strings and breadcrumb `handle` labels
-- `frontend/src/pages/DocumentsPage.tsx` — page `h1` heading ("Project Documents" → "Parse")
-- `frontend/src/pages/ExtractionPage.tsx` — page `h1` heading ("Extraction" → "Extract")
-- `frontend/src/components/layout/Breadcrumbs.tsx` — verify breadcrumb labels render from route handles (no hardcoding)
-- Any `navigate('/documents')` or `navigate('/extraction')` call-sites in other pages (e.g. `DocumentsPage` `handleExtract` navigates to `/extraction?documentId=...` → update to `/extract`)
-
----
-
-## Workstream 2: Classify — DocumentPickerPanel + SourceDocumentBrowser + Backend
-
-### New component: `DocumentPickerPanel`
-
-**Path:** `frontend/src/components/documents/DocumentPickerPanel.tsx`
-
-Self-contained left panel. Replaces the ad-hoc document list in `NewClassificationRunPage`.
-Also used by Workstream 3 (Extract).
-
-```ts
-interface DocumentPickerPanelProps {
-  projectId: string
-  selectedDocumentId: string | null
-  onSelect: (documentId: string) => void
-}
-```
-
-**Layout (fixed width ~w-72, full height, flex column):**
+`DocumentsPage` is renamed `ParsePage` and refactored from its current layout (folder sidebar +
+document table + Sheet/drawer) into a two-panel layout.
 
 ```
-┌─────────────────────────────┐
-│  🔍 Search documents...      │
-├─────────────────────────────┤
-│  ✅ Invoice Q1.pdf           │  ← parsed, selectable
-│  ✅ Contract_2026.pdf        │
-│  ⏳ Report_draft.pdf         │  ← parsing, greyed out, auto-selects when ready
-│  ...                        │
-├─────────────────────────────┤
-│  [ Upload New ]             │
-│  [ Add from Source ]        │
-└─────────────────────────────┘
+┌──────────────────┬──────────────────────────────────────────┐
+│  LEFT PANEL      │  RIGHT PANEL                             │
+│  (w-72, fixed)   │  (flex-1)                                │
+│                  │                                          │
+│  [All folders ▾] │  No doc selected:                        │
+│  🔍 Search...    │    "Select a document to view parse runs" │
+│                  │                                          │
+│  invoice.pdf     │  Doc selected:                           │
+│  contract.pdf    │    Parse run timeline                    │
+│  report.pdf ⏳   │    Re-parse button                       │
+│  ...             │    Parsed document viewer                │
+│                  │    Document text viewer                  │
+│  [ Upload New  ] │                                          │
+│  [ From Source ] │                                          │
+└──────────────────┴──────────────────────────────────────────┘
 ```
 
-**Document list rules:**
-- Shows project documents that have at least one `succeeded` or `partial` parse run, plus any
-  documents currently in `processing` status (so in-progress work is visible)
-- Documents still processing are greyed out and non-interactive
-- Polling: documents with `processing` status poll every 3 seconds; when status flips to `ready`,
-  the document auto-selects (calls `onSelect(documentId)`)
+**Left panel behaviour:**
+- Shows all project documents (uploaded, processing, parsed) — full list, no parse-run filter
+- Folder filter: compact dropdown above the search box, options are "All folders" + each folder
+  name. Selecting a folder filters the list. Default: "All folders".
+- Search filters by document title
+- Selecting a document highlights it and loads the right panel
+- "Upload New" opens `DocumentUploadDialog` (existing component, unchanged)
+- "From Source" opens `SourceDocumentBrowser` sheet (new — see below)
+- After upload or add-from-source: new document appears in the list and is auto-selected
 
-**"Upload New" button:**
-- Opens `DocumentUploadDialog` (existing component, no changes)
-- After successful upload the new document appears in the list as processing and auto-selects
+**Right panel behaviour:**
+- Empty state when no document is selected
+- On document select: renders inline what the current Sheet/drawer shows:
+  - `DocumentProbePanel`
+  - Parse run timeline (`RunTimeline`) with delete + re-parse actions
+  - `ParsedDocumentViewer`
+  - `DocumentTextViewer`
+- Re-parse dialog (`ReParseDialog`) continues to work the same way, triggered from the timeline
+- Document actions (edit title/description, delete, download) move from table row menus into the
+  right panel header as an actions menu (⋯ dropdown). `DocumentEditDialog` and
+  `DocumentDeleteDialog` existing components are reused unchanged.
 
-**"Add from Source" button:**
-- Opens `SourceDocumentBrowser` sheet (see below)
-- After successful add+parse the new document appears in the list as processing and auto-selects
+**Removed from the Parse page:**
+- `FolderSidebar` — replaced by compact folder dropdown in left panel
+- `BulkActionBar` — bulk-move no longer fits the two-panel layout; removed
+- Sheet / `SheetContent` — replaced by the inline right panel
+
+**Folder management (create, rename, delete folders):**
+The `FolderSidebar` currently provides folder CRUD actions (create/edit/delete popovers). These
+move to the folder dropdown in the left panel: a small gear/settings icon beside the dropdown
+opens a simple folder management popover (same actions, same existing components).
 
 ### New component: `SourceDocumentBrowser`
 
 **Path:** `frontend/src/components/documents/SourceDocumentBrowser.tsx`
 
-A Sheet that opens from the "Add from Source" button.
-
-**Layout:**
+A Sheet that opens from the "From Source" button in the left panel.
 
 ```
 ┌─────────────────────────────────────┐
@@ -119,41 +110,25 @@ A Sheet that opens from the "Add from Source" button.
 │                                     │
 │  ○  annual_report_2025.pdf   2.1MB  │
 │  ○  contracts_batch.pdf      890KB  │
+│  ○  invoices_q4.pdf          1.4MB  │
 │  ...                                │
 ├─────────────────────────────────────┤
 │  Parser:  [ LlamaParse ▾ ]          │
 │  + parse options (collapsible)      │
 ├─────────────────────────────────────┤
-│           [ Cancel ] [ Add & Parse ]│
+│          [ Cancel ] [ Add & Parse ] │
 └─────────────────────────────────────┘
 ```
 
 **Behaviour:**
-- Lists source documents not already present as project documents in the current project
-  (filtered client-side using the existing `useSourceDocuments` hook + the project's document list)
+- Lists source documents not already present as project documents in the current project.
+  Filtered client-side: `useSourceDocuments` results minus documents already in
+  `useDocuments` for this project (matched by source document ID).
 - Parse config reuses `ParseMethodSelector` + existing parser config sub-components
   (`LlamaParseConfig`, `LandingAIConfig`, `LocalPipelineConfig`) — same UI as `ReParseDialog`
-- "Add & Parse" calls `POST /projects/{projectId}/documents/from-source`, closes the sheet, and
-  triggers the auto-select + polling flow in `DocumentPickerPanel`
-- "Cancel" closes without any side effects
-
-### `NewClassificationRunPage` refactor
-
-The existing 3-step wizard (select doc → select parse run → configure) is replaced by a
-two-panel layout:
-
-- **Left panel:** `DocumentPickerPanel`
-- **Right panel:** classifier config form (collapsing steps 2+3 — parse run selection is no longer
-  needed because `DocumentPickerPanel` guarantees only docs with completed parse runs are selectable)
-
-The right panel is empty/disabled with a prompt ("Select a document to configure") until a document
-is selected. Once selected, the `ClassificationRunForm` renders immediately.
-
-The right panel auto-selects the latest `succeeded` or `partial` parse run for the chosen document
-(same pattern `ExtractionPage` uses with `latestViableRun`) and passes that `parseRunId` when
-submitting the classification run. The user never has to pick a parse run manually.
-
-Routing stays the same: `/classify/new`.
+- "Add & Parse" calls `POST /projects/{projectId}/documents/from-source`, sheet closes,
+  new document appears in left panel list and is auto-selected
+- "Cancel" closes without side effects
 
 ### New backend endpoint
 
@@ -166,7 +141,7 @@ POST /projects/{projectId}/documents/from-source
 {
   "source_document_id": "uuid",
   "parser_type": "llamaparse | landingai | simple",
-  "parse_config": { }
+  "parse_config": {}
 }
 ```
 
@@ -179,32 +154,40 @@ POST /projects/{projectId}/documents/from-source
 ```
 
 **Backend behaviour:**
-1. Create a `Document` record in the project, linking to the existing source file (no file transfer)
+1. Create a `Document` record in the project linking to the existing source file — no file transfer
 2. Immediately kick off a parse run with the supplied parser type and config
-3. Return both IDs so the frontend can poll the document status
+3. Return both IDs so the frontend can auto-select and poll the document status
 
 **Backend layers:** router → service → repository, following the standard data-flow pattern.
 
+### Touch points summary
+
+| File | Change |
+|---|---|
+| `frontend/src/config/navigation.ts` | Labels, hrefs, order |
+| `frontend/src/App.tsx` | Route paths, breadcrumb handles |
+| `frontend/src/pages/DocumentsPage.tsx` | Full two-panel refactor → rename to `ParsePage` |
+| `frontend/src/pages/ExtractionPage.tsx` | `h1` heading only ("Extraction" → "Extract") |
+| Any `navigate('/documents')` call-sites | Update to `/parse` |
+| Any `navigate('/extraction')` call-sites | Update to `/extract` |
+| `frontend/src/components/documents/SourceDocumentBrowser.tsx` | New |
+| `backend/app/routers/documents.py` | New `from-source` route |
+| `backend/app/services/documents.py` | New `create_from_source` method |
+| `backend/app/repositories/documents.py` | New repository method |
+
 ---
 
-## Workstream 3: Extract — Adopt DocumentPickerPanel
+## Workstream 2: Classify (TBD)
 
-**Only change:** `ExtractionPage` (`/extract`) replaces the existing
-`frontend/src/components/extraction/DocumentSelector.tsx` with `DocumentPickerPanel`.
-
-`DocumentSelector` is deleted once it has no remaining consumers.
-
-The rest of `ExtractionPage` (schema manager, extraction form, history panel) is unchanged.
+Document selection for classification will include an inline parse option matching the current
+Extract flow — defaulting to the latest parse run config but allowing changes. Design to be
+written after Workstream 1 ships.
 
 ---
 
-## What is NOT changing
+## Workstream 3: Extract (TBD)
 
-- `DocumentsPage` (Parse page) internal functionality — folder sidebar, bulk actions, document
-  table, re-parse sheet. Only the name and route change.
-- `ClassificationPage` (the runs list at `/classify`) — unchanged.
-- All backend endpoints except the one new endpoint added in Workstream 2.
-- Source Documents page — unchanged.
+Design to be written after Workstream 2 ships.
 
 ---
 
@@ -212,6 +195,6 @@ The rest of `ExtractionPage` (schema manager, extraction form, history panel) is
 
 | Workstream | Backend changes |
 |---|---|
-| 1 — Parse | None |
-| 2 — Classify | One new endpoint: `POST /projects/{projectId}/documents/from-source` |
-| 3 — Extract | None |
+| 1 — Parse | One new endpoint: `POST /projects/{projectId}/documents/from-source` |
+| 2 — Classify | TBD |
+| 3 — Extract | TBD |
