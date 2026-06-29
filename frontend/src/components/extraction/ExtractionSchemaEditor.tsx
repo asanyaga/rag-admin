@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { ExtractionSchema, ExtractionSchemaCreate, ExtractionSchemaUpdate } from '@/types/extraction'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -18,6 +17,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { SchemaBuilder } from './SchemaBuilder'
+
+const EMPTY_SCHEMA: Record<string, unknown> = { type: 'object', properties: {} }
 
 interface ExtractionSchemaEditorProps {
   open: boolean
@@ -34,10 +36,12 @@ export function ExtractionSchemaEditor({
 }: ExtractionSchemaEditorProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [schemaText, setSchemaText] = useState('')
   const [extractionTarget, setExtractionTarget] = useState('PER_DOC')
+  const [isSchemaValid, setIsSchemaValid] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [schemaBuilderKey, setSchemaBuilderKey] = useState(0)
+  const schemaDefinitionRef = useRef<Record<string, unknown>>(EMPTY_SCHEMA)
 
   const isEditing = !!schema
 
@@ -45,15 +49,17 @@ export function ExtractionSchemaEditor({
     if (schema) {
       setName(schema.name)
       setDescription(schema.description || '')
-      setSchemaText(JSON.stringify(schema.schemaDefinition, null, 2))
+      schemaDefinitionRef.current = schema.schemaDefinition
       setExtractionTarget(schema.extractionTarget)
     } else {
       setName('')
       setDescription('')
-      setSchemaText('{\n  "type": "object",\n  "properties": {\n    \n  }\n}')
+      schemaDefinitionRef.current = EMPTY_SCHEMA
       setExtractionTarget('PER_DOC')
     }
+    setIsSchemaValid(true)
     setError(null)
+    setSchemaBuilderKey(k => k + 1)
   }, [schema, open])
 
   const handleSave = async () => {
@@ -64,15 +70,8 @@ export function ExtractionSchemaEditor({
       return
     }
 
-    let parsedSchema: Record<string, unknown>
-    try {
-      parsedSchema = JSON.parse(schemaText)
-    } catch {
-      setError('Invalid JSON schema')
-      return
-    }
-
-    if (parsedSchema.type !== 'object') {
+    const schemaDefinition = schemaDefinitionRef.current
+    if (schemaDefinition.type !== 'object') {
       setError('Root schema type must be "object"')
       return
     }
@@ -80,21 +79,19 @@ export function ExtractionSchemaEditor({
     setIsSaving(true)
     try {
       if (isEditing) {
-        const update: ExtractionSchemaUpdate = {
+        await onSave({
           name: name.trim(),
           description: description.trim() || undefined,
-          schemaDefinition: parsedSchema,
+          schemaDefinition,
           extractionTarget,
-        }
-        await onSave(update)
+        } as ExtractionSchemaUpdate)
       } else {
-        const create: ExtractionSchemaCreate = {
+        await onSave({
           name: name.trim(),
           description: description.trim() || undefined,
-          schemaDefinition: parsedSchema,
+          schemaDefinition,
           extractionTarget,
-        }
-        await onSave(create)
+        } as ExtractionSchemaCreate)
       }
       onOpenChange(false)
     } catch (err) {
@@ -146,13 +143,12 @@ export function ExtractionSchemaEditor({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="schema-definition">JSON Schema</Label>
-            <Textarea
-              id="schema-definition"
-              value={schemaText}
-              onChange={(e) => setSchemaText(e.target.value)}
-              className="font-mono text-sm min-h-[200px]"
-              placeholder='{"type": "object", "properties": {...}}'
+            <Label>Schema Definition</Label>
+            <SchemaBuilder
+              key={schemaBuilderKey}
+              value={schemaDefinitionRef.current}
+              onChange={(v) => { schemaDefinitionRef.current = v }}
+              onValidChange={setIsSchemaValid}
             />
           </div>
 
@@ -164,7 +160,7 @@ export function ExtractionSchemaEditor({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving || !isSchemaValid}>
             {isSaving ? 'Saving...' : isEditing ? 'Update' : 'Create'}
           </Button>
         </DialogFooter>
