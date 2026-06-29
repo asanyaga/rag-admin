@@ -35,7 +35,8 @@ describe('fieldsToSchema', () => {
     const fields: SchemaField[] = [
       { key: 'x', type: 'string', description: '', required: false, nullable: false },
     ]
-    const props = (fieldsToSchema(fields) as any).properties
+    const schema = fieldsToSchema(fields)
+    const props = schema.properties as Record<string, Record<string, unknown>>
     expect(props.x.description).toBeUndefined()
   })
 
@@ -43,14 +44,18 @@ describe('fieldsToSchema', () => {
     const fields: SchemaField[] = [
       { key: 'age', type: 'number', description: '', required: false, nullable: true },
     ]
-    expect((fieldsToSchema(fields) as any).properties.age.type).toEqual(['number', 'null'])
+    const schema = fieldsToSchema(fields)
+    const props = schema.properties as Record<string, Record<string, unknown>>
+    expect(props.age.type).toEqual(['number', 'null'])
   })
 
   it('includes enum values', () => {
     const fields: SchemaField[] = [
       { key: 'status', type: 'string', description: '', required: false, nullable: false, enumValues: ['active', 'inactive'] },
     ]
-    expect((fieldsToSchema(fields) as any).properties.status.enum).toEqual(['active', 'inactive'])
+    const schema = fieldsToSchema(fields)
+    const props = schema.properties as Record<string, Record<string, unknown>>
+    expect(props.status.enum).toEqual(['active', 'inactive'])
   })
 
   it('converts nested object fields', () => {
@@ -60,9 +65,12 @@ describe('fieldsToSchema', () => {
         { key: 'street', type: 'string', description: '', required: true, nullable: false },
       ],
     }]
-    const addr = (fieldsToSchema(fields) as any).properties.addr
+    const schema = fieldsToSchema(fields)
+    const props = schema.properties as Record<string, Record<string, unknown>>
+    const addr = props.addr
+    const addrProps = addr.properties as Record<string, unknown>
     expect(addr.type).toBe('object')
-    expect(addr.properties.street).toBeDefined()
+    expect(addrProps.street).toBeDefined()
     expect(addr.required).toEqual(['street'])
   })
 
@@ -71,7 +79,9 @@ describe('fieldsToSchema', () => {
       key: 'tags', type: 'array', description: '', required: false, nullable: false,
       items: { key: '', type: 'string', description: '', required: false, nullable: false },
     }]
-    const tags = (fieldsToSchema(fields) as any).properties.tags
+    const schema = fieldsToSchema(fields)
+    const props = schema.properties as Record<string, Record<string, unknown>>
+    const tags = props.tags
     expect(tags.type).toBe('array')
     expect(tags.items).toEqual({ type: 'string' })
   })
@@ -86,10 +96,14 @@ describe('fieldsToSchema', () => {
         ],
       },
     }]
-    const rows = (fieldsToSchema(fields) as any).properties.rows
-    expect(rows.items.type).toBe('object')
-    expect(rows.items.properties.id).toBeDefined()
-    expect(rows.items.required).toEqual(['id'])
+    const schema = fieldsToSchema(fields)
+    const props = schema.properties as Record<string, Record<string, unknown>>
+    const rows = props.rows
+    const items = rows.items as Record<string, unknown>
+    const itemProps = items.properties as Record<string, unknown>
+    expect(items.type).toBe('object')
+    expect(itemProps.id).toBeDefined()
+    expect(items.required).toEqual(['id'])
   })
 
   it('skips fields with empty keys', () => {
@@ -97,8 +111,9 @@ describe('fieldsToSchema', () => {
       { key: '', type: 'string', description: '', required: false, nullable: false },
       { key: 'ok', type: 'string', description: '', required: false, nullable: false },
     ]
-    const schema = fieldsToSchema(fields) as any
-    expect(Object.keys(schema.properties)).toEqual(['ok'])
+    const schema = fieldsToSchema(fields)
+    const props = schema.properties as Record<string, unknown>
+    expect(Object.keys(props)).toEqual(['ok'])
   })
 })
 
