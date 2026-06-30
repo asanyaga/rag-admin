@@ -12,7 +12,7 @@ interface DocumentSelectorProps {
   isLoading: boolean
   selectedDocumentId: string | null
   onSelect: (documentId: string) => void
-  onUploadClick: () => void
+  onUploadClick?: () => void
 }
 
 export function DocumentSelector({
@@ -109,17 +109,19 @@ export function DocumentSelector({
       </ScrollArea>
 
       {/* Upload button */}
-      <div className="p-3 border-t">
-        <Button
-          variant="outline"
-          className="w-full"
-          size="sm"
-          onClick={onUploadClick}
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Upload Document
-        </Button>
-      </div>
+      {onUploadClick && (
+        <div className="p-3 border-t">
+          <Button
+            variant="outline"
+            className="w-full"
+            size="sm"
+            onClick={onUploadClick}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Document
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,116 +1,134 @@
-// frontend/src/pages/ClassificationPage.tsx
-import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Tags } from 'lucide-react'
 import { useProject } from '@/contexts/ProjectContext'
-import { useClassificationRuns } from '@/hooks/useClassificationRuns'
-import { ClassificationRunStatusBadge } from '@/components/classification/ClassificationRunStatusBadge'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { toast } from 'sonner'
-import { formatDistanceToNow } from 'date-fns'
+import { useDocuments } from '@/hooks/useDocuments'
+import { DocumentSelector } from '@/components/extraction/DocumentSelector'
+import { ClassificationRunHistory } from '@/components/classification/ClassificationRunHistory'
+import { ClassificationRunDetail } from '@/components/classification/ClassificationRunDetail'
+import { ClassificationRunSheet } from '@/components/classification/ClassificationRunSheet'
+import type { RerunDefaults } from '@/components/classification/ClassificationRunDetail'
 
 export default function ClassificationPage(): JSX.Element {
-  const navigate = useNavigate()
   const { currentProject } = useProject()
-  const { runs, isLoading, error, deleteRun } = useClassificationRuns(currentProject?.id ?? null)
+  const projectId = currentProject?.id ?? null
 
-  const handleDelete = async (runId: string) => {
-    try {
-      await deleteRun(runId)
-      toast.success('Classification run deleted')
-    } catch {
-      toast.error('Failed to delete run')
-    }
+  const { documents, isLoading: documentsLoading } = useDocuments(projectId)
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
+    searchParams.get('documentId'),
+  )
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetDefaults, setSheetDefaults] = useState<RerunDefaults | undefined>()
+
+  const handleSelectDocument = (docId: string) => {
+    setSelectedDocumentId(docId)
+    setSelectedRunId(null)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('documentId', docId)
+      return next
+    })
   }
 
+  const handleNewRun = () => {
+    setSheetDefaults(undefined)
+    setSheetOpen(true)
+  }
+
+  const handleRerun = (defaults: RerunDefaults) => {
+    setSheetDefaults(defaults)
+    setSheetOpen(true)
+  }
+
+  const handleRunStarted = (runId: string) => {
+    setSelectedRunId(runId)
+    setSheetOpen(false)
+  }
+
+  const selectedDocument = documents.find((d) => d.id === selectedDocumentId)
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="-m-6 flex flex-col h-[calc(100vh-3.5rem)]">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-3 border-b shrink-0">
         <div>
-          <h1 className="text-3xl font-bold">Classify</h1>
-          <p className="text-muted-foreground mt-1">{currentProject?.name}</p>
+          <h1 className="text-lg font-semibold">Classify</h1>
+          <p className="text-xs text-muted-foreground">{currentProject?.name}</p>
         </div>
-        <Button onClick={() => navigate('/classify/new')}>
-          <Plus className="h-4 w-4 mr-2" />
-          New classification run
-        </Button>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {/* Body */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left: document picker */}
+        <div className="w-56 border-r shrink-0 flex flex-col">
+          <DocumentSelector
+            documents={documents}
+            isLoading={documentsLoading}
+            selectedDocumentId={selectedDocumentId}
+            onSelect={handleSelectDocument}
+          />
+        </div>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+        {/* Right: run history + detail */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {!selectedDocumentId ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-6">
+              <Tags className="h-12 w-12 text-muted-foreground/40 mb-4" />
+              <h2 className="text-lg font-medium text-muted-foreground">
+                Select a document to get started
+              </h2>
+              <p className="text-sm text-muted-foreground/70 mt-1 max-w-sm">
+                Choose a document from the list to see its classification history.
+              </p>
+            </div>
+          ) : (
+            <>
+              <ClassificationRunHistory
+                documentId={selectedDocumentId}
+                selectedRunId={selectedRunId}
+                onSelectRun={setSelectedRunId}
+                onNewRun={handleNewRun}
+              />
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {selectedRunId ? (
+                  <ClassificationRunDetail
+                    runId={selectedRunId}
+                    documentId={selectedDocumentId}
+                    onRerun={handleRerun}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                    <p className="text-sm text-muted-foreground">
+                      Select a run above, or{' '}
+                      <button
+                        className="underline hover:no-underline"
+                        onClick={handleNewRun}
+                      >
+                        start a new one
+                      </button>
+                      .
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
-      ) : runs.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No classification runs yet.</p>
-          <Button className="mt-4" onClick={() => navigate('/classify/new')}>
-            Start your first run
-          </Button>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Labels</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Provider / Model</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {runs.map((run) => (
-              <TableRow
-                key={run.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => navigate(`/classify/${run.id}`)}
-              >
-                <TableCell>
-                  <span className="text-sm">{run.labelsRequested.join(', ')}</span>
-                </TableCell>
-                <TableCell>
-                  <ClassificationRunStatusBadge status={run.status} />
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {run.classifierType === 'llm'
-                    ? `${run.classifierConfig.provider as string} / ${run.classifierConfig.model as string}`
-                    : run.classifierType}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {run.durationMs !== null ? `${(run.durationMs / 1000).toFixed(1)}s` : '—'}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {formatDistanceToNow(new Date(run.createdAt), { addSuffix: true })}
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(run.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      </div>
+
+      {/* New-run sheet */}
+      {selectedDocumentId && (
+        <ClassificationRunSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          documentId={selectedDocumentId}
+          documentTitle={selectedDocument?.title ?? ''}
+          defaultValues={sheetDefaults}
+          onStarted={handleRunStarted}
+        />
       )}
     </div>
   )
