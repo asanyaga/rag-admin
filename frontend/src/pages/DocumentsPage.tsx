@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useFolders } from '@/hooks/useFolders'
@@ -53,10 +54,14 @@ import { createParseRun } from '@/api/parseRuns'
 
 export default function DocumentsPage(): JSX.Element {
   const { currentProject } = useProject()
+  const [searchParams] = useSearchParams()
 
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [documentSearch, setDocumentSearch] = useState('')
   const [fromSourceOpen, setFromSourceOpen] = useState(false)
+  const [viewDocumentId, setViewDocumentId] = useState<string | null>(
+    searchParams.get('documentId'),
+  )
 
   const {
     documents,
@@ -77,7 +82,6 @@ export default function DocumentsPage(): JSX.Element {
   } = useFolders(currentProject?.id || null)
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
-  const [viewDocumentId, setViewDocumentId] = useState<string | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<DocumentListItem | null>(null)
