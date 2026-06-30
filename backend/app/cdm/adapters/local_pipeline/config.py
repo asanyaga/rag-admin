@@ -1,9 +1,4 @@
-"""Configs for the local pipeline tools and the pipeline itself.
-
-The per-tool configs are Pydantic models (serializable → ParseRun.config).
-LocalPipelineConfig is a runtime object holding instantiated tools; it is NOT
-persisted — the runner persists the raw config dict it received.
-"""
+"""Configs for the local pipeline tools and the pipeline itself."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -15,9 +10,9 @@ from app.cdm.adapters.local_pipeline.tools.base import LocalTool, PageMeta
 
 
 class FitzConfig(BaseModel):
-    min_chars_threshold: int = 10   # pages below → emit warning
-    include_images: bool = True      # emit FIGURE blocks for image blocks
-    span_detail: bool = False        # store full span list in parser_extras
+    min_chars_threshold: int = 10
+    include_images: bool = True
+    span_detail: bool = False
 
 
 class CamelotConfig(BaseModel):
@@ -27,10 +22,32 @@ class CamelotConfig(BaseModel):
     copy_text: List[str] = []
 
 
-# tool_id -> the Pydantic config class that validates its per-tool config dict.
+class FitzTablesConfig(BaseModel):
+    vertical_strategy: str = "lines_strict"
+    horizontal_strategy: str = "lines_strict"
+    snap_tolerance: float = 3.0
+    snap_x_tolerance: Optional[float] = None
+    snap_y_tolerance: Optional[float] = None
+    join_tolerance: float = 3.0
+    join_x_tolerance: Optional[float] = None
+    join_y_tolerance: Optional[float] = None
+    edge_min_length: float = 3.0
+    min_words_vertical: int = 3
+    min_words_horizontal: int = 1
+    intersection_tolerance: float = 3.0
+    intersection_x_tolerance: Optional[float] = None
+    intersection_y_tolerance: Optional[float] = None
+    text_tolerance: float = 3.0
+    text_x_tolerance: Optional[float] = None
+    text_y_tolerance: Optional[float] = None
+
+
+TABLE_TOOL_IDS: frozenset[str] = frozenset({"camelot", "fitz_tables"})
+
 TOOL_REGISTRY: Dict[str, type[BaseModel]] = {
     "fitz": FitzConfig,
     "camelot": CamelotConfig,
+    "fitz_tables": FitzTablesConfig,
 }
 
 
@@ -45,18 +62,23 @@ def build_pipeline_config(
     config: Dict[str, Any],
     page_meta: Optional[Dict[int, PageMeta]] = None,
 ) -> LocalPipelineConfig:
-    """Build a runtime LocalPipelineConfig from a serialized config dict.
-
-    `page_meta` is passed to CamelotTool for bbox y-flip (the runner supplies
-    FitzTool's page_meta after FitzTool completes; for fitz-only configs it is
-    unused).
-    """
-    # Imported here to avoid a circular import (tools import nothing from config).
     from app.cdm.adapters.local_pipeline.tools.camelot_tool import CamelotTool
+    from app.cdm.adapters.local_pipeline.tools.fitz_tables_tool import FitzTablesTool
     from app.cdm.adapters.local_pipeline.tools.fitz_tool import FitzTool
 
+    tools_cfg = config.get("tools", [])
+
+    table_ids_present = [
+        e.get("tool_id") for e in tools_cfg
+        if e.get("tool_id") in TABLE_TOOL_IDS
+    ]
+    if len(table_ids_present) > 1:
+        raise ValueError(
+            f"only one table tool allowed per pipeline, got: {table_ids_present}"
+        )
+
     tools: List[LocalTool] = []
-    for entry in config.get("tools", []):
+    for entry in tools_cfg:
         tool_id = entry.get("tool_id")
         raw_cfg = entry.get("config", {}) or {}
         cfg_cls = TOOL_REGISTRY.get(tool_id)
@@ -67,6 +89,8 @@ def build_pipeline_config(
             tools.append(FitzTool(config=tool_cfg))  # type: ignore[arg-type]
         elif tool_id == "camelot":
             tools.append(CamelotTool(config=tool_cfg, page_meta=page_meta or {}))  # type: ignore[arg-type]
+        elif tool_id == "fitz_tables":
+            tools.append(FitzTablesTool(config=tool_cfg, page_meta=page_meta or {}))  # type: ignore[arg-type]
 
     threshold = config.get("eviction_overlap_threshold", 0.5)
     return LocalPipelineConfig(tools=tools, eviction_overlap_threshold=threshold)
