@@ -12,7 +12,7 @@ import {
 import { ParseMethodSelector } from '@/components/documents/ParseMethodSelector'
 import { ClassificationConfig } from './ClassificationConfig'
 import type { ClassificationConfigValue } from './ClassificationConfig'
-import type { RerunDefaults } from './ClassificationRunDetail'
+import type { RerunDefaults } from '@/types/classification'
 import { useParseRuns } from '@/hooks/useParseRuns'
 import { createClassificationRun } from '@/api/classification'
 import type { ParseConfig } from '@/types/parsing'

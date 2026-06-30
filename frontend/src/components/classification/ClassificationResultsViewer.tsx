@@ -7,9 +7,11 @@ import type { AnnotatedBlock } from '@/types/classification'
 interface Props {
   runId: string
   labelsRequested: string[]
+  selectedBlockId?: string | null
+  onBlockSelect?: (blockId: string) => void
 }
 
-export function ClassificationResultsViewer({ runId, labelsRequested }: Props) {
+export function ClassificationResultsViewer({ runId, labelsRequested, selectedBlockId, onBlockSelect }: Props) {
   const { blocks, isLoading, error } = useClassificationRunBlocks(runId)
 
   if (isLoading) {
@@ -52,10 +54,18 @@ export function ClassificationResultsViewer({ runId, labelsRequested }: Props) {
           key={label}
           label={label}
           blocks={grouped.get(label) ?? []}
+          selectedBlockId={selectedBlockId}
+          onBlockSelect={onBlockSelect}
         />
       ))}
       {unmatchedBlocks.length > 0 && (
-        <ClassificationLabelSection key="__unmatched__" label={null} blocks={unmatchedBlocks} />
+        <ClassificationLabelSection
+          key="__unmatched__"
+          label={null}
+          blocks={unmatchedBlocks}
+          selectedBlockId={selectedBlockId}
+          onBlockSelect={onBlockSelect}
+        />
       )}
     </div>
   )

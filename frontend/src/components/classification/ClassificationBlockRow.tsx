@@ -5,16 +5,21 @@ import type { AnnotatedBlock } from '@/types/classification'
 
 interface Props {
   block: AnnotatedBlock
+  isSelected?: boolean
+  onSelect?: (blockId: string) => void
 }
 
-export function ClassificationBlockRow({ block }: Props) {
+export function ClassificationBlockRow({ block, isSelected, onSelect }: Props) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div className={`border rounded-md overflow-hidden ${isSelected ? 'border-primary ring-1 ring-primary' : ''}`}>
       <button
         className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 text-left"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => {
+          setExpanded((v) => !v)
+          onSelect?.(block.blockId)
+        }}
       >
         <Badge variant="secondary" className="shrink-0 font-mono text-xs">
           p.{block.pageIndex + 1}

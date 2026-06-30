@@ -44,3 +44,9 @@ export interface AnnotatedBlock {
   markdown: string | null
   label: string | null
 }
+
+export interface RerunDefaults {
+  labels: string[]
+  classifierType: string
+  classifierConfig: Record<string, unknown>
+}
