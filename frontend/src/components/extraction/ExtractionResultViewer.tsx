@@ -55,6 +55,9 @@ interface ExtractionResultViewerProps {
   schemaName?: string
   projectId?: string
   availableResults?: ExtractionResultListItem[]
+  selectedBlockId?: string | null
+  onBlockSelect?: (blockId: string) => void
+  onPageSelect?: (pageIndex: number) => void
 }
 
 // ── Internal types for casting extractionMetadata and config ─────────────────
@@ -230,7 +233,13 @@ function UserMessageDisplay({ content }: { content: string }) {
   )
 }
 
-function ChunkDetailsPanel({ chunks }: { chunks: ChunkDetail[] }) {
+function ChunkDetailsPanel({
+  chunks,
+  onPageSelect,
+}: {
+  chunks: ChunkDetail[]
+  onPageSelect?: (pageIndex: number) => void
+}) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const chunk = chunks[selectedIndex]
   const systemMsg = chunk.promptMessages?.[0]
@@ -251,7 +260,12 @@ function ChunkDetailsPanel({ chunks }: { chunks: ChunkDetail[] }) {
           return (
             <button
               key={c.chunkIndex}
-              onClick={() => setSelectedIndex(i)}
+              onClick={() => {
+                setSelectedIndex(i)
+                if (onPageSelect && c.pageIndices.length > 0) {
+                  onPageSelect(c.pageIndices[0])
+                }
+              }}
               className={cn(
                 'w-full text-left px-3 py-2 border-b text-sm transition-colors',
                 i === selectedIndex
@@ -417,6 +431,7 @@ export function ExtractionResultViewer({
   schemaName,
   projectId,
   availableResults = [],
+  onPageSelect,
 }: ExtractionResultViewerProps) {
   const navigate = useNavigate()
   const [transformOpen, setTransformOpen] = useState(false)
@@ -457,7 +472,7 @@ export function ExtractionResultViewer({
     if (!result) return
     const derived = await transform.apply({ sourceResultIds: buildSourceResultIds(), transformType, config: buildConfig() })
     setTransformOpen(false)
-    navigate(`/extraction?resultId=${derived.id}`)
+    navigate(`/extract/${derived.id}`)
   }
 
   if (isLoading) {
@@ -816,7 +831,7 @@ export function ExtractionResultViewer({
           <CollapsibleContent>
             <Card className="mt-2">
               <CardContent className="pt-4">
-                <ChunkDetailsPanel chunks={chunks} />
+                <ChunkDetailsPanel chunks={chunks} onPageSelect={onPageSelect} />
               </CardContent>
             </Card>
           </CollapsibleContent>
