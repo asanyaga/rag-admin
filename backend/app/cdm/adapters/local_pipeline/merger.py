@@ -1,8 +1,7 @@
 """Merge tool outputs into a final ordered block list + an audit raw_output.
 
-Eviction rule (spec §6.2): later-declared tools win. A fitz PARAGRAPH block
-that overlaps a camelot TABLE block beyond the threshold is evicted (logged,
-not deleted).
+Eviction rule: later-declared tools win. A fitz PARAGRAPH block that overlaps
+a table block beyond the threshold is evicted (logged, not deleted).
 """
 from __future__ import annotations
 
@@ -32,7 +31,7 @@ def overlap_fraction(table_bbox: BBox, fitz_bbox: BBox) -> float:
 
 @dataclass
 class MergeResult:
-    blocks: List[Block]              # final, non-evicted, ordered, ids minted
+    blocks: List[Block]
     raw_output: Dict[str, Any]
 
 
@@ -44,16 +43,16 @@ def _sort_key(block: Block) -> Tuple[float, float]:
 
 def merge(
     fitz_result: ToolResult,
-    camelot_result: ToolResult,
+    table_result: ToolResult,
     *,
     source_document_id: str,
     eviction_overlap_threshold: float = 0.5,
 ) -> MergeResult:
-    table_blocks = list(camelot_result.blocks)
+    table_blocks = list(table_result.blocks)
 
     # 1. Eviction pass — fitz blocks overlapping any table beyond threshold.
     evicted_ids = set()
-    eviction_winner: Dict[str, str] = {}   # fitz prov id -> table prov id
+    eviction_winner: Dict[str, str] = {}
     eviction_overlap: Dict[str, float] = {}
     for fb in fitz_result.blocks:
         if fb.bbox is None:
@@ -92,7 +91,7 @@ def merge(
         out: Dict[str, Any] = {}
         for prov_id, native in result.native_by_block.items():
             final_id = prov_to_final.get(prov_id)
-            if final_id is not None:  # skip evicted (no final id)
+            if final_id is not None:
                 out[final_id] = native
         return out
 
@@ -111,7 +110,10 @@ def merge(
     raw_output = {
         "tools": {
             "fitz": {"raw": fitz_result.raw, "block_map": _block_map(fitz_result)},
-            "camelot": {"raw": camelot_result.raw, "block_map": _block_map(camelot_result)},
+            table_result.tool_id: {
+                "raw": table_result.raw,
+                "block_map": _block_map(table_result),
+            },
         },
         "evicted": evicted_records,
     }

@@ -75,3 +75,21 @@ def test_merge_raw_output_has_tool_block_maps():
     # surviving table maps to its native record
     table_id = next(b.id for b in result.blocks if b.role == BlockRole.TABLE)
     assert ro["tools"]["camelot"]["block_map"][table_id] == {"acc": 99}
+
+
+def test_merge_raw_output_key_uses_table_result_tool_id():
+    """raw_output["tools"] key is the table tool's tool_id, not the string "camelot"."""
+    block = Block(
+        id="fitz_tables:0:0", role=BlockRole.TABLE, native_type="table",
+        page_index=0, bbox=_bbox(0.1, 0.5, 0.9, 0.7),
+    )
+    fitz_tables_result = ToolResult(
+        tool_id="fitz_tables", blocks=[block], page_meta={},
+        raw={"tables": []}, native_by_block={"fitz_tables:0:0": {"rows": 2}},
+    )
+    result = merge(
+        _fitz_result(), fitz_tables_result,
+        source_document_id="doc1", eviction_overlap_threshold=0.5,
+    )
+    assert "fitz_tables" in result.raw_output["tools"]
+    assert "camelot" not in result.raw_output["tools"]
