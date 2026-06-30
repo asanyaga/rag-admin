@@ -41,7 +41,7 @@ export function ParseConfigFamilySelector({
       <div className="text-center py-12 text-muted-foreground">
         <p className="mb-2">No parse runs found for this project.</p>
         <p>
-          <Link to="/documents" className="underline text-primary">
+          <Link to="/parse" className="underline text-primary">
             Parse some documents first.
           </Link>
         </p>

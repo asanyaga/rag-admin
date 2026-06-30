@@ -108,7 +108,7 @@ export function ParseRunDetailPage() {
     <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
       <div className="px-4 py-2 border-b shrink-0">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/documents">
+          <Link to="/parse">
             <ChevronLeft className="h-4 w-4 mr-1" /> Back to documents
           </Link>
         </Button>
