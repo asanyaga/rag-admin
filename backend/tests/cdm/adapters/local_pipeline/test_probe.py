@@ -125,3 +125,18 @@ def test_run_no_cid_corruption_on_clean_pdf():
     probe = DocumentProbe()
     profile = probe.run(FIXTURES / "simple_text.pdf", source_document_id="doc-abc")
     assert profile.has_cid_corruption is False
+
+
+def test_recommend_suggests_fitz_tables_for_clean_doc_with_table_signal():
+    probe = DocumentProbe()
+    result = probe._recommend(has_cid=False, has_scanned=False, has_tables=True)
+    assert "fitz_tables" in result
+    assert "camelot" not in result
+    assert "fitz" in result
+
+
+def test_recommend_fitz_only_for_clean_doc_without_tables():
+    probe = DocumentProbe()
+    result = probe._recommend(has_cid=False, has_scanned=False, has_tables=False)
+    assert result == ["fitz"]
+    assert "fitz_tables" not in result

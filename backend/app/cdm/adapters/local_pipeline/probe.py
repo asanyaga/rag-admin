@@ -137,5 +137,5 @@ class DocumentProbe:
         else:
             tools = ["fitz"]
             if has_tables:
-                tools.append("camelot")
+                tools.append("fitz_tables")
         return tools
