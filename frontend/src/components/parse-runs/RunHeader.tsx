@@ -129,7 +129,7 @@ export function RunHeader({ run, onReparse, onDelete, onProbe, probeLoading, pro
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="px-4 pb-3">
+            <div className="px-4 pb-3 max-h-80 overflow-y-auto">
               {probeContent}
             </div>
           </CollapsibleContent>
