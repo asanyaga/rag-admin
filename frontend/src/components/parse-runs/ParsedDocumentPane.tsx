@@ -16,16 +16,26 @@ export interface ParsedDocumentPaneProps {
   error?: string | null
   selectedBlockId?: string | null
   onBlockSelect?: (id: string) => void
+  /** blockId → label name — renders a coloured badge on matching block rows */
+  blockLabels?: Map<string, string>
+  /** page index (0-based) → label name — renders a coloured badge on matching page headers */
+  pageLabels?: Map<number, string>
+  /** label name → CSS colour string e.g. 'hsl(221 83% 53%)' */
+  labelColors?: Map<string, string>
 }
 
 function BlockRow({
   block,
   isSelected,
   onBlockSelect,
+  label,
+  labelColor,
 }: {
   block: Block
   isSelected: boolean
   onBlockSelect?: (id: string) => void
+  label?: string
+  labelColor?: string
 }) {
   const [localOpen, setLocalOpen] = useState(false)
   const confidence = block.quality?.confidence
@@ -55,6 +65,14 @@ function BlockRow({
             <Badge variant="secondary" className="text-xs">
               {block.role}
             </Badge>
+            {label && (
+              <span
+                className="text-xs px-1.5 py-0.5 rounded font-medium text-white shrink-0"
+                style={{ backgroundColor: labelColor }}
+              >
+                {label}
+              </span>
+            )}
             {typeof confidence === 'number' && (
               <Badge variant="outline" className="text-xs">
                 {confidence.toFixed(2)}
@@ -96,24 +114,34 @@ export function PageBlockList({
   blocks,
   selectedBlockId,
   onBlockSelect,
+  blockLabels,
+  labelColors,
 }: {
   blocks: Block[]
   selectedBlockId?: string | null
   onBlockSelect?: (id: string) => void
+  blockLabels?: Map<string, string>
+  labelColors?: Map<string, string>
 }) {
   if (blocks.length === 0) {
     return <p className="text-xs text-muted-foreground">No blocks on this page.</p>
   }
   return (
     <div className="space-y-2">
-      {blocks.map((b) => (
-        <BlockRow
-          key={b.id}
-          block={b}
-          isSelected={selectedBlockId === b.id}
-          onBlockSelect={onBlockSelect}
-        />
-      ))}
+      {blocks.map((b) => {
+        const label = blockLabels?.get(b.id)
+        const labelColor = label ? labelColors?.get(label) : undefined
+        return (
+          <BlockRow
+            key={b.id}
+            block={b}
+            isSelected={selectedBlockId === b.id}
+            onBlockSelect={onBlockSelect}
+            label={label}
+            labelColor={labelColor}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -124,6 +152,9 @@ export function ParsedDocumentPane({
   error = null,
   selectedBlockId,
   onBlockSelect,
+  blockLabels,
+  pageLabels,
+  labelColors,
 }: ParsedDocumentPaneProps) {
   const blocksByPage = useMemo<Map<number, Block[]>>(() => {
     const map = new Map<number, Block[]>()
@@ -166,6 +197,9 @@ export function ParsedDocumentPane({
       {pages.map((p) => {
         const pageBlocks = blocksByPage.get(p.index) ?? []
         const confidence = p.quality?.confidence
+        const pageLabel = pageLabels?.get(p.index)
+        const pageLabelColor = pageLabel ? labelColors?.get(pageLabel) : undefined
+
         return (
           <Collapsible key={p.index} defaultOpen>
             <CollapsibleTrigger asChild>
@@ -175,6 +209,14 @@ export function ParsedDocumentPane({
                   <span className="text-muted-foreground text-xs">
                     {pageBlocks.length} block{pageBlocks.length === 1 ? '' : 's'}
                   </span>
+                  {pageLabel && (
+                    <span
+                      className="text-xs px-1.5 py-0.5 rounded font-medium text-white shrink-0"
+                      style={{ backgroundColor: pageLabelColor }}
+                    >
+                      {pageLabel}
+                    </span>
+                  )}
                   {typeof confidence === 'number' && (
                     <Badge variant="outline" className="text-xs ml-auto">
                       confidence {confidence.toFixed(2)}
@@ -188,6 +230,8 @@ export function ParsedDocumentPane({
                 blocks={pageBlocks}
                 selectedBlockId={selectedBlockId}
                 onBlockSelect={onBlockSelect}
+                blockLabels={blockLabels}
+                labelColors={labelColors}
               />
             </CollapsibleContent>
           </Collapsible>

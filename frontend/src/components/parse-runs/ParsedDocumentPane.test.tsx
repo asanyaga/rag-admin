@@ -58,3 +58,50 @@ describe('ParsedDocumentPane', () => {
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 })
+
+describe('ParsedDocumentPane — label overlays', () => {
+  const makeDocWithBlock = (): ParsedDocumentDetail => ({
+    parseRunId: 'run-1',
+    sourceDocumentId: 'src-1',
+    pageCount: 1,
+    blockCount: 1,
+    fullText: 'hello',
+    fullMarkdown: '# Hello',
+    content: {
+      pages: [{ index: 0 }],
+      blocks: [{ id: 'b1', page_index: 0, role: 'paragraph', text: 'Block one' }],
+    },
+  })
+
+  it('renders a label badge on a block row when blockLabels contains its id', () => {
+    const blockLabels = new Map([['b1', 'income_statement']])
+    const labelColors = new Map([['income_statement', 'hsl(221 83% 53%)']])
+    render(
+      <ParsedDocumentPane
+        parsedDocument={makeDocWithBlock()}
+        blockLabels={blockLabels}
+        labelColors={labelColors}
+      />,
+    )
+    expect(screen.getByText('income_statement')).toBeInTheDocument()
+  })
+
+  it('renders a label badge on the page header when pageLabels contains the page index', () => {
+    const pageLabels = new Map([[0, 'balance_sheet']])
+    const labelColors = new Map([['balance_sheet', 'hsl(142 71% 45%)']])
+    render(
+      <ParsedDocumentPane
+        parsedDocument={makeDocWithBlock()}
+        pageLabels={pageLabels}
+        labelColors={labelColors}
+      />,
+    )
+    expect(screen.getAllByText('balance_sheet').length).toBeGreaterThan(0)
+  })
+
+  it('renders nothing extra when overlay props are omitted (backward compat)', () => {
+    render(<ParsedDocumentPane parsedDocument={makeDocWithBlock()} />)
+    // No label badges — only the existing role badge
+    expect(screen.queryByText('income_statement')).not.toBeInTheDocument()
+  })
+})
