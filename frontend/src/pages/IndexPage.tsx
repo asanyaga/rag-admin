@@ -133,7 +133,7 @@ export default function IndexPage() {
             <Button
               variant="link"
               className="p-0 h-auto"
-              onClick={() => navigate('/documents')}
+              onClick={() => navigate('/parse')}
             >
               Go to Documents
             </Button>

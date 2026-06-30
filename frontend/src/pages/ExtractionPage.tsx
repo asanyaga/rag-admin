@@ -178,7 +178,7 @@ export default function ExtractionPage(): JSX.Element {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b shrink-0">
         <div>
-          <h1 className="text-lg font-semibold">Extraction</h1>
+          <h1 className="text-lg font-semibold">Extract</h1>
           <p className="text-xs text-muted-foreground">{currentProject.name}</p>
         </div>
       </div>

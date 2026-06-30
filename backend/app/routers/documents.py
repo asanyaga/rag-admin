@@ -37,7 +37,9 @@ from app.schemas.document import (
     BulkUploadResponse,
     BulkMoveRequest,
     BulkMoveResponse,
+    DocumentFromSourceRequest,
 )
+from app.repositories.source_document_repository import SourceDocumentRepository
 from app.schemas.parse_run import ParseRunResponse
 from app.services.document_service import DocumentService, process_cdm_parsing, BulkUploadItemResult
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
@@ -297,6 +299,70 @@ async def bulk_move_documents(
         folder_id=body.folder_id,
     )
     return BulkMoveResponse(moved_count=moved_count)
+
+
+@router.post(
+    "/from-source",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Add a source document to a project and parse it",
+    description="Links an existing source document into a project without re-uploading "
+                "the file, then kicks off a background parse run.",
+)
+async def add_document_from_source(
+    body: DocumentFromSourceRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    document_service: DocumentService = Depends(get_document_service),
+    db: AsyncSession = Depends(get_db),
+    storage_service: StorageService = Depends(get_storage_service),
+):
+    """Link source document to project and initiate parsing."""
+    llamaparse_api_key, landingai_api_key = await _resolve_parser_key(
+        db, current_user.id, body.parser_type
+    )
+
+    source_doc_repo = SourceDocumentRepository(db)
+    source_doc = await source_doc_repo.get(body.source_document_id)
+    if source_doc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Source document not found",
+        )
+
+    try:
+        document = await document_service.add_from_source(
+            user_id=current_user.id,
+            project_id=body.project_id,
+            source_document_id=body.source_document_id,
+            source_doc_filename=source_doc.filename,
+            source_doc_storage_uri=source_doc.storage_uri,
+            source_doc_sha256=source_doc.sha256,
+            source_doc_byte_size=source_doc.byte_size,
+            source_doc_mime_type=source_doc.mime_type,
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+    if document.source_document_id is not None:
+        config = dict(body.parse_config or {})
+        representation_kind = config.pop("representation_kind", "extract_rich")
+        config["parser"] = body.parser_type
+        background_tasks.add_task(
+            process_cdm_parsing,
+            document_id=document.id,
+            source_document_id=document.source_document_id,
+            project_id=body.project_id,
+            representation_kind=representation_kind,
+            config=config,
+            storage_service=storage_service,
+            llamaparse_api_key=llamaparse_api_key,
+            landingai_api_key=landingai_api_key,
+        )
+
+    return document
 
 
 @router.get(

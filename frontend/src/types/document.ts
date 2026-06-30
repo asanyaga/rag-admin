@@ -4,6 +4,7 @@ export interface Document {
   id: string
   projectId: string
   folderId: string | null
+  sourceDocumentId: string | null
   sourceType: string
   sourceIdentifier: string
   title: string
@@ -22,6 +23,7 @@ export interface DocumentListItem {
   id: string
   projectId: string
   folderId: string | null
+  sourceDocumentId?: string | null
   sourceType: string
   title: string
   description: string | null

@@ -75,7 +75,7 @@ export default function DashboardPage() {
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-950/40',
       borderColor: 'border-l-blue-500',
-      href: '/documents',
+      href: '/parse',
       breakdown: [
         { label: 'Ready', count: docsByStatus.ready, color: 'bg-green-500' },
         { label: 'Processing', count: docsByStatus.processing, color: 'bg-blue-500' },

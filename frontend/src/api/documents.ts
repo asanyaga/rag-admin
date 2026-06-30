@@ -102,6 +102,25 @@ export async function bulkMoveDocuments(
   return response.data
 }
 
+export interface AddFromSourceRequest {
+  projectId: string
+  sourceDocumentId: string
+  parserType: string
+  parseConfig?: Record<string, unknown>
+}
+
+export async function addDocumentFromSource(
+  data: AddFromSourceRequest,
+): Promise<Document> {
+  const response = await apiClient.post<Document>('/documents/from-source', {
+    project_id: data.projectId,
+    source_document_id: data.sourceDocumentId,
+    parser_type: data.parserType,
+    parse_config: data.parseConfig,
+  })
+  return response.data
+}
+
 export async function bulkUploadDocuments(
   data: BulkDocumentUpload
 ): Promise<BulkUploadResponse> {
