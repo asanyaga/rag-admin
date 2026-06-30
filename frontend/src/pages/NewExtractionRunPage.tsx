@@ -55,8 +55,8 @@ export default function NewExtractionRunPage(): JSX.Element {
 
   const documentId = searchParams.get('documentId')
 
-  const { documents } = useDocuments(projectId)
-  const { parseRuns, isLoading: parseRunsLoading } = useParseRuns(documentId)
+  const { documents, isLoading: documentsLoading } = useDocuments(projectId)
+  const { parseRuns } = useParseRuns(documentId)
   const { schemas, error: schemasError, createSchema, updateSchema, deleteSchema } =
     useExtractionSchemas(projectId)
   const { phase, phaseError, submit } = useExtractionSubmit()
@@ -282,6 +282,12 @@ export default function NewExtractionRunPage(): JSX.Element {
   const hasSchemas = schemas.length > 0
   const hasExtractors = extractors.length > 0
 
+  // Disable only when the document file isn't available yet — parse run history
+  // is irrelevant because useExtractionSubmit creates one if none exists.
+  const isDocumentLoading = documentsLoading && !selectedDocument
+  const isDocumentProcessing = selectedDocument?.status === 'processing'
+  const canRun = !isRunning && isConfigured && !isDocumentLoading && !isDocumentProcessing
+
   const phaseLabel = phase === 'parsing' ? 'Parsing document…' : 'Extracting data…'
 
   return (
@@ -352,9 +358,7 @@ export default function NewExtractionRunPage(): JSX.Element {
               <CardTitle className="text-sm">Extraction Configuration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {parseRunsLoading ? (
-                <div className="text-sm text-muted-foreground">Loading parse history…</div>
-              ) : !hasExtractors ? (
+              {!hasExtractors ? (
                 <p className="text-sm text-muted-foreground">
                   No extraction methods available. Contact your administrator.
                 </p>
@@ -691,11 +695,29 @@ export default function NewExtractionRunPage(): JSX.Element {
                     compact
                   />
 
+                  {/* Parse run failure */}
+                  {phaseError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        <span className="font-medium">Parse run failed: </span>
+                        {phaseError}. Check the parse configuration and try again.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {isDocumentProcessing && (
+                    <Alert>
+                      <AlertDescription>
+                        Document is still processing — extraction will be available once it
+                        completes.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   {/* Run */}
                   <div className="flex items-center justify-between pt-2">
                     <div>
                       {formError && <p className="text-sm text-destructive">{formError}</p>}
-                      {phaseError && <p className="text-sm text-destructive">{phaseError}</p>}
                       {!isConfigured && (
                         <p className="text-xs text-amber-600">
                           {selectedExtractor?.name ?? 'This extractor'} is not configured. Contact
@@ -705,10 +727,15 @@ export default function NewExtractionRunPage(): JSX.Element {
                     </div>
                     <Button
                       onClick={() => void handleRun()}
-                      disabled={isRunning || !isConfigured || selectedDocument?.status !== 'ready'}
+                      disabled={!canRun}
                       size="sm"
                     >
-                      {isRunning ? (
+                      {isDocumentLoading ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                          Loading…
+                        </>
+                      ) : isRunning ? (
                         <>
                           <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                           {phaseLabel}
