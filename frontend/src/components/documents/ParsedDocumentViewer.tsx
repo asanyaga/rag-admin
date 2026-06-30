@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -21,9 +21,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useParseRuns } from '@/hooks/useParseRuns'
 import type { ParseRunListItem, ParseRunStatus } from '@/types/cdm'
 import { ParsedDocumentPane } from '@/components/parse-runs/ParsedDocumentPane'
+import type { ClassificationRegion, AnnotatedBlock } from '@/types/classification'
+
+const LABEL_COLORS = [
+  'hsl(221 83% 53%)',
+  'hsl(142 71% 45%)',
+  'hsl(32 95% 44%)',
+  'hsl(346 77% 49%)',
+  'hsl(262 80% 58%)',
+  'hsl(199 89% 48%)',
+  'hsl(25 95% 53%)',
+  'hsl(316 70% 50%)',
+]
 
 interface ParsedDocumentViewerProps {
   documentId: string
+  defaultParseRunId?: string
+  regions?: ClassificationRegion[]
+  annotatedBlocks?: AnnotatedBlock[]
 }
 
 function StatusBadge({ status }: { status: ParseRunStatus }) {
@@ -149,6 +164,9 @@ export function MetricsTab({ run }: { run: ParseRunListItem }) {
 
 export function ParsedDocumentViewer({
   documentId,
+  defaultParseRunId,
+  regions,
+  annotatedBlocks,
 }: ParsedDocumentViewerProps) {
   const {
     parseRuns,
@@ -159,6 +177,39 @@ export function ParsedDocumentViewer({
     error,
     selectRun,
   } = useParseRuns(documentId)
+
+  // Pre-select the parse run used by a classification run when provided
+  useEffect(() => {
+    if (!defaultParseRunId || parseRuns.length === 0) return
+    const match = parseRuns.find((r) => r.id === defaultParseRunId)
+    if (match) selectRun(defaultParseRunId)
+  }, [defaultParseRunId, parseRuns, selectRun])
+
+  const labelColors = useMemo<Map<string, string>>(() => {
+    const labels = regions?.map((r) => r.label) ?? []
+    const unique = [...new Set(labels)]
+    return new Map(unique.map((l, i) => [l, LABEL_COLORS[i % LABEL_COLORS.length]]))
+  }, [regions])
+
+  const blockLabels = useMemo<Map<string, string>>(() => {
+    if (!annotatedBlocks) return new Map()
+    const map = new Map<string, string>()
+    for (const b of annotatedBlocks) {
+      if (b.label) map.set(b.blockId, b.label)
+    }
+    return map
+  }, [annotatedBlocks])
+
+  const pageLabels = useMemo<Map<number, string>>(() => {
+    if (!regions) return new Map()
+    const map = new Map<number, string>()
+    for (const r of regions) {
+      for (let p = r.pageStart; p <= r.pageEnd; p++) {
+        if (!map.has(p)) map.set(p, r.label)
+      }
+    }
+    return map
+  }, [regions])
 
   const [tab, setTab] = useState('markdown')
 
@@ -277,7 +328,12 @@ export function ParsedDocumentViewer({
 
                 <TabsContent value="pages" className="mt-4">
                   <div className="max-h-[500px] overflow-y-auto">
-                    <ParsedDocumentPane parsedDocument={parsedDocument} />
+                    <ParsedDocumentPane
+                      parsedDocument={parsedDocument}
+                      blockLabels={blockLabels.size > 0 ? blockLabels : undefined}
+                      pageLabels={pageLabels.size > 0 ? pageLabels : undefined}
+                      labelColors={labelColors.size > 0 ? labelColors : undefined}
+                    />
                   </div>
                 </TabsContent>
 
