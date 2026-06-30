@@ -34,6 +34,7 @@ import DataStoreDetailPage from './pages/DataStoreDetailPage'
 import ExportPlaygroundPage from './pages/ExportPlaygroundPage'
 import { ParseRunDetailPage } from './pages/ParseRunDetailPage'
 import ClassificationPage from './pages/ClassificationPage'
+import { NewClassificationRunPage } from './pages/NewClassificationRunPage'
 import { ClassificationRunDetailPage } from './pages/ClassificationRunDetailPage'
 
 const router = createBrowserRouter([
@@ -109,6 +110,11 @@ const router = createBrowserRouter([
             path: 'classify',
             element: <ClassificationPage />,
             handle: { breadcrumb: 'Classify' },
+          },
+          {
+            path: 'classify/new',
+            element: <NewClassificationRunPage />,
+            handle: { breadcrumb: 'New Classification Run' },
           },
           {
             path: 'classify/:runId',

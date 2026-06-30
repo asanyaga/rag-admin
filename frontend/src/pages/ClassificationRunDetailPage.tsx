@@ -1,17 +1,15 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ClassificationRunStatusBadge } from '@/components/classification/ClassificationRunStatusBadge'
 import { ClassificationResultsViewer } from '@/components/classification/ClassificationResultsViewer'
-import { ClassificationRunSheet } from '@/components/classification/ClassificationRunSheet'
 import { DocumentPdfViewer } from '@/components/parse-runs/DocumentPdfViewer'
 import { useClassificationRunDetail, useClassificationRunBlocks } from '@/hooks/useClassificationRuns'
 import { getParsedDocument } from '@/api/parseRuns'
 import type { Block } from '@/types/cdm'
-import type { RerunDefaults } from '@/types/classification'
 import { formatDistanceToNow } from 'date-fns'
 
 const LABEL_COLORS = [
@@ -27,6 +25,7 @@ const LABEL_COLORS = [
 
 export function ClassificationRunDetailPage() {
   const { runId } = useParams<{ runId: string }>()
+  const navigate = useNavigate()
   const { run, isLoading, error } = useClassificationRunDetail(runId ?? null)
   const { blocks: annotatedBlocks } = useClassificationRunBlocks(
     run?.status === 'completed' ? (runId ?? null) : null,
@@ -34,10 +33,7 @@ export function ClassificationRunDetailPage() {
 
   const [parseBlocks, setParseBlocks] = useState<Block[]>([])
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [sheetDefaults, setSheetDefaults] = useState<RerunDefaults | undefined>()
 
-  // Load parse run blocks so the PDF viewer has bbox data
   useEffect(() => {
     if (!run?.parseRunId) return
     getParsedDocument(run.parseRunId)
@@ -45,7 +41,6 @@ export function ClassificationRunDetailPage() {
       .catch(() => setParseBlocks([]))
   }, [run?.parseRunId])
 
-  // Build blockId → label color map for PDF overlays
   const blockColors = useMemo<Map<string, string>>(() => {
     if (!annotatedBlocks.length) return new Map()
     const labelIndex = new Map<string, number>()
@@ -53,9 +48,7 @@ export function ClassificationRunDetailPage() {
     const map = new Map<string, string>()
     for (const b of annotatedBlocks) {
       if (!b.label) continue
-      if (!labelIndex.has(b.label)) {
-        labelIndex.set(b.label, idx++ % LABEL_COLORS.length)
-      }
+      if (!labelIndex.has(b.label)) labelIndex.set(b.label, idx++ % LABEL_COLORS.length)
       map.set(b.blockId, LABEL_COLORS[labelIndex.get(b.label)!])
     }
     return map
@@ -86,12 +79,15 @@ export function ClassificationRunDetailPage() {
   }
 
   const handleRerun = () => {
-    setSheetDefaults({
-      labels: run.labelsRequested,
-      classifierType: run.classifierType,
-      classifierConfig: run.classifierConfig,
+    navigate(`/classify/new?documentId=${run.documentId}`, {
+      state: {
+        defaults: {
+          labels: run.labelsRequested,
+          classifierType: run.classifierType,
+          classifierConfig: run.classifierConfig,
+        },
+      },
     })
-    setSheetOpen(true)
   }
 
   const modelSummary =
@@ -137,7 +133,6 @@ export function ClassificationRunDetailPage() {
 
       {/* Body: PDF viewer | classification results */}
       <div className="flex flex-1 min-h-0">
-        {/* Left: PDF with label overlays */}
         <div className="flex-1 min-w-0 border-r overflow-hidden">
           <DocumentPdfViewer
             documentId={run.documentId}
@@ -147,8 +142,6 @@ export function ClassificationRunDetailPage() {
             blockColors={blockColors}
           />
         </div>
-
-        {/* Right: classification results */}
         <div className="w-80 shrink-0 overflow-y-auto p-4">
           {run.status === 'completed' ? (
             <ClassificationResultsViewer
@@ -166,15 +159,6 @@ export function ClassificationRunDetailPage() {
           ) : null}
         </div>
       </div>
-
-      <ClassificationRunSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        documentId={run.documentId}
-        documentTitle=""
-        defaultValues={sheetDefaults}
-        onStarted={() => setSheetOpen(false)}
-      />
     </div>
   )
 }

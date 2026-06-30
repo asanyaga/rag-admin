@@ -18,7 +18,6 @@ import {
 import { DocumentStatusBadge } from '@/components/documents/DocumentStatusBadge'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { ClassificationRunHistory } from '@/components/classification/ClassificationRunHistory'
-import { ClassificationRunSheet } from '@/components/classification/ClassificationRunSheet'
 import { cn } from '@/lib/utils'
 
 export default function ClassificationPage(): JSX.Element {
@@ -33,7 +32,6 @@ export default function ClassificationPage(): JSX.Element {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [documentSearch, setDocumentSearch] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(false)
 
   const { documents, isLoading, uploadDocument } = useDocuments(projectId, undefined, selectedFolderId)
   const { folders } = useFolders(projectId)
@@ -53,13 +51,11 @@ export default function ClassificationPage(): JSX.Element {
     })
   }
 
-  const handleSelectRun = (runId: string) => {
-    navigate(`/classify/${runId}`)
-  }
-
-  const handleRunStarted = (runId: string) => {
-    setSheetOpen(false)
-    navigate(`/classify/${runId}`)
+  const handleNewRun = () => {
+    if (!selectedDocumentId) return
+    navigate(`/classify/new?documentId=${selectedDocumentId}`, {
+      state: { documentTitle: selectedDocument?.title },
+    })
   }
 
   return (
@@ -171,8 +167,8 @@ export default function ClassificationPage(): JSX.Element {
             <ClassificationRunHistory
               documentId={selectedDocumentId}
               selectedRunId={null}
-              onSelectRun={handleSelectRun}
-              onNewRun={() => setSheetOpen(true)}
+              onSelectRun={(runId) => navigate(`/classify/${runId}`)}
+              onNewRun={handleNewRun}
             />
           )}
         </div>
@@ -186,16 +182,6 @@ export default function ClassificationPage(): JSX.Element {
           projectId={currentProject.id}
           documents={documents}
           folders={folders}
-        />
-      )}
-
-      {selectedDocumentId && (
-        <ClassificationRunSheet
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          documentId={selectedDocumentId}
-          documentTitle={selectedDocument?.title ?? ''}
-          onStarted={handleRunStarted}
         />
       )}
     </div>
