@@ -423,7 +423,7 @@ export default function DocumentsPage(): JSX.Element {
               </div>
             </div>
 
-            <DocumentProbePanel profile={probeProfile} isLoading={probeLoading} error={probeError} />
+            <DocumentProbePanel profile={probeProfile} isLoading={probeLoading} error={probeError} onClear={resetProbe} />
 
             <section>
               <h3 className="text-sm font-medium mb-2">Parse runs</h3>

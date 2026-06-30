@@ -1,12 +1,15 @@
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { X } from 'lucide-react'
 import type { DocumentProfile, PageProfile } from '@/types/probe'
 
 interface DocumentProbePanelProps {
   profile: DocumentProfile | null
   isLoading: boolean
   error: string | null
+  onClear?: () => void
 }
 
 function pageTypeBadge(type: PageProfile['page_type']) {
@@ -26,12 +29,19 @@ function fontHealthBadge(health: PageProfile['font_health']) {
   return <Badge variant="outline">unknown</Badge>
 }
 
-export function DocumentProbePanel({ profile, isLoading, error }: DocumentProbePanelProps) {
+export function DocumentProbePanel({ profile, isLoading, error, onClear }: DocumentProbePanelProps) {
   if (!isLoading && !error && !profile) return null
 
   return (
     <section>
-      <h3 className="text-sm font-medium mb-2">Document probe</h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium">Document probe</h3>
+        {onClear && !isLoading && (
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClear} title="Clear probe results">
+            <X className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
 
       {error && (
         <Alert variant="destructive" className="mb-2">

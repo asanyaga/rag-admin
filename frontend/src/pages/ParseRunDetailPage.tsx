@@ -41,7 +41,7 @@ export function ParseRunDetailPage() {
     error: rawError,
   } = useParseRunRawPayload(runId ?? null)
 
-  const { profile: probeProfile, isLoading: probeLoading, error: probeError, runProbe } = useDocumentProbe(documentId ?? null)
+  const { profile: probeProfile, isLoading: probeLoading, error: probeError, runProbe, reset: resetProbe } = useDocumentProbe(documentId ?? null)
 
   const [parsedDoc, setParsedDoc] = useState<ParsedDocumentDetail | undefined>(
     undefined,
@@ -130,6 +130,7 @@ export function ParseRunDetailPage() {
               profile={probeProfile}
               isLoading={probeLoading}
               error={probeError}
+              onClear={resetProbe}
             />
           ) : null
         }
