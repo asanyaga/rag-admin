@@ -212,7 +212,10 @@ export default function ExtractionPage(): JSX.Element {
               <Button
                 size="sm"
                 onClick={handleNewRun}
-                disabled={selectedDocument?.status !== 'ready'}
+                disabled={
+                  (documentsLoading && !selectedDocument) ||
+                  selectedDocument?.status === 'processing'
+                }
               >
                 <Plus className="h-4 w-4 mr-1.5" />
                 New Run
