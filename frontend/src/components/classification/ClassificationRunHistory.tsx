@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -24,13 +23,6 @@ export function ClassificationRunHistory({
 }: ClassificationRunHistoryProps) {
   const { runs, isLoading, error, deleteRun } = useDocumentClassificationRuns(documentId)
 
-  // Auto-select the most recent run when the document changes and no run is selected
-  useEffect(() => {
-    if (runs.length > 0 && !selectedRunId) {
-      onSelectRun(runs[0].id)
-    }
-  }, [runs, selectedRunId, onSelectRun])
-
   const handleDelete = async (e: React.MouseEvent, runId: string) => {
     e.stopPropagation()
     try {
@@ -46,8 +38,8 @@ export function ClassificationRunHistory({
   }
 
   return (
-    <div className="border-b shrink-0">
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
+    <div>
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20 sticky top-0 z-10">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           Classification runs
         </span>
@@ -75,7 +67,7 @@ export function ClassificationRunHistory({
           </button>
         </div>
       ) : (
-        <div className="overflow-y-auto max-h-44">
+        <div>
           {runs.map((run) => {
             const isSelected = run.id === selectedRunId
             const modelSummary =
