@@ -25,6 +25,8 @@ import RunComparisonPage from './pages/RunComparisonPage'
 import ExperimentDetailPage from './pages/ExperimentDetailPage'
 import ExperimentComparisonPage from './pages/ExperimentComparisonPage'
 import ExtractionPage from './pages/ExtractionPage'
+import NewExtractionRunPage from './pages/NewExtractionRunPage'
+import ExtractionResultDetailPage from './pages/ExtractionResultDetailPage'
 import AgentListPage from './pages/AgentListPage'
 import AgentComposerPage from './pages/AgentComposerPage'
 import AgentRunsPage from './pages/AgentRunsPage'
@@ -105,6 +107,16 @@ const router = createBrowserRouter([
             path: 'extract',
             element: <ExtractionPage />,
             handle: { breadcrumb: 'Extract' },
+          },
+          {
+            path: 'extract/new',
+            element: <NewExtractionRunPage />,
+            handle: { breadcrumb: 'New Extraction Run' },
+          },
+          {
+            path: 'extract/:resultId',
+            element: <ExtractionResultDetailPage />,
+            handle: { breadcrumb: 'Extraction Result' },
           },
           {
             path: 'classify',
