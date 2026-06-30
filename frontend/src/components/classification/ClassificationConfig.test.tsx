@@ -74,32 +74,16 @@ describe('ClassificationConfig', () => {
     expect(screen.getByText('b')).toBeInTheDocument()
   })
 
-  it('shows Batch settings trigger when classifierType is llm (default)', () => {
-    render(<ClassificationConfig onChange={() => {}} />)
-    expect(screen.getByText('Batch settings')).toBeInTheDocument()
-  })
-
-  it('calls onChange with correct llm classifierConfig shape', () => {
+  it('calls onChange with labels and classifierType when a label is added', () => {
     const onChange = vi.fn()
     render(<ClassificationConfig onChange={onChange} />)
     fireEvent.change(screen.getByPlaceholderText('e.g. balance_sheet'), {
       target: { value: 'test_label' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        classifierType: 'llm',
-        classifierConfig: expect.objectContaining({
-          provider: expect.any(String),
-          model: expect.any(String),
-          batch_size: expect.any(Number),
-          batch_overlap: expect.any(Number),
-          llm_config: expect.objectContaining({
-            temperature: expect.any(Number),
-            max_tokens: expect.any(Number),
-          }),
-        }),
-      }),
-    )
+    expect(onChange).toHaveBeenCalledWith({
+      labels: ['test_label'],
+      classifierType: 'llm',
+    })
   })
 })

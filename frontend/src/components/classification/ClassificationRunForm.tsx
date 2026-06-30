@@ -22,7 +22,6 @@ export function ClassificationRunForm({
   const [config, setConfig] = useState<ClassificationConfigValue>({
     labels: defaultValues?.labels ?? [],
     classifierType: defaultValues?.classifierType ?? 'llm',
-    classifierConfig: defaultValues?.classifierConfig ?? {},
   })
 
   return (

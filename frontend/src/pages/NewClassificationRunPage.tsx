@@ -1,16 +1,43 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link, useLocation } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { ParseMethodSelector } from '@/components/documents/ParseMethodSelector'
 import { ClassificationConfig } from '@/components/classification/ClassificationConfig'
 import type { ClassificationConfigValue } from '@/components/classification/ClassificationConfig'
+import { PromptConfigEditor } from '@/components/shared/PromptConfigEditor'
 import { useParseRuns } from '@/hooks/useParseRuns'
 import { createClassificationRun } from '@/api/classification'
 import type { ParseConfig } from '@/types/parsing'
+import type { PromptConfig } from '@/types/prompt-config'
 import type { RerunDefaults } from '@/types/classification'
+
+const DEFAULT_PROMPT_CONFIG: PromptConfig = {
+  provider: 'ollama_local',
+  model: 'qwen2.5:7b',
+  temperature: 0.0,
+  maxTokens: 4096,
+}
+
+function configToPromptConfig(config: Record<string, unknown>): PromptConfig {
+  const llm = (config.llm_config as Record<string, unknown> | undefined) ?? {}
+  return {
+    provider: (config.provider as string | undefined) ?? DEFAULT_PROMPT_CONFIG.provider,
+    model: (config.model as string | undefined) ?? DEFAULT_PROMPT_CONFIG.model,
+    temperature: (llm.temperature as number | undefined) ?? DEFAULT_PROMPT_CONFIG.temperature,
+    maxTokens: (llm.max_tokens as number | undefined) ?? DEFAULT_PROMPT_CONFIG.maxTokens,
+    systemPrompt: llm.system_prompt as string | undefined,
+  }
+}
 
 export function NewClassificationRunPage() {
   const navigate = useNavigate()
@@ -33,8 +60,18 @@ export function NewClassificationRunPage() {
   const [classifyConfig, setClassifyConfig] = useState<ClassificationConfigValue>({
     labels: defaults?.labels ?? [],
     classifierType: defaults?.classifierType ?? 'llm',
-    classifierConfig: defaults?.classifierConfig ?? {},
   })
+  const [promptConfig, setPromptConfig] = useState<PromptConfig>(
+    defaults?.classifierConfig && Object.keys(defaults.classifierConfig).length > 0
+      ? configToPromptConfig(defaults.classifierConfig)
+      : DEFAULT_PROMPT_CONFIG,
+  )
+  const [batchSize, setBatchSize] = useState(
+    (defaults?.classifierConfig?.batch_size as number | undefined) ?? 10,
+  )
+  const [batchOverlap, setBatchOverlap] = useState(
+    (defaults?.classifierConfig?.batch_overlap as number | undefined) ?? 3,
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,11 +95,26 @@ export function NewClassificationRunPage() {
     setIsSubmitting(true)
     setError(null)
     try {
+      const classifierConfig =
+        classifyConfig.classifierType === 'llm'
+          ? {
+              provider: promptConfig.provider,
+              model: promptConfig.model,
+              batch_size: batchSize,
+              batch_overlap: batchOverlap,
+              llm_config: {
+                system_prompt: promptConfig.systemPrompt ?? null,
+                temperature: promptConfig.temperature ?? 0.0,
+                max_tokens: promptConfig.maxTokens ?? 4096,
+              },
+            }
+          : {}
+
       const run = await createClassificationRun(documentId, {
         parseRunId: latestViableRun.id,
         labels: classifyConfig.labels,
         classifierType: classifyConfig.classifierType,
-        classifierConfig: classifyConfig.classifierConfig,
+        classifierConfig,
       })
       navigate(`/classify/${run.id}`)
     } catch (err) {
@@ -70,6 +122,8 @@ export function NewClassificationRunPage() {
       setIsSubmitting(false)
     }
   }
+
+  const isLlm = classifyConfig.classifierType === 'llm'
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-6 space-y-6">
@@ -87,24 +141,86 @@ export function NewClassificationRunPage() {
         )}
       </div>
 
-      <ParseMethodSelector
-        parserType={parserType}
-        config={parserConfig}
-        onParserTypeChange={setParserType}
-        onConfigChange={setParserConfig}
-        disabled={isSubmitting}
-      />
+      {/* Section 1: Parse configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Parse configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ParseMethodSelector
+            parserType={parserType}
+            config={parserConfig}
+            onParserTypeChange={setParserType}
+            onConfigChange={setParserConfig}
+            disabled={isSubmitting}
+          />
+        </CardContent>
+      </Card>
 
-      <Separator />
+      {/* Section 2: Classification */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Classification</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ClassificationConfig
+            defaultValues={{
+              labels: classifyConfig.labels,
+              classifierType: classifyConfig.classifierType,
+            }}
+            onChange={setClassifyConfig}
+          />
+          {classifyConfig.classifierType === 'llamaindex_split' && (
+            <p className="text-sm text-muted-foreground mt-4">
+              LlamaIndex split classifier is not yet implemented. Select LLM classifier to proceed.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-      <ClassificationConfig
-        defaultValues={{
-          labels: classifyConfig.labels,
-          classifierType: classifyConfig.classifierType,
-          classifierConfig: classifyConfig.classifierConfig,
-        }}
-        onChange={setClassifyConfig}
-      />
+      {/* Section 3: LLM configuration (only when LLM classifier selected) */}
+      {isLlm && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">LLM configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <PromptConfigEditor
+              value={promptConfig}
+              onChange={setPromptConfig}
+              capabilities={{ thinking: true }}
+            />
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                <ChevronDown className="h-4 w-4" />
+                Batch settings
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Batch size (pages)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={batchSize}
+                    onChange={(e) => setBatchSize(Number(e.target.value))}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Batch overlap (pages)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={batchOverlap}
+                    onChange={(e) => setBatchOverlap(Number(e.target.value))}
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <Alert variant="destructive">
@@ -115,7 +231,7 @@ export function NewClassificationRunPage() {
       <div className="flex gap-3 pt-2">
         <Button
           onClick={handleSubmit}
-          disabled={classifyConfig.labels.length === 0 || isSubmitting}
+          disabled={classifyConfig.labels.length === 0 || isSubmitting || !isLlm}
         >
           {isSubmitting ? 'Starting…' : 'Start classification'}
         </Button>
