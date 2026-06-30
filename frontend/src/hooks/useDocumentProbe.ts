@@ -7,6 +7,7 @@ interface UseDocumentProbeReturn {
   isLoading: boolean
   error: string | null
   runProbe: () => Promise<void>
+  reset: () => void
 }
 
 export function useDocumentProbe(documentId: string | null): UseDocumentProbeReturn {
@@ -28,5 +29,10 @@ export function useDocumentProbe(documentId: string | null): UseDocumentProbeRet
     }
   }, [documentId])
 
-  return { profile, isLoading, error, runProbe }
+  const reset = useCallback(() => {
+    setProfile(null)
+    setError(null)
+  }, [])
+
+  return { profile, isLoading, error, runProbe, reset }
 }

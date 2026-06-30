@@ -12,8 +12,10 @@ import { ParsedDocumentPane } from '@/components/parse-runs/ParsedDocumentPane'
 import { DocumentPdfViewer } from '@/components/parse-runs/DocumentPdfViewer'
 import { MetricsTab } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
+import { DocumentProbePanel } from '@/components/documents/DocumentProbePanel'
 import { ParseRunDeleteDialog } from '@/components/parse-runs/ParseRunDeleteDialog'
 import { useParseRunDetail } from '@/hooks/useParseRunDetail'
+import { useDocumentProbe } from '@/hooks/useDocumentProbe'
 import { useParseRunRawPayload } from '@/hooks/useParseRunRawPayload'
 import * as parseRunsApi from '@/api/parseRuns'
 import type { ParsedDocumentDetail } from '@/types/cdm'
@@ -38,6 +40,8 @@ export function ParseRunDetailPage() {
     isLoading: rawLoading,
     error: rawError,
   } = useParseRunRawPayload(runId ?? null)
+
+  const { profile: probeProfile, isLoading: probeLoading, error: probeError, runProbe } = useDocumentProbe(documentId ?? null)
 
   const [parsedDoc, setParsedDoc] = useState<ParsedDocumentDetail | undefined>(
     undefined,
@@ -118,6 +122,17 @@ export function ParseRunDetailPage() {
         run={run}
         onReparse={() => setReparseOpen(true)}
         onDelete={() => setDeleteOpen(true)}
+        onProbe={runProbe}
+        probeLoading={probeLoading}
+        probeContent={
+          (probeProfile || probeLoading || probeError) ? (
+            <DocumentProbePanel
+              profile={probeProfile}
+              isLoading={probeLoading}
+              error={probeError}
+            />
+          ) : null
+        }
       />
 
       <div

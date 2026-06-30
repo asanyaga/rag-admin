@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
 import { useDocuments } from '@/hooks/useDocuments'
@@ -21,6 +21,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -36,9 +37,11 @@ import { FolderEditPopover } from '@/components/documents/FolderEditPopover'
 import { SourceDocumentBrowser } from '@/components/documents/SourceDocumentBrowser'
 import { RunTimeline } from '@/components/parse-runs/RunTimeline'
 import { useParseRuns } from '@/hooks/useParseRuns'
+import { useDocumentProbe } from '@/hooks/useDocumentProbe'
 import {
   Plus,
   RotateCw,
+  ScanSearch,
   Search,
   Library,
   FileText,
@@ -88,6 +91,12 @@ export default function DocumentsPage(): JSX.Element {
   const [reparseDialogOpen, setReparseDialogOpen] = useState(false)
 
   const { parseRuns, refresh: refreshParseRuns } = useParseRuns(viewDocumentId)
+
+  const { profile: probeProfile, isLoading: probeLoading, error: probeError, runProbe, reset: resetProbe } = useDocumentProbe(viewDocumentId)
+
+  useEffect(() => {
+    resetProbe()
+  }, [viewDocumentId, resetProbe])
 
   if (!currentProject) {
     return (
@@ -361,13 +370,24 @@ export default function DocumentsPage(): JSX.Element {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <Button
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
+                  onClick={runProbe}
+                  disabled={probeLoading}
+                  title="Probe document"
+                >
+                  <ScanSearch className="h-4 w-4 mr-1.5" />
+                  {probeLoading ? 'Probing…' : 'Probe'}
+                </Button>
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setReparseDialogOpen(true)}
+                  title="Re-parse document"
                 >
-                  <RotateCw className="h-4 w-4 mr-2" />
+                  <RotateCw className="h-4 w-4 mr-1.5" />
                   Re-parse
                 </Button>
                 <DropdownMenu>
@@ -390,6 +410,7 @@ export default function DocumentsPage(): JSX.Element {
                       <Download className="h-4 w-4 mr-2" />
                       Download
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
                       onClick={() => handleDelete(viewDocumentId)}
@@ -402,7 +423,7 @@ export default function DocumentsPage(): JSX.Element {
               </div>
             </div>
 
-            <DocumentProbePanel documentId={viewDocumentId} />
+            <DocumentProbePanel profile={probeProfile} isLoading={probeLoading} error={probeError} />
 
             <section>
               <h3 className="text-sm font-medium mb-2">Parse runs</h3>
