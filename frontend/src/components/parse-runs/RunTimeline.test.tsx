@@ -51,7 +51,7 @@ describe('RunTimeline', () => {
     )
     const links = screen.getAllByRole('link', { name: /open viewer/i })
     expect(links).toHaveLength(2)
-    expect(links[0].getAttribute('href')).toBe('/documents/d1/runs/r1')
+    expect(links[0].getAttribute('href')).toBe('/parse/d1/runs/r1')
   })
 
   it('renders a delete button per run row', () => {

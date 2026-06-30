@@ -71,7 +71,7 @@ export function RunTimeline({ documentId, runs, onRunDeleted }: RunTimelineProps
             )}
             <div className="ml-auto flex items-center gap-1">
               <Button asChild size="sm" variant="ghost">
-                <Link to={`/documents/${documentId}/runs/${r.id}`}>
+                <Link to={`/parse/${documentId}/runs/${r.id}`}>
                   <ExternalLink className="h-3 w-3 mr-1" /> Open viewer
                 </Link>
               </Button>
