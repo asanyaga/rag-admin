@@ -33,6 +33,7 @@ interface DocumentPdfViewerProps {
   blocks: Block[]
   selectedBlockId: string | null
   onBlockSelect: (blockId: string) => void
+  blockColors?: Map<string, string>
 }
 
 export function DocumentPdfViewer({
@@ -40,6 +41,7 @@ export function DocumentPdfViewer({
   blocks,
   selectedBlockId,
   onBlockSelect,
+  blockColors,
 }: DocumentPdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -111,7 +113,7 @@ export function DocumentPdfViewer({
                 {pageBlocks.map((b) => {
                   const bbox = b.bbox!
                   const isSelected = b.id === selectedBlockId
-                  const color = ROLE_COLOR[b.role] ?? DEFAULT_COLOR
+                  const color = blockColors?.get(b.id) ?? ROLE_COLOR[b.role] ?? DEFAULT_COLOR
                   return (
                     <rect
                       key={b.id}

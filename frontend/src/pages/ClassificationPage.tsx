@@ -1,116 +1,188 @@
-// frontend/src/pages/ClassificationPage.tsx
-import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Tags, Search, FileText, Plus } from 'lucide-react'
 import { useProject } from '@/contexts/ProjectContext'
-import { useClassificationRuns } from '@/hooks/useClassificationRuns'
-import { ClassificationRunStatusBadge } from '@/components/classification/ClassificationRunStatusBadge'
+import { useDocuments } from '@/hooks/useDocuments'
+import { useFolders } from '@/hooks/useFolders'
+import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { toast } from 'sonner'
-import { formatDistanceToNow } from 'date-fns'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { DocumentStatusBadge } from '@/components/documents/DocumentStatusBadge'
+import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
+import { ClassificationRunHistory } from '@/components/classification/ClassificationRunHistory'
+import { cn } from '@/lib/utils'
 
 export default function ClassificationPage(): JSX.Element {
   const navigate = useNavigate()
   const { currentProject } = useProject()
-  const { runs, isLoading, error, deleteRun } = useClassificationRuns(currentProject?.id ?? null)
+  const projectId = currentProject?.id ?? null
 
-  const handleDelete = async (runId: string) => {
-    try {
-      await deleteRun(runId)
-      toast.success('Classification run deleted')
-    } catch {
-      toast.error('Failed to delete run')
-    }
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
+    searchParams.get('documentId'),
+  )
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+  const [documentSearch, setDocumentSearch] = useState('')
+  const [uploadOpen, setUploadOpen] = useState(false)
+
+  const { documents, isLoading, uploadDocument } = useDocuments(projectId, undefined, selectedFolderId)
+  const { folders } = useFolders(projectId)
+
+  const filtered = documents.filter((doc) =>
+    doc.title.toLowerCase().includes(documentSearch.toLowerCase()),
+  )
+
+  const selectedDocument = documents.find((d) => d.id === selectedDocumentId)
+
+  const handleSelectDocument = (docId: string) => {
+    setSelectedDocumentId(docId)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('documentId', docId)
+      return next
+    })
+  }
+
+  const handleNewRun = () => {
+    if (!selectedDocumentId) return
+    navigate(`/classify/new?documentId=${selectedDocumentId}`, {
+      state: { documentTitle: selectedDocument?.title },
+    })
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Classify</h1>
-          <p className="text-muted-foreground mt-1">{currentProject?.name}</p>
-        </div>
-        <Button onClick={() => navigate('/classify/new')}>
-          <Plus className="h-4 w-4 mr-2" />
-          New classification run
-        </Button>
+    <div className="-m-6 flex flex-col h-[calc(100vh-3.5rem)]">
+      {/* Header */}
+      <div className="px-6 py-3 border-b shrink-0">
+        <h1 className="text-lg font-semibold">Classify</h1>
+        <p className="text-xs text-muted-foreground">{currentProject?.name}</p>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {/* Body */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left: document picker (Parse-style) */}
+        <div className="w-72 border-r shrink-0 flex flex-col">
+          {/* Folder filter */}
+          <div className="p-3 border-b">
+            <Select
+              value={selectedFolderId ?? '__all__'}
+              onValueChange={(v) => {
+                setSelectedFolderId(v === '__all__' ? null : v)
+                setSelectedDocumentId(null)
+              }}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="All folders" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All folders</SelectItem>
+                {folders.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
-        </div>
-      ) : runs.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No classification runs yet.</p>
-          <Button className="mt-4" onClick={() => navigate('/classify/new')}>
-            Start your first run
-          </Button>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Labels</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Provider / Model</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {runs.map((run) => (
-              <TableRow
-                key={run.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => navigate(`/classify/${run.id}`)}
-              >
-                <TableCell>
-                  <span className="text-sm">{run.labelsRequested.join(', ')}</span>
-                </TableCell>
-                <TableCell>
-                  <ClassificationRunStatusBadge status={run.status} />
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {run.classifierType === 'llm'
-                    ? `${run.classifierConfig.provider as string} / ${run.classifierConfig.model as string}`
-                    : run.classifierType}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {run.durationMs !== null ? `${(run.durationMs / 1000).toFixed(1)}s` : '—'}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {formatDistanceToNow(new Date(run.createdAt), { addSuffix: true })}
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(run.id)}
+          {/* Search */}
+          <div className="p-3 border-b">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search documents..."
+                value={documentSearch}
+                onChange={(e) => setDocumentSearch(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+          </div>
+
+          {/* Document list */}
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              {isLoading ? (
+                <div className="space-y-2 p-2">
+                  {[0, 1, 2].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+              ) : filtered.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  {documentSearch ? 'No documents match your search' : 'No documents yet'}
+                </p>
+              ) : (
+                filtered.map((doc) => (
+                  <button
+                    key={doc.id}
+                    onClick={() => handleSelectDocument(doc.id)}
+                    className={cn(
+                      'w-full text-left rounded-md px-3 py-2.5 mb-1 transition-colors',
+                      'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      selectedDocumentId === doc.id && 'bg-muted',
+                    )}
                   >
-                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="text-sm truncate flex-1">{doc.title}</span>
+                      <DocumentStatusBadge status={doc.status} />
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Upload */}
+          <div className="p-3 border-t">
+            <Button
+              variant="outline"
+              className="w-full"
+              size="sm"
+              onClick={() => setUploadOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Upload New
+            </Button>
+          </div>
+        </div>
+
+        {/* Right: run history */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {!selectedDocumentId ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-6">
+              <Tags className="h-12 w-12 text-muted-foreground/40 mb-4" />
+              <h2 className="text-lg font-medium text-muted-foreground">
+                Select a document to get started
+              </h2>
+              <p className="text-sm text-muted-foreground/70 mt-1 max-w-sm">
+                Choose a document from the list to see its classification history.
+              </p>
+            </div>
+          ) : (
+            <ClassificationRunHistory
+              documentId={selectedDocumentId}
+              selectedRunId={null}
+              onSelectRun={(runId) => navigate(`/classify/${runId}`)}
+              onNewRun={handleNewRun}
+            />
+          )}
+        </div>
+      </div>
+
+      {currentProject && (
+        <DocumentUploadDialog
+          open={uploadOpen}
+          onOpenChange={setUploadOpen}
+          onUpload={uploadDocument}
+          projectId={currentProject.id}
+          documents={documents}
+          folders={folders}
+        />
       )}
     </div>
   )

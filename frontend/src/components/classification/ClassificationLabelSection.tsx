@@ -8,6 +8,8 @@ import type { AnnotatedBlock } from '@/types/classification'
 interface Props {
   label: string | null
   blocks: AnnotatedBlock[]
+  selectedBlockId?: string | null
+  onBlockSelect?: (blockId: string) => void
 }
 
 function pageRange(blocks: AnnotatedBlock[]): string {
@@ -18,7 +20,7 @@ function pageRange(blocks: AnnotatedBlock[]): string {
   return min === max ? `Page ${min}` : `Pages ${min}–${max}`
 }
 
-export function ClassificationLabelSection({ label, blocks }: Props) {
+export function ClassificationLabelSection({ label, blocks, selectedBlockId, onBlockSelect }: Props) {
   const displayName = label ?? 'Unmatched'
   const [open, setOpen] = useState(label !== null)
 
@@ -47,7 +49,12 @@ export function ClassificationLabelSection({ label, blocks }: Props) {
           </p>
         ) : (
           blocks.map((block) => (
-            <ClassificationBlockRow key={block.blockId} block={block} />
+            <ClassificationBlockRow
+              key={block.blockId}
+              block={block}
+              isSelected={selectedBlockId === block.blockId}
+              onSelect={onBlockSelect}
+            />
           ))
         )}
       </CollapsibleContent>

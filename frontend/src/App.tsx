@@ -34,8 +34,8 @@ import DataStoreDetailPage from './pages/DataStoreDetailPage'
 import ExportPlaygroundPage from './pages/ExportPlaygroundPage'
 import { ParseRunDetailPage } from './pages/ParseRunDetailPage'
 import ClassificationPage from './pages/ClassificationPage'
-import NewClassificationRunPage from './pages/NewClassificationRunPage'
-import ClassificationRunDetailPage from './pages/ClassificationRunDetailPage'
+import { NewClassificationRunPage } from './pages/NewClassificationRunPage'
+import { ClassificationRunDetailPage } from './pages/ClassificationRunDetailPage'
 
 const router = createBrowserRouter([
   {
