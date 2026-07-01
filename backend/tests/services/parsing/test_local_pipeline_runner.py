@@ -90,3 +90,67 @@ async def test_run_local_pipeline_wraps_failure(tmp_path):
         )
     assert ei.value.run.status == ParseRunStatus.FAILED
     assert ei.value.run.parser == ParserKind.LOCAL_PIPELINE
+
+
+@pytest.mark.asyncio
+async def test_run_local_pipeline_fitz_tables_emits_table_blocks(tmp_path):
+    """fitz_tables tool runs end-to-end and emits TABLE blocks."""
+    pdf = tmp_path / "table_test.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    col_x = [72, 236, 400]
+    row_y = [100, 150, 200]
+    for x in col_x:
+        page.draw_line(
+            fitz.Point(x, row_y[0]), fitz.Point(x, row_y[-1]),
+            color=(0, 0, 0), width=1,
+        )
+    for y in row_y:
+        page.draw_line(
+            fitz.Point(col_x[0], y), fitz.Point(col_x[-1], y),
+            color=(0, 0, 0), width=1,
+        )
+    page.insert_text(fitz.Point(80, 135), "Name", fontsize=11)
+    page.insert_text(fitz.Point(244, 135), "Value", fontsize=11)
+    page.insert_text(fitz.Point(80, 185), "alpha", fontsize=11)
+    page.insert_text(fitz.Point(244, 185), "1", fontsize=11)
+    doc.save(str(pdf))
+    doc.close()
+
+    config = {
+        "tools": [
+            {"tool_id": "fitz", "config": {}},
+            {"tool_id": "fitz_tables", "config": {}},
+        ],
+        "eviction_overlap_threshold": 0.5,
+    }
+    run, doc_result = await run_local_pipeline(
+        source=_source(),
+        file_path=str(pdf),
+        representation_kind="extract_rich",
+        config=config,
+        client=None,
+    )
+    assert run.status == ParseRunStatus.SUCCEEDED
+    assert "fitz_tables" in run.raw_payload["tools"]
+    assert any(b.role == BlockRole.TABLE for b in doc_result.blocks)
+
+
+@pytest.mark.asyncio
+async def test_run_local_pipeline_rejects_dual_table_tools():
+    config = {
+        "tools": [
+            {"tool_id": "fitz", "config": {}},
+            {"tool_id": "fitz_tables", "config": {}},
+            {"tool_id": "camelot", "config": {}},
+        ],
+    }
+    with pytest.raises(LocalPipelineRunError) as ei:
+        await run_local_pipeline(
+            source=_source(),
+            file_path=str(FIXTURES / "simple_text.pdf"),
+            representation_kind="extract_rich",
+            config=config,
+            client=None,
+        )
+    assert ei.value.run.status == ParseRunStatus.FAILED
