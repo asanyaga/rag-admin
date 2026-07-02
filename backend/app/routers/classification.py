@@ -26,6 +26,10 @@ from app.services.classification.classifier_factory import (
     _resolve_byok_provider,
     build_classifier,
 )
+from app.services.classification.prompt_constants import (
+    _DEFAULT_INSTRUCTION,
+    _REQUIRED_FORMAT,
+)
 from app.services.classification.service import ClassificationService
 from app.services.provider_key_service import resolve_api_key
 
@@ -197,6 +201,16 @@ async def list_all_classification_runs(
     repo = ClassificationRunRepository(db)
     runs = await repo.list_for_project(project_id)
     return [_to_run_response(r) for r in runs]
+
+
+@runs_router.get("/system-prompt-config")
+async def get_classification_system_prompt_config(
+    current_user: User = Depends(get_current_active_user),
+) -> dict:
+    return {
+        "instruction": _DEFAULT_INSTRUCTION,
+        "required_format": _REQUIRED_FORMAT,
+    }
 
 
 @runs_router.get("/{run_id}", response_model=ClassificationRunResponse)

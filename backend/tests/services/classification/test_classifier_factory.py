@@ -72,8 +72,10 @@ def test_build_classifier_llm_threads_llm_config():
         api_key=None,
     )
     p.stop()
+    from app.services.classification.prompt_constants import _REQUIRED_FORMAT
     assert isinstance(classifier, LLMClassifier)
-    assert classifier.system_prompt == "Custom"
+    assert classifier.system_prompt.startswith("Custom")
+    assert _REQUIRED_FORMAT in classifier.system_prompt
     assert classifier.temperature == 0.5
     assert classifier.max_tokens == 2048
 
