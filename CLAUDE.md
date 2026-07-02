@@ -76,12 +76,13 @@ Access: http://localhost (or http://localhost:3000)
 
 ## Superpowers Workflow Customizations
 
-### Pre-Implementation Gate (applies after any planning step)
-After writing an implementation plan and before writing any code:
+### Pre-Implementation Gate (applies before any implementaioni step)
+Before writing any code:
+1. ALWAYS work in a feature branch for ALL code changes no matter how small
 1. Create a GitHub issue with:
    - Title: one-line summary of the work
    - Body: acceptance criteria derived from the plan
-   - Links to the relevant spec (`docs/specs/`) and plan
+   - Links to the relevant spec and plan
 2. Confirm Github issue details with the user
 3. Continue with implementation
 4. Do not begin implementation until the issue exists.
@@ -95,33 +96,3 @@ When running the systematic-debugging skill:
   2. Each of the 3 approaches tried and why each did not resolve it
   3. Your recommended next step (rewrite the test, investigate upstream dependency, ask for clarification, etc.)
 - **Wait for explicit user instruction before continuing.**
-
-### Finishing a Development Branch — Issue Close Gate
-After running the finishing-a-development-branch skill:
-- Ask the user: *"Should I close GitHub issue #[number] for this branch?"*
-- Close the issue **only on explicit consent**.
-- Do not close automatically as part of the skill flow.
-
-## Autonomy & Command Style
-
-### Operating mode
-Complete tasks with minimal interruption. Only pause and surface a decision to the user for:
-- Design reviews (spec shape, architectural tradeoffs)
-- Brainstorming (before writing non-trivial code)
-- Actions that open/merge pull requests or push to shared branches
-- Genuinely destructive operations (`rm -rf`, `git push --force`, schema drops,
-  `git reset --hard` on shared branches, truncating production data)
-
-Routine reads, local commits, lints, type-checks, test runs, container restarts,
-and migrations on dev databases do not require approval.
-
-### Command style
-- **Never use `cd X && Y` compound commands.** They defeat permission matching
-  and obscure the actual command in logs. Use absolute paths, or invoke tools
-  with their native "working directory" flag (e.g. `uv run --directory backend ...`,
-  `git -C path ...`, `docker compose -f path/docker-compose.yml ...`).
-- Prefer one command per Bash call unless the commands are part of a single
-  atomic operation (e.g. `git add X && git commit -m "..."`).
-- When a long-running command must be chained with its follow-up
-  (e.g. start server, then test), use `run_in_background` and a separate read,
-  not `sleep N && ...`.
