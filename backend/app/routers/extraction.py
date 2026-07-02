@@ -17,6 +17,7 @@ from app.repositories.extraction_schema_repository import ExtractionSchemaReposi
 from app.repositories.extraction_result_repository import ExtractionResultRepository
 from app.repositories.parsed_document_repository import ParsedDocumentRepository
 from app.repositories.provider_key_repository import ProviderKeyRepository
+from app.repositories.classification_run_repository import ClassificationRunRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
 from app.dependencies.documents import get_storage_service
 from app.schemas.extraction_result import (
@@ -32,6 +33,7 @@ from app.schemas.extraction_result import (
 from app.services.extraction_service import ExtractionService, process_extraction
 from app.services.exceptions import NotFoundError, ConflictError
 from app.services.provider_key_service import resolve_api_key
+from app.services.classification.category_filter_resolver import resolve_category_filter_stages
 from app.services.llm.factory import create_adapter
 from app.adapters.extraction.registry import get_extractor
 from app.adapters.extraction.pipeline import PipelineExtractor
@@ -214,14 +216,21 @@ async def run_extraction(
                 },
             )
 
-        extractor = _maybe_wrap_pipeline(extractor, body.preprocess, body.chunking)
+        resolved_preprocess, applied_filter = await resolve_category_filter_stages(
+            body.preprocess, body.parse_run_id, ClassificationRunRepository(db)
+        )
+        extractor = _maybe_wrap_pipeline(extractor, resolved_preprocess, body.chunking)
+
+        run_config = dict(body.config or {})
+        if applied_filter is not None:
+            run_config["applied_filter"] = applied_filter
 
         result = await service.run_extraction(
             parse_run_id=body.parse_run_id,
             extraction_schema_id=body.extraction_schema_id,
             extraction_method=body.extraction_method,
             user_id=current_user.id,
-            config=body.config,
+            config=run_config,
             llm_config=body.llm_config,
             user_prompt_template=body.user_prompt_template,
             timeout_minutes=body.timeout_minutes,
