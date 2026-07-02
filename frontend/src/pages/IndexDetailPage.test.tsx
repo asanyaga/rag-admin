@@ -302,7 +302,7 @@ describe('IndexDetailPage — full config panel', () => {
           chunkingStrategy: 'block' as const,
           groupByHeading: true,
           maxBlocksPerChunk: 5,
-          blockRoleFilter: ['paragraph', 'heading'],
+          blockRoleFilter: ['text', 'heading'],
         },
       },
       chunks: null,
@@ -319,7 +319,7 @@ describe('IndexDetailPage — full config panel', () => {
 
     expect(screen.getByText('Yes')).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
-    expect(screen.getByText('paragraph, heading')).toBeInTheDocument()
+    expect(screen.getByText('text, heading')).toBeInTheDocument()
   })
 
   it('shows "all" for role filter when blockRoleFilter is null', async () => {

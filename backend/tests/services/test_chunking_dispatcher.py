@@ -63,7 +63,7 @@ def test_dispatch_blocks_source_routes_to_block_service():
         ).model_dump(),
         Block(
             id="b2",
-            role=BlockRole.PARAGRAPH,
+            role=BlockRole.TEXT,
             native_type="p",
             page_index=0,
             bbox=bbox.model_copy(update={"y0": 0.1, "y1": 0.2}),
@@ -81,7 +81,7 @@ def test_dispatch_blocks_source_routes_to_block_service():
     assert len(chunks) == 1
     assert chunks[0].metadata["block_ids"] == ["b1", "b2"]
     assert chunks[0].metadata["page_indices"] == [0]
-    assert chunks[0].metadata["block_roles"] == ["heading", "paragraph"]
+    assert chunks[0].metadata["block_roles"] == ["heading", "text"]
 
 
 def test_dispatch_empty_text_returns_empty_list():

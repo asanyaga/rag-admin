@@ -29,7 +29,7 @@ def test_fitz_tool_id():
 def test_fitz_extracts_paragraph_blocks_with_normalized_bbox():
     result = FitzTool().run(FIXTURES / "simple_text.pdf")
     assert result.tool_id == "fitz"
-    paras = [b for b in result.blocks if b.role == BlockRole.PARAGRAPH]
+    paras = [b for b in result.blocks if b.role == BlockRole.TEXT]
     assert len(paras) > 0
     b = paras[0]
     assert b.text.strip() != ""
@@ -56,13 +56,13 @@ def test_fitz_native_record_keyed_by_provisional_id():
 
 def test_fitz_span_detail_off_by_default():
     result = FitzTool().run(FIXTURES / "simple_text.pdf")
-    para = next(b for b in result.blocks if b.role == BlockRole.PARAGRAPH)
+    para = next(b for b in result.blocks if b.role == BlockRole.TEXT)
     assert "spans" not in para.parser_extras
 
 
 def test_fitz_span_detail_on_records_spans():
     result = FitzTool(config=FitzConfig(span_detail=True)).run(FIXTURES / "simple_text.pdf")
-    para = next(b for b in result.blocks if b.role == BlockRole.PARAGRAPH)
+    para = next(b for b in result.blocks if b.role == BlockRole.TEXT)
     assert "spans" in para.parser_extras
     assert isinstance(para.parser_extras["spans"], list)
 

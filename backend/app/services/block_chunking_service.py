@@ -10,7 +10,7 @@ Grouping algorithm (per spec slice 3):
    - TITLE/HEADING: closes any open group, opens a new one with this block.
    - TABLE/FIGURE: never split. If group_by_heading and a group is open,
      append; else close the current group and emit a single-block group.
-   - Other content roles (PARAGRAPH/LIST/CAPTION/CODE/FORMULA): append to
+   - Other content roles (TEXT/LIST/CAPTION/CODE/FORMULA): append to
      the open group; if no group is open, start one without a heading.
 4. If appending would push current group over max_blocks_per_chunk and the
    incoming block is NOT a TABLE/FIGURE, close the group and start a new one.

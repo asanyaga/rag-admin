@@ -27,7 +27,7 @@ def _make_parsed_doc(blocks=None, full_markdown=None) -> ParsedDocument:
 def _make_block(id_, text, page_index=0, reading_order=None, markdown=None):
     return Block(
         id=id_,
-        role=BlockRole.PARAGRAPH,
+        role=BlockRole.TEXT,
         native_type="paragraph",
         text=text,
         markdown=markdown,

@@ -46,7 +46,7 @@ export interface IndexConfig {
 export type BlockRole =
   | 'title'
   | 'heading'
-  | 'paragraph'
+  | 'text'
   | 'list'
   | 'table'
   | 'figure'
@@ -60,7 +60,7 @@ export type BlockRole =
   | 'other'
 
 export const BLOCK_ROLE_OPTIONS: BlockRole[] = [
-  'title', 'heading', 'paragraph', 'list', 'table', 'figure',
+  'title', 'heading', 'text', 'list', 'table', 'figure',
   'caption', 'code', 'formula', 'link', 'other',
 ]
 

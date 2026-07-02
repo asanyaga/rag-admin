@@ -63,8 +63,8 @@ async def test_get_blocks_returns_annotated_list(
             "page_count": 1,
             "pages": [{"index": 0}],
             "blocks": [
-                {"id": "b-1", "role": "paragraph", "native_type": "paragraph", "text": "Foo", "page_index": 0},
-                {"id": "b-2", "role": "paragraph", "native_type": "paragraph", "text": "Bar", "page_index": 0},
+                {"id": "b-1", "role": "text", "native_type": "paragraph", "text": "Foo", "page_index": 0},
+                {"id": "b-2", "role": "text", "native_type": "paragraph", "text": "Bar", "page_index": 0},
             ],
         },
     )
@@ -109,7 +109,7 @@ async def test_get_blocks_returns_annotated_list(
     assert len(data) == 2
     assert data[0]["blockId"] == "b-1"
     assert data[0]["label"] == "section_a"
-    assert data[0]["role"] == "paragraph"
+    assert data[0]["role"] == "text"
     assert data[0]["text"] == "Foo"
     assert data[0]["pageIndex"] == 0
     assert data[1]["blockId"] == "b-2"

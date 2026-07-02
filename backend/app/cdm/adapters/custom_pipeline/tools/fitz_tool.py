@@ -105,7 +105,7 @@ class FitzTool:
                             extras["spans"] = _spans(blk)
                         block = Block(
                             id=prov_id,
-                            role=BlockRole.PARAGRAPH,
+                            role=BlockRole.TEXT,
                             native_type="text",
                             text=text,
                             page_index=i,

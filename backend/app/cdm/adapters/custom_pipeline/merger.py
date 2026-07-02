@@ -1,6 +1,6 @@
 """Merge tool outputs into a final ordered block list + an audit raw_output.
 
-Eviction rule: later-declared tools win. A fitz PARAGRAPH block that overlaps
+Eviction rule: later-declared tools win. A fitz TEXT block that overlaps
 a table block beyond the threshold is evicted (logged, not deleted).
 """
 from __future__ import annotations

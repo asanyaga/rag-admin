@@ -21,9 +21,9 @@ def test_overlap_fraction_no_overlap():
 
 def _fitz_result():
     blocks = [
-        Block(id="fitz:0:0", role=BlockRole.PARAGRAPH, native_type="text",
+        Block(id="fitz:0:0", role=BlockRole.TEXT, native_type="text",
               text="heading", page_index=0, bbox=_bbox(0.1, 0.05, 0.9, 0.1)),
-        Block(id="fitz:0:1", role=BlockRole.PARAGRAPH, native_type="text",
+        Block(id="fitz:0:1", role=BlockRole.TEXT, native_type="text",
               text="inside table", page_index=0, bbox=_bbox(0.2, 0.55, 0.8, 0.65)),
     ]
     return ToolResult(

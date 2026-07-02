@@ -256,8 +256,8 @@ async def test_process_index_block_source_produces_block_chunks():
     bbox = BBox(x0=0.1, y0=0.0, x1=0.9, y1=0.05, space=CoordSpace.NORMALIZED)
     blocks = [
         Block(id="b1", role=BlockRole.HEADING, native_type="h1", page_index=0, bbox=bbox, text="Heading").model_dump(),
-        Block(id="b2", role=BlockRole.PARAGRAPH, native_type="p", page_index=0, bbox=bbox.model_copy(update={"y0": 0.1, "y1": 0.2}), text="para 1").model_dump(),
-        Block(id="b3", role=BlockRole.PARAGRAPH, native_type="p", page_index=0, bbox=bbox.model_copy(update={"y0": 0.2, "y1": 0.3}), text="para 2").model_dump(),
+        Block(id="b2", role=BlockRole.TEXT, native_type="p", page_index=0, bbox=bbox.model_copy(update={"y0": 0.1, "y1": 0.2}), text="para 1").model_dump(),
+        Block(id="b3", role=BlockRole.TEXT, native_type="p", page_index=0, bbox=bbox.model_copy(update={"y0": 0.2, "y1": 0.3}), text="para 2").model_dump(),
     ]
 
     parsed_doc = MagicMock()
@@ -313,5 +313,5 @@ async def test_process_index_block_source_produces_block_chunks():
     assert chunk["source_type"] == "block"
     assert chunk["parse_run_id"] == str(parse_run_id)
     assert chunk["chunk_metadata"]["block_ids"] == ["b1", "b2", "b3"]
-    assert chunk["chunk_metadata"]["block_roles"] == ["heading", "paragraph", "paragraph"]
+    assert chunk["chunk_metadata"]["block_roles"] == ["heading", "text", "text"]
     assert chunk["chunk_metadata"]["page_indices"] == [0]

@@ -8,7 +8,7 @@ def _doc(n_pages: int, chars_per_page: int = 400) -> ParsedDocument:
     pages, blocks = [], []
     for i in range(n_pages):
         blocks.append(Block(
-            id=f"b{i}", role=BlockRole.PARAGRAPH, native_type="text",
+            id=f"b{i}", role=BlockRole.TEXT, native_type="text",
             text="x" * chars_per_page, markdown="x" * chars_per_page,
             page_index=i, reading_order=0,
         ))

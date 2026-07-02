@@ -35,14 +35,14 @@ describe('BlockConfigPanel', () => {
   it('shows existing role filter as selected', () => {
     render(
       <BlockConfigPanel
-        config={{ ...baseConfig, blockRoleFilter: ['table', 'paragraph'] }}
+        config={{ ...baseConfig, blockRoleFilter: ['table', 'text'] }}
         onUpdate={vi.fn()}
       />
     )
     expect(screen.getByRole('button', { name: /^table$/i })).toHaveAttribute(
       'aria-pressed', 'true'
     )
-    expect(screen.getByRole('button', { name: /^paragraph$/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /^text$/i })).toHaveAttribute(
       'aria-pressed', 'true'
     )
   })

@@ -49,7 +49,7 @@ def test_union_bbox_empty_returns_none():
 
 @pytest.mark.parametrize("llama_type,expected_role", [
     ("heading", BlockRole.HEADING),
-    ("text", BlockRole.PARAGRAPH),
+    ("text", BlockRole.TEXT),
     ("list", BlockRole.LIST),
     ("table", BlockRole.TABLE),
     ("image", BlockRole.FIGURE),
@@ -141,7 +141,7 @@ def test_adapter_produces_blocks_with_normalized_bboxes():
     assert 0.0 <= heading.bbox.x0 <= heading.bbox.x1 <= 1.0
     assert heading.markdown == "# Title"
     assert heading.text == "Title"
-    assert body.role.value == "paragraph"
+    assert body.role.value == "text"
 
 
 def test_adapter_populates_quality_from_confidence():

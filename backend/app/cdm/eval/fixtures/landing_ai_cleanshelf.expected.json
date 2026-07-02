@@ -32,7 +32,7 @@
   "blocks": [
     {
       "id": "structural-test-src:p0:b0",
-      "role": "paragraph",
+      "role": "text",
       "native_type": "text",
       "native_label": null,
       "text": "<a id='b821b0d0-8cf9-4fca-b136-2ca4ac18767d'></a>\n\nCLEANSHELF SUPERMARKETS LIMITED\nKIKUYU\nP.O Box 1/08 0021/,1 IMURU",
@@ -112,7 +112,7 @@
     },
     {
       "id": "structural-test-src:p0:b2",
-      "role": "paragraph",
+      "role": "text",
       "native_type": "text",
       "native_label": null,
       "text": "<a id='11a45a0b-7b25-4990-848a-b5435d27870b'></a>\n\nSBN . P051147119.. VAT Reg 0125810H\nTel No. : 0110090570 Tax\nTill No. : 1 Cash Sale $ 103\nDate : 12-Apr 26 Time : 12:45:PM Branch : 13",
@@ -2400,7 +2400,7 @@
     },
     {
       "id": "structural-test-src:p0:b4",
-      "role": "paragraph",
+      "role": "text",
       "native_type": "text",
       "native_label": null,
       "text": "<a id='80d828c4-2a69-4339-bfb9-64c3057fd310'></a>\n\nTOTAL : 2,718.00\nM-PAY : 2,718.00",
@@ -2442,7 +2442,7 @@
     },
     {
       "id": "structural-test-src:p0:b5",
-      "role": "paragraph",
+      "role": "text",
       "native_type": "text",
       "native_label": null,
       "text": "<a id='a91a4fdd-c701-4e4a-aca0-83d3f35e6d0b'></a>\n\n***\n*** MPESA DETAILS ***\n***\nTransaction No.: UDOOGORZCH\nMobile No : 0722 ### 673\n***",
@@ -2971,7 +2971,7 @@
     },
     {
       "id": "structural-test-src:p0:b7",
-      "role": "paragraph",
+      "role": "text",
       "native_type": "text",
       "native_label": null,
       "text": "<a id='760eb065-4575-4cca-bf2d-61b2a0cc555d'></a>\n\nTSIN : 131131204261243189\n\nCUIN : 0170495670001143165\n\nCUSN : KRAMW017202207049567\n\nDATE : 2026-04-12 12:46",
@@ -3051,7 +3051,7 @@
     },
     {
       "id": "structural-test-src:p0:b9",
-      "role": "paragraph",
+      "role": "text",
       "native_type": "text",
       "native_label": null,
       "text": "<a id='ea12bc31-3b53-4942-bbf9-09b4479c7137'></a>\n\nPRICES INCLUSIVE OF VAT WHERE APPLICABLE",

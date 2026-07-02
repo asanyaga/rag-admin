@@ -6,7 +6,7 @@ from app.cdm.models import Block, BlockRole, Page, ParsedDocument
 def _doc():
     blocks = [
         Block(id="h", role=BlockRole.HEADER, native_type="t", text="hdr", page_index=0),
-        Block(id="p", role=BlockRole.PARAGRAPH, native_type="t", text="body", page_index=0),
+        Block(id="p", role=BlockRole.TEXT, native_type="t", text="body", page_index=0),
         Block(id="f", role=BlockRole.FOOTER, native_type="t", text="ftr", page_index=0),
     ]
     return ParsedDocument(

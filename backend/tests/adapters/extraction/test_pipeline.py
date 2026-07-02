@@ -15,7 +15,7 @@ _SCHEMA = {"type": "object", "properties": {
 def _doc(n_pages: int, chars=400):
     pages, blocks = [], []
     for i in range(n_pages):
-        blocks.append(Block(id=f"b{i}", role=BlockRole.PARAGRAPH, native_type="t",
+        blocks.append(Block(id=f"b{i}", role=BlockRole.TEXT, native_type="t",
                             text="x" * chars, markdown="x" * chars, page_index=i))
         pages.append(Page(index=i, block_ids=[f"b{i}"]))
     return ParsedDocument(id="d", source_document_id="s", parse_run_id=str(_RUN),
@@ -72,7 +72,7 @@ async def test_preprocess_runs_before_extraction():
         provider_response_raw=None, extraction_metadata={}))
     px = PipelineExtractor(
         inner=inner,
-        preprocess=[{"stage": "block_filter", "config": {"drop": ["paragraph"]}}],
+        preprocess=[{"stage": "block_filter", "config": {"drop": ["text"]}}],
         chunking=None,
     )
     await px.extract(_doc(1), _SCHEMA)

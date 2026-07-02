@@ -7,7 +7,7 @@ def _make_doc(page_count: int) -> ParsedDocument:
     blocks = [
         Block(
             id=f"b{i}",
-            role=BlockRole.PARAGRAPH,
+            role=BlockRole.TEXT,
             native_type="paragraph",
             text=f"content on page {i}",
             page_index=i,
@@ -28,8 +28,8 @@ def _make_doc(page_count: int) -> ParsedDocument:
 def test_serialize_pages_format():
     doc = _make_doc(3)
     text = serialize_pages(doc, 0, 1)
-    assert "[page 0, paragraph] content on page 0" in text
-    assert "[page 1, paragraph] content on page 1" in text
+    assert "[page 0, text] content on page 0" in text
+    assert "[page 1, text] content on page 1" in text
     assert "page 2" not in text
 
 

@@ -110,8 +110,8 @@ def test_block_role_filter_accepts_camel_case_alias():
         "chunkingStrategy": "block",
         "groupByHeading": False,
         "maxBlocksPerChunk": 5,
-        "blockRoleFilter": ["paragraph"],
+        "blockRoleFilter": ["text"],
     })
     assert cfg.group_by_heading is False
     assert cfg.max_blocks_per_chunk == 5
-    assert cfg.block_role_filter == ["paragraph"]
+    assert cfg.block_role_filter == ["text"]
