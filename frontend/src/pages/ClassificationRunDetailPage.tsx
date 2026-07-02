@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import { ChevronLeft, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -26,6 +26,8 @@ const LABEL_COLORS = [
 export function ClassificationRunDetailPage() {
   const { runId } = useParams<{ runId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const documentTitle = (location.state as { documentTitle?: string } | null)?.documentTitle
   const { run, isLoading, error } = useClassificationRunDetail(runId ?? null)
   const { blocks: annotatedBlocks } = useClassificationRunBlocks(
     run?.status === 'completed' ? (runId ?? null) : null,
@@ -81,6 +83,7 @@ export function ClassificationRunDetailPage() {
   const handleRerun = () => {
     navigate(`/classify/new?documentId=${run.documentId}`, {
       state: {
+        documentTitle,
         defaults: {
           labels: run.labelsRequested,
           classifierType: run.classifierType,
@@ -107,6 +110,9 @@ export function ClassificationRunDetailPage() {
         </Button>
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <ClassificationRunStatusBadge status={run.status} />
+          {documentTitle && (
+            <span className="text-sm font-medium truncate max-w-[200px]">{documentTitle}</span>
+          )}
           <span className="text-sm text-muted-foreground truncate">{modelSummary}</span>
           <span className="text-xs text-muted-foreground shrink-0">
             {formatDistanceToNow(new Date(run.createdAt), { addSuffix: true })}

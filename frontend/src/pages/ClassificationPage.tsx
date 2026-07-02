@@ -167,7 +167,11 @@ export default function ClassificationPage(): JSX.Element {
             <ClassificationRunHistory
               documentId={selectedDocumentId}
               selectedRunId={null}
-              onSelectRun={(runId) => navigate(`/classify/${runId}`)}
+              onSelectRun={(runId) =>
+                navigate(`/classify/${runId}`, {
+                  state: { documentTitle: selectedDocument?.title },
+                })
+              }
               onNewRun={handleNewRun}
             />
           )}
