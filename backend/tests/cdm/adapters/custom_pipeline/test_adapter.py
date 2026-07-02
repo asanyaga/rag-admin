@@ -1,6 +1,6 @@
 from app.cdm.adapters.base import SourceMeta
-from app.cdm.adapters.local_pipeline.adapter import LocalPipelineAdapter
-from app.cdm.adapters.local_pipeline.tools.base import PageMeta
+from app.cdm.adapters.custom_pipeline.adapter import CustomPipelineAdapter
+from app.cdm.adapters.custom_pipeline.tools.base import PageMeta
 from app.cdm.models import BBox, Block, BlockRole, ParsedDocument, ParserKind
 
 
@@ -21,7 +21,7 @@ def _blocks():
 
 
 def test_adapter_parser_kind():
-    assert LocalPipelineAdapter.parser == ParserKind.LOCAL_PIPELINE
+    assert CustomPipelineAdapter.parser == ParserKind.CUSTOM_PIPELINE
 
 
 def test_adapter_builds_parsed_document():
@@ -32,7 +32,7 @@ def test_adapter_builds_parsed_document():
         },
         "blocks": _blocks(),
     }
-    doc = LocalPipelineAdapter().adapt(raw, SourceMeta(
+    doc = CustomPipelineAdapter().adapt(raw, SourceMeta(
         source_document_id="doc1", parse_run_id="run1", filename="x.pdf"
     ))
     assert isinstance(doc, ParsedDocument)
@@ -51,7 +51,7 @@ def test_adapter_page_block_ids_in_reading_order():
                       1: PageMeta(index=1, width=612.0, height=792.0)},
         "blocks": _blocks(),
     }
-    doc = LocalPipelineAdapter().adapt(raw, SourceMeta(
+    doc = CustomPipelineAdapter().adapt(raw, SourceMeta(
         source_document_id="doc1", parse_run_id="run1"
     ))
     page0 = next(p for p in doc.pages if p.index == 0)

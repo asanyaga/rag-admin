@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { LocalPipelineConfig } from './LocalPipelineConfig'
+import { CustomPipelineConfig } from './CustomPipelineConfig'
 
 const fitzOnly = {
   tools: [
@@ -32,16 +32,16 @@ const withCamelot = {
   ],
 }
 
-describe('LocalPipelineConfig', () => {
+describe('CustomPipelineConfig', () => {
   it('renders fitz section as always-on and a table-tool selector', () => {
-    render(<LocalPipelineConfig config={fitzOnly} onChange={vi.fn()} />)
+    render(<CustomPipelineConfig config={fitzOnly} onChange={vi.fn()} />)
     expect(screen.getByText(/fitz \(text \+ images\)/i)).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: /table extraction/i })).toBeInTheDocument()
   })
 
   it('selecting fitz_tables adds it to tools list', async () => {
     const onChange = vi.fn()
-    render(<LocalPipelineConfig config={fitzOnly} onChange={onChange} />)
+    render(<CustomPipelineConfig config={fitzOnly} onChange={onChange} />)
     await userEvent.click(screen.getByRole('combobox', { name: /table extraction/i }))
     await userEvent.click(screen.getByText(/fitz_tables/i))
     const next = onChange.mock.calls[0][0]
@@ -51,7 +51,7 @@ describe('LocalPipelineConfig', () => {
 
   it('selecting camelot adds it to tools list', async () => {
     const onChange = vi.fn()
-    render(<LocalPipelineConfig config={fitzOnly} onChange={onChange} />)
+    render(<CustomPipelineConfig config={fitzOnly} onChange={onChange} />)
     await userEvent.click(screen.getByRole('combobox', { name: /table extraction/i }))
     await userEvent.click(screen.getByText(/^camelot/i))
     const next = onChange.mock.calls[0][0]
@@ -61,7 +61,7 @@ describe('LocalPipelineConfig', () => {
 
   it('selecting none removes existing table tool', async () => {
     const onChange = vi.fn()
-    render(<LocalPipelineConfig config={withFitzTables} onChange={onChange} />)
+    render(<CustomPipelineConfig config={withFitzTables} onChange={onChange} />)
     await userEvent.click(screen.getByRole('combobox', { name: /table extraction/i }))
     await userEvent.click(screen.getByRole('option', { name: /none/i }))
     const next = onChange.mock.calls[0][0]
@@ -71,7 +71,7 @@ describe('LocalPipelineConfig', () => {
 
   it('switching from camelot to fitz_tables removes camelot', async () => {
     const onChange = vi.fn()
-    render(<LocalPipelineConfig config={withCamelot} onChange={onChange} />)
+    render(<CustomPipelineConfig config={withCamelot} onChange={onChange} />)
     await userEvent.click(screen.getByRole('combobox', { name: /table extraction/i }))
     await userEvent.click(screen.getByText(/fitz_tables/i))
     const next = onChange.mock.calls[0][0]
@@ -81,18 +81,18 @@ describe('LocalPipelineConfig', () => {
   })
 
   it('shows fitz_tables config panel when fitz_tables is selected', () => {
-    render(<LocalPipelineConfig config={withFitzTables} onChange={vi.fn()} />)
+    render(<CustomPipelineConfig config={withFitzTables} onChange={vi.fn()} />)
     expect(screen.getAllByText(/vertical strategy/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/snap tolerance/i).length).toBeGreaterThan(0)
   })
 
   it('shows camelot flavor select when camelot is selected', () => {
-    render(<LocalPipelineConfig config={withCamelot} onChange={vi.fn()} />)
+    render(<CustomPipelineConfig config={withCamelot} onChange={vi.fn()} />)
     expect(screen.getByText('Flavor')).toBeInTheDocument()
   })
 
   it('hides edge_tol/row_tol for camelot lattice flavor', () => {
-    render(<LocalPipelineConfig config={withCamelot} onChange={vi.fn()} />)
+    render(<CustomPipelineConfig config={withCamelot} onChange={vi.fn()} />)
     expect(screen.queryByText('edge_tol')).not.toBeInTheDocument()
     expect(screen.queryByText('row_tol')).not.toBeInTheDocument()
   })
@@ -105,14 +105,14 @@ describe('LocalPipelineConfig', () => {
         { tool_id: 'camelot', config: { flavor: 'stream', edge_tol: 50, row_tol: 2 } },
       ],
     }
-    render(<LocalPipelineConfig config={withStream} onChange={vi.fn()} />)
+    render(<CustomPipelineConfig config={withStream} onChange={vi.fn()} />)
     expect(screen.getByText('edge_tol')).toBeInTheDocument()
     expect(screen.getByText('row_tol')).toBeInTheDocument()
   })
 
   it('shows suggested-tools hint when a profile is provided', () => {
     render(
-      <LocalPipelineConfig
+      <CustomPipelineConfig
         config={fitzOnly}
         onChange={vi.fn()}
         profile={{

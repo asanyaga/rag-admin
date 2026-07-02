@@ -3,8 +3,8 @@ from pathlib import Path
 
 import fitz
 
-from app.cdm.adapters.local_pipeline.config import FitzConfig
-from app.cdm.adapters.local_pipeline.tools.fitz_tool import FitzTool, _json_safe
+from app.cdm.adapters.custom_pipeline.config import FitzConfig
+from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool, _json_safe
 from app.cdm.models import BlockRole
 
 FIXTURES = Path(__file__).parent / "fixtures"

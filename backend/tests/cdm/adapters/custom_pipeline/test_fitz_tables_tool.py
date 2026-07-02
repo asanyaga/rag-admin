@@ -6,9 +6,9 @@ from pathlib import Path
 import fitz
 import pytest
 
-from app.cdm.adapters.local_pipeline.config import FitzTablesConfig
-from app.cdm.adapters.local_pipeline.tools.base import PageMeta
-from app.cdm.adapters.local_pipeline.tools.fitz_tables_tool import FitzTablesTool
+from app.cdm.adapters.custom_pipeline.config import FitzTablesConfig
+from app.cdm.adapters.custom_pipeline.tools.base import PageMeta
+from app.cdm.adapters.custom_pipeline.tools.fitz_tables_tool import FitzTablesTool
 from app.cdm.models import BlockRole
 
 

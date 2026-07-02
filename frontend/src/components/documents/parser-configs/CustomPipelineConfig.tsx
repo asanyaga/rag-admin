@@ -24,7 +24,7 @@ interface ToolEntry {
   config: Record<string, unknown>
 }
 
-interface LocalPipelineConfigProps {
+interface CustomPipelineConfigProps {
   config: ParseConfig
   onChange: (config: ParseConfig) => void
   disabled?: boolean
@@ -350,12 +350,12 @@ function FitzTablesConfigPanel({
   )
 }
 
-export function LocalPipelineConfig({
+export function CustomPipelineConfig({
   config,
   onChange,
   disabled = false,
   profile,
-}: LocalPipelineConfigProps) {
+}: CustomPipelineConfigProps) {
   const tools = (config.tools as ToolEntry[] | undefined) ?? []
   const threshold = (config.eviction_overlap_threshold as number | undefined) ?? 0.5
 

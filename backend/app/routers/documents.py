@@ -43,7 +43,7 @@ from app.repositories.source_document_repository import SourceDocumentRepository
 from app.schemas.parse_run import ParseRunResponse
 from app.services.document_service import DocumentService, process_cdm_parsing, BulkUploadItemResult
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
-from app.cdm.adapters.local_pipeline.probe import DocumentProbe
+from app.cdm.adapters.custom_pipeline.probe import DocumentProbe
 from pydantic import BaseModel as PydanticBaseModel
 
 

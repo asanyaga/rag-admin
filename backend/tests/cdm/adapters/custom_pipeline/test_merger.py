@@ -1,5 +1,5 @@
-from app.cdm.adapters.local_pipeline.merger import merge, overlap_fraction
-from app.cdm.adapters.local_pipeline.tools.base import PageMeta, ToolResult
+from app.cdm.adapters.custom_pipeline.merger import merge, overlap_fraction
+from app.cdm.adapters.custom_pipeline.tools.base import PageMeta, ToolResult
 from app.cdm.models import BBox, Block, BlockRole
 
 

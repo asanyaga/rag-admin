@@ -12,8 +12,8 @@ from typing import Any, Dict, List, Optional
 
 import camelot
 
-from app.cdm.adapters.local_pipeline.config import CamelotConfig
-from app.cdm.adapters.local_pipeline.tools.base import (
+from app.cdm.adapters.custom_pipeline.config import CamelotConfig
+from app.cdm.adapters.custom_pipeline.tools.base import (
     PageMeta,
     ToolResult,
     clamp01,

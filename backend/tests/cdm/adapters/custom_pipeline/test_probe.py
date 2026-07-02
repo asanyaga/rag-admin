@@ -1,4 +1,4 @@
-from app.cdm.adapters.local_pipeline.probe import PageProfile, DocumentProfile
+from app.cdm.adapters.custom_pipeline.probe import PageProfile, DocumentProfile
 
 
 def _make_page_profile(index: int = 0) -> PageProfile:
@@ -64,7 +64,7 @@ def test_recommended_tools_is_list_of_strings():
 
 
 from pathlib import Path
-from app.cdm.adapters.local_pipeline.probe import DocumentProbe
+from app.cdm.adapters.custom_pipeline.probe import DocumentProbe
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

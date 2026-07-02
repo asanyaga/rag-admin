@@ -1,4 +1,4 @@
-"""Drives the local tool pipeline end-to-end: tools → merge → CDM + ParseRun."""
+"""Drives the custom tool pipeline end-to-end: tools → merge → CDM + ParseRun."""
 from __future__ import annotations
 
 import time
@@ -8,16 +8,16 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from app.cdm.adapters.base import SourceMeta
-from app.cdm.adapters.local_pipeline.adapter import LocalPipelineAdapter
-from app.cdm.adapters.local_pipeline.config import TABLE_TOOL_IDS, build_pipeline_config
-from app.cdm.adapters.local_pipeline.merger import merge
-from app.cdm.adapters.local_pipeline.tools.base import ToolResult
+from app.cdm.adapters.custom_pipeline.adapter import CustomPipelineAdapter
+from app.cdm.adapters.custom_pipeline.config import TABLE_TOOL_IDS, build_pipeline_config
+from app.cdm.adapters.custom_pipeline.merger import merge
+from app.cdm.adapters.custom_pipeline.tools.base import ToolResult
 from app.cdm.models import ParsedDocument, ParserKind
 from app.cdm.source import ParseRun, ParseRunStatus, SourceDocument
-from app.services.parsing.errors import LocalPipelineRunError
+from app.services.parsing.errors import CustomPipelineRunError
 
 
-async def run_local_pipeline(
+async def run_custom_pipeline(
     *,
     source: SourceDocument,
     file_path: str,
@@ -30,13 +30,13 @@ async def run_local_pipeline(
     started_at = datetime.now(timezone.utc)
     t0 = time.perf_counter()
 
-    def _fail(exc: Exception) -> LocalPipelineRunError:
+    def _fail(exc: Exception) -> CustomPipelineRunError:
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((time.perf_counter() - t0) * 1000)
         failed = ParseRun(
             id=run_id,
             source_document_id=source.id,
-            parser=ParserKind.LOCAL_PIPELINE,
+            parser=ParserKind.CUSTOM_PIPELINE,
             representation_kind=representation_kind,
             config=config,
             status=ParseRunStatus.FAILED,
@@ -45,7 +45,7 @@ async def run_local_pipeline(
             duration_ms=duration_ms,
             error=f"{type(exc).__name__}: {exc}",
         )
-        return LocalPipelineRunError(f"Local pipeline failed: {exc}", run=failed)
+        return CustomPipelineRunError(f"Custom pipeline failed: {exc}", run=failed)
 
     try:
         pdf_path = Path(file_path)
@@ -54,7 +54,7 @@ async def run_local_pipeline(
 
         fitz_tool = next((t for t in pipeline.tools if t.tool_id == "fitz"), None)
         if fitz_tool is None:
-            raise ValueError("local pipeline requires a 'fitz' tool")
+            raise ValueError("custom pipeline requires a 'fitz' tool")
 
         fitz_result: ToolResult = fitz_tool.run(pdf_path)
         warnings = list(fitz_result.warnings)
@@ -88,7 +88,7 @@ async def run_local_pipeline(
     run = ParseRun(
         id=run_id,
         source_document_id=source.id,
-        parser=ParserKind.LOCAL_PIPELINE,
+        parser=ParserKind.CUSTOM_PIPELINE,
         representation_kind=representation_kind,
         config=config,
         status=ParseRunStatus.SUCCEEDED,
@@ -99,7 +99,7 @@ async def run_local_pipeline(
         raw_payload=merge_result.raw_output,
     )
 
-    adapter = LocalPipelineAdapter()
+    adapter = CustomPipelineAdapter()
     doc = adapter.adapt(
         {"page_meta": fitz_result.page_meta, "blocks": merge_result.blocks},
         SourceMeta(

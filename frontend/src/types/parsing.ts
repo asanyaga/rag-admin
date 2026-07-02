@@ -13,12 +13,12 @@ export type ParseConfig = {
   [key: string]: unknown
 }
 
-export interface LocalPipelineToolConfig {
+export interface CustomPipelineToolConfig {
   tool_id: string
   config: Record<string, unknown>
 }
 
-export interface LocalPipelineParseConfig {
-  tools: LocalPipelineToolConfig[]
+export interface CustomPipelineParseConfig {
+  tools: CustomPipelineToolConfig[]
   eviction_overlap_threshold: number
 }

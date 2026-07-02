@@ -9,7 +9,7 @@ import {
 import type { ParseConfig } from '@/types/parsing'
 import { LandingAIConfig } from './parser-configs/LandingAIConfig'
 import { LlamaParseConfig } from './parser-configs/LlamaParseConfig'
-import { LocalPipelineConfig } from './parser-configs/LocalPipelineConfig'
+import { CustomPipelineConfig } from './parser-configs/CustomPipelineConfig'
 
 interface ParserMeta {
   label: string
@@ -38,9 +38,9 @@ const PARSER_REGISTRY: Record<string, ParserMeta> = {
     description: 'Local PDF parsing. Rich layout extraction with tables, headings, and figures.',
     defaultConfig: {},
   },
-  local_pipeline: {
-    label: 'Local pipeline',
-    description: 'Composable local tools (fitz + camelot). No cloud API — for prototyping and eval.',
+  custom_pipeline: {
+    label: 'Custom pipeline',
+    description: 'Composable tools',
     defaultConfig: {
       tools: [
         {
@@ -106,8 +106,8 @@ export function ParseMethodSelector({
       {parserType === 'landing_ai' && (
         <LandingAIConfig config={config} onChange={onConfigChange} disabled={disabled} />
       )}
-      {parserType === 'local_pipeline' && (
-        <LocalPipelineConfig config={config} onChange={onConfigChange} disabled={disabled} />
+      {parserType === 'custom_pipeline' && (
+        <CustomPipelineConfig config={config} onChange={onConfigChange} disabled={disabled} />
       )}
     </div>
   )

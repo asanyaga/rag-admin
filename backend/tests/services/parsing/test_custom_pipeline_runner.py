@@ -7,10 +7,10 @@ import pytest
 
 from app.cdm.models import BlockRole, ParserKind
 from app.cdm.source import ParseRunStatus, SourceDocument
-from app.services.parsing.errors import LocalPipelineRunError
-from app.services.parsing.local_pipeline_runner import run_local_pipeline
+from app.services.parsing.errors import CustomPipelineRunError
+from app.services.parsing.custom_pipeline_runner import run_custom_pipeline
 
-FIXTURES = Path(__file__).parents[2] / "cdm" / "adapters" / "local_pipeline" / "fixtures"
+FIXTURES = Path(__file__).parents[2] / "cdm" / "adapters" / "custom_pipeline" / "fixtures"
 
 
 def _source() -> SourceDocument:
@@ -26,19 +26,19 @@ def _source() -> SourceDocument:
 
 
 @pytest.mark.asyncio
-async def test_run_local_pipeline_fitz_only_succeeds():
+async def test_run_custom_pipeline_fitz_only_succeeds():
     config = {
         "tools": [{"tool_id": "fitz", "config": {}}],
         "eviction_overlap_threshold": 0.5,
     }
-    run, doc = await run_local_pipeline(
+    run, doc = await run_custom_pipeline(
         source=_source(),
         file_path=str(FIXTURES / "simple_text.pdf"),
         representation_kind="extract_rich",
         config=config,
         client=None,
     )
-    assert run.parser == ParserKind.LOCAL_PIPELINE
+    assert run.parser == ParserKind.CUSTOM_PIPELINE
     assert run.status == ParseRunStatus.SUCCEEDED
     assert run.source_document_id == "doc-xyz"
     assert run.raw_payload is not None
@@ -52,7 +52,7 @@ async def test_run_local_pipeline_fitz_only_succeeds():
 
 
 @pytest.mark.asyncio
-async def test_run_local_pipeline_raw_payload_json_serializable_with_images(tmp_path):
+async def test_run_custom_pipeline_raw_payload_json_serializable_with_images(tmp_path):
     """Regression: fitz image bytes must not break the JSON raw_payload column."""
     pdf = tmp_path / "with_image.pdf"
     src = fitz.open()
@@ -65,7 +65,7 @@ async def test_run_local_pipeline_raw_payload_json_serializable_with_images(tmp_
     doc_pdf.close()
 
     config = {"tools": [{"tool_id": "fitz", "config": {}}]}
-    run, _ = await run_local_pipeline(
+    run, _ = await run_custom_pipeline(
         source=_source(),
         file_path=str(pdf),
         representation_kind="extract_rich",
@@ -78,10 +78,10 @@ async def test_run_local_pipeline_raw_payload_json_serializable_with_images(tmp_
 
 
 @pytest.mark.asyncio
-async def test_run_local_pipeline_wraps_failure(tmp_path):
+async def test_run_custom_pipeline_wraps_failure(tmp_path):
     config = {"tools": [{"tool_id": "fitz", "config": {}}]}
-    with pytest.raises(LocalPipelineRunError) as ei:
-        await run_local_pipeline(
+    with pytest.raises(CustomPipelineRunError) as ei:
+        await run_custom_pipeline(
             source=_source(),
             file_path=str(tmp_path / "does_not_exist.pdf"),
             representation_kind="extract_rich",
@@ -89,11 +89,11 @@ async def test_run_local_pipeline_wraps_failure(tmp_path):
             client=None,
         )
     assert ei.value.run.status == ParseRunStatus.FAILED
-    assert ei.value.run.parser == ParserKind.LOCAL_PIPELINE
+    assert ei.value.run.parser == ParserKind.CUSTOM_PIPELINE
 
 
 @pytest.mark.asyncio
-async def test_run_local_pipeline_fitz_tables_emits_table_blocks(tmp_path):
+async def test_run_custom_pipeline_fitz_tables_emits_table_blocks(tmp_path):
     """fitz_tables tool runs end-to-end and emits TABLE blocks."""
     pdf = tmp_path / "table_test.pdf"
     doc = fitz.open()
@@ -124,7 +124,7 @@ async def test_run_local_pipeline_fitz_tables_emits_table_blocks(tmp_path):
         ],
         "eviction_overlap_threshold": 0.5,
     }
-    run, doc_result = await run_local_pipeline(
+    run, doc_result = await run_custom_pipeline(
         source=_source(),
         file_path=str(pdf),
         representation_kind="extract_rich",
@@ -137,7 +137,7 @@ async def test_run_local_pipeline_fitz_tables_emits_table_blocks(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_run_local_pipeline_rejects_dual_table_tools():
+async def test_run_custom_pipeline_rejects_dual_table_tools():
     config = {
         "tools": [
             {"tool_id": "fitz", "config": {}},
@@ -145,8 +145,8 @@ async def test_run_local_pipeline_rejects_dual_table_tools():
             {"tool_id": "camelot", "config": {}},
         ],
     }
-    with pytest.raises(LocalPipelineRunError) as ei:
-        await run_local_pipeline(
+    with pytest.raises(CustomPipelineRunError) as ei:
+        await run_custom_pipeline(
             source=_source(),
             file_path=str(FIXTURES / "simple_text.pdf"),
             representation_kind="extract_rich",

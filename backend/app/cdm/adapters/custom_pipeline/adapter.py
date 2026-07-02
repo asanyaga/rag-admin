@@ -1,4 +1,4 @@
-"""LocalPipelineAdapter — pure assembler: merged blocks + page geometry → CDM.
+"""CustomPipelineAdapter — pure assembler: merged blocks + page geometry → CDM.
 
 All heavy lifting (eviction, id minting, bbox normalization) happens upstream
 in the tools and the merger. This adapter only assembles the ParsedDocument.
@@ -9,12 +9,12 @@ from typing import Any, ClassVar, Dict, List
 from uuid import uuid4
 
 from app.cdm.adapters.base import SourceMeta
-from app.cdm.adapters.local_pipeline.tools.base import PageMeta
+from app.cdm.adapters.custom_pipeline.tools.base import PageMeta
 from app.cdm.models import Block, Page, ParsedDocument, ParserKind
 
 
-class LocalPipelineAdapter:
-    parser: ClassVar[ParserKind] = ParserKind.LOCAL_PIPELINE
+class CustomPipelineAdapter:
+    parser: ClassVar[ParserKind] = ParserKind.CUSTOM_PIPELINE
 
     def adapt(self, raw: Any, source_meta: SourceMeta) -> ParsedDocument:
         page_meta: Dict[int, PageMeta] = raw["page_meta"]

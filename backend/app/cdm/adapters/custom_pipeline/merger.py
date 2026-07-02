@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
-from app.cdm.adapters.local_pipeline.tools.base import ToolResult
+from app.cdm.adapters.custom_pipeline.tools.base import ToolResult
 from app.cdm.models import BBox, Block
 
 

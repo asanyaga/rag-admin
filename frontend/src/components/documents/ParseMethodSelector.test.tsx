@@ -72,11 +72,11 @@ describe('ParseMethodSelector', () => {
     expect(screen.queryByText('Tier')).not.toBeInTheDocument()
   })
 
-  it('renders LocalPipelineConfig when local_pipeline selected', () => {
+  it('renders CustomPipelineConfig when custom_pipeline selected', () => {
     render(
       <ParseMethodSelector
         {...defaultProps}
-        parserType="local_pipeline"
+        parserType="custom_pipeline"
         config={{
           tools: [{ tool_id: 'fitz', config: {} }],
           eviction_overlap_threshold: 0.5,
@@ -86,11 +86,11 @@ describe('ParseMethodSelector', () => {
     expect(screen.getByText(/fitz \(text \+ images\)/i)).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: /camelot/i })).toBeInTheDocument()
     expect(
-      screen.getByText(/Composable local tools \(fitz \+ camelot\)/i)
+      screen.getByText(/Composable tools/i)
     ).toBeInTheDocument()
   })
 
-  it('hides local pipeline options when simple selected', () => {
+  it('hides custom pipeline options when simple selected', () => {
     render(<ParseMethodSelector {...defaultProps} parserType="simple" />)
     expect(screen.queryByText(/fitz \(text \+ images\)/i)).not.toBeInTheDocument()
   })

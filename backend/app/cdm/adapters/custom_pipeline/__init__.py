@@ -1,20 +1,20 @@
-from app.cdm.adapters.local_pipeline.adapter import LocalPipelineAdapter
-from app.cdm.adapters.local_pipeline.config import (
+from app.cdm.adapters.custom_pipeline.adapter import CustomPipelineAdapter
+from app.cdm.adapters.custom_pipeline.config import (
     CamelotConfig,
     FitzConfig,
-    LocalPipelineConfig,
+    CustomPipelineConfig,
     build_pipeline_config,
 )
-from app.cdm.adapters.local_pipeline.merger import MergeResult, merge, overlap_fraction
-from app.cdm.adapters.local_pipeline.tools.base import LocalTool, PageMeta, ToolResult
-from app.cdm.adapters.local_pipeline.tools.camelot_tool import CamelotTool
-from app.cdm.adapters.local_pipeline.tools.fitz_tool import FitzTool
+from app.cdm.adapters.custom_pipeline.merger import MergeResult, merge, overlap_fraction
+from app.cdm.adapters.custom_pipeline.tools.base import LocalTool, PageMeta, ToolResult
+from app.cdm.adapters.custom_pipeline.tools.camelot_tool import CamelotTool
+from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool
 
 __all__ = [
-    "LocalPipelineAdapter",
+    "CustomPipelineAdapter",
     "CamelotConfig",
     "FitzConfig",
-    "LocalPipelineConfig",
+    "CustomPipelineConfig",
     "build_pipeline_config",
     "MergeResult",
     "merge",

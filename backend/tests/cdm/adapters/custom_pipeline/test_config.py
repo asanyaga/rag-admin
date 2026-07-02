@@ -1,10 +1,10 @@
 import pytest
 
-from app.cdm.adapters.local_pipeline.config import (
+from app.cdm.adapters.custom_pipeline.config import (
     CamelotConfig,
     FitzConfig,
     FitzTablesConfig,
-    LocalPipelineConfig,
+    CustomPipelineConfig,
     TABLE_TOOL_IDS,
     build_pipeline_config,
 )
@@ -30,7 +30,7 @@ def test_build_pipeline_config_fitz_only():
         "tools": [{"tool_id": "fitz", "config": {"min_chars_threshold": 5}}],
         "eviction_overlap_threshold": 0.4,
     })
-    assert isinstance(cfg, LocalPipelineConfig)
+    assert isinstance(cfg, CustomPipelineConfig)
     assert cfg.eviction_overlap_threshold == 0.4
     assert [t.tool_id for t in cfg.tools] == ["fitz"]
 

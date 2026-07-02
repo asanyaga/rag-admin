@@ -1,4 +1,4 @@
-from app.cdm.adapters.local_pipeline.tools.base import PageMeta, ToolResult, clamp01
+from app.cdm.adapters.custom_pipeline.tools.base import PageMeta, ToolResult, clamp01
 from app.cdm.models import Block, BlockRole
 
 

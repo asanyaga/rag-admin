@@ -3,9 +3,9 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from app.cdm.adapters.local_pipeline.config import CamelotConfig
-from app.cdm.adapters.local_pipeline.tools.base import PageMeta
-from app.cdm.adapters.local_pipeline.tools.camelot_tool import CamelotTool
+from app.cdm.adapters.custom_pipeline.config import CamelotConfig
+from app.cdm.adapters.custom_pipeline.tools.base import PageMeta
+from app.cdm.adapters.custom_pipeline.tools.camelot_tool import CamelotTool
 from app.cdm.models import BlockRole
 
 
@@ -85,7 +85,7 @@ def test_run_maps_pages_arg_and_invokes_camelot(monkeypatch):
         calls["path"] = path
         return [_fake_table()]
 
-    import app.cdm.adapters.local_pipeline.tools.camelot_tool as mod
+    import app.cdm.adapters.custom_pipeline.tools.camelot_tool as mod
     monkeypatch.setattr(mod.camelot, "read_pdf", fake_read_pdf)
 
     pm = {1: PageMeta(index=1, width=612.0, height=792.0)}
@@ -106,7 +106,7 @@ def test_run_lattice_omits_stream_only_kwargs(monkeypatch):
         calls.update(kwargs)
         return []
 
-    import app.cdm.adapters.local_pipeline.tools.camelot_tool as mod
+    import app.cdm.adapters.custom_pipeline.tools.camelot_tool as mod
     monkeypatch.setattr(mod.camelot, "read_pdf", fake_read_pdf)
 
     CamelotTool(config=CamelotConfig(flavor="lattice")).run("/tmp/x.pdf")
@@ -122,7 +122,7 @@ def test_run_stream_includes_tol_kwargs(monkeypatch):
         calls.update(kwargs)
         return []
 
-    import app.cdm.adapters.local_pipeline.tools.camelot_tool as mod
+    import app.cdm.adapters.custom_pipeline.tools.camelot_tool as mod
     monkeypatch.setattr(mod.camelot, "read_pdf", fake_read_pdf)
 
     CamelotTool(config=CamelotConfig(flavor="stream", edge_tol=40, row_tol=3)).run("/tmp/x.pdf")

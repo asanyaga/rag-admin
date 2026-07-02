@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 def test_profile_dict_shape_matches_endpoint_contract():
     """Verify DocumentProfile serialises to the JSON shape the endpoint returns."""
-    from app.cdm.adapters.local_pipeline.probe import DocumentProfile
+    from app.cdm.adapters.custom_pipeline.probe import DocumentProfile
 
     profile = DocumentProfile(
         source_document_id="doc-abc",

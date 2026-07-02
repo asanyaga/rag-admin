@@ -26,8 +26,8 @@ class DoclingRunError(ParseRunError):
     """Raised by docling_runner when conversion fails on any batch."""
 
 
-class LocalPipelineRunError(ParseRunError):
-    """Raised by local_pipeline_runner when a tool invocation fails."""
+class CustomPipelineRunError(ParseRunError):
+    """Raised by custom_pipeline_runner when a tool invocation fails."""
 
 
 class ParseFailedError(RuntimeError):

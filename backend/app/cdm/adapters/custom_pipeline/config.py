@@ -1,4 +1,4 @@
-"""Configs for the local pipeline tools and the pipeline itself."""
+"""Configs for the custom pipeline tools and the pipeline itself."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel
 
-from app.cdm.adapters.local_pipeline.tools.base import LocalTool, PageMeta
+from app.cdm.adapters.custom_pipeline.tools.base import LocalTool, PageMeta
 
 
 class FitzConfig(BaseModel):
@@ -52,7 +52,7 @@ TOOL_REGISTRY: Dict[str, type[BaseModel]] = {
 
 
 @dataclass
-class LocalPipelineConfig:
+class CustomPipelineConfig:
     """Runtime pipeline config — ordered tools (later = higher priority)."""
     tools: List[LocalTool]
     eviction_overlap_threshold: float = 0.5
@@ -61,10 +61,10 @@ class LocalPipelineConfig:
 def build_pipeline_config(
     config: Dict[str, Any],
     page_meta: Optional[Dict[int, PageMeta]] = None,
-) -> LocalPipelineConfig:
-    from app.cdm.adapters.local_pipeline.tools.camelot_tool import CamelotTool
-    from app.cdm.adapters.local_pipeline.tools.fitz_tables_tool import FitzTablesTool
-    from app.cdm.adapters.local_pipeline.tools.fitz_tool import FitzTool
+) -> CustomPipelineConfig:
+    from app.cdm.adapters.custom_pipeline.tools.camelot_tool import CamelotTool
+    from app.cdm.adapters.custom_pipeline.tools.fitz_tables_tool import FitzTablesTool
+    from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool
 
     tools_cfg = config.get("tools", [])
 
@@ -93,4 +93,4 @@ def build_pipeline_config(
             tools.append(FitzTablesTool(config=tool_cfg, page_meta=page_meta or {}))  # type: ignore[arg-type]
 
     threshold = config.get("eviction_overlap_threshold", 0.5)
-    return LocalPipelineConfig(tools=tools, eviction_overlap_threshold=threshold)
+    return CustomPipelineConfig(tools=tools, eviction_overlap_threshold=threshold)
