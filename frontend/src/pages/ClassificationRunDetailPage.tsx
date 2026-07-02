@@ -36,6 +36,17 @@ export function ClassificationRunDetailPage() {
 
   const [parseBlocks, setParseBlocks] = useState<Block[]>([])
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
+  const [selectedPageIndex, setSelectedPageIndex] = useState<number | null>(null)
+
+  const handleBlockSelect = (blockId: string) => {
+    setSelectedBlockId(blockId)
+    setSelectedPageIndex(null)
+  }
+
+  const handlePageSelect = (pageIndex: number) => {
+    setSelectedPageIndex(pageIndex)
+    setSelectedBlockId(null)
+  }
 
   useEffect(() => {
     if (!run?.parseRunId) return
@@ -145,8 +156,9 @@ export function ClassificationRunDetailPage() {
             documentId={run.documentId}
             blocks={parseBlocks}
             selectedBlockId={selectedBlockId}
-            onBlockSelect={setSelectedBlockId}
+            onBlockSelect={handleBlockSelect}
             blockColors={blockColors}
+            selectedPageIndex={selectedPageIndex}
           />
         </div>
         <div className="w-80 shrink-0 overflow-y-auto p-4">
@@ -156,7 +168,8 @@ export function ClassificationRunDetailPage() {
               runId={run.id}
               labelsRequested={run.labelsRequested}
               selectedBlockId={selectedBlockId}
-              onBlockSelect={setSelectedBlockId}
+              onBlockSelect={handleBlockSelect}
+              onPageSelect={handlePageSelect}
             />
           ) : run.status === 'running' ? (
             <p className="text-sm text-muted-foreground animate-pulse">Classification in progress…</p>

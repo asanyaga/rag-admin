@@ -37,6 +37,7 @@ interface DocumentPdfViewerProps {
   selectedBlockId: string | null
   onBlockSelect: (blockId: string) => void
   blockColors?: Map<string, string>
+  selectedPageIndex?: number | null
 }
 
 export function DocumentPdfViewer({
@@ -45,6 +46,7 @@ export function DocumentPdfViewer({
   selectedBlockId,
   onBlockSelect,
   blockColors,
+  selectedPageIndex,
 }: DocumentPdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0)
   const [currentPage, setCurrentPage] = useState<number>(1)
@@ -73,6 +75,12 @@ export function DocumentPdfViewer({
     )
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [selectedBlockId, blocks])
+
+  useEffect(() => {
+    if (selectedPageIndex == null || !numPages) return
+    const el = pageRefs.current[selectedPageIndex]
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [selectedPageIndex, numPages])
 
   // Track current visible page via IntersectionObserver
   useEffect(() => {

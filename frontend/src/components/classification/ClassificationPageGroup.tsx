@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
@@ -10,15 +10,26 @@ interface Props {
   blocks: AnnotatedBlock[]
   selectedBlockId?: string | null
   onBlockSelect?: (blockId: string) => void
+  onPageSelect?: (pageIndex: number) => void
 }
 
-export function ClassificationPageGroup({ pageIndex, blocks, selectedBlockId, onBlockSelect }: Props) {
+export function ClassificationPageGroup({ pageIndex, blocks, selectedBlockId, onBlockSelect, onPageSelect }: Props) {
   const [open, setOpen] = useState(false)
+
+  // Auto-expand when a block in this page group becomes selected (e.g. via PDF click)
+  useEffect(() => {
+    if (selectedBlockId && blocks.some((b) => b.blockId === selectedBlockId)) {
+      setOpen(true)
+    }
+  }, [selectedBlockId, blocks])
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
-        <button className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/30 text-left">
+        <button
+          className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/30 text-left"
+          onClick={() => onPageSelect?.(pageIndex)}
+        >
           {open ? (
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           ) : (
@@ -36,7 +47,9 @@ export function ClassificationPageGroup({ pageIndex, blocks, selectedBlockId, on
             key={block.blockId}
             block={block}
             isSelected={selectedBlockId === block.blockId}
-            onSelect={onBlockSelect}
+            onSelect={(id) => {
+              onBlockSelect?.(id)
+            }}
           />
         ))}
       </CollapsibleContent>

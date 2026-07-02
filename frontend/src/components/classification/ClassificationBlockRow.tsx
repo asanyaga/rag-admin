@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { AnnotatedBlock } from '@/types/classification'
@@ -11,9 +11,17 @@ interface Props {
 
 export function ClassificationBlockRow({ block, isSelected, onSelect }: Props) {
   const [expanded, setExpanded] = useState(false)
+  const rowRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isSelected) {
+      rowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [isSelected])
 
   return (
     <div
+      ref={rowRef}
       className={`border rounded-md overflow-hidden ${isSelected ? 'border-primary ring-1 ring-primary' : ''}`}
     >
       <button

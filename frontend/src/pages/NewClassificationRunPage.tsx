@@ -158,23 +158,7 @@ export function NewClassificationRunPage() {
         )}
       </div>
 
-      {/* Section 1: Parse configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Parse configuration</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ParseMethodSelector
-            parserType={parserType}
-            config={parserConfig}
-            onParserTypeChange={setParserType}
-            onConfigChange={setParserConfig}
-            disabled={isSubmitting}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Section 2: Classification */}
+      {/* Section 1: Classification */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Classification</CardTitle>
@@ -248,6 +232,22 @@ export function NewClassificationRunPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Section 3: Parse configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Parse configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ParseMethodSelector
+            parserType={parserType}
+            config={parserConfig}
+            onParserTypeChange={setParserType}
+            onConfigChange={setParserConfig}
+            disabled={isSubmitting}
+          />
+        </CardContent>
+      </Card>
 
       {error && (
         <Alert variant="destructive">

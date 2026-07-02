@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,7 @@ interface Props {
   blocks: AnnotatedBlock[]
   selectedBlockId?: string | null
   onBlockSelect?: (blockId: string) => void
+  onPageSelect?: (pageIndex: number) => void
 }
 
 function pageRange(blocks: AnnotatedBlock[]): string {
@@ -20,9 +21,16 @@ function pageRange(blocks: AnnotatedBlock[]): string {
   return min === max ? `Page ${min}` : `Pages ${min}–${max}`
 }
 
-export function ClassificationLabelSection({ label, blocks, selectedBlockId, onBlockSelect }: Props) {
+export function ClassificationLabelSection({ label, blocks, selectedBlockId, onBlockSelect, onPageSelect }: Props) {
   const displayName = label ?? 'Unmatched'
   const [open, setOpen] = useState(label !== null)
+
+  // Auto-expand when a block in this label section becomes selected (e.g. via PDF click)
+  useEffect(() => {
+    if (selectedBlockId && blocks.some((b) => b.blockId === selectedBlockId)) {
+      setOpen(true)
+    }
+  }, [selectedBlockId, blocks])
 
   const pageGroups = Array.from(
     blocks.reduce((map, block) => {
@@ -64,6 +72,7 @@ export function ClassificationLabelSection({ label, blocks, selectedBlockId, onB
               blocks={pageBlocks}
               selectedBlockId={selectedBlockId}
               onBlockSelect={onBlockSelect}
+              onPageSelect={onPageSelect}
             />
           ))
         )}
