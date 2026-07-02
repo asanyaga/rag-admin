@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
-import { ChevronLeft, RotateCw } from 'lucide-react'
+import { ChevronLeft, RotateCw, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ClassificationRunStatusBadge } from '@/components/classification/ClassificationRunStatusBadge'
 import { ClassificationResultsViewer } from '@/components/classification/ClassificationResultsViewer'
 import { ClassificationRunConfigPanel } from '@/components/classification/ClassificationRunConfigPanel'
@@ -143,6 +144,16 @@ export function ClassificationRunDetailPage() {
             )}
           </div>
         </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" title="Run config">
+              <Info className="h-3.5 w-3.5" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-4">
+            <ClassificationRunConfigPanel run={run} />
+          </PopoverContent>
+        </Popover>
         <Button variant="outline" size="sm" className="h-7 text-xs shrink-0" onClick={handleRerun}>
           <RotateCw className="h-3.5 w-3.5 mr-1.5" />
           Re-run
@@ -162,7 +173,6 @@ export function ClassificationRunDetailPage() {
           />
         </div>
         <div className="w-80 shrink-0 overflow-y-auto p-4">
-          <ClassificationRunConfigPanel run={run} />
           {run.status === 'completed' ? (
             <ClassificationResultsViewer
               runId={run.id}
