@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { getAccessToken } from '@/api/client'
 import type { Block } from '@/types/cdm'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -44,8 +47,11 @@ export function DocumentPdfViewer({
   blockColors,
 }: DocumentPdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageInput, setPageInput] = useState<string>('1')
   const [loadError, setLoadError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const pageRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const pdfFile = useMemo(
     () => ({
@@ -68,6 +74,51 @@ export function DocumentPdfViewer({
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [selectedBlockId, blocks])
 
+  // Track current visible page via IntersectionObserver
+  useEffect(() => {
+    if (!numPages) return
+    const container = containerRef.current
+    if (!container) return
+
+    const observers: IntersectionObserver[] = []
+    const visibleRatios = new Map<number, number>()
+
+    pageRefs.current.forEach((el, i) => {
+      if (!el) return
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          visibleRatios.set(i, entry.intersectionRatio)
+          // Pick the page with the highest visible ratio
+          let best = 0
+          let bestRatio = -1
+          visibleRatios.forEach((ratio, idx) => {
+            if (ratio > bestRatio) { bestRatio = ratio; best = idx }
+          })
+          const page = best + 1
+          setCurrentPage(page)
+          setPageInput(String(page))
+        },
+        { root: container, threshold: Array.from({ length: 21 }, (_, k) => k / 20) },
+      )
+      obs.observe(el)
+      observers.push(obs)
+    })
+
+    return () => observers.forEach((o) => o.disconnect())
+  }, [numPages])
+
+  const scrollToPage = useCallback((page: number) => {
+    const clamped = Math.max(1, Math.min(page, numPages))
+    const el = pageRefs.current[clamped - 1]
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [numPages])
+
+  const handlePageInputCommit = () => {
+    const n = parseInt(pageInput, 10)
+    if (!isNaN(n)) scrollToPage(n)
+    else setPageInput(String(currentPage))
+  }
+
   if (loadError) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-destructive p-4">
@@ -77,7 +128,41 @@ export function DocumentPdfViewer({
   }
 
   return (
-    <div ref={containerRef} className="overflow-auto bg-muted/20 p-4 h-full">
+    <div className="flex flex-col h-full">
+      {numPages > 0 && (
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-background shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            disabled={currentPage <= 1}
+            onClick={() => scrollToPage(currentPage - 1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <span>Page</span>
+            <Input
+              className="h-7 w-12 text-center px-1 text-sm"
+              value={pageInput}
+              onChange={(e) => setPageInput(e.target.value)}
+              onBlur={handlePageInputCommit}
+              onKeyDown={(e) => { if (e.key === 'Enter') handlePageInputCommit() }}
+            />
+            <span>of {numPages}</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            disabled={currentPage >= numPages}
+            onClick={() => scrollToPage(currentPage + 1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      <div ref={containerRef} className="overflow-auto bg-muted/20 p-4 flex-1">
       <Document
         file={pdfFile}
         onLoadSuccess={({ numPages: n }) => setNumPages(n)}
@@ -95,6 +180,7 @@ export function DocumentPdfViewer({
           return (
             <div
               key={i}
+              ref={(el) => { pageRefs.current[i] = el }}
               data-page-index={i}
               className="relative mb-4 shadow-sm"
             >
@@ -138,6 +224,7 @@ export function DocumentPdfViewer({
           )
         })}
       </Document>
+      </div>
     </div>
   )
 }
