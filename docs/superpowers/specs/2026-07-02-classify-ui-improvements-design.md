@@ -13,7 +13,7 @@ Two screens receive changes:
 1. **Classify results display** (`ClassificationRunDetailPage`) — three improvements
 2. **New classification run form** (`NewClassificationRunPage`) — two improvements
 
-Full run details (LLM request/response traces, per-batch inputs/outputs) are explicitly out of scope.
+Out of scope: full run detail traces (LLM request/response per batch), persistent prompt templates, `PromptConfigEditor` refactors.
 
 ---
 
@@ -23,15 +23,16 @@ Full run details (LLM request/response traces, per-batch inputs/outputs) are exp
 
 **Goal:** make it immediately clear which document this run is for.
 
-**Change:** add `documentTitle` after the status badge in the page header.
+**Change:** add the document name in the page header after the status badge.
 
 ```
 ← Back  [completed]  My Document.pdf  ollama_local/qwen2.5:7b  2h ago  3 labels  12 regions  4.2s  [Re-run]
 ```
 
-The document name is rendered in `text-sm font-medium` and truncated with `truncate` if the header is tight. It lives between the status badge and the model summary.
+**Frontend-only approach — no backend schema change.**  
+Document title is passed as `location.state.documentTitle` when navigating to `/classify/{runId}`. The detail page reads it from state: `(location.state as { documentTitle?: string } | null)?.documentTitle`. When a run is opened from `ClassificationRunHistory`, the history component passes the document name in the navigation state. Direct URL access shows no title (graceful degradation; acceptable for a technical audience).
 
-**Backend:** `ClassificationRunResponse` gains a `documentTitle: str` field. The repository's `get(run_id)` method joins the `documents` table (or calls a simple `SELECT name FROM documents WHERE id = ?`) and includes the name in the response schema. No new endpoint needed.
+`ClassificationRunHistory` already receives a `documentTitle` or has access to the document context — the navigation call adds `{ state: { documentTitle } }`.
 
 ---
 
@@ -39,9 +40,9 @@ The document name is rendered in `text-sm font-medium` and truncated with `trunc
 
 **Goal:** let the user inspect what config was used without cluttering the results view.
 
-**Placement:** collapsible section at the top of the right panel (w-80), above `ClassificationResultsViewer`. Collapsed by default.
+**Placement:** collapsible section at the top of the right panel (`w-80`), above `ClassificationResultsViewer`. Collapsed by default.
 
-**Trigger:** a single row `▶ Run config` (using `ChevronRight` / `ChevronDown`). Clicking expands it.
+**Trigger:** a single row `▶ Run config` (`ChevronRight` / `ChevronDown`). Clicking expands inline.
 
 **Expanded content — two groups:**
 
@@ -50,8 +51,7 @@ The document name is rendered in `text-sm font-medium` and truncated with `trunc
 |-------|---------|
 | Classifier | LLM |
 | Labels | `[Introduction]` `[Methodology]` `[Conclusion]` |
-| Batch size | 10 pages |
-| Batch overlap | 3 pages |
+| Batch size / Overlap | 10 / 3 pages |
 
 **LLM classification** *(only when `classifierType === 'llm'`)*
 | Field | Example |
@@ -60,15 +60,15 @@ The document name is rendered in `text-sm font-medium` and truncated with `trunc
 | Temperature | 0.0 |
 | System prompt | First ~2 lines, truncated; "Show full" link expands inline |
 
-Labels are shown as small `Badge variant="secondary"` chips. The system prompt expansion is inline (no modal) using a `Collapsible`.
+Labels are `Badge variant="secondary"` chips. System prompt expansion is inline via `Collapsible`.
 
-**Component:** `ClassificationRunConfigPanel` (new component in `components/classification/`). Receives the full `ClassificationRun` object as its only prop.
+**Component:** `ClassificationRunConfigPanel` (new, `components/classification/ClassificationRunConfigPanel.tsx`). Receives the full `ClassificationRun` as its only prop.
 
 ---
 
 ### A3: Right Panel Hierarchy — Label → Page → Block
 
-**Goal:** the primary mental model for classification results is sections of a document. The page level is the natural summary unit; blocks are secondary detail.
+**Goal:** the page level is the primary unit of interest for classification results; blocks are secondary detail.
 
 **Before:**
 ```
@@ -87,7 +87,7 @@ Labels are shown as small `Badge variant="secondary"` chips. The system prompt e
   ▶ Page 4  [1 block]
 ```
 
-Clicking a page row expands it:
+Clicking a page row expands it to reveal blocks:
 ```
 ▼ Introduction  [8 blocks]  Pages 1–4
   ▼ Page 1  [3 blocks]
@@ -98,21 +98,20 @@ Clicking a page row expands it:
 ```
 
 **Default states:**
-- Label sections: open (unchanged from current behaviour)
-- Page groups: **closed** — the summary of interest is at the page level
-- Block rows: no change (click to expand markdown content, click selects block in PDF)
+- Label sections: **open** (unchanged)
+- Page groups: **closed** — user sees pages at a glance and drills in on demand
 
 **Component changes:**
 
-`ClassificationLabelSection` — groups its `blocks` array by `pageIndex` (ascending) before rendering. Replaces the current `blocks.map(ClassificationBlockRow)` with `pageGroups.map(ClassificationPageGroup)`.
+`ClassificationLabelSection` — groups its `blocks` by `pageIndex` (ascending) before rendering; replaces `blocks.map(ClassificationBlockRow)` with `pageGroups.map(ClassificationPageGroup)`.
 
 `ClassificationPageGroup` *(new, `components/classification/ClassificationPageGroup.tsx`)* — collapsible row:
-- Header: `▶ Page N  [k blocks]` — uses `ChevronRight`/`ChevronDown`, `Badge variant="secondary"` for count
-- Closed by default (`useState(false)`)
-- Content: `ClassificationBlockRow` for each block in the group
+- Header: `▶ Page N  [k blocks]` using `ChevronRight`/`ChevronDown` and a secondary badge for count
+- **Closed by default** (`useState(false)`)
+- Expands to render `ClassificationBlockRow` for each block
 - Passes through `selectedBlockId` and `onBlockSelect`
 
-`ClassificationBlockRow` — remove the `p.N` page badge (now redundant at the group level). Keep role badge and text.
+`ClassificationBlockRow` — remove the `p.N` page badge (redundant now). Keep role badge and text.
 
 ---
 
@@ -120,91 +119,73 @@ Clicking a page row expands it:
 
 ### B1: Batch Settings Move to Classification Card
 
-**Goal:** the "LLM configuration" card should contain only LLM concerns.
+**Goal:** "LLM configuration" card contains only LLM concerns; batch settings are classification run parameters.
 
-**Before — "LLM configuration" card contains:**
-- System prompt
-- Provider / Model
-- Temperature
-- Batch size / Batch overlap (collapsible)
+**Before — "LLM configuration" card:** system prompt, provider/model, temperature, batch size/overlap (collapsible).
 
-**After — "Classification" card gains:**
-- Batch size (shown inline when `classifierType === 'llm'`, below the classifier selector)
-- Batch overlap (same row as batch size)
+**After — "Classification" card gains:** batch size and batch overlap shown as a two-field row below the classifier selector, visible when `classifierType === 'llm'`. No longer collapsible (they are first-class parameters).
 
-**After — "LLM configuration" card contains:**
-- System prompt (new `ClassificationSystemPromptEditor` — see B2)
-- Provider / Model
-- Temperature / Max tokens
-
-The batch settings are no longer wrapped in a collapsible — they are a straightforward two-field row inside the Classification card since they are always relevant for LLM runs.
+**After — "LLM configuration" card contains:** system prompt area (see B2) + `PromptConfigEditor` for provider/model/temperature/thinking.
 
 ---
 
-### B2: System Prompt — Editable + Read-Only Split
+### B2: System Prompt — Full Prompt Visibility with Required Section
 
-**Goal:** users can see and customise what the classifier is instructed to do, without accidentally breaking the JSON output contract that the app depends on.
+**Goal:** surface the complete prompt that goes to the LLM. The editable instruction portion and the required output format are shown together. The required portion is visually marked as app-controlled and not editable.
 
-**Component:** `ClassificationSystemPromptEditor` (new, `components/classification/ClassificationSystemPromptEditor.tsx`)
+**Approach:** `PromptConfigEditor` is used **unchanged** for all LLM config fields (system prompt textarea, provider, model, temperature, thinking, advanced). The system prompt textarea in `PromptConfigEditor` is pre-populated with the **instruction portion** of the default prompt (fetched from the backend).
 
-Replaces the generic system prompt `Textarea` in `PromptConfigEditor` when used in the classification run form. `PromptConfigEditor` is passed a `hideSystemPrompt` prop (or the classification form simply doesn't use `PromptConfigEditor`'s system prompt field and renders `ClassificationSystemPromptEditor` above it instead).
-
-**UI layout:**
+A **read-only format section** is rendered below `PromptConfigEditor` in the LLM config card — outside the component. It shows the required output format with a clear label, explaining what the app always expects:
 
 ```
-System prompt
-┌──────────────────────────────────────────────────────┐
-│ You are a document classifier. Analyze the document  │
-│ pages provided and determine which labels apply to   │  ← editable Textarea
-│ each page.                                           │
-│                                                      │
-│ For each label, classify each page as:               │
-│ - "start": this page begins a section matching...    │
-│ - "continue": this page continues a section...       │
-│ - "none": this page does not contain this label      │
-└──────────────────────────────────────────────────────┘
-                                         [Reset to default]
-
-Required output format · read-only
-┌──────────────────────────────────────────────────────┐
-│ Return ONLY valid JSON in this exact format:         │
-│ {                                                    │  ← read-only pre/code block
-│   "pages": [                                         │     bg-muted, text-muted-foreground
-│     {"page": <page_index>, "labels": {              │     cursor-not-allowed
-│       "<label>": "start"|"continue"|"none", ...}}   │
-│   ]                                                  │
-│ }                                                    │
-│ Include every page index in the document content.    │
-└──────────────────────────────────────────────────────┘
-ⓘ The app parses this JSON structure from the model response.
+┌─ LLM configuration ───────────────────────────────────────────┐
+│                                                               │
+│  System Prompt                                                │
+│  ┌───────────────────────────────────────────────────────┐   │
+│  │ You are a document classifier. Analyze the document   │   │  ← PromptConfigEditor
+│  │ pages provided and determine which labels apply...    │   │     (unchanged)
+│  │ For each label, classify each page as:                │   │
+│  │ - "start": this page begins a section...              │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                               │
+│  Provider: ollama_local ▼    Model: qwen2.5:7b               │
+│  Temperature: 0.0 ─────────────────────────────────────      │
+│  Thinking / Reasoning  ○                                     │
+│  ▸ Advanced                                                   │
+│                                                               │
+│  ─────────────────────────────────────────────────────────   │  ← separator
+│                                                               │
+│  Required output format · always appended by the app         │  ← new read-only
+│  ┌───────────────────────────────────────────────────────┐   │     section, outside
+│  │ Return ONLY valid JSON in this exact format:          │   │     PromptConfigEditor
+│  │ {                                                     │   │
+│  │   "pages": [                                          │   │
+│  │     {"page": <page_index>, "labels": {               │   │
+│  │       "<label>": "start"|"continue"|"none", ...}}    │   │
+│  │   ]                                                   │   │
+│  │ }                                                     │   │
+│  │ Include every page index present in the document.     │   │
+│  └───────────────────────────────────────────────────────┘   │
+│  ⓘ The app parses this JSON to build classification regions. │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-**Props:**
-```typescript
-interface ClassificationSystemPromptEditorProps {
-  value: string | undefined   // the editable instruction portion; undefined = use default
-  onChange: (value: string | undefined) => void
-  disabled?: boolean
-}
+The read-only section uses a `bg-muted` code block (`<pre>`) with `cursor-default select-text`. Its label and the info note below it make it clear this is generated by the app.
+
+**What `PromptConfigEditor` receives for system prompt:** the instruction portion only (`value.systemPrompt`). When the user hasn't changed it, this is pre-populated with `_DEFAULT_INSTRUCTION` text fetched from the backend (not left as an empty placeholder). When submitting, `promptConfig.systemPrompt` carries the instruction text (or is `undefined` if the user cleared it back to empty).
+
+**Backend changes (two):**
+
+**1. New endpoint — expose prompt constants:**
 ```
-
-**Default instruction text** (shown in the textarea when `value` is `undefined`):
+GET /api/classification/system-prompt-config
+→ { "instruction": "...", "required_format": "..." }
 ```
-You are a document classifier. Analyze the document pages provided and determine which labels apply to each page.
+Frontend fetches this once on mount of `NewClassificationRunPage` to populate the system prompt textarea default and render the read-only section.
 
-For each label, classify each page as:
-- "start": this page begins a section matching this label
-- "continue": this page continues a section from a previous page
-- "none": this page does not contain this label
-```
+**2. `llm_classifier.py` — always append required format:**
 
-"Reset to default" link: sets `value` back to `undefined`, restoring the textarea to the default text.
-
-**What is submitted:** `promptConfig.systemPrompt` receives the editable portion only (`undefined` if the user hasn't changed the default, or their custom text). The backend handles appending the required format section.
-
-**Data model — backend changes:**
-
-`llm_classifier.py` — split `_DEFAULT_SYSTEM_PROMPT`:
+Split `_DEFAULT_SYSTEM_PROMPT`:
 ```python
 _DEFAULT_INSTRUCTION = """\
 You are a document classifier. Analyze the document pages provided and determine which labels apply to each page.
@@ -230,42 +211,33 @@ Include every page index present in the document content.\
 _DEFAULT_SYSTEM_PROMPT = _DEFAULT_INSTRUCTION + "\n\n" + _REQUIRED_FORMAT
 ```
 
-The constructor logic changes:
+Constructor logic:
 ```python
-# Before
-self.system_prompt = system_prompt or _DEFAULT_SYSTEM_PROMPT
-
-# After
+# system_prompt here is the instruction portion only
 if system_prompt:
     self.system_prompt = system_prompt + "\n\n" + _REQUIRED_FORMAT
 else:
-    self.system_prompt = _DEFAULT_SYSTEM_PROMPT
+    self.system_prompt = _DEFAULT_SYSTEM_PROMPT   # backward compatible with existing runs (null)
 ```
 
-This means:
-- `system_prompt = null` → full default (backward compatible with existing runs)
-- `system_prompt = <user text>` → user text + required format
-
-Per-run customization only. Persistent prompt templates are out of scope for this sprint.
+Existing runs with `system_prompt = null` continue to use the full default unchanged.
 
 ---
 
-## Component Summary
+## Component / File Summary
 
 | Component | File | Type |
 |-----------|------|------|
 | `ClassificationRunConfigPanel` | `components/classification/ClassificationRunConfigPanel.tsx` | New |
 | `ClassificationPageGroup` | `components/classification/ClassificationPageGroup.tsx` | New |
-| `ClassificationSystemPromptEditor` | `components/classification/ClassificationSystemPromptEditor.tsx` | New |
 | `ClassificationRunDetailPage` | `pages/ClassificationRunDetailPage.tsx` | Modified |
+| `ClassificationRunHistory` | `components/classification/ClassificationRunHistory.tsx` | Modified (pass doc title in nav state) |
 | `ClassificationLabelSection` | `components/classification/ClassificationLabelSection.tsx` | Modified |
 | `ClassificationBlockRow` | `components/classification/ClassificationBlockRow.tsx` | Modified |
 | `NewClassificationRunPage` | `pages/NewClassificationRunPage.tsx` | Modified |
+| `PromptConfigEditor` | `components/shared/PromptConfigEditor.tsx` | **Unchanged** |
 
-## Backend Summary
-
-| File | Change |
-|------|--------|
-| `schemas/classification.py` | Add `documentTitle: str` to `ClassificationRunResponse` |
-| `repositories/classification_run_repository.py` | Join documents in `get(run_id)` to populate `documentTitle` |
-| `services/classification/llm_classifier.py` | Split prompt constant; always append `_REQUIRED_FORMAT` |
+| Backend File | Change |
+|-------------|--------|
+| `routers/classification.py` | Add `GET /classification/system-prompt-config` endpoint |
+| `services/classification/llm_classifier.py` | Split prompt constant; append `_REQUIRED_FORMAT` when custom instruction provided |
