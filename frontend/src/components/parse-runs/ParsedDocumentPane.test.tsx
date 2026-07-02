@@ -14,7 +14,7 @@ const makeDoc = (overrides = {}): ParsedDocumentDetail => ({
   content: {
     pages: [{ index: 0 }],
     blocks: [
-      { id: 'b1', page_index: 0, role: 'paragraph', text: 'Block one' },
+      { id: 'b1', page_index: 0, role: 'text', text: 'Block one' },
       { id: 'b2', page_index: 0, role: 'table', text: 'Block two' },
     ],
   },
@@ -24,7 +24,7 @@ const makeDoc = (overrides = {}): ParsedDocumentDetail => ({
 describe('ParsedDocumentPane', () => {
   it('renders block roles', () => {
     render(<ParsedDocumentPane parsedDocument={makeDoc()} />)
-    expect(screen.getAllByText('paragraph').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('text').length).toBeGreaterThan(0)
     expect(screen.getAllByText('table').length).toBeGreaterThan(0)
   })
 
@@ -69,7 +69,7 @@ describe('ParsedDocumentPane — label overlays', () => {
     fullMarkdown: '# Hello',
     content: {
       pages: [{ index: 0 }],
-      blocks: [{ id: 'b1', page_index: 0, role: 'paragraph', text: 'Block one' }],
+      blocks: [{ id: 'b1', page_index: 0, role: 'text', text: 'Block one' }],
     },
   })
 

@@ -12,8 +12,8 @@ import * as api from '@/api/classification'
 const mockGetBlocks = vi.mocked(api.getClassificationRunBlocks)
 
 const mockBlocks: AnnotatedBlock[] = [
-  { blockId: 'b-1', pageIndex: 0, role: 'paragraph', text: 'Hello', markdown: null, label: 'intro' },
-  { blockId: 'b-2', pageIndex: 1, role: 'paragraph', text: 'World', markdown: null, label: null },
+  { blockId: 'b-1', pageIndex: 0, role: 'text', text: 'Hello', markdown: null, label: 'intro' },
+  { blockId: 'b-2', pageIndex: 1, role: 'text', text: 'World', markdown: null, label: null },
 ]
 
 beforeEach(() => {

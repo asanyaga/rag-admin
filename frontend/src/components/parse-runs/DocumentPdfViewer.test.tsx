@@ -27,7 +27,7 @@ const makeBlocks = (): Block[] => [
   {
     id: 'b1',
     page_index: 0,
-    role: 'paragraph',
+    role: 'text',
     text: 'Hello',
     bbox: { x0: 0.1, y0: 0.1, x1: 0.5, y1: 0.2 },
   },

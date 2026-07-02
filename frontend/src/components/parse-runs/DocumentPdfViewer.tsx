@@ -18,7 +18,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 const ROLE_COLOR: Record<string, string> = {
   title: 'rgb(59,130,246)',
   heading: 'rgb(99,102,241)',
-  paragraph: 'rgb(107,114,128)',
+  text: 'rgb(107,114,128)',
   list: 'rgb(245,158,11)',
   table: 'rgb(16,185,129)',
   figure: 'rgb(139,92,246)',
