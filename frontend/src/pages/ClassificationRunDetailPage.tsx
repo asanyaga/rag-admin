@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ClassificationRunStatusBadge } from '@/components/classification/ClassificationRunStatusBadge'
 import { ClassificationResultsViewer } from '@/components/classification/ClassificationResultsViewer'
+import { ClassificationRunConfigPanel } from '@/components/classification/ClassificationRunConfigPanel'
 import { DocumentPdfViewer } from '@/components/parse-runs/DocumentPdfViewer'
 import { useClassificationRunDetail, useClassificationRunBlocks } from '@/hooks/useClassificationRuns'
 import { getParsedDocument } from '@/api/parseRuns'
@@ -149,6 +150,7 @@ export function ClassificationRunDetailPage() {
           />
         </div>
         <div className="w-80 shrink-0 overflow-y-auto p-4">
+          <ClassificationRunConfigPanel run={run} />
           {run.status === 'completed' ? (
             <ClassificationResultsViewer
               runId={run.id}
