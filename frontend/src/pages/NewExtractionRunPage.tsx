@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useExtractionSchemas } from '@/hooks/useExtractionSchemas'
 import { useExtractionSubmit } from '@/hooks/useExtractionSubmit'
 import { useParseRuns } from '@/hooks/useParseRuns'
+import { useDocumentClassificationRuns } from '@/hooks/useClassificationRuns'
+import { useCategoryFilter } from '@/hooks/useCategoryFilter'
+import { CategoryFilterSection } from '@/components/extraction/CategoryFilterSection'
 import type {
   ExtractionSchema,
   ExtractionSchemaCreate,
@@ -60,6 +63,7 @@ export default function NewExtractionRunPage(): JSX.Element {
   const { schemas, error: schemasError, createSchema, updateSchema, deleteSchema } =
     useExtractionSchemas(projectId)
   const { phase, phaseError, submit } = useExtractionSubmit()
+  const { runs: classificationRuns } = useDocumentClassificationRuns(documentId)
 
   const [schemaEditorOpen, setSchemaEditorOpen] = useState(false)
   const [editingSchema, setEditingSchema] = useState<ExtractionSchema | null>(null)
@@ -85,6 +89,18 @@ export default function NewExtractionRunPage(): JSX.Element {
     setParserConfig(defaultParserConfig)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latestViableRun?.id])
+
+  // Resolve the parse run that matches the current parse config among existing runs.
+  // If none matches (a new parse would be created on submit), there can be no eligible
+  // classification run yet, so pass null.
+  const matchedParseRunId = useMemo(
+    () => parseRuns.find(
+      (r) => r.parser === parserType && r.representationKind === REPRESENTATION_KIND
+        && (r.status === 'succeeded' || r.status === 'partial'),
+    )?.id ?? null,
+    [parseRuns, parserType],
+  )
+  const categoryFilter = useCategoryFilter(classificationRuns, matchedParseRunId)
 
   // Extraction config
   const [schemaId, setSchemaId] = useState('')
@@ -236,6 +252,7 @@ export default function NewExtractionRunPage(): JSX.Element {
         chunking = { strategy: 'none', citationLevel }
       }
       const tm = parseInt(timeoutMinutes, 10)
+      const categoryStage = categoryFilter.toPreprocessStage()
       extractionConfig = {
         extractionSchemaId: schemaId,
         extractionMethod,
@@ -243,6 +260,7 @@ export default function NewExtractionRunPage(): JSX.Element {
         llmConfig: promptConfig,
         userPromptTemplate: userPromptTemplate.trim() || undefined,
         ...(chunking ? { chunking } : {}),
+        ...(categoryStage ? { preprocess: [categoryStage] } : {}),
         ...(!Number.isNaN(tm) && tm >= 1 ? { timeoutMinutes: Math.min(tm, 120) } : {}),
       }
     } else {
@@ -680,6 +698,11 @@ export default function NewExtractionRunPage(): JSX.Element {
                           </p>
                         </CollapsibleContent>
                       </Collapsible>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Filter by classification (optional)</Label>
+                        <CategoryFilterSection state={categoryFilter} />
+                      </div>
                     </div>
                   )}
 
