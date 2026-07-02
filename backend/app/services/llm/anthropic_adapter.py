@@ -15,6 +15,13 @@ logger = logging.getLogger(__name__)
 
 _DEPRECATED_PARAM_RE = re.compile(r"`(\w+)`\s+is deprecated")
 _JSON_INSTRUCTION = "\n\nRespond with valid JSON only. No markdown, no explanation."
+# Some models (e.g. Sonnet) wrap JSON in ```json ... ``` despite the instruction.
+_CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*\n(.*)\n```\s*$", re.DOTALL)
+
+
+def _unwrap_json(text: str) -> str:
+    m = _CODE_FENCE_RE.match(text.strip())
+    return m.group(1) if m else text
 
 
 def _strip_deprecated(kwargs: dict, error_msg: str) -> dict | None:
@@ -78,6 +85,8 @@ class AnthropicAdapter:
 
         latency = (time.monotonic() - start) * 1000
         content = response.content[0].text if response.content else ""
+        if config.structured_output_mode == "json_mode":
+            content = _unwrap_json(content)
         return CompletionResult(
             content=content,
             usage=TokenUsage(

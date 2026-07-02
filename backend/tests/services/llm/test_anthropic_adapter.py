@@ -80,6 +80,45 @@ async def test_complete_raises_llm_connection_error():
 
 
 @pytest.mark.asyncio
+async def test_complete_json_mode_strips_markdown_code_fence():
+    adapter = _make_adapter()
+    fenced = '```json\n{"key": "value"}\n```'
+    adapter.client.messages.create = AsyncMock(return_value=_make_response(fenced))
+    config = LLMConfig(
+        provider="anthropic", model="claude-sonnet-4-6",
+        structured_output_mode="json_mode",
+    )
+    result = await adapter.complete([{"role": "user", "content": "hi"}], config)
+    assert result.content == '{"key": "value"}'
+
+
+@pytest.mark.asyncio
+async def test_complete_json_mode_strips_plain_code_fence():
+    adapter = _make_adapter()
+    fenced = '```\n{"key": "value"}\n```'
+    adapter.client.messages.create = AsyncMock(return_value=_make_response(fenced))
+    config = LLMConfig(
+        provider="anthropic", model="claude-sonnet-4-6",
+        structured_output_mode="json_mode",
+    )
+    result = await adapter.complete([{"role": "user", "content": "hi"}], config)
+    assert result.content == '{"key": "value"}'
+
+
+@pytest.mark.asyncio
+async def test_complete_json_mode_leaves_bare_json_unchanged():
+    adapter = _make_adapter()
+    bare = '{"key": "value"}'
+    adapter.client.messages.create = AsyncMock(return_value=_make_response(bare))
+    config = LLMConfig(
+        provider="anthropic", model="claude-sonnet-4-6",
+        structured_output_mode="json_mode",
+    )
+    result = await adapter.complete([{"role": "user", "content": "hi"}], config)
+    assert result.content == bare
+
+
+@pytest.mark.asyncio
 async def test_complete_threads_stop_reason():
     adapter = _make_adapter()
     adapter.client.messages.create = AsyncMock(
