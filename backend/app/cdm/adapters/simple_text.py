@@ -33,7 +33,7 @@ class SimpleTextAdapter:
                 block_id = f"{source_meta.source_document_id}:p{page_index}:b0"
                 block = Block(
                     id=block_id,
-                    role=BlockRole.PARAGRAPH,
+                    role=BlockRole.TEXT,
                     native_type="text",
                     text=page_text,
                     page_index=page_index,
@@ -50,7 +50,7 @@ class SimpleTextAdapter:
             block_id = f"{source_meta.source_document_id}:p0:b0"
             blocks = [Block(
                 id=block_id,
-                role=BlockRole.PARAGRAPH,
+                role=BlockRole.TEXT,
                 native_type="text",
                 text=full_text.strip(),
                 page_index=0,

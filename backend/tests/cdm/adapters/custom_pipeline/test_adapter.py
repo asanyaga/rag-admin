@@ -10,12 +10,12 @@ def _bbox(y0):
 
 def _blocks():
     return [
-        Block(id="doc1:0:0", role=BlockRole.PARAGRAPH, native_type="text",
+        Block(id="doc1:0:0", role=BlockRole.TEXT, native_type="text",
               text="alpha", page_index=0, bbox=_bbox(0.1), reading_order=0),
         Block(id="doc1:0:1", role=BlockRole.TABLE, native_type="table",
               text="A | B", markdown="| A | B |", page_index=0, bbox=_bbox(0.5),
               reading_order=1),
-        Block(id="doc1:1:0", role=BlockRole.PARAGRAPH, native_type="text",
+        Block(id="doc1:1:0", role=BlockRole.TEXT, native_type="text",
               text="beta", page_index=1, bbox=_bbox(0.2), reading_order=0),
     ]
 

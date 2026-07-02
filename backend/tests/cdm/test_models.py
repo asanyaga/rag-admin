@@ -14,7 +14,7 @@ def test_parser_kind_values():
 def test_block_role_has_coarse_taxonomy():
     # Closed taxonomy — ~14 values.
     assert BlockRole.TITLE.value == "title"
-    assert BlockRole.PARAGRAPH.value == "paragraph"
+    assert BlockRole.TEXT.value == "text"
     assert BlockRole.TABLE.value == "table"
     assert BlockRole.OTHER.value == "other"
 
@@ -84,7 +84,7 @@ def test_table_requires_dimensions_and_cells():
 def test_block_minimum_fields():
     b = Block(
         id="b1",
-        role=BlockRole.PARAGRAPH,
+        role=BlockRole.TEXT,
         native_type="text",
         page_index=0,
     )
@@ -153,7 +153,7 @@ def test_parsed_document_json_round_trip():
         pages=[Page(index=0, block_ids=["b1"])],
         blocks=[Block(
             id="b1",
-            role=BlockRole.PARAGRAPH,
+            role=BlockRole.TEXT,
             native_type="text",
             text="hello",
             page_index=0,

@@ -22,7 +22,7 @@ from app.cdm.models import (
 
 _ROLE_MAP: Dict[str, BlockRole] = {
     "heading": BlockRole.HEADING,
-    "text":    BlockRole.PARAGRAPH,
+    "text":    BlockRole.TEXT,
     "list":    BlockRole.LIST,
     "table":   BlockRole.TABLE,
     "image":   BlockRole.FIGURE,

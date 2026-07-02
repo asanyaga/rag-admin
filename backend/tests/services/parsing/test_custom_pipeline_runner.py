@@ -46,7 +46,7 @@ async def test_run_custom_pipeline_fitz_only_succeeds():
     assert "fitz" in run.raw_payload["tools"]
     assert doc.parse_run_id == run.id
     assert doc.page_count == 2
-    assert any(b.role == BlockRole.PARAGRAPH for b in doc.blocks)
+    assert any(b.role == BlockRole.TEXT for b in doc.blocks)
     # every block id is namespaced to the source document
     assert all(b.id.startswith("doc-xyz:") for b in doc.blocks)
 

@@ -9,7 +9,7 @@ from app.services.classification.port import ClassificationResult
 def _make_doc() -> ParsedDocument:
     pages = [Page(index=i, block_ids=[f"b{i}"]) for i in range(3)]
     blocks = [
-        Block(id=f"b{i}", role=BlockRole.PARAGRAPH, native_type="p",
+        Block(id=f"b{i}", role=BlockRole.TEXT, native_type="p",
               text=f"page {i}", page_index=i, reading_order=0)
         for i in range(3)
     ]

@@ -34,7 +34,7 @@
         "notes": null
       },
       "reading_order": 0,
-      "role": "paragraph",
+      "role": "text",
       "spans": [],
       "style": null,
       "table": null,
@@ -74,7 +74,7 @@
         "notes": null
       },
       "reading_order": 1,
-      "role": "paragraph",
+      "role": "text",
       "spans": [],
       "style": null,
       "table": null,
@@ -114,7 +114,7 @@
         "notes": null
       },
       "reading_order": 2,
-      "role": "paragraph",
+      "role": "text",
       "spans": [],
       "style": null,
       "table": null,
@@ -154,7 +154,7 @@
         "notes": null
       },
       "reading_order": 3,
-      "role": "paragraph",
+      "role": "text",
       "spans": [],
       "style": null,
       "table": null,

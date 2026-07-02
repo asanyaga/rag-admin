@@ -75,9 +75,9 @@ async def test_get_annotated_blocks(test_db):
             "blocks": [
                 {"id": "b-1", "role": "heading", "native_type": "heading",
                  "text": "Balance Sheet", "page_index": 0},
-                {"id": "b-2", "role": "paragraph", "native_type": "paragraph",
+                {"id": "b-2", "role": "text", "native_type": "paragraph",
                  "text": "Assets data", "page_index": 0},
-                {"id": "b-3", "role": "paragraph", "native_type": "paragraph",
+                {"id": "b-3", "role": "text", "native_type": "paragraph",
                  "text": "Notes", "page_index": 1},
             ],
         },

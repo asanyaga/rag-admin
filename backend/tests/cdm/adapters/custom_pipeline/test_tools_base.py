@@ -15,7 +15,7 @@ def test_page_meta_defaults():
 
 
 def test_tool_result_holds_blocks_and_native_records():
-    block = Block(id="fitz:0:0", role=BlockRole.PARAGRAPH, native_type="text",
+    block = Block(id="fitz:0:0", role=BlockRole.TEXT, native_type="text",
                   text="hi", page_index=0)
     result = ToolResult(
         tool_id="fitz",

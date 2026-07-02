@@ -24,7 +24,7 @@ class ParserKind(str, Enum):
 class BlockRole(str, Enum):
     TITLE      = "title"
     HEADING    = "heading"
-    PARAGRAPH  = "paragraph"
+    TEXT       = "text"
     LIST       = "list"
     TABLE      = "table"
     FIGURE     = "figure"

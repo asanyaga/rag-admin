@@ -55,7 +55,7 @@ async def test_cdm_parsed_document_round_trip(test_db: AsyncSession):
         blocks=[Block(
             id="b1",
             page_index=0,
-            role=BlockRole.PARAGRAPH,
+            role=BlockRole.TEXT,
             native_type="text",
             text="hello world",
             markdown="hello world",

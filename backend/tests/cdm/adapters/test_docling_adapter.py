@@ -144,8 +144,8 @@ def test_map_role_known_labels():
     cases = [
         ("title",          BlockRole.TITLE),
         ("section_header", BlockRole.HEADING),
-        ("text",           BlockRole.PARAGRAPH),
-        ("paragraph",      BlockRole.PARAGRAPH),
+        ("text",           BlockRole.TEXT),
+        ("paragraph",      BlockRole.TEXT),
         ("list_item",      BlockRole.LIST),
         ("table",          BlockRole.TABLE),
         ("picture",        BlockRole.FIGURE),

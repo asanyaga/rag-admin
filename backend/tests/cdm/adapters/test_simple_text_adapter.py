@@ -34,7 +34,7 @@ def test_two_pages_produces_two_pages_and_two_blocks():
 
 def test_block_role_is_paragraph():
     doc = SimpleTextAdapter().adapt(TWO_PAGE_RAW, SOURCE_META)
-    assert all(b.role == BlockRole.PARAGRAPH for b in doc.blocks)
+    assert all(b.role == BlockRole.TEXT for b in doc.blocks)
 
 
 def test_block_ids_are_unique_and_referenced_by_pages():

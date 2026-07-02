@@ -102,7 +102,7 @@ def test_bbox_normalized(doc):
 
 def test_block_roles(doc):
     roles = {b.role for b in doc.blocks}
-    assert BlockRole.PARAGRAPH in roles
+    assert BlockRole.TEXT in roles
     assert BlockRole.TABLE in roles
 
 
@@ -128,7 +128,7 @@ def test_table_html_preserved(doc):
 
 
 def test_quality_from_grounding(doc):
-    text_block = next(b for b in doc.blocks if b.role == BlockRole.PARAGRAPH)
+    text_block = next(b for b in doc.blocks if b.role == BlockRole.TEXT)
     assert text_block.quality is not None
     assert text_block.quality.confidence == pytest.approx(0.97)
 
@@ -278,11 +278,11 @@ from app.cdm.adapters.landing_ai import _detect_text_role
 
 
 def test_detect_plain_text_is_paragraph():
-    assert _detect_text_role("Hello world.") == BlockRole.PARAGRAPH
+    assert _detect_text_role("Hello world.") == BlockRole.TEXT
 
 
 def test_detect_anchor_then_plain_text_is_paragraph():
-    assert _detect_text_role("<a id='x'></a>\n\nPlain paragraph.") == BlockRole.PARAGRAPH
+    assert _detect_text_role("<a id='x'></a>\n\nPlain paragraph.") == BlockRole.TEXT
 
 
 def test_detect_h1_is_title():
@@ -308,15 +308,15 @@ def test_detect_h4_is_heading():
 
 def test_detect_hash_without_space_is_paragraph():
     # ##NoSpace is not a valid ATX heading; treat as paragraph
-    assert _detect_text_role("##NoSpace") == BlockRole.PARAGRAPH
+    assert _detect_text_role("##NoSpace") == BlockRole.TEXT
 
 
 def test_detect_empty_markdown_is_paragraph():
-    assert _detect_text_role("") == BlockRole.PARAGRAPH
+    assert _detect_text_role("") == BlockRole.TEXT
 
 
 def test_detect_anchor_only_is_paragraph():
-    assert _detect_text_role("<a id='x'></a>\n\n") == BlockRole.PARAGRAPH
+    assert _detect_text_role("<a id='x'></a>\n\n") == BlockRole.TEXT
 
 
 # ---------------------------------------------------------------------------
@@ -368,7 +368,7 @@ def test_plain_text_chunk_remains_paragraph():
         "markdown": None, "metadata": {}, "splits": [], "grounding": {},
     }
     doc = LandingAIAdapter().adapt(raw, _META)
-    assert doc.blocks[0].role == BlockRole.PARAGRAPH
+    assert doc.blocks[0].role == BlockRole.TEXT
 
 
 def test_mixed_roles_across_chunks():
@@ -406,4 +406,4 @@ def test_mixed_roles_across_chunks():
     assert by_id["c-title"].role == BlockRole.TITLE
     assert by_id["c-h2"].role == BlockRole.HEADING
     assert by_id["c-h3"].role == BlockRole.HEADING
-    assert by_id["c-para"].role == BlockRole.PARAGRAPH
+    assert by_id["c-para"].role == BlockRole.TEXT

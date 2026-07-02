@@ -85,7 +85,7 @@ async def test_citation_resolution_block_resolves_against_parsed_doc(monkeypatch
             bbox=bbox, text="Heading", quality=Quality(confidence=0.95),
         ).model_dump(),
         Block(
-            id="b2", role=BlockRole.PARAGRAPH, native_type="p", page_index=2,
+            id="b2", role=BlockRole.TEXT, native_type="p", page_index=2,
             bbox=bbox.model_copy(update={"y0": 0.1, "y1": 0.2}),
             text="body", quality=Quality(confidence=0.6),
         ).model_dump(),
@@ -112,7 +112,7 @@ async def test_citation_resolution_block_resolves_against_parsed_doc(monkeypatch
     cit = result.citation
     assert cit.block_ids == ["b1", "b2"]
     assert cit.page_indices == [2]
-    assert cit.block_roles == ["heading", "paragraph"]
+    assert cit.block_roles == ["heading", "text"]
     assert len(cit.bboxes) == 2
     assert cit.confidence == pytest.approx(0.6)
     repo_get.assert_awaited_once_with(parse_run_id)
@@ -160,7 +160,7 @@ async def test_block_chunk_page_indices_converted_to_1based_page_numbers():
         chunk_metadata={
             "block_ids": ["b1"],
             "page_indices": [0, 1],  # 0-based: pages 1 and 2 in the document
-            "block_roles": ["paragraph"],
+            "block_roles": ["text"],
             "bboxes": [None],
         },
     )

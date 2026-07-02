@@ -51,11 +51,11 @@ def _first_content_line(markdown: str) -> str:
 
 
 def _detect_text_role(markdown: str) -> BlockRole:
-    """Map a text chunk's markdown to TITLE, HEADING, or PARAGRAPH."""
+    """Map a text chunk's markdown to TITLE, HEADING, or TEXT."""
     first = _first_content_line(markdown)
     m = _HEADING_RE.match(first)
     if not m:
-        return BlockRole.PARAGRAPH
+        return BlockRole.TEXT
     return BlockRole.TITLE if len(m.group(1)) == 1 else BlockRole.HEADING
 
 

@@ -12,7 +12,7 @@ def _make_doc(page_count: int) -> ParsedDocument:
     blocks = [
         Block(
             id=f"b{i}",
-            role=BlockRole.PARAGRAPH,
+            role=BlockRole.TEXT,
             native_type="paragraph",
             text=f"page {i}",
             page_index=i,

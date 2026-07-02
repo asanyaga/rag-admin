@@ -18,7 +18,7 @@ def _make_cdm_doc(parse_run_id: str, source_document_id: str) -> ParsedDocument:
         parse_run_id=parse_run_id,
         page_count=1,
         pages=[Page(index=0, block_ids=["b1"])],
-        blocks=[Block(id="b1", role=BlockRole.PARAGRAPH, native_type="p", text="hello", page_index=0)],
+        blocks=[Block(id="b1", role=BlockRole.TEXT, native_type="p", text="hello", page_index=0)],
         full_markdown="hello",
     )
 
