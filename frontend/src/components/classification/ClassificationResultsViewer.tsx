@@ -9,9 +9,10 @@ interface Props {
   labelsRequested: string[]
   selectedBlockId?: string | null
   onBlockSelect?: (blockId: string) => void
+  onPageSelect?: (pageIndex: number) => void
 }
 
-export function ClassificationResultsViewer({ runId, labelsRequested, selectedBlockId, onBlockSelect }: Props) {
+export function ClassificationResultsViewer({ runId, labelsRequested, selectedBlockId, onBlockSelect, onPageSelect }: Props) {
   const { blocks, isLoading, error } = useClassificationRunBlocks(runId)
 
   if (isLoading) {
@@ -56,6 +57,7 @@ export function ClassificationResultsViewer({ runId, labelsRequested, selectedBl
           blocks={grouped.get(label) ?? []}
           selectedBlockId={selectedBlockId}
           onBlockSelect={onBlockSelect}
+          onPageSelect={onPageSelect}
         />
       ))}
       {unmatchedBlocks.length > 0 && (
@@ -65,6 +67,7 @@ export function ClassificationResultsViewer({ runId, labelsRequested, selectedBl
           blocks={unmatchedBlocks}
           selectedBlockId={selectedBlockId}
           onBlockSelect={onBlockSelect}
+          onPageSelect={onPageSelect}
         />
       )}
     </div>

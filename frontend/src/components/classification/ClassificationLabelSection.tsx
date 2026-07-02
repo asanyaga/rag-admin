@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
-import { ClassificationBlockRow } from './ClassificationBlockRow'
+import { ClassificationPageGroup } from './ClassificationPageGroup'
 import type { AnnotatedBlock } from '@/types/classification'
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   blocks: AnnotatedBlock[]
   selectedBlockId?: string | null
   onBlockSelect?: (blockId: string) => void
+  onPageSelect?: (pageIndex: number) => void
 }
 
 function pageRange(blocks: AnnotatedBlock[]): string {
@@ -20,9 +21,25 @@ function pageRange(blocks: AnnotatedBlock[]): string {
   return min === max ? `Page ${min}` : `Pages ${min}–${max}`
 }
 
-export function ClassificationLabelSection({ label, blocks, selectedBlockId, onBlockSelect }: Props) {
+export function ClassificationLabelSection({ label, blocks, selectedBlockId, onBlockSelect, onPageSelect }: Props) {
   const displayName = label ?? 'Unmatched'
   const [open, setOpen] = useState(label !== null)
+
+  // Auto-expand when a block in this label section becomes selected (e.g. via PDF click)
+  useEffect(() => {
+    if (selectedBlockId && blocks.some((b) => b.blockId === selectedBlockId)) {
+      setOpen(true)
+    }
+  }, [selectedBlockId, blocks])
+
+  const pageGroups = Array.from(
+    blocks.reduce((map, block) => {
+      const key = block.pageIndex
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(block)
+      return map
+    }, new Map<number, AnnotatedBlock[]>()),
+  ).sort(([a], [b]) => a - b)
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -42,18 +59,20 @@ export function ClassificationLabelSection({ label, blocks, selectedBlockId, onB
           )}
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="mt-1 space-y-1">
+      <CollapsibleContent className="mt-1 space-y-0.5">
         {blocks.length === 0 ? (
           <p className="text-sm text-muted-foreground px-4 py-2">
             No regions identified for this label.
           </p>
         ) : (
-          blocks.map((block) => (
-            <ClassificationBlockRow
-              key={block.blockId}
-              block={block}
-              isSelected={selectedBlockId === block.blockId}
-              onSelect={onBlockSelect}
+          pageGroups.map(([pageIndex, pageBlocks]) => (
+            <ClassificationPageGroup
+              key={pageIndex}
+              pageIndex={pageIndex}
+              blocks={pageBlocks}
+              selectedBlockId={selectedBlockId}
+              onBlockSelect={onBlockSelect}
+              onPageSelect={onPageSelect}
             />
           ))
         )}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { AnnotatedBlock } from '@/types/classification'
@@ -11,9 +11,19 @@ interface Props {
 
 export function ClassificationBlockRow({ block, isSelected, onSelect }: Props) {
   const [expanded, setExpanded] = useState(false)
+  const rowRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isSelected) {
+      rowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [isSelected])
 
   return (
-    <div className={`border rounded-md overflow-hidden ${isSelected ? 'border-primary ring-1 ring-primary' : ''}`}>
+    <div
+      ref={rowRef}
+      className={`border rounded-md overflow-hidden ${isSelected ? 'border-primary ring-1 ring-primary' : ''}`}
+    >
       <button
         className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 text-left"
         onClick={() => {
@@ -21,15 +31,10 @@ export function ClassificationBlockRow({ block, isSelected, onSelect }: Props) {
           onSelect?.(block.blockId)
         }}
       >
-        <Badge variant="secondary" className="shrink-0 font-mono text-xs">
-          p.{block.pageIndex + 1}
-        </Badge>
         <Badge variant="outline" className="shrink-0 text-xs">
           {block.role}
         </Badge>
-        <span className="flex-1 truncate text-muted-foreground line-clamp-1">
-          {block.text}
-        </span>
+        <span className="flex-1 truncate text-muted-foreground line-clamp-1">{block.text}</span>
         {expanded ? (
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         ) : (

@@ -90,6 +90,7 @@ async def test_llm_classifier_passes_json_mode_to_config():
 @pytest.mark.asyncio
 async def test_llm_classifier_uses_custom_system_prompt():
     from app.services.classification.llm_classifier import LLMClassifier
+    from app.services.classification.prompt_constants import _REQUIRED_FORMAT
     adapter = _make_adapter(_RESPONSE_ALL_NONE)
     classifier = LLMClassifier(
         adapter=adapter, provider="ollama_local", model="qwen2.5:7b",
@@ -97,7 +98,31 @@ async def test_llm_classifier_uses_custom_system_prompt():
     )
     await classifier.classify(_make_doc(), ["x"])
     messages = adapter.complete.call_args[0][0]
-    assert messages[0]["content"] == "Custom prompt"
+    # Custom instruction is prepended; required format is always appended
+    assert messages[0]["content"].startswith("Custom prompt")
+    assert _REQUIRED_FORMAT in messages[0]["content"]
+
+
+def test_prompt_assembly_default_uses_full_default_prompt():
+    from app.services.classification.llm_classifier import LLMClassifier
+    from app.services.classification.prompt_constants import DEFAULT_SYSTEM_PROMPT
+    classifier = LLMClassifier(adapter=None, provider="ollama_local", model="test")
+    assert classifier.system_prompt == DEFAULT_SYSTEM_PROMPT
+
+
+def test_prompt_assembly_custom_instruction_appends_required_format():
+    from app.services.classification.llm_classifier import LLMClassifier
+    from app.services.classification.prompt_constants import _REQUIRED_FORMAT
+    custom = "You are a specialized classifier."
+    classifier = LLMClassifier(adapter=None, provider="ollama_local", model="test",
+                               system_prompt=custom)
+    assert classifier.system_prompt == custom + "\n\n" + _REQUIRED_FORMAT
+
+
+def test_prompt_assembly_required_format_not_duplicated_in_default():
+    from app.services.classification.llm_classifier import LLMClassifier
+    classifier = LLMClassifier(adapter=None, provider="ollama_local", model="test")
+    assert classifier.system_prompt.count("Return ONLY valid JSON") == 1
 
 
 @pytest.mark.asyncio

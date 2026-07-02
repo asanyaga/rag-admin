@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, RotateCw } from 'lucide-react'
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
+import { ChevronLeft, RotateCw, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ClassificationRunStatusBadge } from '@/components/classification/ClassificationRunStatusBadge'
 import { ClassificationResultsViewer } from '@/components/classification/ClassificationResultsViewer'
+import { ClassificationRunConfigPanel } from '@/components/classification/ClassificationRunConfigPanel'
 import { DocumentPdfViewer } from '@/components/parse-runs/DocumentPdfViewer'
 import { useClassificationRunDetail, useClassificationRunBlocks } from '@/hooks/useClassificationRuns'
 import { getParsedDocument } from '@/api/parseRuns'
@@ -26,6 +28,8 @@ const LABEL_COLORS = [
 export function ClassificationRunDetailPage() {
   const { runId } = useParams<{ runId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const documentTitle = (location.state as { documentTitle?: string } | null)?.documentTitle
   const { run, isLoading, error } = useClassificationRunDetail(runId ?? null)
   const { blocks: annotatedBlocks } = useClassificationRunBlocks(
     run?.status === 'completed' ? (runId ?? null) : null,
@@ -33,6 +37,17 @@ export function ClassificationRunDetailPage() {
 
   const [parseBlocks, setParseBlocks] = useState<Block[]>([])
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
+  const [selectedPageIndex, setSelectedPageIndex] = useState<number | null>(null)
+
+  const handleBlockSelect = (blockId: string) => {
+    setSelectedBlockId(blockId)
+    setSelectedPageIndex(null)
+  }
+
+  const handlePageSelect = (pageIndex: number) => {
+    setSelectedPageIndex(pageIndex)
+    setSelectedBlockId(null)
+  }
 
   useEffect(() => {
     if (!run?.parseRunId) return
@@ -81,6 +96,7 @@ export function ClassificationRunDetailPage() {
   const handleRerun = () => {
     navigate(`/classify/new?documentId=${run.documentId}`, {
       state: {
+        documentTitle,
         defaults: {
           labels: run.labelsRequested,
           classifierType: run.classifierType,
@@ -107,6 +123,9 @@ export function ClassificationRunDetailPage() {
         </Button>
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <ClassificationRunStatusBadge status={run.status} />
+          {documentTitle && (
+            <span className="text-sm font-medium truncate max-w-[200px]">{documentTitle}</span>
+          )}
           <span className="text-sm text-muted-foreground truncate">{modelSummary}</span>
           <span className="text-xs text-muted-foreground shrink-0">
             {formatDistanceToNow(new Date(run.createdAt), { addSuffix: true })}
@@ -125,6 +144,16 @@ export function ClassificationRunDetailPage() {
             )}
           </div>
         </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" title="Run config">
+              <Info className="h-3.5 w-3.5" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-4">
+            <ClassificationRunConfigPanel run={run} />
+          </PopoverContent>
+        </Popover>
         <Button variant="outline" size="sm" className="h-7 text-xs shrink-0" onClick={handleRerun}>
           <RotateCw className="h-3.5 w-3.5 mr-1.5" />
           Re-run
@@ -138,8 +167,9 @@ export function ClassificationRunDetailPage() {
             documentId={run.documentId}
             blocks={parseBlocks}
             selectedBlockId={selectedBlockId}
-            onBlockSelect={setSelectedBlockId}
+            onBlockSelect={handleBlockSelect}
             blockColors={blockColors}
+            selectedPageIndex={selectedPageIndex}
           />
         </div>
         <div className="w-80 shrink-0 overflow-y-auto p-4">
@@ -148,7 +178,8 @@ export function ClassificationRunDetailPage() {
               runId={run.id}
               labelsRequested={run.labelsRequested}
               selectedBlockId={selectedBlockId}
-              onBlockSelect={setSelectedBlockId}
+              onBlockSelect={handleBlockSelect}
+              onPageSelect={handlePageSelect}
             />
           ) : run.status === 'running' ? (
             <p className="text-sm text-muted-foreground animate-pulse">Classification in progress…</p>

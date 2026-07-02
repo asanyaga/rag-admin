@@ -49,3 +49,16 @@ export async function getClassificationRunBlocks(runId: string): Promise<Annotat
   const response = await apiClient.get<AnnotatedBlock[]>(`/classification-runs/${runId}/blocks`)
   return response.data
 }
+
+export async function getClassificationSystemPromptConfig(): Promise<{
+  instruction: string
+  requiredFormat: string
+}> {
+  const response = await apiClient.get<{ instruction: string; required_format: string }>(
+    '/classification-runs/system-prompt-config',
+  )
+  return {
+    instruction: response.data.instruction,
+    requiredFormat: response.data.required_format,
+  }
+}
