@@ -1,22 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link, useLocation } from 'react-router-dom'
-import { ChevronLeft, ChevronDown } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
 import { ParseMethodSelector } from '@/components/documents/ParseMethodSelector'
 import { ClassificationConfig } from '@/components/classification/ClassificationConfig'
 import type { ClassificationConfigValue } from '@/components/classification/ClassificationConfig'
 import { PromptConfigEditor } from '@/components/shared/PromptConfigEditor'
 import { useParseRuns } from '@/hooks/useParseRuns'
-import { createClassificationRun } from '@/api/classification'
+import { createClassificationRun, getClassificationSystemPromptConfig } from '@/api/classification'
 import type { ParseConfig } from '@/types/parsing'
 import type { PromptConfig } from '@/types/prompt-config'
 import type { RerunDefaults } from '@/types/classification'
@@ -72,6 +67,10 @@ export function NewClassificationRunPage() {
   const [batchOverlap, setBatchOverlap] = useState(
     (defaults?.classifierConfig?.batch_overlap as number | undefined) ?? 3,
   )
+  const [systemPromptConfig, setSystemPromptConfig] = useState<{
+    instruction: string
+    requiredFormat: string
+  } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -83,6 +82,24 @@ export function NewClassificationRunPage() {
     delete cfg['parser']
     setParserConfig(cfg as ParseConfig)
   }, [latestViableRun?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch the default system prompt instruction + required format section from the backend
+  useEffect(() => {
+    getClassificationSystemPromptConfig()
+      .then(setSystemPromptConfig)
+      .catch(() => {
+        // silently degrade — required format section simply won't render
+      })
+  }, [])
+
+  // Pre-populate the system prompt textarea with the default instruction when not from re-run
+  useEffect(() => {
+    if (!systemPromptConfig) return
+    setPromptConfig((prev) => {
+      if (prev.systemPrompt !== undefined) return prev // already set from re-run defaults
+      return { ...prev, systemPrompt: systemPromptConfig.instruction }
+    })
+  }, [systemPromptConfig])
 
   const backHref = `/classify${documentId ? `?documentId=${documentId}` : ''}`
 
@@ -162,7 +179,7 @@ export function NewClassificationRunPage() {
         <CardHeader>
           <CardTitle className="text-base">Classification</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <ClassificationConfig
             defaultValues={{
               labels: classifyConfig.labels,
@@ -171,9 +188,33 @@ export function NewClassificationRunPage() {
             onChange={setClassifyConfig}
           />
           {classifyConfig.classifierType === 'llamaindex_split' && (
-            <p className="text-sm text-muted-foreground mt-4">
+            <p className="text-sm text-muted-foreground">
               LlamaIndex split classifier is not yet implemented. Select LLM classifier to proceed.
             </p>
+          )}
+          {isLlm && (
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div className="space-y-2">
+                <Label>Batch size (pages)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={batchSize}
+                  onChange={(e) => setBatchSize(Number(e.target.value))}
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Batch overlap (pages)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={batchOverlap}
+                  onChange={(e) => setBatchOverlap(Number(e.target.value))}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -190,34 +231,20 @@ export function NewClassificationRunPage() {
               onChange={setPromptConfig}
               capabilities={{ thinking: true }}
             />
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-                <ChevronDown className="h-4 w-4" />
-                Batch settings
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Batch size (pages)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={batchSize}
-                    onChange={(e) => setBatchSize(Number(e.target.value))}
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Batch overlap (pages)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={batchOverlap}
-                    onChange={(e) => setBatchOverlap(Number(e.target.value))}
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+            {systemPromptConfig && (
+              <div className="border-t pt-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Required output format · always appended by the app
+                </p>
+                <pre className="text-xs bg-muted rounded-md p-3 font-mono text-muted-foreground whitespace-pre-wrap break-words cursor-default select-text">
+                  {systemPromptConfig.requiredFormat}
+                </pre>
+                <p className="text-xs text-muted-foreground">
+                  ⓘ The app parses this JSON structure from the model response to build
+                  classification regions.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
