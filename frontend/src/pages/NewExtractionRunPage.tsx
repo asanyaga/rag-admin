@@ -6,8 +6,12 @@ import { useExtractionSchemas } from '@/hooks/useExtractionSchemas'
 import { useExtractionSubmit } from '@/hooks/useExtractionSubmit'
 import { useParseRuns } from '@/hooks/useParseRuns'
 import { useDocumentClassificationRuns } from '@/hooks/useClassificationRuns'
-import { useCategoryFilter } from '@/hooks/useCategoryFilter'
-import { CategoryFilterSection } from '@/components/extraction/CategoryFilterSection'
+import { useClassificationFilter } from '@/hooks/useClassificationFilter'
+import { ClassificationFilterSection } from '@/components/extraction/ClassificationFilterSection'
+import { buildFilterIntent } from '@/lib/classificationFilter'
+import { buildClassifierConfig } from '@/lib/classifierConfig'
+import type { ClassificationConfigValue } from '@/components/classification/ClassificationConfig'
+import type { PromptConfig } from '@/types/prompt-config'
 import type {
   ExtractionSchema,
   ExtractionSchemaCreate,
@@ -100,7 +104,20 @@ export default function NewExtractionRunPage(): JSX.Element {
     )?.id ?? null,
     [parseRuns, parserType],
   )
-  const categoryFilter = useCategoryFilter(classificationRuns, matchedParseRunId)
+  const filter = useClassificationFilter(classificationRuns, matchedParseRunId)
+  const [classifyConfig, setClassifyConfig] = useState<ClassificationConfigValue>({
+    labels: [], classifierType: 'llm',
+  })
+  const [classifyPrompt, setClassifyPrompt] = useState<PromptConfig>({
+    provider: 'ollama_local', model: 'qwen2.5:7b', temperature: 0.0, maxTokens: 4096,
+  })
+  const [parseOpen, setParseOpen] = useState(false)
+  const [classifyOpen, setClassifyOpen] = useState(false)
+
+  // Parse config is required (and auto-expanded) only when no viable parse run exists.
+  useEffect(() => {
+    setParseOpen(!matchedParseRunId)
+  }, [matchedParseRunId])
 
   // Extraction config
   const [schemaId, setSchemaId] = useState('')
@@ -252,7 +269,6 @@ export default function NewExtractionRunPage(): JSX.Element {
         chunking = { strategy: 'none', citationLevel }
       }
       const tm = parseInt(timeoutMinutes, 10)
-      const categoryStage = categoryFilter.toPreprocessStage()
       extractionConfig = {
         extractionSchemaId: schemaId,
         extractionMethod,
@@ -260,14 +276,29 @@ export default function NewExtractionRunPage(): JSX.Element {
         llmConfig: promptConfig,
         userPromptTemplate: userPromptTemplate.trim() || undefined,
         ...(chunking ? { chunking } : {}),
-        ...(categoryStage ? { preprocess: [categoryStage] } : {}),
         ...(!Number.isNaN(tm) && tm >= 1 ? { timeoutMinutes: Math.min(tm, 120) } : {}),
       }
     } else {
       extractionConfig = { extractionSchemaId: schemaId, extractionMethod, config: {} }
     }
 
-    const resultId = await submit(documentId, parseRuns, { parseConfig, extractionConfig })
+    const intent = buildFilterIntent({
+      eligibleRunId: filter.eligibleRun?.id ?? null,
+      selectedCategories: filter.selectedCategories,
+      granularity: filter.granularity,
+      classify:
+        filter.mode === 'configure' && classifyConfig.labels.length > 0
+          ? {
+              labels: classifyConfig.labels,
+              classifierType: classifyConfig.classifierType,
+              classifierConfig: buildClassifierConfig(
+                classifyConfig.classifierType, classifyPrompt, 10, 3,
+              ),
+            }
+          : null,
+    })
+
+    const resultId = await submit(documentId, parseRuns, { parseConfig, extractionConfig }, intent)
     if (resultId) {
       navigate(`/extract/${resultId}`)
     }
@@ -296,7 +327,7 @@ export default function NewExtractionRunPage(): JSX.Element {
   const selectedDocument = documents.find((d) => d.id === documentId)
   const selectedExtractor = extractors.find((e) => e.extractionMethod === extractionMethod)
   const isConfigured = selectedExtractor?.configured ?? true
-  const isRunning = phase === 'parsing' || phase === 'extracting'
+  const isRunning = phase === 'parsing' || phase === 'classifying' || phase === 'extracting'
   const hasSchemas = schemas.length > 0
   const hasExtractors = extractors.length > 0
 
@@ -306,7 +337,10 @@ export default function NewExtractionRunPage(): JSX.Element {
   const isDocumentProcessing = selectedDocument?.status === 'processing'
   const canRun = !isRunning && isConfigured && !isDocumentLoading && !isDocumentProcessing
 
-  const phaseLabel = phase === 'parsing' ? 'Parsing document…' : 'Extracting data…'
+  const phaseLabel =
+    phase === 'parsing' ? 'Parsing document…'
+      : phase === 'classifying' ? 'Classifying document…'
+        : 'Extracting data…'
 
   return (
     <div className="-m-6 flex flex-col h-[calc(100vh-3.5rem)]">
@@ -698,25 +732,56 @@ export default function NewExtractionRunPage(): JSX.Element {
                           </p>
                         </CollapsibleContent>
                       </Collapsible>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs">Filter by classification (optional)</Label>
-                        <CategoryFilterSection state={categoryFilter} />
-                      </div>
                     </div>
                   )}
 
                   <Separator />
 
-                  {/* Parse config */}
-                  <ParseMethodSelector
-                    parserType={parserType}
-                    config={parserConfig}
-                    onParserTypeChange={setParserType}
-                    onConfigChange={setParserConfig}
-                    disabled={isRunning}
-                    compact
-                  />
+                  {/* Parse config (collapsible; required when no viable parse run) */}
+                  <Collapsible open={parseOpen} onOpenChange={setParseOpen}>
+                    <CollapsibleTrigger asChild>
+                      <button type="button" className="flex items-center gap-2 text-sm font-medium">
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${parseOpen ? '' : '-rotate-90'}`}
+                        />
+                        Parse configuration
+                        {!matchedParseRunId && (
+                          <Badge variant="secondary" className="text-[10px]">required</Badge>
+                        )}
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3">
+                      <ParseMethodSelector
+                        parserType={parserType}
+                        config={parserConfig}
+                        onParserTypeChange={setParserType}
+                        onConfigChange={setParserConfig}
+                        disabled={isRunning}
+                        compact
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  {/* Classification filter (collapsible; optional, method-agnostic) */}
+                  <Collapsible open={classifyOpen} onOpenChange={setClassifyOpen}>
+                    <CollapsibleTrigger asChild>
+                      <button type="button" className="flex items-center gap-2 text-sm font-medium">
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${classifyOpen ? '' : '-rotate-90'}`}
+                        />
+                        Filter by classification (optional)
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3">
+                      <ClassificationFilterSection
+                        state={filter}
+                        classifyConfig={classifyConfig}
+                        onClassifyConfigChange={setClassifyConfig}
+                        promptConfig={classifyPrompt}
+                        onPromptConfigChange={setClassifyPrompt}
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
 
                   {/* Parse run failure */}
                   {phaseError && (
