@@ -4,7 +4,9 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+from app.cdm.models import ParserKind
 
 
 class TargetInput(BaseModel):
@@ -41,6 +43,17 @@ class RunCreate(BaseModel):
     name: str | None = None
     case_ids: list[UUID]
     parsers: list[str]
+
+    @field_validator("parsers")
+    @classmethod
+    def _validate_parsers(cls, value: list[str]) -> list[str]:
+        valid = {p.value for p in ParserKind}
+        invalid = [p for p in value if p not in valid]
+        if invalid:
+            raise ValueError(
+                f"Invalid parser name(s): {invalid}. Valid parsers: {sorted(valid)}"
+            )
+        return value
 
 
 class RunResponse(BaseModel):
