@@ -5,10 +5,12 @@ import type { ClassificationRun } from '@/types/classification'
 
 function run(overrides: Partial<ClassificationRun>): ClassificationRun {
   return {
-    id: 'r1', parseRunId: 'p1', documentId: 'd1', labelsRequested: [],
+    id: 'r1', parseRunId: 'p1', documentId: 'd1', labelsRequested: ['fin', 'legal'],
     classifierType: 'llm', classifierConfig: {}, status: 'completed',
     error: null, inputTokens: 0, outputTokens: 0, durationMs: 0,
-    createdAt: '', regions: [{ label: 'fin' } as never, { label: 'legal' } as never],
+    // The document list endpoint returns runs WITHOUT regions — categories must
+    // come from labelsRequested, not regions.
+    createdAt: '', regions: [],
     ...overrides,
   } as ClassificationRun
 }

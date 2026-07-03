@@ -28,9 +28,11 @@ export function useCategoryFilter(
     )
   }, [runs, parseRunId])
 
+  // Categories come from labelsRequested, not regions: the document
+  // classification-runs list endpoint returns runs without regions populated.
   const availableCategories = useMemo<string[]>(() => {
     if (!eligibleRun) return []
-    return Array.from(new Set(eligibleRun.regions.map((r) => r.label)))
+    return Array.from(new Set(eligibleRun.labelsRequested))
   }, [eligibleRun])
 
   const toPreprocessStage = (): PreprocessStage | null => {
