@@ -151,12 +151,23 @@ additive via the scorer registry (seam #1) and dimension-typed loader (seam #2).
 run = create_run(case_ids, parsers)              # persisted, status=running
 for case in cases(run):
     for parser in applicable_parsers(case, run):
-        cdm, cost, latency = capture(parser, case.source)     # adapter.adapt(...), timed
+        # capture reuses ParsingService.parse_and_persist — NOT adapter.adapt directly.
+        # The runners do file→raw→adapt, and the returned ParseRun already carries
+        # duration_ms + cost + tokens (our cost/latency signal) and same-config reuse.
+        parse_run, cdm = capture(parser, case.source, project_id)
+        cost, latency = parse_run.cost, parse_run.duration_ms
         for target in case.targets:                            # only asserted dimensions
             score, details = SCORERS[target.dimension](cdm, target.expected)
             save_result(run, case, parser, target.dimension, score, details, cost, latency)
 finish_run(run)                                   # status=complete
 ```
+
+> **Capture reuses existing infrastructure.** `capture(parser, source, project_id)` calls
+> `ParsingService.ensure_source_document(...)` then `parse_and_persist(config={"parser": kind}, …)`,
+> which returns `(ParseRunCDM, ParsedDocumentCDM)`. Cost/latency come from the `ParseRun`
+> (`duration_ms`, `cost`, `input_tokens`, `output_tokens`) — no bespoke timing/metrics needed. Local
+> parsers (docling, custom_pipeline, simple) need no cloud client; cloud parsers reuse the existing
+> per-parser clients from `get_parsing_service`.
 
 What the UI shows (a comparison table keyed by parser, one row group per case × dimension):
 
@@ -203,7 +214,7 @@ is scorer #2, added purely through the scorer-registry seam — no service chang
 | Repository | persistence + result upsert keyed `(run, case, parser, dimension)` | `app/repositories/parser_eval_repository.py` |
 | Scorer registry | `dict[dimension → scorer]`, one entry (`text`) | `app/services/parser_eval/scorers/__init__.py` |
 | Text scorer | the faithfulness metric above | `app/services/parser_eval/scorers/text.py` |
-| Capture | `adapter.adapt(...)`, timed, cost from `parser_extras`/job metadata | `app/services/parser_eval/capture.py` |
+| Capture | wraps `ParsingService.parse_and_persist` per parser; cost/latency from `ParseRun` | `app/services/parser_eval/capture.py` |
 | Engine/service | orchestrate run → capture → score → persist | `app/services/parser_eval/engine.py`, `service.py` |
 | Router | create case/target, trigger run, fetch results | `app/routers/parser_eval.py` |
 | Schemas | request/response DTOs | `app/schemas/parser_eval.py` |
