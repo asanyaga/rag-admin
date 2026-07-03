@@ -89,7 +89,7 @@ Ground truth and results live in the **database**, not files. Sketch (finalized 
 | Entity | Purpose | Key fields |
 |---|---|---|
 | `ParserEvalCase` | a benchmark document | `id`, `name`, `doc_type`, source document ref, `created_at` |
-| `ParserEvalTarget` | one asserted dimension + its truth for a case | `case_id`, `dimension`, `expected` (payload; for `text` = reference string) |
+| `ParserEvalTarget` | one asserted dimension + its truth for a case | `case_id`, `dimension`, `expected` (dimension-typed JSON payload; for `text` = `{ pages: [str] }`) |
 | `ParserEvalRun` | one execution over case(s) × parsers | `id`, `status`, selected parsers, `created_at` |
 | `ParserEvalResult` | one score cell | `run_id`, `case_id`, `parser`, `dimension`, `score`, `details` (json), `cost`, `latency_ms` — **unique on `(run_id, case_id, parser, dimension)`** |
 
@@ -101,8 +101,8 @@ table-heavy, multi-column, scanned, form); grow by adding real failures, not syn
 
 A case with multiple targets is the intended shape, but each target owns its ground truth:
 
-- **Per-dimension `expected`.** The `text` target stores a reference string; a future `table` target
-  stores gold-table HTML. No scorer reads a shared "expected document."
+- **Per-dimension `expected`.** The `text` target stores page-segmented reference text; a future
+  `table` target stores gold-table HTML. No scorer reads a shared "expected document."
 - **Asserted-or-not is explicit.** A scorer runs for a case **only if a target for that dimension
   exists**. A missing dimension means "not evaluated here" — never a silent score of 0. This prevents
   false-zeros and keeps authoring incremental (add a target when you're ready to label it).
@@ -111,6 +111,39 @@ A case with multiple targets is the intended shape, but each target owns its gro
   inherently positional (reading order, role labels), and even then scorers align by **content, not
   block id** — because parsers legitimately segment blocks differently, and a fixed `expected_blocks`
   would unfairly penalize a parser whose segmentation differs but is correct.
+
+### Ground truth formats per dimension
+
+**The user never authors a `ParsedDocument`.** No block ids, `parent_id`, `reading_order` integers,
+`bbox`, or page `block_ids` — those are per-parser artifacts and authoring them would bake in one
+parser's segmentation. Instead `expected` is the **minimal parser-agnostic projection** of a single
+dimension, and every scorer locates what to compare by **matching text content, not index/id**
+(content-anchored alignment) — this is what lets one `expected` fairly score parsers that segment
+differently.
+
+CDM vocabulary is reused *selectively*:
+- **Value vocabulary reused** where it is intrinsic and parser-agnostic: `BlockRole` names, the
+  `Table`/`Cell` shape, and `page` (a PDF's page N is physically page N for every parser).
+- **Structural/identity vocabulary never authored**: block ids, `parent_id`, `reading_order`, `bbox`.
+
+`ParserEvalTarget.expected` is a **JSON payload whose shape is discriminated by `dimension`** (this
+is seam #2). Each dimension also gets its own authoring widget:
+
+| Dimension | User enters | `expected` payload | CDM vocab | Scorer compares vs | Authoring widget |
+|---|---|---|---|---|---|
+| **text** | correct readable text, per page | `{ pages: [str] }` | `page` only | per-page slices of `cdm.full_text` (via `Page.start_char/end_char`) | per-page textareas, pre-fillable from a trusted parser |
+| **table** | correct table as HTML `<table>` | `{ locator: {page}, html: str }` | `Table`/`Cell` | matching `Block.table`, aligned by page+content | HTML paste + rendered preview |
+| **reading_order** | ordered short anchor snippets | `{ anchors: [str] }` | none | positions of anchors located in the parser's block sequence | drag-to-order snippet list |
+| **roles** | `snippet → role` assertions | `{ assertions: [{snippet, role, depth?}] }` | `BlockRole` | role of the block whose text matches each snippet | snippet + role dropdown |
+| **spatial** (deferred) | gold boxes per region | `{ regions: [{bbox, label}] }` | `BBox` | region boxes, IoU after content match | box-drawing tool |
+
+**OCR is a *condition*, not a dimension.** A scanned document is evaluated on the same dimensions
+(chiefly `text`, sometimes `table`); the `expected` format is unchanged. The case is **tagged**
+`scanned`/`ocr` so results can be *sliced* ("text faithfulness on scanned docs") — that is where OCR
+surfaces, as a filter over the same scores, not a new truth format.
+
+First slice implements the **`text` payload + per-page textarea authoring only**; every other row is
+additive via the scorer registry (seam #1) and dimension-typed loader (seam #2).
 
 ### The scoring service (backend core)
 
@@ -144,17 +177,23 @@ author** (paste/type it in the UI), so it proves the full vertical (upload → a
 persisted score) with the least labeling before we take on the harder table metric. Table structure
 is scorer #2, added purely through the scorer-registry seam — no service change.
 
-- **Ground truth:** the known-correct readable text of the document, authored in the UI, stored on
-  the `text` target.
-- **Input from CDM:** `cdm.full_text` (fall back to concatenated block text if absent).
-- **Metric:** normalize both sides (whitespace, casing per config), then report three numbers,
-  combined into the `[0,1]` score:
+- **Ground truth:** `{ pages: [str] }` — the known-correct readable text **per page**, authored in
+  the UI (one textarea per page), pre-fillable from a trusted parser's per-page text then corrected.
+- **Input from CDM:** per-page text via `Page.start_char/end_char` slices of `cdm.full_text` (fall
+  back to concatenated per-page block text if offsets absent).
+- **Metric:** compare **page-aligned** — score each page's parsed text vs. its reference, then
+  aggregate to a document score (mean, or content-length-weighted). Per page, normalize both sides
+  (whitespace, casing per config) and compute three numbers:
   - **similarity** — normalized edit-distance similarity (or token-level F1) of parsed vs. reference.
   - **omission rate** — fraction of reference content missing from the parse.
   - **hallucination rate** — fraction of parsed content absent from the reference.
   Omission and hallucination are called out separately because they are the two failure modes that
   actually hurt downstream RAG; a single blended similarity can hide them. Slice-1 score =
-  `similarity`; omission/hallucination travel in `details` and surface as sub-columns.
+  `similarity`; per-page scores + omission/hallucination travel in `details` (enabling per-page
+  attribution) and surface as sub-columns.
+- **Page-count mismatch:** if a parser yields a different page count than the reference, unmatched
+  reference pages count as fully omitted and unmatched parser pages as fully hallucinated — the
+  mismatch is penalized, not silently ignored.
 
 ### Components (first slice) — full-stack, mirroring `extraction_eval`
 
