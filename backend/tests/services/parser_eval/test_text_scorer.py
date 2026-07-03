@@ -47,3 +47,13 @@ def test_normalization_ignores_whitespace_and_case():
     doc = _doc("Hello    WORLD", [(0, 14)])
     score, _ = score_text(doc, {"pages": ["hello world"]})
     assert score == 1.0
+
+
+def test_fabricated_extra_page_penalized_as_hallucination():
+    # reference has 1 page, parse produced 2 → the extra page is fully fabricated and
+    # must carry full weight in the aggregate, not a floor weight of 1.
+    full_text = "hello world" + " some entirely fabricated extra page content here"
+    doc = _doc(full_text, [(0, 11), (11, len(full_text))])
+    score, details = score_text(doc, {"pages": ["hello world"]})
+    assert details["hallucination"] > 0.3
+    assert score < 1.0

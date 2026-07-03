@@ -61,10 +61,14 @@ def score_text(cdm: ParsedDocument, expected: dict[str, Any]) -> tuple[float, di
         page_scores = _score_page(ref, par)
         per_page.append({"page": i, **page_scores})
 
-    # Length-weighted aggregate by reference character count (empty ref pages weight 0,
-    # but an unmatched *parsed* page still contributes hallucination via a min weight of 1).
+    # Length-weighted aggregate by the larger of reference/parsed character count at each
+    # index. This keeps the omission direction unchanged (parsed empty → weight is ref
+    # length) while making the hallucination direction visible (ref empty → weight is
+    # parsed length, so a fabricated extra page carries full weight instead of a floor of 1).
     def _weight(i: int) -> int:
-        return max(len(reference_pages[i]) if i < len(reference_pages) else 0, 1)
+        ref_len = len(reference_pages[i]) if i < len(reference_pages) else 0
+        par_len = len(parsed_pages[i]) if i < len(parsed_pages) else 0
+        return max(ref_len, par_len, 1)
 
     total_w = sum(_weight(i) for i in range(n)) or 1
     similarity = sum(p["similarity"] * _weight(p["page"]) for p in per_page) / total_w
