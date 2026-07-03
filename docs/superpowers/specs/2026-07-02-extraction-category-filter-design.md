@@ -188,8 +188,66 @@ Optional **"Filter by classification"** section in the Extract config panel:
 
 ## Assumptions (confirm during review)
 
-- **Select-only (no inline trigger).** This slice assumes the classification run is
-  triggered and completed via the *existing* classification UI; the Extract panel only
-  *selects* from completed, parse-matched runs. Inline "trigger + wait" is deferred to the
-  workflow sprint.
-- Categories offered = distinct `label`s present in the selected run's regions.
+- Categories offered = the selected run's `labelsRequested` (the document
+  classification-runs *list* endpoint does not populate `regions`).
+
+---
+
+## Revision 2026-07-03: reworked extraction page + inline classification
+
+Supersedes the original "Frontend" section and the select-only assumption. Backend is
+unchanged — the resolver, `category_filter`, and the classification create/poll endpoints
+already support everything below.
+
+### Page layout
+
+- **Extraction config → a Card** (primary, always visible): schema, method,
+  method-specific settings, prompt/output mode, chunking.
+- **Parse config → a Collapsible.** Collapsed when a viable parse run exists; auto-expanded
+  and required when none does.
+- **Classification filter → a Collapsible.** Always optional, collapsed by default.
+
+### Classification filter is standalone and method-agnostic
+
+The filter leaves the LLM method block. On submit the composed `category_filter`
+preprocess stage is attached regardless of extraction method. (Guaranteed to affect the
+CDM-based LLM path; `llamaextract` behaviour verified separately.)
+
+### Classification collapsible — dual mode
+
+- **Select mode** — a completed classification run exists for the resolved parse: show its
+  `labelsRequested` as category checkboxes + granularity toggle.
+- **Configure mode** — no run exists for the parse: reuse `ClassificationConfig` (labels +
+  classifier type) + `PromptConfigEditor` + batch size/overlap, **plus** a "filter by"
+  multi-select over the labels being classified (a run may have many labels; the user
+  filters extraction to a subset) + granularity. Defaults to all entered labels.
+
+### Auto-chain orchestration
+
+`useExtractionSubmit` gains a `classifying` phase between parse and extract. A single "Run
+extraction" click performs:
+
+```
+ensure parse (create + wait if needed)
+  → configure mode: createClassificationRun(parseRunId, labels, classifierConfig)
+                     → poll getClassificationRun until completed (or failed → abort)
+  → build category_filter { classificationRunId, categories (subset), granularity }
+  → run extraction with that stage (method-agnostic)
+```
+
+Phases: `parsing → classifying → extracting`. If neither an existing run is selected nor a
+configure-mode classification is set up, the classify phase is skipped and nothing filters.
+
+### Reuse
+
+Extract the classifier-config assembly (the `classifierConfig` object built inline in
+`NewClassificationRunPage.handleSubmit`) into a shared helper so both pages build it
+identically.
+
+### Testing (delta)
+
+- Filter hook: select mode composes stage from existing run; configure mode carries labels,
+  classifier config, filter-subset, granularity; `none` when unconfigured.
+- Orchestration: parse → classify (poll to completed) → extract with the just-created
+  run id; classification failure aborts before extraction.
+- Component: renders select mode vs configure mode by eligibility; filter-subset selection.
