@@ -1,8 +1,10 @@
 import { useState, useCallback, useRef } from 'react'
-import type { RunWithParseRequest } from '@/types/extraction'
+import type { PreprocessStage, RunWithParseRequest } from '@/types/extraction'
 import type { ParseRunListItem } from '@/types/cdm'
 import * as extractionApi from '@/api/extraction'
 import { createParseRun, listParseRuns, getParseRun } from '@/api/parseRuns'
+import { createClassificationRun, getClassificationRun } from '@/api/classification'
+import type { ClassificationFilterIntent } from '@/lib/classificationFilter'
 
 const POLLING_INTERVAL = 3_000
 const PARSE_TIMEOUT_MS = 10 * 60 * 1_000
@@ -37,7 +39,7 @@ function findMatchingRun(
   )
 }
 
-export type SubmitPhase = 'idle' | 'parsing' | 'extracting' | 'failed'
+export type SubmitPhase = 'idle' | 'parsing' | 'classifying' | 'extracting' | 'failed'
 
 export interface UseExtractionSubmitReturn {
   phase: SubmitPhase
@@ -46,6 +48,7 @@ export interface UseExtractionSubmitReturn {
     documentId: string,
     existingParseRuns: ParseRunListItem[],
     request: RunWithParseRequest,
+    intent?: ClassificationFilterIntent,
   ) => Promise<string | null>
 }
 
@@ -59,6 +62,7 @@ export function useExtractionSubmit(): UseExtractionSubmitReturn {
       documentId: string,
       existingParseRuns: ParseRunListItem[],
       request: RunWithParseRequest,
+      intent: ClassificationFilterIntent = { mode: 'none' },
     ): Promise<string | null> => {
       const { parseConfig, extractionConfig } = request
       setPhaseError(null)
@@ -131,8 +135,66 @@ export function useExtractionSubmit(): UseExtractionSubmitReturn {
         }
       }
 
+      // Resolve the classification filter into a category_filter stage (method-agnostic).
+      let categoryStage: PreprocessStage | null = null
+      if (intent.mode === 'select') {
+        categoryStage = {
+          stage: 'category_filter',
+          config: {
+            classificationRunId: intent.classificationRunId,
+            categories: intent.categories,
+            granularity: intent.granularity,
+          },
+        }
+      } else if (intent.mode === 'configure') {
+        setPhase('classifying')
+        let runId: string
+        try {
+          const created = await createClassificationRun(documentId, {
+            parseRunId: parseRunId!,
+            labels: intent.classify.labels,
+            classifierType: intent.classify.classifierType,
+            classifierConfig: intent.classify.classifierConfig,
+          })
+          runId = created.id
+        } catch {
+          setPhase('failed')
+          setPhaseError('Failed to start classification')
+          return null
+        }
+        const clsStarted = Date.now()
+        for (;;) {
+          if (cancelledRef.current) return null
+          if (Date.now() - clsStarted > PARSE_TIMEOUT_MS) {
+            setPhase('failed')
+            setPhaseError('Classification timed out')
+            return null
+          }
+          const run = await getClassificationRun(runId)
+          if (run.status === 'completed') break
+          if (run.status === 'failed') {
+            setPhase('failed')
+            setPhaseError(run.error ?? 'Classification failed')
+            return null
+          }
+          await sleep(POLLING_INTERVAL)
+        }
+        categoryStage = {
+          stage: 'category_filter',
+          config: {
+            classificationRunId: runId,
+            categories: intent.categories,
+            granularity: intent.granularity,
+          },
+        }
+      }
+
       setPhase('extracting')
       try {
+        const preprocess = [
+          ...(extractionConfig.preprocess ?? []),
+          ...(categoryStage ? [categoryStage] : []),
+        ]
         const result = await extractionApi.runExtraction({
           parseRunId: parseRunId!,
           extractionSchemaId: extractionConfig.extractionSchemaId,
@@ -141,7 +203,7 @@ export function useExtractionSubmit(): UseExtractionSubmitReturn {
           llmConfig: extractionConfig.llmConfig,
           userPromptTemplate: extractionConfig.userPromptTemplate,
           chunking: extractionConfig.chunking,
-          preprocess: extractionConfig.preprocess,
+          preprocess: preprocess.length ? preprocess : undefined,
           timeoutMinutes: extractionConfig.timeoutMinutes,
         })
         setPhase('idle')

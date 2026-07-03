@@ -17,14 +17,3 @@ def block_filter(doc: ParsedDocument, config: dict[str, Any]) -> ParsedDocument:
         "derived_from": doc.parse_run_id,
         "derivation": "preprocess:block_filter",
     })
-
-
-def category_filter(doc: ParsedDocument, config: dict[str, Any]) -> ParsedDocument:
-    """SEAM (deferred): scope doc to pages/blocks in classification regions.
-
-    Implemented in a follow-up spec; will read an upstream classificationRunId.
-    """
-    raise NotImplementedError(
-        "category_filter is not yet implemented. It will scope the document to "
-        "pages matching the configured categories using an upstream classification run."
-    )

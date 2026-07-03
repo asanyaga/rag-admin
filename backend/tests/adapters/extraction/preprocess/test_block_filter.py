@@ -40,8 +40,3 @@ def test_catalogue_lists_block_filter_and_category_filter():
 def test_unknown_stage_raises():
     with pytest.raises(ValueError):
         apply_preprocess(_doc(), [{"stage": "nope", "config": {}}])
-
-
-def test_category_filter_not_implemented():
-    with pytest.raises(NotImplementedError):
-        apply_preprocess(_doc(), [{"stage": "category_filter", "config": {"categories": ["spec"]}}])

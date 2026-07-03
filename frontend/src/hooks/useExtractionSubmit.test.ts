@@ -3,11 +3,14 @@ import { renderHook, act } from '@testing-library/react'
 import { useExtractionSubmit } from './useExtractionSubmit'
 import * as extractionApi from '@/api/extraction'
 import * as parseRunsApi from '@/api/parseRuns'
+import * as classificationApi from '@/api/classification'
 import type { RunWithParseRequest } from '@/types/extraction'
 import type { ParseRunListItem } from '@/types/cdm'
+import type { ClassificationFilterIntent } from '@/lib/classificationFilter'
 
 vi.mock('@/api/extraction')
 vi.mock('@/api/parseRuns')
+vi.mock('@/api/classification')
 
 // Mirrors the makeParseRun pattern from useExtractionResults.test.ts.
 // config must include { parser } so findMatchingRun can match it.
@@ -68,6 +71,63 @@ describe('useExtractionSubmit', () => {
     expect(resultId).toBeNull()
     expect(result.current.phase).toBe('failed')
     expect(result.current.phaseError).toBe('API error')
+  })
+
+  it('select-mode intent attaches category_filter without running classification', async () => {
+    vi.mocked(extractionApi.runExtraction).mockResolvedValue({ id: 'result-1', status: 'pending' } as never)
+    const intent: ClassificationFilterIntent = {
+      mode: 'select', classificationRunId: 'cls-existing', categories: ['fin'], granularity: 'block',
+    }
+    const { result } = renderHook(() => useExtractionSubmit())
+    await act(async () => {
+      await result.current.submit('doc-1', [makeParseRun()], request, intent)
+    })
+    expect(classificationApi.createClassificationRun).not.toHaveBeenCalled()
+    const runArg = vi.mocked(extractionApi.runExtraction).mock.calls[0][0]
+    expect(runArg.preprocess).toContainEqual({
+      stage: 'category_filter',
+      config: { classificationRunId: 'cls-existing', categories: ['fin'], granularity: 'block' },
+    })
+  })
+
+  it('auto-chains: configure-mode classification runs and its id is used to filter', async () => {
+    vi.mocked(classificationApi.createClassificationRun).mockResolvedValue({ id: 'cls1', status: 'pending' } as never)
+    vi.mocked(classificationApi.getClassificationRun).mockResolvedValue({ id: 'cls1', status: 'completed' } as never)
+    vi.mocked(extractionApi.runExtraction).mockResolvedValue({ id: 'result-1', status: 'pending' } as never)
+    const intent: ClassificationFilterIntent = {
+      mode: 'configure',
+      classify: { labels: ['fin'], classifierType: 'llm', classifierConfig: {} },
+      categories: ['fin'], granularity: 'page',
+    }
+    const { result } = renderHook(() => useExtractionSubmit())
+    await act(async () => {
+      await result.current.submit('doc-1', [makeParseRun()], request, intent)
+    })
+    expect(classificationApi.createClassificationRun).toHaveBeenCalled()
+    const runArg = vi.mocked(extractionApi.runExtraction).mock.calls[0][0]
+    expect(runArg.preprocess).toContainEqual({
+      stage: 'category_filter',
+      config: { classificationRunId: 'cls1', categories: ['fin'], granularity: 'page' },
+    })
+  })
+
+  it('aborts before extraction when classification fails', async () => {
+    vi.mocked(classificationApi.createClassificationRun).mockResolvedValue({ id: 'cls1', status: 'pending' } as never)
+    vi.mocked(classificationApi.getClassificationRun).mockResolvedValue(
+      { id: 'cls1', status: 'failed', error: 'boom' } as never)
+    const intent: ClassificationFilterIntent = {
+      mode: 'configure',
+      classify: { labels: ['fin'], classifierType: 'llm', classifierConfig: {} },
+      categories: ['fin'], granularity: 'page',
+    }
+    const { result } = renderHook(() => useExtractionSubmit())
+    let resultId: string | null = 'not-null'
+    await act(async () => {
+      resultId = await result.current.submit('doc-1', [makeParseRun()], request, intent)
+    })
+    expect(resultId).toBeNull()
+    expect(result.current.phase).toBe('failed')
+    expect(extractionApi.runExtraction).not.toHaveBeenCalled()
   })
 
   it('returns null and does not call runExtraction when createParseRun fails', async () => {

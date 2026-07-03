@@ -92,6 +92,71 @@ async def test_run_extraction_rejects_document_id(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_run_extraction_folds_applied_filter_into_config(client: AsyncClient):
+    """A category_filter stage is resolved and its summary folded into the run config."""
+    summary = {
+        "classificationRunId": str(uuid4()), "categories": ["fin"],
+        "granularity": "page", "keptPages": 2, "keptBlocks": 0,
+    }
+    resolved_pre = [{"stage": "category_filter", "config": {"keepPages": [1, 2], "keepBlockIds": []}}]
+
+    app.dependency_overrides[get_current_active_user] = _mock_user
+    try:
+        with patch("app.routers.extraction.resolve_api_key", new_callable=AsyncMock, return_value="key"), \
+             patch("app.routers.extraction.create_adapter"), \
+             patch("app.routers.extraction.get_extractor"), \
+             patch("app.routers.extraction.process_extraction"), \
+             patch("app.routers.extraction.resolve_category_filter_stages",
+                   new_callable=AsyncMock, return_value=(resolved_pre, summary)) as mock_resolve, \
+             patch("app.routers.extraction.ExtractionService.run_extraction",
+                   new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = MagicMock(id=uuid4())
+            # The mock return can't satisfy the response_model, but resolver + run_extraction
+            # run before serialization — so we assert on those interactions, not the response.
+            try:
+                await client.post("/api/v1/extractions/run", json={
+                    "parseRunId": str(uuid4()),
+                    "extractionSchemaId": str(uuid4()),
+                    "extractionMethod": "llm",
+                    "preprocess": [{"stage": "category_filter", "config": {
+                        "classificationRunId": summary["classificationRunId"],
+                        "categories": ["fin"], "granularity": "page"}}],
+                })
+            except Exception:
+                pass
+    finally:
+        app.dependency_overrides.pop(get_current_active_user, None)
+
+    assert mock_resolve.await_count == 1
+    assert mock_run.await_args.kwargs["config"]["applied_filter"] == summary
+
+
+@pytest.mark.asyncio
+async def test_run_extraction_category_filter_error_returns_400(client: AsyncClient):
+    """A resolver ValueError (e.g. empty match) surfaces as HTTP 400 before dispatch."""
+    app.dependency_overrides[get_current_active_user] = _mock_user
+    try:
+        with patch("app.routers.extraction.resolve_api_key", new_callable=AsyncMock, return_value="key"), \
+             patch("app.routers.extraction.create_adapter"), \
+             patch("app.routers.extraction.get_extractor"), \
+             patch("app.routers.extraction.process_extraction"), \
+             patch("app.routers.extraction.resolve_category_filter_stages", new_callable=AsyncMock,
+                   side_effect=ValueError("Selected categories matched no content in classification run X")):
+            response = await client.post("/api/v1/extractions/run", json={
+                "parseRunId": str(uuid4()),
+                "extractionSchemaId": str(uuid4()),
+                "extractionMethod": "llm",
+                "preprocess": [{"stage": "category_filter", "config": {
+                    "classificationRunId": str(uuid4()), "categories": ["fin"], "granularity": "page"}}],
+            })
+    finally:
+        app.dependency_overrides.pop(get_current_active_user, None)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "matched no content" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_get_llm_extraction_defaults(client: AsyncClient):
     """GET /extractors/llm/defaults returns the two hardcoded prompt constants."""
     from app.adapters.extraction.llm import (

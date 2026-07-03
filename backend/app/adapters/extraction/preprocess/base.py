@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from app.adapters.extraction.preprocess.block_filter import block_filter, category_filter
+from app.adapters.extraction.preprocess.block_filter import block_filter
+from app.adapters.extraction.preprocess.category_filter import category_filter
 from app.cdm.models import ParsedDocument
 
 _STAGES: dict[str, Callable[[ParsedDocument, dict[str, Any]], ParsedDocument]] = {
@@ -18,11 +19,12 @@ def get_preprocess_stages() -> list[dict]:
          "description": "Drop blocks by role (headers, footers, page numbers, …).",
          "config_schema": {"type": "object", "properties": {
              "drop": {"type": "array", "items": {"type": "string"}}}}},
-        {"stage": "category_filter", "name": "Category filter (coming soon)",
-         "description": "Scope to pages in an upstream classification run's categories.",
+        {"stage": "category_filter", "name": "Category filter",
+         "description": "Scope extraction to pages/blocks in an upstream classification run's categories.",
          "config_schema": {"type": "object", "properties": {
              "classificationRunId": {"type": "string"},
-             "categories": {"type": "array", "items": {"type": "string"}}}}},
+             "categories": {"type": "array", "items": {"type": "string"}},
+             "granularity": {"type": "string", "enum": ["page", "block"], "default": "page"}}}},
     ]
 
 
