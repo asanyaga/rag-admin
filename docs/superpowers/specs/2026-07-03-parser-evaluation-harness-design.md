@@ -42,9 +42,9 @@ These are deferred out of the *first* slice, not out of the feature:
 - No caching layer / capture-score split. First slice runs parsing and scoring inline.
 - Implementing a `pdfplumber` adapter — pdfplumber belongs to the existing `custom_pipeline`.
 
-**Frontend note:** the feature *is* surfaced in the app UI; whether the UI lands in the first slice
-or the second is the lead Open Question below. The "printed table + `results.json`" form is the
-minimal developer-facing output of the scoring core, which the UI later reads — not the end state.
+**Frontend note:** the UI *is* in the first slice — a minimal view to author a case + one truth
+dimension, run, and read the comparison table. It is intentionally thin (one scorer, no profiles, no
+history browsing); richness follows through seam #10.
 
 ## Mental model
 
@@ -71,45 +71,40 @@ Result:                score in [0,1] for (case, parser, target), plus cost + la
 - **The result key is `(doc, parser, dimension)`** — a flat row, from day one. Many scorers per doc
   produces a vector of these rows, which is also how baselines and regression are keyed.
 
-## v0 design — the minimal loop
+## First slice — thin vertical slice (end-to-end)
 
-### Corpus layout
+The first slice is **one scorer wired all the way through**: DB-backed data model → scoring service
+→ router → a minimal frontend view. It proves the full stack early. The user flow it delivers:
 
-A tiny anchor set of ~5 hand-picked stress documents (e.g. one prose, one table-heavy, one
-multi-column, one scanned, one form). Grow by adding real failures, not synthetic breadth.
+> Create a case (upload a source document) → attach **one** dimension's ground truth (the `text`
+> reference) in the UI → pick parsers → run → see a persisted per-parser score table.
 
-```
-backend/app/services/parser_eval/benchmark/
-  <case_name>/
-    source.<ext>          # the document
-    case.yaml             # manifest: targets + which parsers apply
-    truth/                # dimension-typed ground-truth artifacts
-      text.txt            #   clean reference text  (text dimension)
-      p2.html             #   gold table            (table dimension)
-```
+Deliberately one scorer (`text`), one dimension of ground truth authored via UI, no profiles, no
+caching. Everything else grows through the seams.
 
-`case.yaml` — a doc may attach multiple targets; each names its own dimension + `expected`, and a
-dimension is asserted **only** if it appears here:
+### Data model (lean, mirrors `eval_run` / `extraction_eval`)
 
-```yaml
-name: acme_invoice
-doc_type: invoice
-parsers: [docling, llamaparse, custom_pipeline]   # omit/[] = all registered parsers
-targets:
-  - dimension: text
-    expected: truth/text.txt
-  - dimension: table
-    expected: truth/p2.html         # table is asserted; reading_order/roles are NOT for this doc
-```
+Ground truth and results live in the **database**, not files. Sketch (finalized in the plan):
+
+| Entity | Purpose | Key fields |
+|---|---|---|
+| `ParserEvalCase` | a benchmark document | `id`, `name`, `doc_type`, source document ref, `created_at` |
+| `ParserEvalTarget` | one asserted dimension + its truth for a case | `case_id`, `dimension`, `expected` (payload; for `text` = reference string) |
+| `ParserEvalRun` | one execution over case(s) × parsers | `id`, `status`, selected parsers, `created_at` |
+| `ParserEvalResult` | one score cell | `run_id`, `case_id`, `parser`, `dimension`, `score`, `details` (json), `cost`, `latency_ms` — **unique on `(run_id, case_id, parser, dimension)`** |
+
+A **target existing is what "asserts" a dimension** — the result key `(run, case, parser, dimension)`
+is the flat row the mental model calls for. Aim for a tiny anchor set (~5 stress docs: prose,
+table-heavy, multi-column, scanned, form); grow by adding real failures, not synthetic breadth.
 
 ### Ground truth model (why it's per-dimension, not one shared object)
 
-A document containing multiple targets is the intended shape, but each target owns its ground truth:
+A case with multiple targets is the intended shape, but each target owns its ground truth:
 
-- **Per-dimension `expected`.** The `text` target reads `truth/text.txt`; the `table` target reads
-  `truth/p2.html`. No scorer reads a shared "expected document."
-- **Asserted-or-not is explicit.** A scorer runs for a doc **only if that dimension is a target**. A
-  missing dimension means "not evaluated here" — never a silent score of 0. This prevents
+- **Per-dimension `expected`.** The `text` target stores a reference string; a future `table` target
+  stores gold-table HTML. No scorer reads a shared "expected document."
+- **Asserted-or-not is explicit.** A scorer runs for a case **only if a target for that dimension
+  exists**. A missing dimension means "not evaluated here" — never a silent score of 0. This prevents
   false-zeros and keeps authoring incremental (add a target when you're ready to label it).
 - **Prefer content-oriented truth.** Clean text, gold-table HTML — truth that does *not* assume a
   block structure. Structural `expected_blocks`/`expected_page` is reserved for dimensions that are
@@ -117,20 +112,20 @@ A document containing multiple targets is the intended shape, but each target ow
   block id** — because parsers legitimately segment blocks differently, and a fixed `expected_blocks`
   would unfairly penalize a parser whose segmentation differs but is correct.
 
-### The run
+### The scoring service (backend core)
 
 ```
-for case in load_cases(benchmark_dir):
-    for parser in applicable_parsers(case):
-        run = capture(parser, case.doc)          # -> { cdm, cost, latency }
-        for target in case.targets:
-            expected = load_truth(target)         # dimension-typed loader
-            score, details = SCORERS[target.dimension](run.cdm, expected)
-            results.append(Result(case, parser, target, score, run.cost, run.latency, details))
-report(results)                                   # printed table + results.json
+run = create_run(case_ids, parsers)              # persisted, status=running
+for case in cases(run):
+    for parser in applicable_parsers(case, run):
+        cdm, cost, latency = capture(parser, case.source)     # adapter.adapt(...), timed
+        for target in case.targets:                            # only asserted dimensions
+            score, details = SCORERS[target.dimension](cdm, target.expected)
+            save_result(run, case, parser, target.dimension, score, details, cost, latency)
+finish_run(run)                                   # status=complete
 ```
 
-Printed output shape:
+What the UI shows (a comparison table keyed by parser, one row group per case × dimension):
 
 ```
 acme_invoice · text
@@ -139,14 +134,18 @@ acme_invoice · text
   llamaparse       0.99   (cloud, 3.2s,   $0.010)
 ```
 
-### First scorer: **text faithfulness** (chosen for v0)
+Reuse existing evaluation UI primitives where they fit (`ComparisonTable`, `ScorePill`,
+`MetricCard`) rather than building new ones.
 
-Rationale for picking text over table first: clean reference text is the **cheapest ground truth
-to author**, so it proves the entire loop (corpus → capture → scorer → report) end-to-end with the
-least up-front labeling, before we take on the harder table metric. Table structure is scorer #2,
-added purely through the scorer-registry seam — no harness change.
+### The one scorer: **text faithfulness** (chosen for the first slice)
 
-- **Ground truth:** `truth/text.txt` — the known-correct readable text of the document.
+Rationale for text over table first: a clean reference string is the **cheapest ground truth to
+author** (paste/type it in the UI), so it proves the full vertical (upload → author truth → run →
+persisted score) with the least labeling before we take on the harder table metric. Table structure
+is scorer #2, added purely through the scorer-registry seam — no service change.
+
+- **Ground truth:** the known-correct readable text of the document, authored in the UI, stored on
+  the `text` target.
 - **Input from CDM:** `cdm.full_text` (fall back to concatenated block text if absent).
 - **Metric:** normalize both sides (whitespace, casing per config), then report three numbers,
   combined into the `[0,1]` score:
@@ -154,47 +153,51 @@ added purely through the scorer-registry seam — no harness change.
   - **omission rate** — fraction of reference content missing from the parse.
   - **hallucination rate** — fraction of parsed content absent from the reference.
   Omission and hallucination are called out separately because they are the two failure modes that
-  actually hurt downstream RAG; a single blended similarity can hide them. v0 score =
-  `similarity`; omission/hallucination travel in `details` and are printed as sub-columns.
+  actually hurt downstream RAG; a single blended similarity can hide them. Slice-1 score =
+  `similarity`; omission/hallucination travel in `details` and surface as sub-columns.
 
-### Components (v0)
+### Components (first slice) — full-stack, mirroring `extraction_eval`
 
-| Component | v0 form | File (proposed) |
+| Layer | Responsibility | File (proposed) |
 |---|---|---|
-| Case loader | parse `case.yaml`, resolve truth paths | `app/services/parser_eval/cases.py` |
-| Capture | call `adapter.adapt(...)`, time it, read cost from `parser_extras`/job metadata | `app/services/parser_eval/capture.py` |
-| Scorer registry | hardcoded `dict[str, Scorer]` | `app/services/parser_eval/scorers/__init__.py` |
+| Models | `ParserEvalCase/Target/Run/Result` | `app/models/parser_eval.py` |
+| Repository | persistence + result upsert keyed `(run, case, parser, dimension)` | `app/repositories/parser_eval_repository.py` |
+| Scorer registry | `dict[dimension → scorer]`, one entry (`text`) | `app/services/parser_eval/scorers/__init__.py` |
 | Text scorer | the faithfulness metric above | `app/services/parser_eval/scorers/text.py` |
-| Reporter | printed table + `results.json` | `app/services/parser_eval/report.py` |
-| Entry point | `python -m app.services.parser_eval.run [--benchmark DIR]` | `app/services/parser_eval/run.py` |
+| Capture | `adapter.adapt(...)`, timed, cost from `parser_extras`/job metadata | `app/services/parser_eval/capture.py` |
+| Engine/service | orchestrate run → capture → score → persist | `app/services/parser_eval/engine.py`, `service.py` |
+| Router | create case/target, trigger run, fetch results | `app/routers/parser_eval.py` |
+| Schemas | request/response DTOs | `app/schemas/parser_eval.py` |
+| Frontend | author case+truth, run, view comparison | `frontend/src/components/evaluation/parser/…` |
 
-(Directory names are proposals; final layout settled in the implementation plan. The point is that
-capture, scoring, and reporting are separate modules from day one, even while wired inline.)
+(Names are proposals; final layout settled in the plan. The point: capture, scoring, and persistence
+are separate modules from day one, so seams wrap them additively.)
 
-## Extension seams (scaffolding — deliberately NOT built in v0)
+## Extension seams (scaffolding — deliberately NOT built in the first slice)
 
-Each seam is written so v0 leaves a clean joint. None are implemented until a second concrete case
-forces them.
+Each seam is written so the first slice leaves a clean joint. None are implemented until a concrete
+case forces them. (The DB + a minimal frontend view are *in* the first slice — see Components — so
+seam #10 is only about the *richer* surface that follows.)
 
-1. **Scorer registry.** v0 is a literal `dict[dimension → scorer]`. Seam: a `register("table", fn)`
-   interface so new dimensions are additive files, never edits to the run loop.
+1. **Scorer registry.** First slice is a literal `dict[dimension → scorer]` with one entry. Seam: a
+   `register("table", fn)` interface so new dimensions are additive files, never edits to the engine.
 2. **Dimension-typed truth loader.** `expected` for `text` is a string, for `table` is HTML, for
    `reading_order` a list. Seam: a per-dimension `load_truth` keyed by dimension, so no single "gold
    format" is ever forced across dimensions.
 3. **Parser = adapter + config.** E.g. the `custom_pipeline` adapter run under different tool configs
    (pdfplumber-based or otherwise). Seam: an evaluator identity of `(adapter, config)` so the *same*
-   adapter under different configs is a distinct comparable row. v0 uses default config and
+   adapter under different configs is a distinct comparable row. First slice uses default config and
    identifies parsers by `ParserKind`.
-4. **Capture/score split.** v0 runs `adapt()` inline. Seam: a `CachedRun {cdm, cost, latency}`
-   boundary persisted to disk, so scoring decouples from expensive parsing once cloud cost/latency
+4. **Capture/score split.** First slice runs `adapt()` inline. Seam: a `CachedRun {cdm, cost, latency}`
+   boundary persisted, so scoring decouples from expensive parsing once cloud cost/latency
    make re-parsing-per-metric-tweak wasteful. Aligns with existing raw-payload persistence.
-5. **Profiles & selection.** v0 prints raw per-dimension scores. Seam: a `Profile { weights, floors,
+5. **Profiles & selection.** First slice reports raw per-dimension scores. Seam: a `Profile { weights, floors,
    tie_tolerance }` applied *at report time* (so one scoring pass serves many projects) that
    produces a weighted total, marks who clears the floor, and applies the cheapest/fastest-wins
    tie-break — directly implementing the pdfplumber-vs-docling decision. Kicks in at >1 dimension.
    Profiles may later map to real app Projects; not now.
 6. **Baseline / regression.** Seam: freeze a scorecard as committed baseline (mirroring the existing
-   `UPDATE_SNAPSHOTS` pattern) and fail when a parser drops >Δ below its own baseline. No CI in v0.
+   `UPDATE_SNAPSHOTS` pattern) and fail when a parser drops >Δ below its own baseline. No CI initially.
 7. **Truth bootstrapping.** Authoring `expected` from scratch is the main cost. Seam: generate a
    draft `expected` from a trusted parser run, then hand-correct — record-then-correct, like
    snapshots.
@@ -203,12 +206,10 @@ forces them.
    small hand-labeled anchor set so its error rate is known before it is trusted. Never the backbone.
 9. **Extrinsic layer.** Intrinsic scores are primary. Seam: a future evaluator that feeds a parse
    through chunk → retrieve → answer and scores end-task quality, reusing existing answer-evals work.
-10. **DB-backed + frontend surface (the destination, not optional).** Unlike the other seams, this
-    is a committed goal, sequenced as a later slice: `parser_eval` models/repository/router, ground
-    truth persisted (golden-set style), results stored per run, and a `frontend/.../evaluation` view
-    to trigger and browse runs. The v0 core (scoring loop + data model) is shaped so these layers
-    wrap it additively. The only open question is *which slice* introduces the UI (see Open
-    Questions), not *whether*.
+10. **Richer frontend + operational surface.** The *minimal* DB + UI (author a case, one truth
+    dimension, run, view a comparison table) is in the first slice. This seam is the surface that
+    follows: run history browsing, multi-case corpus management, a golden-set-style truth library,
+    profile/floor configuration UI, and a regression/baseline dashboard. Built as those needs land.
 
 ## Relationship to existing code
 
@@ -227,25 +228,23 @@ forces them.
   feature a user runs and browses in the UI, not a developer-only script.
 
 **Phasing "start simple" against "it's a real feature":** the destination is the full DB-backed,
-frontend-surfaced feature. We still build it in thin slices, starting with the smallest correct
-core (the scoring loop + data model) and adding the router/UI in a following slice, rather than
-front-loading a large surface. Exactly where the frontend enters is settled in the implementation
-plan (see Open Questions). The v0 module boundaries above are chosen so the DB/router/UI layers wrap
-the core additively.
+frontend-surfaced feature. The **first slice is a thin end-to-end vertical** — one scorer (`text`)
+wired through models → repository → engine → router → a minimal UI view — proving the whole stack
+before breadth. Additional dimensions, profiles, caching, and the richer surface follow through the
+seams. Truth is authored **in the UI** from the first slice (no file corpus).
 
-## Success criteria for v0
+## Success criteria for the first slice
 
-- Running the entry point over the anchor corpus prints a per-case, per-parser table of text
-  faithfulness scores with cost + latency, and writes `results.json`.
-- Adding the table scorer later requires only: a new scorer file + registry line + a `truth/*.html`
-  artifact and a `case.yaml` target — no change to the run loop, reporter, or case loader.
+- In the app UI: create a case (upload a document), author the `text` ground truth, select ≥2
+  parsers, run, and see a persisted per-parser score table with cost + latency.
+- Scores, cost, and latency persist as `ParserEvalResult` rows keyed `(run, case, parser, dimension)`
+  and reload after refresh.
+- A case with no `text` target simply isn't scored on `text` — no false-zero. (Asserted-or-not works.)
+- Adding the table scorer later requires only: a new scorer file + one registry line + a `table`
+  target type — no change to the engine, router, or result model.
 
 ## Open questions (resolve in planning)
 
-- **Which slice introduces the frontend.** Options: (a) backend scoring core + data model first,
-  UI in the immediately-following slice; or (b) a thin end-to-end vertical slice (one scorer wired
-  through DB + a minimal UI view) from the start. Determines whether early ground truth is authored
-  as files or through the UI.
 - Exact edit-distance vs. token-F1 choice and normalization rules for the text scorer.
 - Where cost/latency come from per adapter (job metadata exists for LlamaParse; local parsers need a
   timer and `$0`).
