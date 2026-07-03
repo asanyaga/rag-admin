@@ -29,14 +29,22 @@ table structure for a document, pick `pdfplumber` — it is CPU-only, fast, and 
 - Start **as simple as possible**; grow abstractions only when a second concrete case demands them.
 - Leave clean seams so extension is additive, not a rewrite.
 
-## Non-Goals (for v0)
+## Non-Goals (for the first slice)
+
+The feature's destination is DB-backed and frontend-surfaced (see "Relationship to existing code").
+These are deferred out of the *first* slice, not out of the feature:
 
 - No CI integration, no regression gating. (Named as a seam; deferred.)
 - No extrinsic / end-task evaluation (retrieval or answer quality). **Intrinsic first** — score the
   CDM directly against ground truth. Extrinsic is a future layer.
-- No profile/weighting engine, no automatic "winner" selection. v0 prints raw per-dimension scores.
-- No caching layer / capture-score split. v0 runs parsing and scoring inline.
-- No UI. Output is a printed table + a JSON/JSONL artifact.
+- No profile/weighting engine, no automatic "winner" selection. First slice reports raw
+  per-dimension scores.
+- No caching layer / capture-score split. First slice runs parsing and scoring inline.
+- Implementing a `pdfplumber` adapter — pdfplumber belongs to the existing `custom_pipeline`.
+
+**Frontend note:** the feature *is* surfaced in the app UI; whether the UI lands in the first slice
+or the second is the lead Open Question below. The "printed table + `results.json`" form is the
+minimal developer-facing output of the scoring core, which the UI later reads — not the end state.
 
 ## Mental model
 
@@ -52,10 +60,16 @@ Result:                score in [0,1] for (case, parser, target), plus cost + la
   structure, reading order, role/structure accuracy, spatial (bbox). Different documents stress
   different dimensions; a parser is never one number.
 - A **scorer** is a small, independently testable unit: `score(cdm, expected) -> (float, details)`.
-- **Ground truth is per-dimension**, not per-document. A case carries `expected` only for the
-  dimensions it tests. A table-stress doc ships a gold table; a prose doc ships clean text. Ground
-  truth cost scales with *what you test*, not with document complexity — this is what makes the
-  corpus sustainable.
+- **One document, many scorers — but ground truth stays per-dimension.** A document is a *container*:
+  it may attach several dimension scorers (that is the intended UX). But each dimension carries its
+  **own** `expected` artifact and is **explicitly asserted or not** for that document. There is no
+  single shared ground-truth object that all scorers read — that path causes all-or-nothing
+  authoring, silent false-zeros when a dimension's truth is absent, schema-migration ripple, and
+  segmentation bias. See "Ground truth model" below.
+- **Ground truth cost scales with what you test**, not with document complexity. A table-stress doc
+  ships a gold table; a prose doc ships clean text; neither is forced to label the other's dimension.
+- **The result key is `(doc, parser, dimension)`** — a flat row, from day one. Many scorers per doc
+  produces a vector of these rows, which is also how baselines and regression are keyed.
 
 ## v0 design — the minimal loop
 
@@ -74,16 +88,34 @@ backend/app/services/parser_eval/benchmark/
       p2.html             #   gold table            (table dimension)
 ```
 
-`case.yaml`:
+`case.yaml` — a doc may attach multiple targets; each names its own dimension + `expected`, and a
+dimension is asserted **only** if it appears here:
 
 ```yaml
 name: acme_invoice
 doc_type: invoice
-parsers: [pdfplumber, docling, llamaparse]   # omit/[] = all registered parsers
+parsers: [docling, llamaparse, custom_pipeline]   # omit/[] = all registered parsers
 targets:
   - dimension: text
     expected: truth/text.txt
+  - dimension: table
+    expected: truth/p2.html         # table is asserted; reading_order/roles are NOT for this doc
 ```
+
+### Ground truth model (why it's per-dimension, not one shared object)
+
+A document containing multiple targets is the intended shape, but each target owns its ground truth:
+
+- **Per-dimension `expected`.** The `text` target reads `truth/text.txt`; the `table` target reads
+  `truth/p2.html`. No scorer reads a shared "expected document."
+- **Asserted-or-not is explicit.** A scorer runs for a doc **only if that dimension is a target**. A
+  missing dimension means "not evaluated here" — never a silent score of 0. This prevents
+  false-zeros and keeps authoring incremental (add a target when you're ready to label it).
+- **Prefer content-oriented truth.** Clean text, gold-table HTML — truth that does *not* assume a
+  block structure. Structural `expected_blocks`/`expected_page` is reserved for dimensions that are
+  inherently positional (reading order, role labels), and even then scorers align by **content, not
+  block id** — because parsers legitimately segment blocks differently, and a fixed `expected_blocks`
+  would unfairly penalize a parser whose segmentation differs but is correct.
 
 ### The run
 
@@ -102,9 +134,9 @@ Printed output shape:
 
 ```
 acme_invoice · text
-  pdfplumber   0.98   (cpu,   120ms,  $0)
-  docling      0.97   (cpu,   890ms,  $0)
-  llamaparse   0.99   (cloud, 3.2s,   $0.010)
+  docling          0.97   (cpu,   890ms,  $0)
+  custom_pipeline  0.95   (cpu,   140ms,  $0)
+  llamaparse       0.99   (cloud, 3.2s,   $0.010)
 ```
 
 ### First scorer: **text faithfulness** (chosen for v0)
@@ -149,9 +181,10 @@ forces them.
 2. **Dimension-typed truth loader.** `expected` for `text` is a string, for `table` is HTML, for
    `reading_order` a list. Seam: a per-dimension `load_truth` keyed by dimension, so no single "gold
    format" is ever forced across dimensions.
-3. **Parser = adapter + config.** The `pdfplumber_config` idea. Seam: an evaluator identity of
-   `(adapter, config)` so the *same* adapter under different configs is a distinct comparable row.
-   v0 uses default config and identifies parsers by `ParserKind`.
+3. **Parser = adapter + config.** E.g. the `custom_pipeline` adapter run under different tool configs
+   (pdfplumber-based or otherwise). Seam: an evaluator identity of `(adapter, config)` so the *same*
+   adapter under different configs is a distinct comparable row. v0 uses default config and
+   identifies parsers by `ParserKind`.
 4. **Capture/score split.** v0 runs `adapt()` inline. Seam: a `CachedRun {cdm, cost, latency}`
    boundary persisted to disk, so scoring decouples from expensive parsing once cloud cost/latency
    make re-parsing-per-metric-tweak wasteful. Aligns with existing raw-payload persistence.
@@ -170,34 +203,35 @@ forces them.
    small hand-labeled anchor set so its error rate is known before it is trusted. Never the backbone.
 9. **Extrinsic layer.** Intrinsic scores are primary. Seam: a future evaluator that feeds a parse
    through chunk → retrieve → answer and scores end-task quality, reusing existing answer-evals work.
-10. **DB-backed feature graduation.** v0 is a file-based harness under `app/services/parser_eval/`.
-    Seam: promote to the same shape as the other evals — `parser_eval` models/repository/router,
-    ground truth stored like golden sets, results persisted per run, and a `frontend/.../evaluation`
-    view — so parser-eval runs can be triggered and browsed from the UI. Pursued only when that need
-    is real; the v0 package boundary is chosen to make this additive.
+10. **DB-backed + frontend surface (the destination, not optional).** Unlike the other seams, this
+    is a committed goal, sequenced as a later slice: `parser_eval` models/repository/router, ground
+    truth persisted (golden-set style), results stored per run, and a `frontend/.../evaluation` view
+    to trigger and browse runs. The v0 core (scoring loop + data model) is shaped so these layers
+    wrap it additively. The only open question is *which slice* introduces the UI (see Open
+    Questions), not *whether*.
 
-## Relationship to existing eval code
+## Relationship to existing code
 
-The two existing evals are DB-backed, full-stack features, and both live under `app/services/`:
+**This is a new, first-class, frontend-surfaced feature — not an extension of anything that exists.**
 
-- **Answer / retrieval eval** — `app/services/eval_service.py` + `eval_run` models/repository/router
-  + golden sets + `frontend/src/components/evaluation/`.
-- **Extraction eval** — the `app/services/extraction_eval/` package (`engine.py`, `service.py`,
-  `field_matchers.py`, `line_item_matcher.py`) + models/repository/router.
+- The `tests/cdm/eval/` invariant/snapshot/cost artifacts are **early test scaffolding from the
+  parse feature's first iterations**. They are *not* the foundation for this work and are not being
+  extended, refactored, or depended on. Parser eval is greenfield.
+- Its **peers** are the other two evals, and it is modeled after them as a sibling feature under
+  `app/services/`:
+  - **Answer / retrieval eval** — `app/services/eval_service.py` + `eval_run`
+    models/repository/router + golden sets + `frontend/src/components/evaluation/`.
+  - **Extraction eval** — `app/services/extraction_eval/` package + models/repository/router + UI.
+- **Parser eval lives at `app/services/parser_eval/`**, mirroring `app/services/extraction_eval/`,
+  and — like both peers — is **DB-backed and surfaced in the app frontend**. The end state is a
+  feature a user runs and browses in the UI, not a developer-only script.
 
-**Parser eval is co-located with them: `app/services/parser_eval/`, mirroring
-`app/services/extraction_eval/`.** This is the requested consistency point — parser eval sits beside
-the other evals, not under `app/cdm/`.
-
-One deliberate difference for v0: the existing evals persist ground truth and results in the
-database. Parser eval **starts as a lightweight, file-based harness** (benchmark corpus + truth
-artifacts on disk, results to `results.json`) per the "start simple" goal. Graduating to the
-DB-backed shape (models, repository, router, frontend) is **seam #10 below**, matching how the other
-evals are built — pursued only when the app needs to trigger and browse parser-eval runs from the UI.
-
-This harness also complements the existing `tests/cdm/eval/` invariant + snapshot + cost tests
-(structural + change + cost layers), which stay as-is; parser eval adds the missing
-**quality-vs-ground-truth** and **cross-parser comparison** layers.
+**Phasing "start simple" against "it's a real feature":** the destination is the full DB-backed,
+frontend-surfaced feature. We still build it in thin slices, starting with the smallest correct
+core (the scoring loop + data model) and adding the router/UI in a following slice, rather than
+front-loading a large surface. Exactly where the frontend enters is settled in the implementation
+plan (see Open Questions). The v0 module boundaries above are chosen so the DB/router/UI layers wrap
+the core additively.
 
 ## Success criteria for v0
 
@@ -208,8 +242,14 @@ This harness also complements the existing `tests/cdm/eval/` invariant + snapsho
 
 ## Open questions (resolve in planning)
 
+- **Which slice introduces the frontend.** Options: (a) backend scoring core + data model first,
+  UI in the immediately-following slice; or (b) a thin end-to-end vertical slice (one scorer wired
+  through DB + a minimal UI view) from the start. Determines whether early ground truth is authored
+  as files or through the UI.
 - Exact edit-distance vs. token-F1 choice and normalization rules for the text scorer.
 - Where cost/latency come from per adapter (job metadata exists for LlamaParse; local parsers need a
   timer and `$0`).
-- Whether `pdfplumber` is added as a new `ParserKind` + adapter now, or the corpus starts with
-  existing adapters and pdfplumber lands with the table scorer.
+
+_Out of scope for this feature (noted to prevent scope creep): implementing a `pdfplumber` adapter.
+pdfplumber is a tool inside the existing `custom_pipeline` and was only ever an illustrative example;
+the corpus compares whatever adapters already exist._
