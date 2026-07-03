@@ -1,5 +1,6 @@
 import asyncio
 from typing import AsyncGenerator, Generator
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -58,3 +59,34 @@ async def client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 @pytest.fixture(scope="function")
 def sync_client() -> TestClient:
     return TestClient(app)
+
+
+@pytest.fixture(scope="function")
+async def seed_project_user_source(test_db: AsyncSession):
+    """Insert a Project + User + SourceDocument; return (project_id, user_id, source_id)."""
+    from app.models import User
+    from app.models.project import Project
+    from app.models.source_document import SourceDocument
+
+    user = User(
+        id=uuid4(),
+        email=f"{uuid4()}@example.com",
+        full_name="Test User",
+        auth_provider="email",
+        password_hash="hashed",
+    )
+    test_db.add(user)
+    await test_db.commit()
+    await test_db.refresh(user)
+
+    project = Project(id=uuid4(), user_id=user.id, name="Test Project")
+    test_db.add(project)
+    await test_db.commit()
+    await test_db.refresh(project)
+
+    source = SourceDocument(id=uuid4(), sha256="a" * 64, storage_uri="local://a.pdf")
+    test_db.add(source)
+    await test_db.commit()
+    await test_db.refresh(source)
+
+    return project.id, user.id, source.id
