@@ -12,6 +12,7 @@ import type { ClassificationConfigValue } from '@/components/classification/Clas
 import { PromptConfigEditor } from '@/components/shared/PromptConfigEditor'
 import { useParseRuns } from '@/hooks/useParseRuns'
 import { createClassificationRun, getClassificationSystemPromptConfig } from '@/api/classification'
+import { buildClassifierConfig } from '@/lib/classifierConfig'
 import type { ParseConfig } from '@/types/parsing'
 import type { PromptConfig } from '@/types/prompt-config'
 import type { RerunDefaults } from '@/types/classification'
@@ -112,20 +113,9 @@ export function NewClassificationRunPage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const classifierConfig =
-        classifyConfig.classifierType === 'llm'
-          ? {
-              provider: promptConfig.provider,
-              model: promptConfig.model,
-              batch_size: batchSize,
-              batch_overlap: batchOverlap,
-              llm_config: {
-                system_prompt: promptConfig.systemPrompt ?? null,
-                temperature: promptConfig.temperature ?? 0.0,
-                max_tokens: promptConfig.maxTokens ?? 4096,
-              },
-            }
-          : {}
+      const classifierConfig = buildClassifierConfig(
+        classifyConfig.classifierType, promptConfig, batchSize, batchOverlap,
+      )
 
       const run = await createClassificationRun(documentId, {
         parseRunId: latestViableRun.id,
