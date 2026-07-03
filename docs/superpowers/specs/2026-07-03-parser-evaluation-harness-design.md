@@ -65,7 +65,7 @@ A tiny anchor set of ~5 hand-picked stress documents (e.g. one prose, one table-
 multi-column, one scanned, one form). Grow by adding real failures, not synthetic breadth.
 
 ```
-backend/app/cdm/eval/benchmark/
+backend/app/services/parser_eval/benchmark/
   <case_name>/
     source.<ext>          # the document
     case.yaml             # manifest: targets + which parsers apply
@@ -129,12 +129,12 @@ added purely through the scorer-registry seam — no harness change.
 
 | Component | v0 form | File (proposed) |
 |---|---|---|
-| Case loader | parse `case.yaml`, resolve truth paths | `app/cdm/eval/harness/cases.py` |
-| Capture | call `adapter.adapt(...)`, time it, read cost from `parser_extras`/job metadata | `app/cdm/eval/harness/capture.py` |
-| Scorer registry | hardcoded `dict[str, Scorer]` | `app/cdm/eval/harness/scorers/__init__.py` |
-| Text scorer | the faithfulness metric above | `app/cdm/eval/harness/scorers/text.py` |
-| Reporter | printed table + `results.json` | `app/cdm/eval/harness/report.py` |
-| Entry point | `python -m app.cdm.eval.harness.run [--benchmark DIR]` | `app/cdm/eval/harness/run.py` |
+| Case loader | parse `case.yaml`, resolve truth paths | `app/services/parser_eval/cases.py` |
+| Capture | call `adapter.adapt(...)`, time it, read cost from `parser_extras`/job metadata | `app/services/parser_eval/capture.py` |
+| Scorer registry | hardcoded `dict[str, Scorer]` | `app/services/parser_eval/scorers/__init__.py` |
+| Text scorer | the faithfulness metric above | `app/services/parser_eval/scorers/text.py` |
+| Reporter | printed table + `results.json` | `app/services/parser_eval/report.py` |
+| Entry point | `python -m app.services.parser_eval.run [--benchmark DIR]` | `app/services/parser_eval/run.py` |
 
 (Directory names are proposals; final layout settled in the implementation plan. The point is that
 capture, scoring, and reporting are separate modules from day one, even while wired inline.)
@@ -170,14 +170,34 @@ forces them.
    small hand-labeled anchor set so its error rate is known before it is trusted. Never the backbone.
 9. **Extrinsic layer.** Intrinsic scores are primary. Seam: a future evaluator that feeds a parse
    through chunk → retrieve → answer and scores end-task quality, reusing existing answer-evals work.
+10. **DB-backed feature graduation.** v0 is a file-based harness under `app/services/parser_eval/`.
+    Seam: promote to the same shape as the other evals — `parser_eval` models/repository/router,
+    ground truth stored like golden sets, results persisted per run, and a `frontend/.../evaluation`
+    view — so parser-eval runs can be triggered and browsed from the UI. Pursued only when that need
+    is real; the v0 package boundary is chosen to make this additive.
 
 ## Relationship to existing eval code
 
-- Keeps `tests/cdm/eval/` invariant + snapshot + cost tests as-is (structural + change + cost
-  layers). This harness adds the missing **quality-vs-ground-truth** and **cross-parser comparison**
-  layers.
-- Lives under `app/cdm/eval/` (library, reusable) rather than test-only, because capture is a
-  deliberate script that may spend money, and the scorers are reusable logic.
+The two existing evals are DB-backed, full-stack features, and both live under `app/services/`:
+
+- **Answer / retrieval eval** — `app/services/eval_service.py` + `eval_run` models/repository/router
+  + golden sets + `frontend/src/components/evaluation/`.
+- **Extraction eval** — the `app/services/extraction_eval/` package (`engine.py`, `service.py`,
+  `field_matchers.py`, `line_item_matcher.py`) + models/repository/router.
+
+**Parser eval is co-located with them: `app/services/parser_eval/`, mirroring
+`app/services/extraction_eval/`.** This is the requested consistency point — parser eval sits beside
+the other evals, not under `app/cdm/`.
+
+One deliberate difference for v0: the existing evals persist ground truth and results in the
+database. Parser eval **starts as a lightweight, file-based harness** (benchmark corpus + truth
+artifacts on disk, results to `results.json`) per the "start simple" goal. Graduating to the
+DB-backed shape (models, repository, router, frontend) is **seam #10 below**, matching how the other
+evals are built — pursued only when the app needs to trigger and browse parser-eval runs from the UI.
+
+This harness also complements the existing `tests/cdm/eval/` invariant + snapshot + cost tests
+(structural + change + cost layers), which stay as-is; parser eval adds the missing
+**quality-vs-ground-truth** and **cross-parser comparison** layers.
 
 ## Success criteria for v0
 
