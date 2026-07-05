@@ -4,7 +4,7 @@
 **Status:** Draft for review — **no code to be written against this yet**
 **Author:** brainstorming session (asanyaga)
 **Applies to:** all evaluation features — parser eval, retrieval/answer eval, extraction eval, classification eval (future)
-**Revision:** r3 — all open questions resolved (Q1–Q7): concrete per-feature tables + uniform `ParserEval*` naming, Dataset container modeled now, `page` stays inside `expected`, Variant = `(adapter, config)` from day one, Experiment folds into Eval Run + Variant. (r2 added Datasets, generation/provenance, run-snapshots-cases.)
+**Revision:** r4 — Results are immutable/append-only; `variant_key` is a *grouping/comparison* identity, not a mutation key; a run is single-shot (retry = new run); variance sampling across executions is a named seam. (r3 resolved Q1–Q7; r2 added Datasets, generation/provenance, run-snapshots-cases.)
 
 ---
 
@@ -201,10 +201,27 @@ adapter + normalized config), since a raw JSON blob can't back a unique constrai
 
 ### Result — the produced cell
 `{ id, run_id, eval_case_id, adapter, config, variant_key, metrics{name→value}, primary_metric?, cost, latency_ms }`,
-unique on `(run, eval_case, variant_key)` where `variant_key` is the deterministic hash of
-`(adapter, config)`. This is the output of applying one Scorer to one Eval Case under one Variant. It
-stores **metric values**, cost, and latency. It carries **no verdict** — judgment is a later, separate
-layer.
+unique on `(run, eval_case, variant_key)`. This is the output of applying one Scorer to one Eval Case
+under one Variant. It stores **metric values**, cost, and latency. It carries **no verdict** — judgment
+is a later, separate layer.
+
+**Results are immutable append-only facts — never overwritten.** A Result records what one execution
+produced. This matters because a Variant may be **probabilistic** (LLM-based parsers, sampling, some
+OCR): the same `(adapter, config)` legitimately yields a different output each execution, so
+overwriting would destroy a real data point.
+
+- **`variant_key` is a *grouping/comparison* identity, not a mutation key.** It must stay
+  **deterministic** so all executions of one variant group together (to compute mean/variance and to
+  line variants up in the comparison table). Determinism is a feature; it is *not* what makes a row
+  mutable.
+- **A run is single-shot.** Within one Eval Run each `(case, variant)` is executed once, so
+  `(run, eval_case, variant_key)` is a uniqueness *safety net*, not a place to upsert. **Retry = a new
+  run** (comparability across runs is preserved by run immutability); variance across executions is
+  captured as variance across runs.
+- **Seam — variance sampling / trials.** To sample a probabilistic variant *within* one run, add a
+  `trial_index` and widen uniqueness to `(run, eval_case, variant_key, trial_index)`; each trial is its
+  own immutable row, aggregated (mean + variance) at report time. `variant_key` stays deterministic and
+  now *groups* the trials. Not built until a probabilistic variant is actually on the bench.
 
 ---
 
@@ -343,6 +360,10 @@ Observations:
 5. **Variant is a named first-class column** on Run + Result, never JSON-buried. **Variant identity =
    `(adapter, config)` from day one** *(Q5)* — stored as `adapter` + `config` + a deterministic
    `variant_key`; uniqueness `(run, eval_case, variant_key)`.
+15. **Results are immutable/append-only; run is single-shot.** `variant_key` is a deterministic
+    *grouping/comparison* identity, not a mutation key. No upsert-overwrite — retry is a new run.
+    Variance sampling *within* a run (a `trial_index` axis) is a named seam, deferred until a
+    probabilistic variant is benched.
 6. **Judgment & Selection (Target/Profile) are named but deferred** (seam #5) — report-time policy over
    aggregate metrics, never on the case.
 7. **Dataset is the container entity, modeled from the start.** *(Revised from r1; Q3 resolved.)*

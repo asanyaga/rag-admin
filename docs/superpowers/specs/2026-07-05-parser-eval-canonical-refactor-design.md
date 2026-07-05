@@ -34,6 +34,10 @@ Out of scope (deferred — unchanged from the harness design's seams):
 - Golden-tier mechanics (derived vs explicit) — deferred per entity-model Q4; **no `tier` field**.
 - Synthetic-generation pipeline — only the provenance/review *slot* is added, no generator.
 - Verification workflow (endpoints to promote draft→verified) — fields only, no promotion API.
+- **Variance sampling / trials** — sampling a probabilistic variant multiple times *within* one run
+  (`trial_index` + widened uniqueness `(run, case, variant_key, trial_index)`, aggregated at report
+  time). Named seam; deferred until a probabilistic variant is benched. Until then, variance is
+  observed across runs.
 - Additional dimension scorers (table/reading_order/roles) — registry seam unchanged.
 - Retrofit of extraction/retrieval eval — later, targeted refactors.
 
@@ -128,6 +132,12 @@ becomes the new `ParserEvalCase`. `parser_eval_targets` is dropped.
 - Unique `(run_id, eval_case_id, variant_key)` (`uq_parser_eval_results_run_case_variant`).
   Index on `run_id`. **`dimension` is NOT on Result** — it is a property of the Eval Case.
 
+**Results are immutable / append-only.** A run is single-shot (each `(case, variant)` executes once),
+so results are **inserted, never upserted-over**. `variant_key` is a deterministic *grouping* identity
+(for comparison/aggregation), not a mutation key. The unique constraint is a safety net; **retry = a
+new run**. This preserves genuine data points for **probabilistic variants** (LLM parsers, sampling,
+some OCR), whose output legitimately varies per execution.
+
 ### Variant identity
 
 `variant_key(adapter: str, config: dict) -> str` in `app/services/parser_eval/variants.py`:
@@ -157,9 +167,9 @@ SCORERS: dict[str, ScorerSpec] = {
 ### Engine
 
 Loop `for case in cases: for variant in run.variants:` — capture with `(adapter, config)`, run the
-case's single dimension scorer (no inner target loop; the case *is* one dimension), and upsert a
-Result keyed by `variant_key`. On capture failure, write `metrics={primary: 0.0}`,
-`details={"capture_failed": True}`.
+case's single dimension scorer (no inner target loop; the case *is* one dimension), and **insert** an
+immutable Result keyed by `variant_key` (append-only — no overwrite). On capture failure, write
+`metrics={primary: 0.0}`, `details={"capture_failed": True}`.
 
 ### Service / Router / API
 
@@ -181,6 +191,7 @@ Result keyed by `variant_key`. On capture failure, write `metrics={primary: 0.0}
 2. A Result stores a `metrics` map + `primary_metric`; no `score` float column remains.
 3. Variants are `(adapter, config)`; two configs of the same adapter produce two distinct Results under
    one run (unique on `variant_key`).
+3a. Results are **append-only** — the engine inserts (never upserts-over); re-running is a new run.
 4. A run created with `dataset_id` snapshots the dataset's member case-ids into `eval_case_ids`, and
    later dataset edits do not change that run's covered set.
 5. Creating a run with an unknown adapter returns 422 (unchanged behaviour).

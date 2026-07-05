@@ -648,7 +648,7 @@ git commit -m "refactor(parser-eval): scorer emits metrics map; registry uses Sc
   - `get_case(case_id) -> ParserEvalCase | None`; `list_cases(project_id) -> list[ParserEvalCase]`; `get_cases_by_ids(ids) -> list[ParserEvalCase]`
   - `create_dataset(project_id, name, description, user_id) -> ParserEvalDataset`; `list_datasets(project_id)`; `get_dataset(dataset_id)`; `add_case_to_dataset(dataset_id, eval_case_id)`; `remove_case_from_dataset(dataset_id, eval_case_id)`; `list_dataset_case_ids(dataset_id) -> list[UUID]`
   - `create_run(project_id, name, variants, eval_case_ids, user_id, dataset_id=None) -> ParserEvalRun`; `get_run`; `list_runs`; `set_run_status`
-  - `upsert_result(run_id, eval_case_id, adapter, config, variant_key, metrics, primary_metric, details, cost, latency_ms)`; `get_results(run_id)`
+  - `insert_result(run_id, eval_case_id, adapter, config, variant_key, metrics, primary_metric, details, cost, latency_ms)` — **append-only** (no overwrite); `get_results(run_id)`
 
 - [ ] **Step 1: Write the failing repository tests**
 
@@ -685,20 +685,27 @@ async def test_dataset_membership_roundtrip(test_db, seed_project_user_source):
 
 
 @pytest.mark.asyncio
-async def test_result_upsert_keyed_by_variant(test_db, seed_project_user_source):
+async def test_results_are_append_only(test_db, seed_project_user_source):
     project_id, user_id, source_id = seed_project_user_source
     repo = ParserEvalRepository(test_db)
     case = await repo.create_case(project_id, source_id, ParserEvalDimension.text,
                                   {"pages": ["x"]}, user_id)
-    run = await repo.create_run(project_id, "r", [{"adapter": "docling", "config": {}}],
-                                [str(case.id)], user_id)
-    await repo.upsert_result(run.id, case.id, "docling", {}, "docling@aaa",
+    run = await repo.create_run(project_id, "r",
+                                [{"adapter": "docling", "config": {}}], [str(case.id)], user_id)
+    # Two distinct variants -> two immutable rows.
+    await repo.insert_result(run.id, case.id, "docling", {}, "docling@aaa",
                              {"similarity": 0.9}, "similarity", {}, {}, 100)
-    await repo.upsert_result(run.id, case.id, "docling", {}, "docling@aaa",
-                             {"similarity": 0.95}, "similarity", {}, {}, 110)  # same variant_key
-    results = await repo.get_results(run.id)
-    assert len(results) == 1
-    assert results[0].metrics["similarity"] == 0.95
+    await repo.insert_result(run.id, case.id, "custom_pipeline", {"tool": "fitz"},
+                             "custom_pipeline@bbb", {"similarity": 0.8}, "similarity", {}, {}, 40)
+    assert len(await repo.get_results(run.id)) == 2
+
+    # Re-inserting the same (run, case, variant_key) is rejected — results are never overwritten.
+    from sqlalchemy.exc import IntegrityError
+    with pytest.raises(IntegrityError):
+        await repo.insert_result(run.id, case.id, "docling", {}, "docling@aaa",
+                                 {"similarity": 0.95}, "similarity", {}, {}, 110)
+    await test_db.rollback()
+
     await repo.set_run_status(run.id, ParserEvalRunStatus.completed)
     assert (await repo.get_run(run.id)).status == ParserEvalRunStatus.completed
 ```
@@ -837,24 +844,17 @@ class ParserEvalRepository:
             run.error_message = error_message
         await self.session.commit()
 
-    async def upsert_result(self, run_id: UUID, eval_case_id: UUID, adapter: str, config: dict,
+    async def insert_result(self, run_id: UUID, eval_case_id: UUID, adapter: str, config: dict,
                             variant_key: str, metrics: dict, primary_metric: str | None,
                             details: dict | None, cost: dict, latency_ms: int | None) -> None:
-        res = await self.session.execute(
-            select(ParserEvalResult).where(
-                ParserEvalResult.run_id == run_id,
-                ParserEvalResult.eval_case_id == eval_case_id,
-                ParserEvalResult.variant_key == variant_key))
-        existing = res.scalar_one_or_none()
-        if existing is None:
-            self.session.add(ParserEvalResult(
-                run_id=run_id, eval_case_id=eval_case_id, adapter=adapter, config=config,
-                variant_key=variant_key, metrics=metrics, primary_metric=primary_metric,
-                details=details, cost=cost, latency_ms=latency_ms))
-        else:
-            existing.adapter, existing.config = adapter, config
-            existing.metrics, existing.primary_metric = metrics, primary_metric
-            existing.details, existing.cost, existing.latency_ms = details, cost, latency_ms
+        # Append-only: Results are immutable facts (a probabilistic variant may produce a
+        # different output each execution). The unique (run_id, eval_case_id, variant_key)
+        # constraint is a safety net; retry = a new run. Variance sampling within one run
+        # (a trial_index axis) is a deferred seam.
+        self.session.add(ParserEvalResult(
+            run_id=run_id, eval_case_id=eval_case_id, adapter=adapter, config=config,
+            variant_key=variant_key, metrics=metrics, primary_metric=primary_metric,
+            details=details, cost=cost, latency_ms=latency_ms))
         await self.session.commit()
 
     async def get_results(self, run_id: UUID) -> list[ParserEvalResult]:
@@ -885,7 +885,7 @@ git commit -m "refactor(parser-eval): repository for canonical cases/datasets/ru
 - Test: `backend/tests/services/parser_eval/test_engine.py` (rewrite)
 
 **Interfaces:**
-- Consumes: `capture(...)` (unchanged signature — keyword `parser`), `get_scorer` (ScorerSpec), `variant_key`, repository `upsert_result` (Task 5), `ParserEvalRunStatus`.
+- Consumes: `capture(...)` (extended with keyword `config` in Step 4), `get_scorer` (ScorerSpec), `variant_key`, repository `insert_result` (Task 5, append-only), `ParserEvalRunStatus`.
 - Produces: `run_evaluation(repo, parsing_service, storage, *, run_id, cases, variants, project_id, _case_source)` where `variants: list[dict]` each `{adapter, config}`. Each `case` has `.dimension` and `.expected` directly (no `.targets`).
 
 - [ ] **Step 1: Rewrite the engine test**
@@ -906,7 +906,7 @@ class _Repo:
         self.results = []
     async def set_run_status(self, run_id, status, error_message=None):
         self.status = status
-    async def upsert_result(self, run_id, eval_case_id, adapter, config, variant_key,
+    async def insert_result(self, run_id, eval_case_id, adapter, config, variant_key,
                             metrics, primary_metric, details, cost, latency_ms):
         self.results.append((adapter, variant_key, metrics, details))
 
@@ -1006,7 +1006,7 @@ async def run_evaluation(
                     metrics, details = {spec.primary: 0.0}, {"capture_failed": True}
                 else:
                     metrics, details = spec.fn(cdm, case.expected)
-                await repo.upsert_result(
+                await repo.insert_result(
                     run_id, case.id, adapter, config, variant_key(adapter, config),
                     metrics, spec.primary, details, cost, latency)
         await repo.set_run_status(run_id, ParserEvalRunStatus.completed)
@@ -1570,11 +1570,12 @@ git commit -m "test(parser-eval): HTTP coverage for datasets, variant runs, metr
 - Run snapshots dataset members → Task 8 (`create_run`). ✅
 - Migration rewritten in place → Task 2. ✅
 - Unknown adapter → 422 → Task 7, 9. ✅
+- Results append-only/immutable (no upsert; retry = new run) → Task 5 (`insert_result`), Task 6 (engine insert). ✅
 - `parser_eval_targets` dropped → Task 1 (models), Task 2 (migration). ✅
 
 **Placeholder scan:** No `TBD`/"add error handling"/bare "write tests" — all steps carry real code. Router Task 8/9 references the existing file's auth-override block rather than reprinting it (it is environment-specific and already established); this is a deliberate "match existing pattern," not a placeholder.
 
-**Type consistency:** `run_evaluation(..., variants=...)` (Task 6) matches service call (Task 8). `upsert_result(run_id, eval_case_id, adapter, config, variant_key, metrics, primary_metric, details, cost, latency_ms)` identical in Task 5 (def), Task 6 (call). `score_text -> (metrics, details)` consistent across Task 4 (def), Task 6 (call). `variant_key(adapter, config)` consistent Task 3/6. `ScorerSpec{fn,emits,primary}` consistent Task 4/6.
+**Type consistency:** `run_evaluation(..., variants=...)` (Task 6) matches service call (Task 8). `insert_result(run_id, eval_case_id, adapter, config, variant_key, metrics, primary_metric, details, cost, latency_ms)` identical in Task 5 (def), Task 6 (call), and the engine-test fake `_Repo`. `score_text -> (metrics, details)` consistent across Task 4 (def), Task 6 (call). `variant_key(adapter, config)` consistent Task 3/6. `ScorerSpec{fn,emits,primary}` consistent Task 4/6.
 
 ## Execution Handoff
 
