@@ -293,6 +293,31 @@ seams. Truth is authored **in the UI** from the first slice (no file corpus).
 - Adding the table scorer later requires only: a new scorer file + one registry line + a `table`
   target type — no change to the engine, router, or result model.
 
+## Vision alignment & known deviations (revisit before hardening)
+
+The product's larger purpose is to **evaluate the options available at each stage of a RAG pipeline** —
+hand-rolled/custom pipelines vs. providers (LlamaParse) vs. OSS (docling) — using the CDM
+(`ParsedDocument`) as the common *projection* of each tool's output that makes them comparable. Parser
+eval is the first stage. The first slice takes deliberate shortcuts that are **not** the target shape:
+
+1. **`ParserEvalCase` is a stand-in, not the target entity.** It re-wraps `project_id +
+   source_document_id` (plus `name`/`doc_type`/`source_filename`) in a parallel table. In the product
+   vision, `Document` and `ParsedDocument` are the first-class, load-bearing primitives — and
+   "Document" means *the source_document that belongs to this project*. Eval + ground truth should
+   ultimately bind to that first-class project-scoped `Document`/`ParsedDocument` primitive rather than
+   a parallel case table. (The `documents` table's chunk/index/folder weight is **vestigial** — an
+   artifact of Index being the first pipeline component built; Index has since been refactored onto
+   `ParsedDocument` and those references are slated for cleanup. Do not treat that baggage as the
+   definition of `Document`.) **Plan:** collapse `ParserEvalCase` onto `Document`/`ParsedDocument` once
+   that primitive settles from the Index refactor.
+2. **Raw-text ground truth is a convenience, not canonical.** For `text`, ground truth is authored and
+   scored as raw text (`{"pages": [str]}`) rather than against `ParsedDocument.Page.Block.text`, to
+   feel out the parser flow first. The canonical form follows the primitives later.
+3. **`source_filename` on `ParserEvalCase` is redundant** — a denormalization of
+   `SourceDocument.filename`; derive via join when the entity is reworked (or drop it).
+
+These are intentional stepping stones for the first slice; revisit before the feature is hardened.
+
 ## Open questions (resolve in planning)
 
 - Exact edit-distance vs. token-F1 choice and normalization rules for the text scorer.

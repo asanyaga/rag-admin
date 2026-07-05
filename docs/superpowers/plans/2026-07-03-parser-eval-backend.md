@@ -31,6 +31,20 @@
 
 ---
 
+## Known deviation from the product vision (build as specified; do NOT "fix" here)
+
+`ParserEvalCase` is a deliberate pragmatic stand-in: it re-wraps `project_id + source_document_id`
+(plus `name`/`doc_type`/`source_filename`) in a parallel table. The product vision treats `Document`
+and `ParsedDocument` as first-class primitives ("Document" = the source_document that belongs to this
+project), and eval/ground-truth should ultimately bind to those rather than a parallel case entity;
+raw-text `text` ground truth is a convenience, not canonical; `source_filename` is redundant
+denormalization of `SourceDocument.filename`. **Build the model exactly as specified for the first
+slice** — collapsing `ParserEvalCase` onto `Document`/`ParsedDocument` is a separate future refactor
+(see the design spec's "Vision alignment & known deviations"), gated on the Index→`ParsedDocument`
+refactor. Do not attempt it in this plan.
+
+---
+
 ## File Structure
 
 - Create `app/models/parser_eval.py` — `ParserEvalCase`, `ParserEvalTarget`, `ParserEvalRun`, `ParserEvalResult`, `ParserEvalDimension`, `ParserEvalRunStatus`.
