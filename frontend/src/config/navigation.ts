@@ -41,9 +41,9 @@ export const navigationItems: readonly NavItem[] = [
     icon: BarChart3,
     activeColor: 'border-l-amber-500',
     children: [
+      { label: 'Parsing', href: '/evaluation/parser' },
       { label: 'Retrieval', href: '/evaluation/retrieval' },
       { label: 'Extraction', href: '/evaluation/extraction' },
-      { label: 'Parsing', href: '/evaluation/parser' },
     ],
   },
   { label: 'Settings', href: '/settings', icon: Settings, activeColor: 'border-l-gray-400' },
