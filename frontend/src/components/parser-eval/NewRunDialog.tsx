@@ -64,18 +64,24 @@ export function NewRunDialog({ open, onOpenChange, projectId, onCreate }: Props)
           </div>
           <div className="space-y-2">
             <Label>Cases</Label>
-            {cases.map((c) => (
-              <div key={c.id} className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  aria-label={filename(c.sourceDocumentId)}
-                  checked={caseIds.includes(c.id)}
-                  onCheckedChange={() => setCaseIds((a) => toggle(a, c.id))}
-                />
-                <span>
-                  {filename(c.sourceDocumentId)} · {c.dimension}
-                </span>
-              </div>
-            ))}
+            {cases.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No cases yet — create one in the Cases tab first.
+              </p>
+            ) : (
+              cases.map((c) => (
+                <div key={c.id} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    aria-label={filename(c.sourceDocumentId)}
+                    checked={caseIds.includes(c.id)}
+                    onCheckedChange={() => setCaseIds((a) => toggle(a, c.id))}
+                  />
+                  <span>
+                    {filename(c.sourceDocumentId)} · {c.dimension}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
           <div className="space-y-2">
             <Label>Adapters</Label>
@@ -91,6 +97,11 @@ export function NewRunDialog({ open, onOpenChange, projectId, onCreate }: Props)
             ))}
           </div>
         </div>
+        {!canSubmit && (
+          <p className="text-xs text-muted-foreground">
+            Select at least one case and one adapter to run. (Name is optional.)
+          </p>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
