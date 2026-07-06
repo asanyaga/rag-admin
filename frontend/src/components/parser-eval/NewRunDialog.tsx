@@ -4,15 +4,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { PARSER_REGISTRY } from '@/components/documents/ParseMethodSelector'
+import { ParseMethodSelector, PARSER_REGISTRY } from '@/components/documents/ParseMethodSelector'
 import { useParserEvalCases } from '@/hooks/useParserEval'
 import { useSourceDocuments } from '@/hooks/useSourceDocuments'
+import { stableStringify } from '@/lib/stableStringify'
+import type { ParseConfig } from '@/types/parsing'
 import type { CreateRunRequest } from '@/types/parserEval'
 
-const ADAPTER_OPTIONS = Object.entries(PARSER_REGISTRY).map(([value, meta]) => ({
-  value,
-  label: meta.label,
-}))
+type Variant = { adapter: string; config: ParseConfig }
+
+const DEFAULT_ADAPTER = 'docling'
 
 interface Props {
   open: boolean
@@ -26,26 +27,34 @@ export function NewRunDialog({ open, onOpenChange, projectId, onCreate }: Props)
   const { sourceDocuments } = useSourceDocuments()
   const [name, setName] = useState('')
   const [caseIds, setCaseIds] = useState<string[]>([])
-  const [adapters, setAdapters] = useState<string[]>([])
+  const [variants, setVariants] = useState<Variant[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   const filename = (id: string) => sourceDocuments.find((d) => d.id === id)?.filename ?? id
-  const toggle = (arr: string[], v: string) =>
-    arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]
-  const canSubmit = caseIds.length > 0 && adapters.length > 0
+  const toggleCase = (id: string) =>
+    setCaseIds((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]))
+
+  const addVariant = () =>
+    setVariants((vs) => [
+      ...vs,
+      { adapter: DEFAULT_ADAPTER, config: PARSER_REGISTRY[DEFAULT_ADAPTER]?.defaultConfig ?? {} },
+    ])
+  const removeVariant = (i: number) => setVariants((vs) => vs.filter((_, idx) => idx !== i))
+  const setVariant = (i: number, patch: Partial<Variant>) =>
+    setVariants((vs) => vs.map((v, idx) => (idx === i ? { ...v, ...patch } : v)))
+
+  const keys = variants.map((v) => `${v.adapter}|${stableStringify(v.config)}`)
+  const hasDuplicate = new Set(keys).size !== keys.length
+  const canSubmit = caseIds.length > 0 && variants.length > 0 && !hasDuplicate
 
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
-      await onCreate({
-        name: name || undefined,
-        evalCaseIds: caseIds,
-        variants: adapters.map((adapter) => ({ adapter, config: {} })),
-      })
+      await onCreate({ name: name || undefined, evalCaseIds: caseIds, variants })
       onOpenChange(false)
       setName('')
       setCaseIds([])
-      setAdapters([])
+      setVariants([])
     } finally {
       setSubmitting(false)
     }
@@ -62,6 +71,7 @@ export function NewRunDialog({ open, onOpenChange, projectId, onCreate }: Props)
             <Label htmlFor="run-name">Name (optional)</Label>
             <Input id="run-name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
+
           <div className="space-y-2">
             <Label>Cases</Label>
             {cases.length === 0 ? (
@@ -74,7 +84,7 @@ export function NewRunDialog({ open, onOpenChange, projectId, onCreate }: Props)
                   <Checkbox
                     aria-label={filename(c.sourceDocumentId)}
                     checked={caseIds.includes(c.id)}
-                    onCheckedChange={() => setCaseIds((a) => toggle(a, c.id))}
+                    onCheckedChange={() => toggleCase(c.id)}
                   />
                   <span>
                     {filename(c.sourceDocumentId)} · {c.dimension}
@@ -83,25 +93,48 @@ export function NewRunDialog({ open, onOpenChange, projectId, onCreate }: Props)
               ))
             )}
           </div>
-          <div className="space-y-2">
-            <Label>Adapters</Label>
-            {ADAPTER_OPTIONS.map((o) => (
-              <div key={o.value} className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  aria-label={o.label}
-                  checked={adapters.includes(o.value)}
-                  onCheckedChange={() => setAdapters((a) => toggle(a, o.value))}
-                />
-                <span>{o.label}</span>
+
+          <div className="space-y-3">
+            <Label>Variants</Label>
+            {variants.map((v, i) => (
+              <div key={i} className="flex items-start gap-2 rounded-md border p-3">
+                <div className="flex-1">
+                  <ParseMethodSelector
+                    compact
+                    parserType={v.adapter}
+                    config={v.config}
+                    onParserTypeChange={(adapter) => setVariant(i, { adapter })}
+                    onConfigChange={(config) => setVariant(i, { config })}
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Remove variant"
+                  onClick={() => removeVariant(i)}
+                >
+                  Remove
+                </Button>
               </div>
             ))}
+            <Button variant="outline" size="sm" onClick={addVariant}>
+              Add variant
+            </Button>
           </div>
         </div>
-        {!canSubmit && (
-          <p className="text-xs text-muted-foreground">
-            Select at least one case and one adapter to run. (Name is optional.)
+
+        {hasDuplicate && (
+          <p className="text-xs text-destructive">
+            Duplicate variant: the same adapter appears more than once with the same config — change or
+            remove one.
           </p>
         )}
+        {!canSubmit && !hasDuplicate && (
+          <p className="text-xs text-muted-foreground">
+            Select at least one case and add at least one variant to run. (Name is optional.)
+          </p>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
