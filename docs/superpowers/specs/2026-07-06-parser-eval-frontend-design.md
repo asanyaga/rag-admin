@@ -30,14 +30,24 @@ covers a **thin, end-to-end frontend vertical** that proves the full stack in th
 - Additional dimensions (table/reading_order/roles) — UI keys off `dimension` but only `text` ships.
 - Delete/edit of cases and runs.
 
-## 2. Backend addition (prerequisite)
+## 2. Backend prerequisites
 
-The run-detail page needs run metadata + status polling, but the router exposes only `list_runs` and
-`get_results` — no get-one-run. Add:
+Two small backend changes are required before the frontend can follow app conventions:
 
-- **`GET /projects/{project_id}/parser-eval/runs/{run_id}` → `RunResponse`.** The service method
-  `ParserEvalService.get_run` already exists; wire a route (mirror `get_results`, `verify_project_access`).
-- Add one router test (200 for owner, 404 for unknown project). Backend-only; small.
+**(a) camelCase response conformance.** The whole app emits **camelCase JSON** via per-field Pydantic
+`alias="camelCase"` + `ConfigDict(populate_by_name=True)` (FastAPI serializes `by_alias`; see
+`app/schemas/extraction_eval.py`). The parser-eval DTOs currently emit **snake_case** — an
+inconsistency. Since no client consumes them yet, conform them now: add camelCase aliases +
+`populate_by_name=True` to every parser-eval schema (`CaseCreate`, `CaseResponse`, `DatasetCreate`,
+`DatasetResponse`, `VariantInput`, `RunCreate`, `RunResponse`, `ResultResponse`). Inputs still accept
+snake_case (populate_by_name), so create-request bodies in existing tests keep working; only
+**response-key reads** in the existing router test change (`review_status`→`reviewStatus`,
+`primary_metric`→`primaryMetric`, `variant_key`→`variantKey`; `metrics`/`config` are dicts, unchanged).
+
+**(b) get-one-run route.** The run-detail page needs run metadata + status polling, but the router
+exposes only `list_runs`/`get_results`. Add
+**`GET /projects/{project_id}/parser-eval/runs/{run_id}` → `RunResponse`** (service `get_run` already
+exists; mirror `get_results` + `verify_project_access`) with one router test (200 owner, 404 unknown).
 
 ## 3. Architecture
 
@@ -112,7 +122,8 @@ Axios `apiClient` (base already includes `/api/v1`), functions per endpoint:
 
 ## 6. Hooks (`frontend/src/hooks/useParserEval.ts`)
 
-react-query, mirroring `useExtractionEval`:
+**Hand-rolled `useState`/`useEffect`/`useCallback` + `setInterval` polling, mirroring `useExtractionEval`**
+(the codebase does not use react-query here):
 - `useParserEvalCases(projectId)`, `useCreateParserEvalCase(projectId)`
 - `useParserEvalRuns(projectId)`, `useCreateParserEvalRun(projectId)`
 - `useParserEvalRun(projectId, runId)` — `refetchInterval` while status is `pending|running`, off once
@@ -202,7 +213,7 @@ Guards on `currentProject` like the peer.
 
 ## 11. Open questions / deferred
 
-- **Key casing** (§4) — confirm camelCase-at-boundary vs snake_case passthrough against the existing
-  api modules; match the established convention.
+- **~~Key casing~~ RESOLVED** — the app convention is camelCase JSON via Pydantic aliases. Parser-eval
+  backend DTOs are conformed to camelCase (§2a); frontend types are camelCase with no boundary mapping.
 - Datasets, `(adapter,config)` editor, bootstrap, verification, delete/edit, extra dimensions — all
   deferred seams per §Scope.
