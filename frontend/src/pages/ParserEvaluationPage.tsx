@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
 import { cn } from '@/lib/utils'
 import { ParserEvalCasesTab } from '@/components/parser-eval/ParserEvalCasesTab'
@@ -8,7 +9,10 @@ type Tab = 'cases' | 'runs'
 
 export default function ParserEvaluationPage(): JSX.Element {
   const { currentProject } = useProject()
-  const [activeTab, setActiveTab] = useState<Tab>('cases')
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState<Tab>(
+    searchParams.get('tab') === 'runs' ? 'runs' : 'cases'
+  )
 
   if (!currentProject) {
     return (

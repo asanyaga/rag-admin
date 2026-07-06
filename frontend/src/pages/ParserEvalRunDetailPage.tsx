@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import { useProject } from '@/contexts/ProjectContext'
 import { EvalStatusBadge } from '@/components/evaluation/EvalStatusBadge'
 import { ParserComparisonTable } from '@/components/parser-eval/ParserComparisonTable'
@@ -23,11 +24,21 @@ export default function ParserEvalRunDetailPage(): JSX.Element {
     return labels
   }, [cases, sourceDocuments])
 
+  const backToRuns = (
+    <Link
+      to="/evaluation/parser?tab=runs"
+      className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="h-4 w-4" /> Back to runs
+    </Link>
+  )
+
   if (isLoading && !run) return <p className="text-muted-foreground">Loading…</p>
-  if (!run) return <p className="text-muted-foreground">Run not found.</p>
+  if (!run) return <div className="space-y-4">{backToRuns}<p className="text-muted-foreground">Run not found.</p></div>
 
   return (
     <div className="space-y-6">
+      {backToRuns}
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">{run.name}</h1>
         <EvalStatusBadge status={run.status} />
