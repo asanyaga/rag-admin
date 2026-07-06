@@ -1,0 +1,116 @@
+import { useState } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { PARSER_REGISTRY } from '@/components/documents/ParseMethodSelector'
+import { useParserEvalCases } from '@/hooks/useParserEval'
+import { useSourceDocuments } from '@/hooks/useSourceDocuments'
+import type { CreateRunRequest } from '@/types/parserEval'
+
+const ADAPTER_OPTIONS = Object.entries(PARSER_REGISTRY).map(([value, meta]) => ({
+  value,
+  label: meta.label,
+}))
+
+interface Props {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  projectId: string
+  onCreate: (data: CreateRunRequest) => Promise<void>
+}
+
+export function NewRunDialog({ open, onOpenChange, projectId, onCreate }: Props) {
+  const { cases } = useParserEvalCases(projectId)
+  const { sourceDocuments } = useSourceDocuments()
+  const [name, setName] = useState('')
+  const [caseIds, setCaseIds] = useState<string[]>([])
+  const [adapters, setAdapters] = useState<string[]>([])
+  const [submitting, setSubmitting] = useState(false)
+
+  const filename = (id: string) => sourceDocuments.find((d) => d.id === id)?.filename ?? id
+  const toggle = (arr: string[], v: string) =>
+    arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]
+  const canSubmit = caseIds.length > 0 && adapters.length > 0
+
+  const handleSubmit = async () => {
+    setSubmitting(true)
+    try {
+      await onCreate({
+        name: name || undefined,
+        evalCaseIds: caseIds,
+        variants: adapters.map((adapter) => ({ adapter, config: {} })),
+      })
+      onOpenChange(false)
+      setName('')
+      setCaseIds([])
+      setAdapters([])
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>New Run</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="run-name">Name (optional)</Label>
+            <Input id="run-name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Cases</Label>
+            {cases.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No cases yet — create one in the Cases tab first.
+              </p>
+            ) : (
+              cases.map((c) => (
+                <div key={c.id} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    aria-label={filename(c.sourceDocumentId)}
+                    checked={caseIds.includes(c.id)}
+                    onCheckedChange={() => setCaseIds((a) => toggle(a, c.id))}
+                  />
+                  <span>
+                    {filename(c.sourceDocumentId)} · {c.dimension}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Adapters</Label>
+            {ADAPTER_OPTIONS.map((o) => (
+              <div key={o.value} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  aria-label={o.label}
+                  checked={adapters.includes(o.value)}
+                  onCheckedChange={() => setAdapters((a) => toggle(a, o.value))}
+                />
+                <span>{o.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {!canSubmit && (
+          <p className="text-xs text-muted-foreground">
+            Select at least one case and one adapter to run. (Name is optional.)
+          </p>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button disabled={!canSubmit || submitting} onClick={handleSubmit}>
+            {submitting ? 'Starting…' : 'Run'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

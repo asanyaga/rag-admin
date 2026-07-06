@@ -196,6 +196,21 @@ async def list_runs(
     return await service.list_runs(project_id)
 
 
+@router.get("/projects/{project_id}/parser-eval/runs/{run_id}", response_model=RunResponse)
+async def get_run(
+    project_id: UUID,
+    run_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.get_run(run_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
 @router.get(
     "/projects/{project_id}/parser-eval/runs/{run_id}/results",
     response_model=list[ResultResponse],

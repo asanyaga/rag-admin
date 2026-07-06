@@ -17,6 +17,8 @@ import IndexDetailPage from './pages/IndexDetailPage'
 import SettingsPage from './pages/SettingsPage'
 import RetrievalEvaluationPage from './pages/RetrievalEvaluationPage'
 import ExtractionEvaluationPage from './pages/ExtractionEvaluationPage'
+import ParserEvaluationPage from './pages/ParserEvaluationPage'
+import ParserEvalRunDetailPage from './pages/ParserEvalRunDetailPage'
 import GoldenSetEditorPage from './pages/GoldenSetEditorPage'
 import NewEvalRunPage from './pages/NewEvalRunPage'
 import EvalRunDetailPage from './pages/EvalRunDetailPage'
@@ -186,6 +188,16 @@ const router = createBrowserRouter([
             path: 'evaluation/extraction',
             element: <ExtractionEvaluationPage />,
             handle: { breadcrumb: 'Extraction Evaluation' },
+          },
+          {
+            path: 'evaluation/parser',
+            element: <ParserEvaluationPage />,
+            handle: { breadcrumb: 'Parser Evaluation' },
+          },
+          {
+            path: 'evaluation/parser/runs/:runId',
+            element: <ParserEvalRunDetailPage />,
+            handle: { breadcrumb: 'Run Detail' },
           },
           {
             path: 'evaluation/golden-sets/:goldenSetId',
