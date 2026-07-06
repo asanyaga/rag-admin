@@ -12,7 +12,8 @@ from app.repositories.parser_eval_repository import ParserEvalRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
 from app.schemas.parser_eval import (
-    CaseCreate, CaseResponse, RunCreate, RunResponse, ResultResponse,
+    CaseCreate, CaseResponse, DatasetCreate, DatasetResponse,
+    RunCreate, RunResponse, ResultResponse,
 )
 from app.services.exceptions import NotFoundError
 from app.services.parser_eval.service import ParserEvalService
@@ -95,6 +96,70 @@ async def list_cases(
 ):
     await verify_project_access(project_id, current_user, project_repo)
     return await service.list_cases(project_id)
+
+
+@router.post("/projects/{project_id}/parser-eval/datasets", response_model=DatasetResponse)
+async def create_dataset(
+    project_id: UUID,
+    data: DatasetCreate,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    return await service.create_dataset(project_id, current_user.id, data)
+
+
+@router.get("/projects/{project_id}/parser-eval/datasets", response_model=list[DatasetResponse])
+async def list_datasets(
+    project_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    return await service.list_datasets(project_id)
+
+
+@router.get("/projects/{project_id}/parser-eval/datasets/{dataset_id}/cases",
+            response_model=list[CaseResponse])
+async def list_dataset_cases(
+    project_id: UUID,
+    dataset_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    return await service.list_dataset_cases(dataset_id)
+
+
+@router.post("/projects/{project_id}/parser-eval/datasets/{dataset_id}/cases/{case_id}",
+             status_code=status.HTTP_204_NO_CONTENT)
+async def add_dataset_case(
+    project_id: UUID,
+    dataset_id: UUID,
+    case_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    await service.add_case_to_dataset(dataset_id, case_id)
+
+
+@router.delete("/projects/{project_id}/parser-eval/datasets/{dataset_id}/cases/{case_id}",
+               status_code=status.HTTP_204_NO_CONTENT)
+async def remove_dataset_case(
+    project_id: UUID,
+    dataset_id: UUID,
+    case_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    await service.remove_case_from_dataset(dataset_id, case_id)
 
 
 @router.post(

@@ -14,39 +14,40 @@ def _doc(full_text: str, pages: list[tuple[int, int]]) -> ParsedDocument:
 
 def test_perfect_match_scores_one():
     doc = _doc("hello world", [(0, 11)])
-    score, details = score_text(doc, {"pages": ["hello world"]})
-    assert score == 1.0
-    assert details["omission"] == 0.0
-    assert details["hallucination"] == 0.0
+    metrics, details = score_text(doc, {"pages": ["hello world"]})
+    assert metrics["similarity"] == 1.0
+    assert metrics["omission"] == 0.0
+    assert metrics["hallucination"] == 0.0
+    assert "per_page" in details
 
 
 def test_omission_detected():
     # reference has two words, parse dropped one
     doc = _doc("hello", [(0, 5)])
-    score, details = score_text(doc, {"pages": ["hello world"]})
-    assert score < 1.0
-    assert details["omission"] > 0.0
+    metrics, _ = score_text(doc, {"pages": ["hello world"]})
+    assert metrics["similarity"] < 1.0
+    assert metrics["omission"] > 0.0
 
 
 def test_hallucination_detected():
     doc = _doc("hello world extra", [(0, 17)])
-    score, details = score_text(doc, {"pages": ["hello world"]})
-    assert details["hallucination"] > 0.0
+    metrics, _ = score_text(doc, {"pages": ["hello world"]})
+    assert metrics["hallucination"] > 0.0
 
 
 def test_page_count_mismatch_penalized():
     # reference has 2 pages, parse produced 1 → missing page fully omitted
     doc = _doc("page one text", [(0, 13)])
-    score, details = score_text(doc, {"pages": ["page one text", "page two text"]})
+    metrics, details = score_text(doc, {"pages": ["page one text", "page two text"]})
     assert details["page_count_expected"] == 2
     assert details["page_count_parsed"] == 1
-    assert score < 1.0
+    assert metrics["similarity"] < 1.0
 
 
 def test_normalization_ignores_whitespace_and_case():
     doc = _doc("Hello    WORLD", [(0, 14)])
-    score, _ = score_text(doc, {"pages": ["hello world"]})
-    assert score == 1.0
+    metrics, _ = score_text(doc, {"pages": ["hello world"]})
+    assert metrics["similarity"] == 1.0
 
 
 def test_fabricated_extra_page_penalized_as_hallucination():
@@ -54,6 +55,6 @@ def test_fabricated_extra_page_penalized_as_hallucination():
     # must carry full weight in the aggregate, not a floor weight of 1.
     full_text = "hello world" + " some entirely fabricated extra page content here"
     doc = _doc(full_text, [(0, 11), (11, len(full_text))])
-    score, details = score_text(doc, {"pages": ["hello world"]})
-    assert details["hallucination"] > 0.3
-    assert score < 1.0
+    metrics, _ = score_text(doc, {"pages": ["hello world"]})
+    assert metrics["hallucination"] > 0.3
+    assert metrics["similarity"] < 1.0

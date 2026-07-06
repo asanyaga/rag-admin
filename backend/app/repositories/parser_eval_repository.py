@@ -1,13 +1,13 @@
-"""Repository for parser evaluation data access."""
+"""Repository for parser evaluation data access (canonical model)."""
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.parser_eval import (
-    ParserEvalCase, ParserEvalTarget, ParserEvalRun, ParserEvalResult,
-    ParserEvalDimension, ParserEvalRunStatus,
+    ParserEvalCase, ParserEvalDataset, ParserEvalDatasetCase,
+    ParserEvalRun, ParserEvalResult, ParserEvalDimension,
+    ParserEvalSourceMethod, ParserEvalReviewStatus, ParserEvalRunStatus,
 )
 
 
@@ -15,44 +15,87 @@ class ParserEvalRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    # --- cases / targets ---
-    async def create_case(self, project_id: UUID, name: str, doc_type: str | None,
-                          source_document_id: UUID, source_filename: str | None,
-                          user_id: UUID) -> ParserEvalCase:
-        case = ParserEvalCase(project_id=project_id, name=name, doc_type=doc_type,
-                              source_document_id=source_document_id,
-                              source_filename=source_filename, created_by=user_id)
+    # --- cases ---
+    async def create_case(self, project_id: UUID, source_document_id: UUID,
+                          dimension: ParserEvalDimension, expected: dict, user_id: UUID,
+                          source_method: ParserEvalSourceMethod = ParserEvalSourceMethod.human,
+                          review_status: ParserEvalReviewStatus = ParserEvalReviewStatus.draft
+                          ) -> ParserEvalCase:
+        case = ParserEvalCase(project_id=project_id, source_document_id=source_document_id,
+                              dimension=dimension, expected=expected, created_by=user_id,
+                              source_method=source_method, review_status=review_status)
         self.session.add(case)
         await self.session.commit()
         await self.session.refresh(case)
         return case
 
-    async def add_target(self, case_id: UUID, dimension: ParserEvalDimension,
-                         expected: dict) -> ParserEvalTarget:
-        target = ParserEvalTarget(case_id=case_id, dimension=dimension, expected=expected)
-        self.session.add(target)
-        await self.session.commit()
-        await self.session.refresh(target)
-        return target
-
     async def get_case(self, case_id: UUID) -> ParserEvalCase | None:
         res = await self.session.execute(
-            select(ParserEvalCase).options(selectinload(ParserEvalCase.targets))
-            .where(ParserEvalCase.id == case_id))
+            select(ParserEvalCase).where(ParserEvalCase.id == case_id))
         return res.scalar_one_or_none()
 
     async def list_cases(self, project_id: UUID) -> list[ParserEvalCase]:
         res = await self.session.execute(
-            select(ParserEvalCase).options(selectinload(ParserEvalCase.targets))
-            .where(ParserEvalCase.project_id == project_id)
+            select(ParserEvalCase).where(ParserEvalCase.project_id == project_id)
             .order_by(ParserEvalCase.created_at.desc()))
         return list(res.scalars().all())
 
+    async def get_cases_by_ids(self, ids: list[UUID]) -> list[ParserEvalCase]:
+        if not ids:
+            return []
+        res = await self.session.execute(
+            select(ParserEvalCase).where(ParserEvalCase.id.in_(ids)))
+        return list(res.scalars().all())
+
+    # --- datasets ---
+    async def create_dataset(self, project_id: UUID, name: str, description: str | None,
+                             user_id: UUID) -> ParserEvalDataset:
+        ds = ParserEvalDataset(project_id=project_id, name=name, description=description,
+                               created_by=user_id)
+        self.session.add(ds)
+        await self.session.commit()
+        await self.session.refresh(ds)
+        return ds
+
+    async def get_dataset(self, dataset_id: UUID) -> ParserEvalDataset | None:
+        res = await self.session.execute(
+            select(ParserEvalDataset).where(ParserEvalDataset.id == dataset_id))
+        return res.scalar_one_or_none()
+
+    async def list_datasets(self, project_id: UUID) -> list[ParserEvalDataset]:
+        res = await self.session.execute(
+            select(ParserEvalDataset).where(ParserEvalDataset.project_id == project_id)
+            .order_by(ParserEvalDataset.created_at.desc()))
+        return list(res.scalars().all())
+
+    async def add_case_to_dataset(self, dataset_id: UUID, eval_case_id: UUID) -> None:
+        exists = await self.session.execute(
+            select(ParserEvalDatasetCase).where(
+                ParserEvalDatasetCase.dataset_id == dataset_id,
+                ParserEvalDatasetCase.eval_case_id == eval_case_id))
+        if exists.scalar_one_or_none() is None:
+            self.session.add(ParserEvalDatasetCase(dataset_id=dataset_id, eval_case_id=eval_case_id))
+            await self.session.commit()
+
+    async def remove_case_from_dataset(self, dataset_id: UUID, eval_case_id: UUID) -> None:
+        await self.session.execute(
+            delete(ParserEvalDatasetCase).where(
+                ParserEvalDatasetCase.dataset_id == dataset_id,
+                ParserEvalDatasetCase.eval_case_id == eval_case_id))
+        await self.session.commit()
+
+    async def list_dataset_case_ids(self, dataset_id: UUID) -> list[UUID]:
+        res = await self.session.execute(
+            select(ParserEvalDatasetCase.eval_case_id)
+            .where(ParserEvalDatasetCase.dataset_id == dataset_id))
+        return list(res.scalars().all())
+
     # --- runs / results ---
-    async def create_run(self, project_id: UUID, name: str, parsers: list[str],
-                         case_ids: list[str], user_id: UUID) -> ParserEvalRun:
-        run = ParserEvalRun(project_id=project_id, name=name, parsers=parsers,
-                            case_ids=case_ids, created_by=user_id)
+    async def create_run(self, project_id: UUID, name: str, variants: list[dict],
+                         eval_case_ids: list[str], user_id: UUID,
+                         dataset_id: UUID | None = None) -> ParserEvalRun:
+        run = ParserEvalRun(project_id=project_id, name=name, variants=variants,
+                            eval_case_ids=eval_case_ids, dataset_id=dataset_id, created_by=user_id)
         self.session.add(run)
         await self.session.commit()
         await self.session.refresh(run)
@@ -79,25 +122,21 @@ class ParserEvalRepository:
             run.error_message = error_message
         await self.session.commit()
 
-    async def upsert_result(self, run_id: UUID, case_id: UUID, parser: str,
-                            dimension: ParserEvalDimension, score: float, details: dict,
-                            cost: dict, latency_ms: int | None) -> None:
-        res = await self.session.execute(
-            select(ParserEvalResult).where(
-                ParserEvalResult.run_id == run_id, ParserEvalResult.case_id == case_id,
-                ParserEvalResult.parser == parser, ParserEvalResult.dimension == dimension))
-        existing = res.scalar_one_or_none()
-        if existing is None:
-            self.session.add(ParserEvalResult(
-                run_id=run_id, case_id=case_id, parser=parser, dimension=dimension,
-                score=score, details=details, cost=cost, latency_ms=latency_ms))
-        else:
-            existing.score, existing.details = score, details
-            existing.cost, existing.latency_ms = cost, latency_ms
+    async def insert_result(self, run_id: UUID, eval_case_id: UUID, adapter: str, config: dict,
+                            variant_key: str, metrics: dict, primary_metric: str | None,
+                            details: dict | None, cost: dict, latency_ms: int | None) -> None:
+        # Append-only: Results are immutable facts (a probabilistic variant may produce a
+        # different output each execution). The unique (run_id, eval_case_id, variant_key)
+        # constraint is a safety net; retry = a new run. Variance sampling within one run
+        # (a trial_index axis) is a deferred seam.
+        self.session.add(ParserEvalResult(
+            run_id=run_id, eval_case_id=eval_case_id, adapter=adapter, config=config,
+            variant_key=variant_key, metrics=metrics, primary_metric=primary_metric,
+            details=details, cost=cost, latency_ms=latency_ms))
         await self.session.commit()
 
     async def get_results(self, run_id: UUID) -> list[ParserEvalResult]:
         res = await self.session.execute(
             select(ParserEvalResult).where(ParserEvalResult.run_id == run_id)
-            .order_by(ParserEvalResult.case_id, ParserEvalResult.parser))
+            .order_by(ParserEvalResult.eval_case_id, ParserEvalResult.variant_key))
         return list(res.scalars().all())

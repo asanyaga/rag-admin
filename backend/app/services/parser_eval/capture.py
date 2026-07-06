@@ -27,6 +27,7 @@ async def capture(
     mime_type: str,
     parser: str,
     project_id: Any,
+    config: dict | None = None,
 ) -> tuple[ParsedDocument | None, dict, int | None]:
     data = await storage.get(storage_uri)
     source = await parsing_service.ensure_source_document(
@@ -41,7 +42,7 @@ async def capture(
         run, doc = await parsing_service.parse_and_persist(
             source=source, file_path=tmp_path,
             representation_kind=DEFAULT_REPRESENTATION_KIND,
-            config={"parser": parser}, project_id=project_id, force=False)
+            config={"parser": parser, **(config or {})}, project_id=project_id, force=False)
         return doc, dict(run.cost or {}), run.duration_ms
     except ParseFailedError as err:
         logger.warning("parser-eval capture failed parser=%s: %s", parser, err)
