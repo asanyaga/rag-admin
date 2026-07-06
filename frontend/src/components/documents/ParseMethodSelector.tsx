@@ -17,7 +17,7 @@ interface ParserMeta {
   defaultConfig: ParseConfig
 }
 
-const PARSER_REGISTRY: Record<string, ParserMeta> = {
+export const PARSER_REGISTRY: Record<string, ParserMeta> = {
   simple: {
     label: 'Simple (local)',
     description: 'Basic text extraction. Works on clean text-based PDFs.',
