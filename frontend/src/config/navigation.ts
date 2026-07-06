@@ -43,6 +43,7 @@ export const navigationItems: readonly NavItem[] = [
     children: [
       { label: 'Retrieval', href: '/evaluation/retrieval' },
       { label: 'Extraction', href: '/evaluation/extraction' },
+      { label: 'Parsing', href: '/evaluation/parser' },
     ],
   },
   { label: 'Settings', href: '/settings', icon: Settings, activeColor: 'border-l-gray-400' },
