@@ -37,7 +37,7 @@ async def test_dataset_run_snapshot_flow(client: AsyncClient, seed_project_user_
                   "expected": {"pages": ["hi"]}})
         assert r.status_code == 200, r.text
         case_id = r.json()["id"]
-        assert r.json()["review_status"] == "draft"
+        assert r.json()["reviewStatus"] == "draft"
 
         # Create a dataset and add the case.
         r = await client.post(
@@ -67,8 +67,14 @@ async def test_dataset_run_snapshot_flow(client: AsyncClient, seed_project_user_
         results = r.json()
         assert len(results) == 1
         assert results[0]["metrics"]["similarity"] == 1.0
-        assert results[0]["primary_metric"] == "similarity"
-        assert results[0]["variant_key"].startswith("docling@")
+        assert results[0]["primaryMetric"] == "similarity"
+        assert results[0]["variantKey"].startswith("docling@")
+
+        # get-one-run route (used by the run-detail page)
+        r = await client.get(f"/api/v1/projects/{project_id}/parser-eval/runs/{run_id}")
+        assert r.status_code == 200
+        assert r.json()["id"] == run_id
+        assert r.json()["status"] in ("pending", "running", "completed")
     finally:
         app.dependency_overrides.pop(get_current_active_user, None)
 
