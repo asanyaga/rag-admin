@@ -1,25 +1,26 @@
 import pytest
 from uuid import uuid4
 from pydantic import ValidationError
-from app.schemas.parser_eval import CaseCreate, RunCreate, TargetInput
+from app.schemas.parser_eval import CaseCreate, RunCreate, VariantInput
 
 
-def test_valid_text_target():
-    c = CaseCreate(name="c", doc_type="invoice", source_document_id=uuid4(),
-                   targets=[TargetInput(dimension="text", expected={"pages": ["a", "b"]})])
-    assert c.targets[0].expected["pages"] == ["a", "b"]
+def test_case_create_requires_dimension_and_expected():
+    c = CaseCreate(source_document_id=uuid4(), dimension="text", expected={"pages": ["hi"]})
+    assert c.dimension == "text"
 
 
-def test_text_target_requires_pages_list():
+def test_text_case_requires_pages_list():
     with pytest.raises(ValidationError):
-        TargetInput(dimension="text", expected={"wrong": 1})
+        CaseCreate(source_document_id=uuid4(), dimension="text", expected={"wrong": 1})
 
 
-def test_run_create_accepts_valid_parser():
-    run = RunCreate(name="run", case_ids=[uuid4()], parsers=["docling"])
-    assert run.parsers == ["docling"]
-
-
-def test_run_create_rejects_unknown_parser():
+def test_run_create_rejects_unknown_adapter():
     with pytest.raises(ValidationError):
-        RunCreate(name="run", case_ids=[uuid4()], parsers=["nope"])
+        RunCreate(variants=[VariantInput(adapter="not_a_parser", config={})],
+                  eval_case_ids=[uuid4()])
+
+
+def test_run_create_accepts_known_adapter():
+    r = RunCreate(variants=[VariantInput(adapter="docling", config={"x": 1})],
+                  eval_case_ids=[uuid4()])
+    assert r.variants[0].adapter == "docling"

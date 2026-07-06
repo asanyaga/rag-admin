@@ -19,8 +19,10 @@ from app.models.extraction_result import ExtractionResult, ExtractionResultStatu
 from app.models.extraction_ground_truth import ExtractionGroundTruthSet, ExtractionGroundTruthItem
 from app.models.extraction_eval import ExtractionEvalRun, ExtractionEvalRunStatus, ExtractionEvalResult
 from app.models.parser_eval import (
-    ParserEvalCase, ParserEvalTarget, ParserEvalRun, ParserEvalResult,
-    ParserEvalDimension, ParserEvalRunStatus,
+    ParserEvalCase, ParserEvalDataset, ParserEvalDatasetCase,
+    ParserEvalRun, ParserEvalResult,
+    ParserEvalDimension, ParserEvalSourceMethod, ParserEvalReviewStatus,
+    ParserEvalRunStatus,
 )
 from app.models.agent_definition import AgentDefinition
 from app.models.agent_run import AgentRun, AgentRunStatus
@@ -69,10 +71,13 @@ __all__ = [
     "ExtractionEvalRunStatus",
     "ExtractionEvalResult",
     "ParserEvalCase",
-    "ParserEvalTarget",
+    "ParserEvalDataset",
+    "ParserEvalDatasetCase",
     "ParserEvalRun",
     "ParserEvalResult",
     "ParserEvalDimension",
+    "ParserEvalSourceMethod",
+    "ParserEvalReviewStatus",
     "ParserEvalRunStatus",
     "AgentDefinition",
     "AgentRun",
