@@ -36,6 +36,20 @@ export interface ParserEvalResult {
   latencyMs: number | null
 }
 
+export interface ParserEvalCaseDetail extends ParserEvalCase {
+  expected: Record<string, unknown>
+}
+
+export interface TableGroundTruth {
+  tables: { page: number; html: string }[]
+}
+
+export interface BootstrapTableRequest {
+  sourceDocumentId: string
+  adapter: string
+  config: Record<string, unknown>
+}
+
 export interface CreateCaseRequest {
   sourceDocumentId: string
   dimension: string
