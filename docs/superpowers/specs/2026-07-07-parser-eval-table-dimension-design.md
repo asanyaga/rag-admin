@@ -131,12 +131,12 @@ Parse each HTML table into a labeled tree (node per `<td>`/`<th>` carrying norma
 `colspan`/`rowspan`), compute tree-edit distance, normalize to
 `1 − distance / max(nodes_a, nodes_b)`.
 
-**Recommendation:** add the well-known pure-Python **`apted`** package (`uv add apted`) for the
+**Decision (locked):** add the well-known pure-Python **`apted`** package (`uv add apted`) for the
 tree-edit-distance core and vendor the ~60-line HTML→tree + normalization wrapper adapted from the
-standard PubTabNet TEDS implementation. **Alternative:** hand-roll tree-edit distance (~100 lines, no
-dependency). We choose `apted` because tree-edit distance is subtle to implement correctly and `apted`
-is the reference everyone uses. HTML parsing uses `lxml`/`html` from the existing stack (confirm
-`lxml` is available; the wrapper can fall back to stdlib `html.parser` if not).
+standard PubTabNet TEDS implementation. Chosen over hand-rolling because tree-edit distance is subtle
+to implement correctly and `apted` is the reference everyone uses. HTML parsing uses `lxml`/`html`
+from the existing stack (confirm `lxml` is available; the wrapper can fall back to stdlib
+`html.parser` if not).
 
 ### Bootstrap — backend service + route
 
@@ -224,8 +224,8 @@ guessed. Committed slice, not optional.
 - **Naive order-matching (Slice 1).** A parser that finds tables in a different order than authored is
   unfairly penalized. Acceptable for a first slice on simple documents; fixed in Slice 3. Choose
   bootstrap/authoring documents accordingly for early use.
-- **`apted` dependency.** Adds one small pure-Python dependency. If the team prefers zero new deps, the
-  hand-rolled alternative is viable at ~100 lines but carries correctness risk.
+- **`apted` dependency.** Adds one small pure-Python dependency (decided). Contained to `teds.py`;
+  the hand-rolled alternative (~100 lines) remains a fallback only if `apted` proves problematic.
 - **Postgres enum migration.** `ALTER TYPE ... ADD VALUE` is not transactional on older Postgres and
   cannot run inside a transaction block in some Alembic setups — follow the existing enum-migration
   pattern in the repo and verify the round-trip on a real container (SQLite tests won't exercise it).
