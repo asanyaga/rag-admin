@@ -47,6 +47,33 @@ class ParserEvalRepository:
             select(ParserEvalCase).where(ParserEvalCase.id.in_(ids)))
         return list(res.scalars().all())
 
+    async def get_case_by_doc_dimension(self, source_document_id: UUID,
+                                        dimension: ParserEvalDimension) -> ParserEvalCase | None:
+        res = await self.session.execute(
+            select(ParserEvalCase).where(
+                ParserEvalCase.source_document_id == source_document_id,
+                ParserEvalCase.dimension == dimension))
+        return res.scalar_one_or_none()
+
+    async def update_case_review_status(self, case_id: UUID,
+                                        review_status: ParserEvalReviewStatus
+                                        ) -> ParserEvalCase | None:
+        case = await self.get_case(case_id)
+        if case is None:
+            return None
+        case.review_status = review_status
+        await self.session.commit()
+        await self.session.refresh(case)
+        return case
+
+    async def delete_case(self, case_id: UUID) -> bool:
+        case = await self.get_case(case_id)
+        if case is None:
+            return False
+        await self.session.delete(case)
+        await self.session.commit()
+        return True
+
     # --- datasets ---
     async def create_dataset(self, project_id: UUID, name: str, description: str | None,
                              user_id: UUID) -> ParserEvalDataset:

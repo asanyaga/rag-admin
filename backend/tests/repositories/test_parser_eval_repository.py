@@ -1,6 +1,26 @@
 import pytest
-from app.models.parser_eval import ParserEvalDimension, ParserEvalRunStatus
+from app.models.parser_eval import (
+    ParserEvalDimension, ParserEvalReviewStatus, ParserEvalRunStatus,
+)
 from app.repositories.parser_eval_repository import ParserEvalRepository
+
+
+@pytest.mark.asyncio
+async def test_get_case_by_doc_dimension_and_review_and_delete(test_db, seed_project_user_source):
+    project_id, user_id, source_id = seed_project_user_source
+    repo = ParserEvalRepository(test_db)
+    case = await repo.create_case(project_id, source_id, ParserEvalDimension.table,
+                                  {"tables": []}, user_id)
+
+    found = await repo.get_case_by_doc_dimension(source_id, ParserEvalDimension.table)
+    assert found is not None and found.id == case.id
+
+    updated = await repo.update_case_review_status(case.id, ParserEvalReviewStatus.verified)
+    assert updated.review_status == ParserEvalReviewStatus.verified
+
+    assert await repo.delete_case(case.id) is True
+    assert await repo.get_case(case.id) is None
+    assert await repo.delete_case(case.id) is False
 
 
 @pytest.mark.asyncio
