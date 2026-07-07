@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
-  ParserEvalCase, ParserEvalRun, ParserEvalResult,
-  CreateCaseRequest, CreateRunRequest,
+  ParserEvalCase, ParserEvalCaseDetail, ParserEvalRun, ParserEvalResult,
+  CreateCaseRequest, CreateRunRequest, BootstrapTableRequest,
 } from '@/types/parserEval'
 import * as api from '@/api/parserEval'
 
@@ -31,9 +31,23 @@ export function useParserEvalCases(projectId: string | null) {
     return created
   }, [projectId])
 
+  const bootstrapTableCase = useCallback(
+    async (data: BootstrapTableRequest): Promise<ParserEvalCaseDetail> => {
+      if (!projectId) throw new Error('No project selected')
+      const created = await api.bootstrapTableCase(projectId, data)
+      setCases((prev) => [created, ...prev])
+      return created
+    }, [projectId])
+
+  const deleteCase = useCallback(async (caseId: string): Promise<void> => {
+    if (!projectId) throw new Error('No project selected')
+    await api.deleteCase(projectId, caseId)
+    setCases((prev) => prev.filter((c) => c.id !== caseId))
+  }, [projectId])
+
   useEffect(() => { if (projectId) fetchCases() }, [projectId, fetchCases])
 
-  return { cases, isLoading, error, fetchCases, createCase }
+  return { cases, isLoading, error, fetchCases, createCase, bootstrapTableCase, deleteCase }
 }
 
 export function useParserEvalRuns(projectId: string | null) {
@@ -120,4 +134,36 @@ export function useParserEvalRunDetail(projectId: string | null, runId: string |
   }, [run, projectId, runId])
 
   return { run, results, isLoading, error }
+}
+
+export function useParserEvalCase(projectId: string | null, caseId: string | null) {
+  const [caseDetail, setCaseDetail] = useState<ParserEvalCaseDetail | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    if (!projectId || !caseId) { setCaseDetail(null); return }
+    setIsLoading(true); setError(null)
+    try {
+      setCaseDetail(await api.getCase(projectId, caseId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load case')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [projectId, caseId])
+
+  useEffect(() => { load() }, [load])
+
+  const verify = useCallback(async () => {
+    if (!projectId || !caseId) return
+    setCaseDetail(await api.updateCaseReview(projectId, caseId, 'verified'))
+  }, [projectId, caseId])
+
+  const reject = useCallback(async () => {
+    if (!projectId || !caseId) return
+    await api.deleteCase(projectId, caseId)
+  }, [projectId, caseId])
+
+  return { caseDetail, isLoading, error, verify, reject }
 }
