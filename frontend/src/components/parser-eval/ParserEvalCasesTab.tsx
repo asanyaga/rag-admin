@@ -1,15 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EvalStatusBadge } from '@/components/evaluation/EvalStatusBadge'
 import { useParserEvalCases } from '@/hooks/useParserEval'
 import { useSourceDocuments } from '@/hooks/useSourceDocuments'
-import { CaseEditorDialog } from './CaseEditorDialog'
 
 export function ParserEvalCasesTab({ projectId }: { projectId: string }) {
-  const { cases, isLoading, createCase } = useParserEvalCases(projectId)
+  const { cases, isLoading } = useParserEvalCases(projectId)
   const { sourceDocuments } = useSourceDocuments()
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const navigate = useNavigate()
 
   const filenameById = useMemo(() => {
     const map = new Map<string, string>()
@@ -20,7 +20,7 @@ export function ParserEvalCasesTab({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => setDialogOpen(true)}>New case</Button>
+        <Button onClick={() => navigate('/evaluation/parser/cases/new')}>New case</Button>
       </div>
 
       {isLoading ? (
@@ -38,19 +38,16 @@ export function ParserEvalCasesTab({ projectId }: { projectId: string }) {
           </TableHeader>
           <TableBody>
             {cases.map((c) => (
-              <TableRow key={c.id}>
+              <TableRow key={c.id} className="cursor-pointer"
+                onClick={() => navigate(`/evaluation/parser/cases/${c.id}`)}>
                 <TableCell>{filenameById.get(c.sourceDocumentId) ?? c.sourceDocumentId}</TableCell>
                 <TableCell>{c.dimension}</TableCell>
-                <TableCell>
-                  <EvalStatusBadge status={c.reviewStatus} />
-                </TableCell>
+                <TableCell><EvalStatusBadge status={c.reviewStatus} /></TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
-
-      <CaseEditorDialog open={dialogOpen} onOpenChange={setDialogOpen} onSubmit={createCase} />
     </div>
   )
 }

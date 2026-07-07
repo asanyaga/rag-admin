@@ -19,6 +19,7 @@ import RetrievalEvaluationPage from './pages/RetrievalEvaluationPage'
 import ExtractionEvaluationPage from './pages/ExtractionEvaluationPage'
 import ParserEvaluationPage from './pages/ParserEvaluationPage'
 import ParserEvalRunDetailPage from './pages/ParserEvalRunDetailPage'
+import ParserEvalCasePage from './pages/ParserEvalCasePage'
 import GoldenSetEditorPage from './pages/GoldenSetEditorPage'
 import NewEvalRunPage from './pages/NewEvalRunPage'
 import EvalRunDetailPage from './pages/EvalRunDetailPage'
@@ -198,6 +199,16 @@ const router = createBrowserRouter([
             path: 'evaluation/parser/runs/:runId',
             element: <ParserEvalRunDetailPage />,
             handle: { breadcrumb: 'Run Detail' },
+          },
+          {
+            path: 'evaluation/parser/cases/new',
+            element: <ParserEvalCasePage />,
+            handle: { breadcrumb: 'New Case' },
+          },
+          {
+            path: 'evaluation/parser/cases/:caseId',
+            element: <ParserEvalCasePage />,
+            handle: { breadcrumb: 'Case Detail' },
           },
           {
             path: 'evaluation/golden-sets/:goldenSetId',
