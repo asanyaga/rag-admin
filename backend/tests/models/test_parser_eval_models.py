@@ -8,6 +8,11 @@ from app.models.parser_eval import (
 )
 
 
+def test_dimension_enum_includes_table():
+    assert ParserEvalDimension.table.value == "table"
+    assert {d.value for d in ParserEvalDimension} >= {"text", "table"}
+
+
 @pytest.mark.asyncio
 async def test_case_defaults_and_persist(test_db, seed_project_user_source):
     project_id, user_id, source_id = seed_project_user_source

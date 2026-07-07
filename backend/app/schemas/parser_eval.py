@@ -27,6 +27,13 @@ class CaseCreate(BaseModel):
             pages = self.expected.get("pages")
             if not isinstance(pages, list) or not all(isinstance(p, str) for p in pages):
                 raise ValueError("text case requires expected.pages: list[str]")
+        elif self.dimension == "table":
+            tables = self.expected.get("tables")
+            if not isinstance(tables, list):
+                raise ValueError("table case requires expected.tables: list")
+            for t in tables:
+                if not isinstance(t, dict) or not isinstance(t.get("html"), str):
+                    raise ValueError("each expected table requires an 'html' string")
         return self
 
 
