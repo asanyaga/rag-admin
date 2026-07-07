@@ -12,10 +12,10 @@ from app.repositories.parser_eval_repository import ParserEvalRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
 from app.schemas.parser_eval import (
-    CaseCreate, CaseResponse, DatasetCreate, DatasetResponse,
-    RunCreate, RunResponse, ResultResponse,
+    BootstrapTableRequest, CaseCreate, CaseDetailResponse, CaseResponse, CaseReviewUpdate,
+    DatasetCreate, DatasetResponse, RunCreate, RunResponse, ResultResponse,
 )
-from app.services.exceptions import NotFoundError
+from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 from app.services.parser_eval.service import ParserEvalService
 
 router = APIRouter(tags=["parser_eval"])
@@ -96,6 +96,75 @@ async def list_cases(
 ):
     await verify_project_access(project_id, current_user, project_repo)
     return await service.list_cases(project_id)
+
+
+@router.post("/projects/{project_id}/parser-eval/cases/bootstrap-table",
+             response_model=CaseDetailResponse)
+async def bootstrap_table_case(
+    project_id: UUID,
+    data: BootstrapTableRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.bootstrap_table_case(project_id, current_user.id, data)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/projects/{project_id}/parser-eval/cases/{case_id}",
+            response_model=CaseDetailResponse)
+async def get_case(
+    project_id: UUID,
+    case_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.get_case(case_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch("/projects/{project_id}/parser-eval/cases/{case_id}",
+              response_model=CaseDetailResponse)
+async def update_case_review(
+    project_id: UUID,
+    case_id: UUID,
+    data: CaseReviewUpdate,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.set_case_review(case_id, data.review_status)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.delete("/projects/{project_id}/parser-eval/cases/{case_id}",
+               status_code=status.HTTP_204_NO_CONTENT)
+async def delete_case(
+    project_id: UUID,
+    case_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        await service.delete_case(case_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.post("/projects/{project_id}/parser-eval/datasets", response_model=DatasetResponse)
