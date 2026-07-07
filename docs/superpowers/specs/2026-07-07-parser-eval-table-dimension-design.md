@@ -49,9 +49,22 @@ Slices 2 and 3 are sketched and will get their own detailed specs when we reach 
 3. **One eval case per document** (its `expected` holds *all* the document's tables), consistent with
    how the `text` dimension already models one case per document. The cost is table-to-table matching,
    deferred to Slice 3.
-4. **Slice 1 authoring is bootstrap-only** (accept/reject); the full grid editor is Slice 2.
+4. **Slice 1 authoring is bootstrap-default** (accept/reject); the full grid editor is Slice 2.
 5. **Each slice lands end-to-end** (backend + frontend). The grid editor (Slice 2) is a committed
    slice, not an "if needed" afterthought.
+6. **Case authoring is a page, not a dialog.** The existing `CaseEditorDialog` is promoted to a
+   dedicated route (`/evaluation/parser/cases/new` + a `/evaluation/parser/cases/:id` detail/editor
+   page). The body grew past what a modal serves well (embedded parser-config editor now, grid editor
+   in Slice 2), and a page gives the draft a deep-linkable home for review/accept/reject and later
+   editing — consistent with run detail already being a page and routes being addressable (PR #149).
+7. **Dimension selector is the fork (Option A).** Authoring stays a single "New case" entry point;
+   the already-present (currently disabled) dimension dropdown in the editor is enabled, and choosing
+   **Table** swaps the body to the table flow. No separate top-level button.
+8. **Bootstrapping is a general, optional capability — not table-only.** Bootstrapping pre-fills
+   ground truth by running a *trusted* parser (with full config) and is designed to apply to any
+   dimension, sitting *alongside* manual authoring. In **Slice 1 it is the default (and only) path to
+   table content**; the optionality (skip bootstrap / author manually) and its extension to other
+   dimensions land in Slice 2+.
 
 ### Non-goals
 
@@ -62,7 +75,7 @@ Slices 2 and 3 are sketched and will get their own detailed specs when we reach 
 
 ---
 
-## Slice 1 — Core scoring loop, bootstrap-only authoring
+## Slice 1 — Core scoring loop, bootstrap-default authoring
 
 **Goal:** pick a document, bootstrap draft table ground truth from a trusted parser, run several
 parsers, and see a TEDS + recall comparison. Fully demoable end to end. No hand-editing of ground
@@ -154,12 +167,21 @@ from the existing stack (confirm `lxml` is available; the wrapper can fall back 
 
 ### Frontend — end to end
 
-- **Cases tab:** a **"Bootstrap table ground truth"** dialog — pick a source document + a trusted
-  parser (reusing `ParseMethodSelector`/`PARSER_REGISTRY`) → creates a draft table case. Reuses
-  `useSourceDocuments`.
-- **Draft review:** render the stored table HTML read-only (the `expected.tables[].html`), grouped by
-  page, with **Accept** (→ `verified`) and **Reject** (delete) actions and a draft/verified badge
-  (reuse existing status badge patterns).
+**Case authoring moves from the modal (`CaseEditorDialog`) to a dedicated page.** The Cases tab's
+"New case" button navigates to `/evaluation/parser/cases/new`; created/opened cases live at
+`/evaluation/parser/cases/:id`. New routing + a `ParserEvalCasePage`; the modal is retired (text
+authoring moves onto the page unchanged).
+
+- **Dimension fork (Option A):** the page's dimension selector (today disabled/text-only) is enabled.
+  - `text` → the existing per-page ground-truth authoring, unchanged.
+  - `table` → the **bootstrap** flow: pick a source document, then choose a **trusted parser and
+    configure the parse** by reusing the **same `ParseMethodSelector` + per-adapter config components
+    the New Run variant editor uses** (PR #147/#148) — a bootstrap is one configured `(adapter,
+    config)`. Submit calls the bootstrap endpoint and creates a **draft** table case. In Slice 1 this
+    is the default and only path to table content (manual authoring/skip-bootstrap is Slice 2).
+- **Draft review (on the case page):** render the stored table HTML read-only (the
+  `expected.tables[].html`), grouped by page, with **Accept** (→ `verified`) and **Reject** (delete)
+  actions and a draft/verified badge (reuse existing status badge patterns).
 - **Runs & results:** runs already operate over any case regardless of dimension, and the results
   table already renders a generic metrics map — so `teds` and `table_recall` appear as columns with
   minimal wiring. Confirm metric formatting (0–1, higher-is-better) matches the existing ScorePill
@@ -188,16 +210,22 @@ from the existing stack (confirm `lxml` is available; the wrapper can fall back 
 
 ---
 
-## Slice 2 — Grid editor (first-class authoring)
+## Slice 2 — Grid editor + optional/manual authoring (first-class authoring)
 
 **Goal:** produce ground truth the user actually trusts, rather than whatever the bootstrap parser
-guessed. Committed slice, not optional.
+guessed, and make bootstrapping genuinely *optional* (author without it). Committed slice, not
+optional.
 
 - **Frontend:** a table **grid editor** — edit cell text, add/remove rows and columns, merge/split
   cells, mark header cells — reachable from a draft (to correct a bootstrap) or from scratch. Verify
-  on save (draft → verified).
+  on save (draft → verified). Bootstrap becomes an *optional assist* on the case page rather than the
+  only path: you can create a table case and author it directly in the grid editor.
 - **Backend:** HTML ↔ grid round-trip and validation on save; `review_status` transitions;
   `PUT .../cases/{id}` to replace `expected`.
+- **Bootstrapping generalizes beyond `table`.** The bootstrap capability (run a trusted, configured
+  parser → draft ground truth) is extended to other dimensions (e.g. `text`), reusing the same
+  configured-`(adapter, config)` mechanism. It remains optional alongside manual authoring for every
+  dimension.
 - Detailed spec written when we reach this slice.
 
 ---
