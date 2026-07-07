@@ -48,6 +48,47 @@ class CaseResponse(BaseModel):
     model_config = _CAMEL_ORM
 
 
+class CaseDetailResponse(BaseModel):
+    id: UUID
+    source_document_id: UUID = Field(..., alias="sourceDocumentId")
+    dimension: str
+    expected: dict
+    source_method: str = Field(..., alias="sourceMethod")
+    review_status: str = Field(..., alias="reviewStatus")
+    created_at: datetime = Field(..., alias="createdAt")
+
+    model_config = _CAMEL_ORM
+
+
+class BootstrapTableRequest(BaseModel):
+    source_document_id: UUID = Field(..., alias="sourceDocumentId")
+    adapter: str
+    config: dict = {}
+
+    model_config = _CAMEL
+
+    @field_validator("adapter")
+    @classmethod
+    def _validate_adapter(cls, value: str) -> str:
+        valid = {p.value for p in ParserKind}
+        if value not in valid:
+            raise ValueError(f"Invalid adapter '{value}'. Valid: {sorted(valid)}")
+        return value
+
+
+class CaseReviewUpdate(BaseModel):
+    review_status: str = Field(..., alias="reviewStatus")
+
+    model_config = _CAMEL
+
+    @field_validator("review_status")
+    @classmethod
+    def _validate_status(cls, value: str) -> str:
+        if value not in ("draft", "verified"):
+            raise ValueError("reviewStatus must be 'draft' or 'verified'")
+        return value
+
+
 class DatasetCreate(BaseModel):
     name: str
     description: str | None = None
