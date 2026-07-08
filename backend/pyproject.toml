@@ -72,6 +72,7 @@ dependencies = [
     "camelot-py>=2.0.0",
     "tabulate>=0.10.0",
     "apted>=1.0.3",
+    "nh3>=0.3.6",
 ]
 
 [project.optional-dependencies]

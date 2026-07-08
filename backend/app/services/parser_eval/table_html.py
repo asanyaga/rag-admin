@@ -7,7 +7,26 @@ from __future__ import annotations
 
 from html import escape
 
+import nh3
+
 from app.cdm.models import BlockRole, ParsedDocument, Table
+
+_ALLOWED_TAGS = {"table", "thead", "tbody", "tr", "td", "th"}
+_ALLOWED_ATTRS = {"td": {"colspan", "rowspan"}, "th": {"colspan", "rowspan", "scope"}}
+
+
+def sanitize_table_html(html: str) -> str:
+    """Strip everything outside the table-structure allowlist; keep text content.
+
+    Ground-truth HTML is authored by a trusted human but is rendered via
+    dangerouslySetInnerHTML and scored, so it is sanitized at the write boundary.
+    """
+    return nh3.clean(
+        html or "",
+        tags=_ALLOWED_TAGS,
+        attributes=_ALLOWED_ATTRS,
+        strip_comments=True,
+    )
 
 
 def table_to_html(table: Table) -> str:
