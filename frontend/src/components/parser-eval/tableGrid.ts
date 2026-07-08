@@ -125,3 +125,120 @@ export function materialize(model: TableModel): Slot[][] {
   }
   return grid
 }
+
+function clone(model: TableModel): TableModel {
+  return { rows: model.rows, cols: model.cols, cells: model.cells.map((c) => ({ ...c })) }
+}
+
+function anchorAt(model: TableModel, row: number, col: number): AnchorCell {
+  const cell = model.cells.find((c) => c.row === row && c.col === col)
+  if (!cell) throw new Error(`No anchor cell at (${row}, ${col}); select a top-left cell`)
+  return cell
+}
+
+export function setText(model: TableModel, row: number, col: number, text: string): TableModel {
+  const next = clone(model)
+  anchorAt(next, row, col).text = text
+  return next
+}
+
+export function toggleHeader(model: TableModel, row: number, col: number): TableModel {
+  const next = clone(model)
+  const cell = anchorAt(next, row, col)
+  cell.isHeader = !cell.isHeader
+  return next
+}
+
+export function addRow(model: TableModel, at: number): TableModel {
+  const next = clone(model)
+  for (const cell of next.cells) {
+    if (at <= cell.row) cell.row++
+    else if (at <= cell.row + cell.rowspan - 1) cell.rowspan++
+  }
+  next.rows++
+  for (let c = 0; c < next.cols; c++) next.cells.push(newCell(at, c))
+  return fillHoles(next)
+}
+
+export function removeRow(model: TableModel, at: number): TableModel {
+  if (model.rows <= 1) throw new Error('A table needs at least one row')
+  for (const cell of model.cells) {
+    if (cell.rowspan > 1 && cell.row <= at && at <= cell.row + cell.rowspan - 1) {
+      throw new Error('Split the merged cell crossing this row before removing it')
+    }
+  }
+  const next = clone(model)
+  next.cells = next.cells.filter((cell) => cell.row !== at)
+  for (const cell of next.cells) if (cell.row > at) cell.row--
+  next.rows--
+  return next
+}
+
+export function addColumn(model: TableModel, at: number): TableModel {
+  const next = clone(model)
+  for (const cell of next.cells) {
+    if (at <= cell.col) cell.col++
+    else if (at <= cell.col + cell.colspan - 1) cell.colspan++
+  }
+  next.cols++
+  for (let r = 0; r < next.rows; r++) next.cells.push(newCell(r, at))
+  return fillHoles(next)
+}
+
+export function removeColumn(model: TableModel, at: number): TableModel {
+  if (model.cols <= 1) throw new Error('A table needs at least one column')
+  for (const cell of model.cells) {
+    if (cell.colspan > 1 && cell.col <= at && at <= cell.col + cell.colspan - 1) {
+      throw new Error('Split the merged cell crossing this column before removing it')
+    }
+  }
+  const next = clone(model)
+  next.cells = next.cells.filter((cell) => cell.col !== at)
+  for (const cell of next.cells) if (cell.col > at) cell.col--
+  next.cols--
+  return next
+}
+
+export function mergeCells(model: TableModel, r1: number, c1: number,
+                           r2: number, c2: number): TableModel {
+  const top = Math.min(r1, r2)
+  const bottom = Math.max(r1, r2)
+  const left = Math.min(c1, c2)
+  const right = Math.max(c1, c2)
+  const grid = materialize(model)
+  const members: AnchorCell[] = []
+  for (let r = top; r <= bottom; r++) {
+    for (let c = left; c <= right; c++) {
+      const slot = grid[r][c]
+      if (slot.kind !== 'anchor' || slot.cell.rowspan !== 1 || slot.cell.colspan !== 1) {
+        throw new Error('Merge only supports a clean rectangle of single cells')
+      }
+      members.push(slot.cell)
+    }
+  }
+  const next = clone(model)
+  const keep = anchorAt(next, top, left)
+  keep.rowspan = bottom - top + 1
+  keep.colspan = right - left + 1
+  keep.text = members.map((m) => m.text).filter((t) => t).join(' ')
+  const removed = new Set(members.filter((m) => !(m.row === top && m.col === left))
+    .map((m) => `${m.row},${m.col}`))
+  next.cells = next.cells.filter((c) => !removed.has(`${c.row},${c.col}`))
+  return next
+}
+
+export function splitCell(model: TableModel, row: number, col: number): TableModel {
+  const next = clone(model)
+  const cell = anchorAt(next, row, col)
+  const { rowspan, colspan } = cell
+  cell.rowspan = 1
+  cell.colspan = 1
+  for (let dr = 0; dr < rowspan; dr++) {
+    for (let dc = 0; dc < colspan; dc++) {
+      if (dr === 0 && dc === 0) continue
+      next.cells.push(newCell(row + dr, col + dc))
+    }
+  }
+  next.cells.sort((a, b) => (a.row - b.row) || (a.col - b.col))
+  return next
+}
