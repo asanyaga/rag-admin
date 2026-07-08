@@ -1,8 +1,27 @@
 import pytest
+from uuid import uuid4
 from app.models.parser_eval import (
     ParserEvalDimension, ParserEvalReviewStatus, ParserEvalRunStatus,
 )
 from app.repositories.parser_eval_repository import ParserEvalRepository
+
+
+@pytest.mark.asyncio
+async def test_replace_case_expected_resets_to_draft(test_db, seed_project_user_source):
+    project_id, user_id, source_id = seed_project_user_source
+    repo = ParserEvalRepository(test_db)
+    case = await repo.create_case(
+        project_id, source_id, ParserEvalDimension.table,
+        {"tables": [{"page": 1, "html": "<table><tr><td>a</td></tr></table>"}]}, user_id,
+        review_status=ParserEvalReviewStatus.verified)
+
+    new_expected = {"tables": [{"page": 2, "html": "<table><tr><td>b</td></tr></table>"}]}
+    updated = await repo.replace_case_expected(case.id, new_expected)
+
+    assert updated is not None
+    assert updated.expected == new_expected
+    assert updated.review_status == ParserEvalReviewStatus.draft
+    assert await repo.replace_case_expected(uuid4(), new_expected) is None
 
 
 @pytest.mark.asyncio

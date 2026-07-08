@@ -66,6 +66,16 @@ class ParserEvalRepository:
         await self.session.refresh(case)
         return case
 
+    async def replace_case_expected(self, case_id: UUID, expected: dict) -> ParserEvalCase | None:
+        case = await self.get_case(case_id)
+        if case is None:
+            return None
+        case.expected = expected
+        case.review_status = ParserEvalReviewStatus.draft
+        await self.session.commit()
+        await self.session.refresh(case)
+        return case
+
     async def delete_case(self, case_id: UUID) -> bool:
         case = await self.get_case(case_id)
         if case is None:
