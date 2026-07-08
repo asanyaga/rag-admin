@@ -24,3 +24,28 @@ def test_run_create_accepts_known_adapter():
     r = RunCreate(variants=[VariantInput(adapter="docling", config={"x": 1})],
                   eval_case_ids=[uuid4()])
     assert r.variants[0].adapter == "docling"
+
+
+def test_table_case_accepts_tables_html():
+    c = CaseCreate.model_validate(
+        {"sourceDocumentId": "11111111-1111-1111-1111-111111111111",
+         "dimension": "table",
+         "expected": {"tables": [{"page": 1, "html": "<table><tr><td>a</td></tr></table>"}]}})
+    assert c.dimension == "table"
+    assert c.expected["tables"][0]["html"].startswith("<table")
+
+
+def test_table_case_rejects_missing_html():
+    with pytest.raises(ValidationError):
+        CaseCreate.model_validate(
+            {"sourceDocumentId": "11111111-1111-1111-1111-111111111111",
+             "dimension": "table",
+             "expected": {"tables": [{"page": 1}]}})
+
+
+def test_table_case_rejects_non_list_tables():
+    with pytest.raises(ValidationError):
+        CaseCreate.model_validate(
+            {"sourceDocumentId": "11111111-1111-1111-1111-111111111111",
+             "dimension": "table",
+             "expected": {"tables": "nope"}})

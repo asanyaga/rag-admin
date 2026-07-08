@@ -9,11 +9,13 @@ from app.models.parser_eval import (
 from app.repositories.parser_eval_repository import ParserEvalRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
 from app.schemas.parser_eval import (
-    CaseCreate, CaseResponse, DatasetCreate, DatasetResponse,
-    RunCreate, RunResponse, ResultResponse,
+    BootstrapTableRequest, CaseCreate, CaseDetailResponse, CaseResponse,
+    DatasetCreate, DatasetResponse, RunCreate, RunResponse, ResultResponse,
 )
-from app.services.exceptions import NotFoundError
+from app.services.exceptions import ConflictError, NotFoundError, ValidationError
+from app.services.parser_eval.capture import capture
 from app.services.parser_eval.engine import run_evaluation
+from app.services.parser_eval.table_html import extract_cdm_tables
 
 
 class ParserEvalService:
@@ -38,6 +40,50 @@ class ParserEvalService:
 
     async def list_cases(self, project_id: UUID) -> list[CaseResponse]:
         return [CaseResponse.model_validate(c) for c in await self.repo.list_cases(project_id)]
+
+    async def get_case(self, case_id: UUID) -> CaseDetailResponse:
+        case = await self.repo.get_case(case_id)
+        if case is None:
+            raise NotFoundError(f"Parser eval case {case_id} not found")
+        return CaseDetailResponse.model_validate(case)
+
+    async def bootstrap_table_case(self, project_id: UUID, user_id: UUID,
+                                   data: BootstrapTableRequest) -> CaseDetailResponse:
+        source = await self.source_doc_repo.get(data.source_document_id)
+        if source is None:
+            raise NotFoundError(f"Source document {data.source_document_id} not found")
+        existing = await self.repo.get_case_by_doc_dimension(
+            data.source_document_id, ParserEvalDimension.table)
+        if existing is not None:
+            raise ConflictError("A table case already exists for this document")
+
+        cdm, _cost, _latency = await capture(
+            self.parsing_service, self.storage,
+            source_document_id=str(data.source_document_id), storage_uri=source.storage_uri,
+            filename=source.filename, mime_type=source.mime_type, parser=data.adapter,
+            project_id=project_id, config=data.config or {})
+        if cdm is None:
+            raise ValidationError(
+                "Bootstrap parse failed — the chosen parser could not parse this document")
+
+        expected = {"tables": [{"page": page_index + 1, "html": html}
+                               for page_index, html in extract_cdm_tables(cdm)]}
+        case = await self.repo.create_case(
+            project_id, data.source_document_id, ParserEvalDimension.table, expected, user_id,
+            source_method=ParserEvalSourceMethod.bootstrapped,
+            review_status=ParserEvalReviewStatus.draft)
+        return CaseDetailResponse.model_validate(case)
+
+    async def set_case_review(self, case_id: UUID, review_status: str) -> CaseDetailResponse:
+        case = await self.repo.update_case_review_status(
+            case_id, ParserEvalReviewStatus(review_status))
+        if case is None:
+            raise NotFoundError(f"Parser eval case {case_id} not found")
+        return CaseDetailResponse.model_validate(case)
+
+    async def delete_case(self, case_id: UUID) -> None:
+        if not await self.repo.delete_case(case_id):
+            raise NotFoundError(f"Parser eval case {case_id} not found")
 
     # --- datasets ---
     async def create_dataset(self, project_id: UUID, user_id: UUID,

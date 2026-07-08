@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from app.cdm.models import ParsedDocument
+from app.services.parser_eval.scorers.table import score_table
 from app.services.parser_eval.scorers.text import score_text
 
 ScorerFn = Callable[[ParsedDocument, dict[str, Any]], "tuple[dict[str, float], dict]"]
@@ -20,6 +21,7 @@ class ScorerSpec:
 SCORERS: dict[str, ScorerSpec] = {
     "text": ScorerSpec(fn=score_text, emits=("similarity", "omission", "hallucination"),
                        primary="similarity"),
+    "table": ScorerSpec(fn=score_table, emits=("teds", "table_recall"), primary="teds"),
 }
 
 

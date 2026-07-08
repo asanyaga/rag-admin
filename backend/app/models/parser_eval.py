@@ -17,7 +17,8 @@ from app.database import Base
 
 
 class ParserEvalDimension(str, enum.Enum):
-    text = "text"          # seam #1: table/reading_order/roles added later
+    text = "text"
+    table = "table"        # seam #1: reading_order/roles added later
 
 
 class ParserEvalSourceMethod(str, enum.Enum):

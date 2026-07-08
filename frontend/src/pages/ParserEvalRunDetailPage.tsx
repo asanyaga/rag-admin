@@ -15,13 +15,15 @@ export default function ParserEvalRunDetailPage(): JSX.Element {
   const { cases } = useParserEvalCases(projectId)
   const { sourceDocuments } = useSourceDocuments()
 
-  const caseLabels = useMemo(() => {
+  const { caseLabels, caseDimensions } = useMemo(() => {
     const fname = new Map(sourceDocuments.map((d) => [d.id, d.filename ?? d.id]))
     const labels: Record<string, string> = {}
+    const dims: Record<string, string> = {}
     cases.forEach((c) => {
       labels[c.id] = fname.get(c.sourceDocumentId) ?? c.sourceDocumentId
+      dims[c.id] = c.dimension
     })
-    return labels
+    return { caseLabels: labels, caseDimensions: dims }
   }, [cases, sourceDocuments])
 
   const backToRuns = (
@@ -54,7 +56,7 @@ export default function ParserEvalRunDetailPage(): JSX.Element {
         <p className="text-muted-foreground">Running… results will appear when complete.</p>
       )}
       {run.status === 'completed' && (
-        <ParserComparisonTable results={results} caseLabels={caseLabels} />
+        <ParserComparisonTable results={results} caseLabels={caseLabels} caseDimensions={caseDimensions} />
       )}
     </div>
   )
