@@ -1,7 +1,22 @@
 import pytest
 from uuid import uuid4
 from pydantic import ValidationError
-from app.schemas.parser_eval import CaseCreate, RunCreate, VariantInput
+from app.schemas.parser_eval import CaseCreate, CaseExpectedUpdate, RunCreate, VariantInput
+
+
+def test_case_expected_update_accepts_tables():
+    m = CaseExpectedUpdate(tables=[{"page": 1, "html": "<table><tr><td>a</td></tr></table>"}])
+    assert m.tables[0]["html"].startswith("<table")
+
+
+def test_case_expected_update_rejects_empty():
+    with pytest.raises(ValidationError):
+        CaseExpectedUpdate(tables=[])
+
+
+def test_case_expected_update_rejects_missing_html():
+    with pytest.raises(ValidationError):
+        CaseExpectedUpdate(tables=[{"page": 1}])
 
 
 def test_case_create_requires_dimension_and_expected():

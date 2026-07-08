@@ -89,6 +89,29 @@ class CaseReviewUpdate(BaseModel):
         return value
 
 
+_MAX_TABLES = 50
+
+
+class CaseExpectedUpdate(BaseModel):
+    tables: list[dict]
+
+    model_config = _CAMEL
+
+    @field_validator("tables")
+    @classmethod
+    def _validate_tables(cls, value: list[dict]) -> list[dict]:
+        if not value:
+            raise ValueError("at least one table is required")
+        if len(value) > _MAX_TABLES:
+            raise ValueError(f"at most {_MAX_TABLES} tables allowed")
+        for t in value:
+            if not isinstance(t.get("html"), str) or not t["html"].strip():
+                raise ValueError("each table requires a non-empty 'html' string")
+            if not isinstance(t.get("page"), int):
+                raise ValueError("each table requires an integer 'page'")
+        return value
+
+
 class DatasetCreate(BaseModel):
     name: str
     description: str | None = None
