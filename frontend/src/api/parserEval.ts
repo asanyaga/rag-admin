@@ -36,6 +36,14 @@ export async function updateCaseReview(
   return r.data
 }
 
+export async function replaceCaseTables(
+  projectId: string, caseId: string, tables: { page: number; html: string }[],
+): Promise<ParserEvalCaseDetail> {
+  const r = await apiClient.put<ParserEvalCaseDetail>(
+    `/projects/${projectId}/parser-eval/cases/${caseId}`, { tables })
+  return r.data
+}
+
 export async function deleteCase(projectId: string, caseId: string): Promise<void> {
   await apiClient.delete(`/projects/${projectId}/parser-eval/cases/${caseId}`)
 }

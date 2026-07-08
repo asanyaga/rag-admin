@@ -9,7 +9,7 @@ describe('TableGridEditor', () => {
     render(<TableGridEditor model={emptyModel(1, 1)} onChange={onChange} />)
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } })
     expect(onChange).toHaveBeenCalled()
-    const next = onChange.mock.calls.at(-1)![0]
+    const next = onChange.mock.calls[onChange.mock.calls.length - 1][0]
     expect(next.cells[0].text).toBe('hello')
   })
 
@@ -17,6 +17,6 @@ describe('TableGridEditor', () => {
     const onChange = vi.fn()
     render(<TableGridEditor model={emptyModel(1, 1)} onChange={onChange} />)
     fireEvent.click(screen.getByRole('button', { name: /add row/i }))
-    expect(onChange.mock.calls.at(-1)![0].rows).toBe(2)
+    expect(onChange.mock.calls[onChange.mock.calls.length - 1][0].rows).toBe(2)
   })
 })

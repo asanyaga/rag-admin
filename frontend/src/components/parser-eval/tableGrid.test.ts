@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { htmlToModel, modelToHtml, materialize, emptyModel } from './tableGrid'
 import {
-  setText, toggleHeader, addRow, removeRow, addColumn, removeColumn, mergeCells, splitCell,
+  setText, toggleHeader, addRow, removeRow, addColumn, mergeCells, splitCell,
   type TableModel,
 } from './tableGrid'
 
