@@ -80,6 +80,58 @@ async def test_dataset_run_snapshot_flow(client: AsyncClient, seed_project_user_
 
 
 @pytest.mark.asyncio
+async def test_put_case_replaces_tables_and_resets_draft(client: AsyncClient, seed_project_user_source):
+    project_id, user_id, source_id = seed_project_user_source
+
+    class _FakeUser:
+        id = user_id
+
+    app.dependency_overrides[get_current_active_user] = lambda: _FakeUser()
+    try:
+        r = await client.post(
+            f"/api/v1/projects/{project_id}/parser-eval/cases",
+            json={"source_document_id": str(source_id), "dimension": "table",
+                  "expected": {"tables": [{"page": 1, "html": "<table><tr><td>a</td></tr></table>"}]},
+                  "reviewStatus": "verified"})
+        assert r.status_code == 200, r.text
+        case_id = r.json()["id"]
+
+        r = await client.put(
+            f"/api/v1/projects/{project_id}/parser-eval/cases/{case_id}",
+            json={"tables": [{"page": 2,
+                              "html": '<table><tr><td onclick="x">b</td></tr></table>'}]})
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["reviewStatus"] == "draft"
+        assert body["expected"]["tables"][0]["page"] == 2
+        assert "onclick" not in body["expected"]["tables"][0]["html"].lower()
+    finally:
+        app.dependency_overrides.pop(get_current_active_user, None)
+
+
+@pytest.mark.asyncio
+async def test_put_case_rejects_text_dimension(client: AsyncClient, seed_project_user_source):
+    project_id, user_id, source_id = seed_project_user_source
+
+    class _FakeUser:
+        id = user_id
+
+    app.dependency_overrides[get_current_active_user] = lambda: _FakeUser()
+    try:
+        r = await client.post(
+            f"/api/v1/projects/{project_id}/parser-eval/cases",
+            json={"source_document_id": str(source_id), "dimension": "text",
+                  "expected": {"pages": ["hi"]}})
+        case_id = r.json()["id"]
+        r = await client.put(
+            f"/api/v1/projects/{project_id}/parser-eval/cases/{case_id}",
+            json={"tables": [{"page": 1, "html": "<table><tr><td>a</td></tr></table>"}]})
+        assert r.status_code == 400, r.text
+    finally:
+        app.dependency_overrides.pop(get_current_active_user, None)
+
+
+@pytest.mark.asyncio
 async def test_create_run_unknown_adapter_returns_422(client: AsyncClient, seed_project_user_source):
     project_id, user_id, source_id = seed_project_user_source
 

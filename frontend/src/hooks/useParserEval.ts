@@ -165,5 +165,13 @@ export function useParserEvalCase(projectId: string | null, caseId: string | nul
     await api.deleteCase(projectId, caseId)
   }, [projectId, caseId])
 
-  return { caseDetail, isLoading, error, verify, reject }
+  const saveTables = useCallback(
+    async (tables: { page: number; html: string }[], opts?: { verify?: boolean }) => {
+      if (!projectId || !caseId) return
+      let updated = await api.replaceCaseTables(projectId, caseId, tables)
+      if (opts?.verify) updated = await api.updateCaseReview(projectId, caseId, 'verified')
+      setCaseDetail(updated)
+    }, [projectId, caseId])
+
+  return { caseDetail, isLoading, error, verify, reject, saveTables }
 }

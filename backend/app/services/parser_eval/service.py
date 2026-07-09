@@ -9,13 +9,13 @@ from app.models.parser_eval import (
 from app.repositories.parser_eval_repository import ParserEvalRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
 from app.schemas.parser_eval import (
-    BootstrapTableRequest, CaseCreate, CaseDetailResponse, CaseResponse,
+    BootstrapTableRequest, CaseCreate, CaseDetailResponse, CaseExpectedUpdate, CaseResponse,
     DatasetCreate, DatasetResponse, RunCreate, RunResponse, ResultResponse,
 )
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 from app.services.parser_eval.capture import capture
 from app.services.parser_eval.engine import run_evaluation
-from app.services.parser_eval.table_html import extract_cdm_tables
+from app.services.parser_eval.table_html import extract_cdm_tables, sanitize_table_html
 
 
 class ParserEvalService:
@@ -80,6 +80,29 @@ class ParserEvalService:
         if case is None:
             raise NotFoundError(f"Parser eval case {case_id} not found")
         return CaseDetailResponse.model_validate(case)
+
+    _MAX_CELLS_PER_TABLE = 2000
+
+    async def replace_case_tables(self, case_id: UUID,
+                                  data: CaseExpectedUpdate) -> CaseDetailResponse:
+        case = await self.repo.get_case(case_id)
+        if case is None:
+            raise NotFoundError(f"Parser eval case {case_id} not found")
+        if case.dimension != ParserEvalDimension.table:
+            raise ValidationError("Only table cases support table replacement")
+
+        clean_tables = []
+        for t in data.tables:
+            html = sanitize_table_html(t["html"])
+            cell_count = html.lower().count("<td") + html.lower().count("<th")
+            if "<table" not in html.lower() or cell_count == 0:
+                raise ValidationError("each table must contain at least one cell")
+            if cell_count > self._MAX_CELLS_PER_TABLE:
+                raise ValidationError(f"table exceeds {self._MAX_CELLS_PER_TABLE} cells")
+            clean_tables.append({"page": t["page"], "html": html})
+
+        updated = await self.repo.replace_case_expected(case_id, {"tables": clean_tables})
+        return CaseDetailResponse.model_validate(updated)
 
     async def delete_case(self, case_id: UUID) -> None:
         if not await self.repo.delete_case(case_id):

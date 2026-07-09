@@ -12,8 +12,8 @@ from app.repositories.parser_eval_repository import ParserEvalRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.source_document_repository import SourceDocumentRepository
 from app.schemas.parser_eval import (
-    BootstrapTableRequest, CaseCreate, CaseDetailResponse, CaseResponse, CaseReviewUpdate,
-    DatasetCreate, DatasetResponse, RunCreate, RunResponse, ResultResponse,
+    BootstrapTableRequest, CaseCreate, CaseDetailResponse, CaseExpectedUpdate, CaseResponse,
+    CaseReviewUpdate, DatasetCreate, DatasetResponse, RunCreate, RunResponse, ResultResponse,
 )
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 from app.services.parser_eval.service import ParserEvalService
@@ -149,6 +149,25 @@ async def update_case_review(
         return await service.set_case_review(case_id, data.review_status)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.put("/projects/{project_id}/parser-eval/cases/{case_id}",
+            response_model=CaseDetailResponse)
+async def replace_case_tables(
+    project_id: UUID,
+    case_id: UUID,
+    data: CaseExpectedUpdate,
+    current_user: User = Depends(get_current_active_user),
+    service: ParserEvalService = Depends(get_service),
+    project_repo: ProjectRepository = Depends(get_project_repo),
+):
+    await verify_project_access(project_id, current_user, project_repo)
+    try:
+        return await service.replace_case_tables(case_id, data)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/projects/{project_id}/parser-eval/cases/{case_id}",
