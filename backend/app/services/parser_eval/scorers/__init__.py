@@ -21,7 +21,9 @@ class ScorerSpec:
 SCORERS: dict[str, ScorerSpec] = {
     "text": ScorerSpec(fn=score_text, emits=("similarity", "omission", "hallucination"),
                        primary="similarity"),
-    "table": ScorerSpec(fn=score_table, emits=("teds", "table_recall"), primary="teds"),
+    "table": ScorerSpec(fn=score_table,
+                        emits=("teds", "teds_struct", "cell_content_f1", "table_recall"),
+                        primary="teds"),
 }
 
 

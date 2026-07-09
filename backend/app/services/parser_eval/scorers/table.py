@@ -1,45 +1,66 @@
-"""Table-structure+content scorer — compares parsed tables to expected tables via TEDS.
+"""Table scorer — matches GT tables to parsed tables by page+content, then scores each pair.
 
-Slice 1 matches tables by order (i-th expected vs i-th parsed); an unmatched table on
-either side scores TEDS 0. Aggregate TEDS is size-weighted by the larger table's cell
-count so big tables dominate. Robust position-based matching is Slice 3.
+Emits `teds` (primary), `teds_struct` (structure-only), `cell_content_f1` (content-only),
+and `table_recall`. Aggregates the TEDS-family metrics as a size-weighted mean over matched
+pairs; unmatched tables (missing or extra) contribute 0. Matching is order-independent
+(Slice 3), replacing Slice 1's positional matching.
 """
 from __future__ import annotations
 
 from typing import Any
 
 from app.cdm.models import ParsedDocument
-from app.services.parser_eval.scorers.teds import cell_count, teds
+from app.services.parser_eval.scorers.table_match import match_tables
+from app.services.parser_eval.scorers.teds import cell_content_f1, cell_count, teds
 from app.services.parser_eval.table_html import extract_cdm_tables
+
+_ZERO = {"teds": 0.0, "teds_struct": 0.0, "cell_content_f1": 0.0}
 
 
 def score_table(cdm: ParsedDocument, expected: dict[str, Any]) -> tuple[dict[str, float], dict]:
-    expected_html = [t.get("html", "") for t in expected.get("tables", [])]
-    parsed_html = [html for _page, html in extract_cdm_tables(cdm)]
+    expected_tables = expected.get("tables", [])
+    parsed = extract_cdm_tables(cdm)  # list[(page_index, html)]
+    pairs = match_tables(expected_tables, parsed)
 
-    n = max(len(expected_html), len(parsed_html))
     per_table: list[dict[str, Any]] = []
-    weighted_sum = 0.0
+    acc = {"teds": 0.0, "teds_struct": 0.0, "cell_content_f1": 0.0}
     total_weight = 0.0
-    for i in range(n):
-        exp = expected_html[i] if i < len(expected_html) else None
-        par = parsed_html[i] if i < len(parsed_html) else None
-        score = teds(exp, par) if (exp is not None and par is not None) else 0.0
-        weight = max(cell_count(exp) if exp else 0, cell_count(par) if par else 0, 1)
-        weighted_sum += score * weight
+    for ei, pj in pairs:
+        gt_html = expected_tables[ei]["html"] if ei is not None else None
+        par_html = parsed[pj][1] if pj is not None else None
+        if ei is not None and pj is not None:
+            scores = {"teds": teds(gt_html, par_html),
+                      "teds_struct": teds(gt_html, par_html, structure_only=True),
+                      "cell_content_f1": cell_content_f1(gt_html, par_html)}
+            status = "matched"
+            page = int(expected_tables[ei].get("page", 0))
+        elif ei is not None:
+            scores, status = dict(_ZERO), "missing"
+            page = int(expected_tables[ei].get("page", 0))
+        else:
+            scores, status = dict(_ZERO), "extra"
+            page = parsed[pj][0] + 1
+
+        weight = max(cell_count(gt_html) if gt_html else 0,
+                     cell_count(par_html) if par_html else 0, 1)
+        for k in acc:
+            acc[k] += scores[k] * weight
         total_weight += weight
-        per_table.append({"index": i, "teds": score,
-                          "expected_present": exp is not None, "parsed_present": par is not None})
+        per_table.append({"expected_index": ei, "parsed_index": pj, "page": page,
+                          "status": status, **scores})
 
-    teds_metric = weighted_sum / total_weight if total_weight else 1.0
-
-    expected_count = len(expected_html)
-    if expected_count == 0:
-        recall = 1.0 if len(parsed_html) == 0 else 0.0
+    if total_weight:
+        metrics = {k: acc[k] / total_weight for k in acc}
     else:
-        recall = min(len(parsed_html), expected_count) / expected_count
+        metrics = {"teds": 1.0, "teds_struct": 1.0, "cell_content_f1": 1.0}
 
-    metrics = {"teds": teds_metric, "table_recall": recall}
+    expected_count = len(expected_tables)
+    parsed_count = len(parsed)
+    if expected_count == 0:
+        metrics["table_recall"] = 1.0 if parsed_count == 0 else 0.0
+    else:
+        metrics["table_recall"] = min(parsed_count, expected_count) / expected_count
+
     details = {"per_table": per_table,
-               "expected_count": expected_count, "parsed_count": len(parsed_html)}
+               "expected_count": expected_count, "parsed_count": parsed_count}
     return metrics, details
