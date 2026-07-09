@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import { ParserComparisonTable } from './ParserComparisonTable'
 import type { ParserEvalResult } from '@/types/parserEval'
 
@@ -33,6 +33,25 @@ describe('ParserComparisonTable', () => {
       caseLabels={{ c1: 'a.pdf' }} caseDimensions={{ c1: 'table' }} />)
     expect(screen.getByText('TEDS')).toBeInTheDocument()
     expect(screen.getByText('Table recall')).toBeInTheDocument()
+  })
+
+  it('shows structure/content columns and expands per-table diagnostics for a table case', () => {
+    const r = one({
+      metrics: { teds: 0.9, teds_struct: 1.0, cell_content_f1: 0.8, table_recall: 1 },
+      primaryMetric: 'teds',
+      details: {
+        per_table: [{ expected_index: 0, parsed_index: 0, page: 3, status: 'matched',
+          teds: 0.9, teds_struct: 1.0, cell_content_f1: 0.8 }],
+        expected_count: 1, parsed_count: 1,
+      },
+    })
+    render(<ParserComparisonTable results={[r]} caseLabels={{ c1: 'a.pdf' }}
+      caseDimensions={{ c1: 'table' }} />)
+    expect(screen.getByText('Structure')).toBeInTheDocument()
+    expect(screen.getByText('Content')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /diagnostics/i }))
+    expect(screen.getByText(/page 3/i)).toBeInTheDocument()
+    expect(screen.getByText(/matched/i)).toBeInTheDocument()
   })
 
   it('renders text columns for a text case', () => {

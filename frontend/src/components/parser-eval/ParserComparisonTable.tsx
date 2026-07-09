@@ -1,3 +1,4 @@
+import { Fragment, useState } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ScorePill } from '@/components/evaluation/ScorePill'
 import { PARSER_REGISTRY } from '@/components/documents/ParseMethodSelector'
@@ -8,6 +9,16 @@ interface MetricColumns {
   rest: { key: string; label: string }[]
 }
 
+interface PerTable {
+  expected_index: number | null
+  parsed_index: number | null
+  page: number | null
+  status: string
+  teds: number
+  teds_struct: number
+  cell_content_f1: number
+}
+
 const METRIC_COLUMNS: Record<string, MetricColumns> = {
   text: {
     primary: { key: 'similarity', label: 'Similarity' },
@@ -15,7 +26,11 @@ const METRIC_COLUMNS: Record<string, MetricColumns> = {
   },
   table: {
     primary: { key: 'teds', label: 'TEDS' },
-    rest: [{ key: 'table_recall', label: 'Table recall' }],
+    rest: [
+      { key: 'teds_struct', label: 'Structure' },
+      { key: 'cell_content_f1', label: 'Content' },
+      { key: 'table_recall', label: 'Table recall' },
+    ],
   },
 }
 
@@ -48,6 +63,14 @@ export function ParserComparisonTable({ results, caseLabels, caseDimensions }: P
     byCase.set(r.evalCaseId, arr)
   })
 
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const toggle = (key: string) => setExpanded((prev) => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  })
+
   return (
     <div className="space-y-6">
       {[...byCase.entries()].map(([caseId, rows]) => {
@@ -70,15 +93,56 @@ export function ParserComparisonTable({ results, caseLabels, caseDimensions }: P
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sorted.map((r) => (
-                  <TableRow key={r.variantKey} data-testid="cmp-row">
-                    <TableCell>{adapterLabel(r.adapter)}</TableCell>
-                    <TableCell><ScorePill score={r.metrics[cols.primary.key] ?? null} /></TableCell>
-                    {cols.rest.map((c) => <TableCell key={c.key}>{pct(r.metrics[c.key])}</TableCell>)}
-                    <TableCell>{fmtCost(r.cost)}</TableCell>
-                    <TableCell>{fmtLatency(r.latencyMs)}</TableCell>
-                  </TableRow>
-                ))}
+                {sorted.map((r) => {
+                  const perTable = (r.details?.per_table as PerTable[] | undefined) ?? []
+                  const canExpand = dimension === 'table' && perTable.length > 0
+                  const isOpen = expanded.has(r.variantKey)
+                  const colSpan = 2 + cols.rest.length + 2
+                  return (
+                    <Fragment key={r.variantKey}>
+                      <TableRow data-testid="cmp-row">
+                        <TableCell>
+                          {canExpand && (
+                            <button type="button" aria-label="Toggle diagnostics"
+                              className="mr-1 text-muted-foreground hover:text-foreground"
+                              onClick={() => toggle(r.variantKey)}>{isOpen ? '▾' : '▸'}</button>
+                          )}
+                          {adapterLabel(r.adapter)}
+                        </TableCell>
+                        <TableCell><ScorePill score={r.metrics[cols.primary.key] ?? null} /></TableCell>
+                        {cols.rest.map((c) => <TableCell key={c.key}>{pct(r.metrics[c.key])}</TableCell>)}
+                        <TableCell>{fmtCost(r.cost)}</TableCell>
+                        <TableCell>{fmtLatency(r.latencyMs)}</TableCell>
+                      </TableRow>
+                      {canExpand && isOpen && (
+                        <TableRow>
+                          <TableCell colSpan={colSpan} className="bg-muted/30">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-muted-foreground">
+                                  <th className="py-1 text-left">Table</th>
+                                  <th className="text-left">TEDS</th>
+                                  <th className="text-left">Structure</th>
+                                  <th className="text-left">Content</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {perTable.map((t, i) => (
+                                  <tr key={i}>
+                                    <td className="py-1">Page {t.page ?? '—'} · {t.status}</td>
+                                    <td>{pct(t.teds)}</td>
+                                    <td>{pct(t.teds_struct)}</td>
+                                    <td>{pct(t.cell_content_f1)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
