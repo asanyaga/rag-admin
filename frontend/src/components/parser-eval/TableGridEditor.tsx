@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   materialize, setText, toggleHeader, addRow, removeRow, addColumn, removeColumn,
@@ -11,13 +11,35 @@ export function TableGridEditor({ model, onChange }:
   { model: TableModel; onChange: (m: TableModel) => void }) {
   const [sel, setSel] = useState<Sel>({ r1: 0, c1: 0, r2: 0, c2: 0 })
   const [error, setError] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const draggingRef = useRef(false)
   const grid = materialize(model)
+
+  // End the drag on any mouse release, even outside the table.
+  useEffect(() => {
+    const stop = () => { draggingRef.current = false; setDragging(false) }
+    window.addEventListener('mouseup', stop)
+    return () => window.removeEventListener('mouseup', stop)
+  }, [])
 
   const apply = (fn: () => TableModel) => {
     try { setError(null); onChange(fn()) } catch (e) { setError((e as Error).message) }
   }
-  const onCellMouseDown = (r: number, c: number, shift: boolean) =>
-    setSel((s) => shift ? { ...s, r2: r, c2: c } : { r1: r, c1: c, r2: r, c2: c })
+  const startSelect = (r: number, c: number, shift: boolean) => {
+    if (shift) { setSel((s) => ({ ...s, r2: r, c2: c })); return }
+    setSel({ r1: r, c1: c, r2: r, c2: c })
+    draggingRef.current = true
+    setDragging(true)
+  }
+  const extendSelect = (r: number, c: number) => {
+    if (draggingRef.current) setSel((s) => ({ ...s, r2: r, c2: c }))
+  }
+
+  const top = Math.min(sel.r1, sel.r2)
+  const bottom = Math.max(sel.r1, sel.r2)
+  const left = Math.min(sel.c1, sel.c2)
+  const right = Math.max(sel.c1, sel.c2)
+  const inSel = (r: number, c: number) => r >= top && r <= bottom && c >= left && c <= right
 
   return (
     <div className="space-y-2">
@@ -32,18 +54,21 @@ export function TableGridEditor({ model, onChange }:
         <Button size="sm" variant="outline" onClick={() => apply(() => toggleHeader(model, sel.r1, sel.c1))}>Header</Button>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
-      <table className="border-collapse">
+      <table className={`border-collapse ${dragging ? 'select-none' : ''}`}>
         <tbody>
           {grid.map((row, r) => (
             <tr key={r}>
               {row.map((slot, c) => {
                 if (slot.kind === 'covered') return null
                 const { cell } = slot
-                const selected = r === sel.r1 && c === sel.c1
+                const selected = inSel(r, c)
                 return (
                   <td key={c} rowSpan={cell.rowspan} colSpan={cell.colspan}
-                    onMouseDown={(e) => onCellMouseDown(r, c, e.shiftKey)}
-                    className={`border p-0 ${selected ? 'ring-2 ring-primary' : ''} ${cell.isHeader ? 'bg-muted font-semibold' : ''}`}>
+                    onMouseDown={(e) => startSelect(r, c, e.shiftKey)}
+                    onMouseEnter={() => extendSelect(r, c)}
+                    className={`border p-0 ${cell.isHeader ? 'font-semibold' : ''} `
+                      + (selected ? 'bg-primary/10 ring-2 ring-inset ring-primary'
+                        : cell.isHeader ? 'bg-muted' : '')}>
                     <input
                       aria-label={`cell ${r},${c}`}
                       className="w-full min-w-24 bg-transparent px-2 py-1 text-sm outline-none"
