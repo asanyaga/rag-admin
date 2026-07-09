@@ -28,6 +28,7 @@ import RunComparisonPage from './pages/RunComparisonPage'
 import ExperimentDetailPage from './pages/ExperimentDetailPage'
 import ExperimentComparisonPage from './pages/ExperimentComparisonPage'
 import ExtractionPage from './pages/ExtractionPage'
+import ProbePage from './pages/ProbePage'
 import NewExtractionRunPage from './pages/NewExtractionRunPage'
 import ExtractionResultDetailPage from './pages/ExtractionResultDetailPage'
 import AgentListPage from './pages/AgentListPage'
@@ -110,6 +111,11 @@ const router = createBrowserRouter([
             path: 'extract',
             element: <ExtractionPage />,
             handle: { breadcrumb: 'Extract' },
+          },
+          {
+            path: 'probe',
+            element: <ProbePage />,
+            handle: { breadcrumb: 'Probe' },
           },
           {
             path: 'extract/new',

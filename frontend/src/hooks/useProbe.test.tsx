@@ -8,7 +8,7 @@ describe('useProbe', () => {
     vi.spyOn(api, 'probeDocument').mockResolvedValue({
       document_id: 'd1', filename: 'f.pdf', page_count: 1, inspection: {},
       pages: [], suggestion: null, duration_ms: 1, probed_at: 't',
-    } as any)
+    })
     const { result } = renderHook(() => useProbe())
     await act(async () => { await result.current.run('d1') })
     await waitFor(() => expect(result.current.report?.document_id).toBe('d1'))

@@ -8,7 +8,7 @@ describe('probeDocument', () => {
   beforeEach(() => vi.clearAllMocks())
   it('posts document_id + config and returns the report', async () => {
     const report = { document_id: 'd1', pages: [], suggestion: null }
-    ;(apiClient.post as any).mockResolvedValue({ data: report })
+    vi.mocked(apiClient.post).mockResolvedValue({ data: report } as never)
     const result = await probeDocument('d1')
     expect(apiClient.post).toHaveBeenCalledWith('/probe', { document_id: 'd1', config: null })
     expect(result.document_id).toBe('d1')
