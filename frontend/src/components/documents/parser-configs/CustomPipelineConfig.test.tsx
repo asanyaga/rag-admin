@@ -194,3 +194,38 @@ describe('CustomPipelineConfig with a legacy config', () => {
     expect(next.tools['0']).toBeUndefined()
   })
 })
+
+const TESSERACT_DEFAULTS_KEYS = ['pages', 'lang', 'psm', 'dpi', 'min_confidence']
+
+describe('OCR slot', () => {
+  const base = {
+    tools: { fitz: { tool: 'fitz', config: {} } },
+    capabilities: { text_extraction: 'fitz' },
+  }
+
+  it('selecting tesseract adds a text_ocr slot with defaults', async () => {
+    const onChange = vi.fn()
+    render(<CustomPipelineConfig config={base} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('combobox', { name: /text ocr/i }))
+    await userEvent.click(screen.getByText(/tesseract/i))
+    const calls = onChange.mock.calls
+    const next = calls[calls.length - 1][0]
+    expect(next.capabilities.text_ocr).toBe('tesseract')
+    expect(next.tools.tesseract.tool).toBe('tesseract')
+    for (const k of TESSERACT_DEFAULTS_KEYS) {
+      expect(next.tools.tesseract.config[k]).toBeDefined()
+    }
+  })
+
+  it('shows the precedence control only when OCR is on', () => {
+    const withOcr = {
+      tools: { fitz: { tool: 'fitz', config: {} },
+               tesseract: { tool: 'tesseract', config: { pages: 'auto' } } },
+      capabilities: { text_extraction: 'fitz', text_ocr: 'tesseract' },
+    }
+    const { rerender } = render(<CustomPipelineConfig config={base} onChange={vi.fn()} />)
+    expect(screen.queryByText(/native text wins/i)).not.toBeInTheDocument()
+    rerender(<CustomPipelineConfig config={withOcr} onChange={vi.fn()} />)
+    expect(screen.getByText(/native text wins/i)).toBeInTheDocument()
+  })
+})
