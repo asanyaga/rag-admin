@@ -152,3 +152,55 @@ async def test_run_custom_pipeline_requires_a_text_extraction_slot():
             config=config,
             client=None,
         )
+
+
+@pytest.mark.asyncio
+async def test_runner_passes_selected_pages_and_ocr_prefer(monkeypatch):
+    """The runner must resolve the OCR page selection via select_pages and pass
+    ocr_prefer through to the merger."""
+    captured = {}
+
+    import app.cdm.adapters.custom_pipeline.config as cfgmod
+    from app.cdm.adapters.custom_pipeline.capabilities import Capability
+    from app.cdm.adapters.custom_pipeline.tools.base import ToolResult
+
+    class FakeOcr:
+        tool_id = "tesseract"
+        provides = frozenset({Capability.TEXT_OCR})
+        def __init__(self, config=None): pass
+        def select_pages(self, flags):
+            captured["select_pages_called"] = True
+            return [0]
+        def run(self, pdf_path, *, pages=None, page_meta=None, emit=frozenset()):
+            captured["ocr_pages"] = pages
+            return ToolResult(tool_id="tesseract",
+                              blocks_by_capability={Capability.TEXT_OCR: []})
+
+    real_registry = cfgmod._tool_registry
+    def fake_registry():
+        reg = real_registry()
+        reg["tesseract"] = cfgmod.ToolSpec(cfgmod.TesseractConfig,
+                                           FakeOcr.provides, lambda c: FakeOcr())
+        return reg
+    monkeypatch.setattr(cfgmod, "_tool_registry", fake_registry)
+
+    import app.cdm.adapters.custom_pipeline.merger as mergemod
+    real_merge = mergemod.merge
+    def spy_merge(*a, **k):
+        captured["ocr_prefer"] = k.get("ocr_prefer")
+        return real_merge(*a, **k)
+    monkeypatch.setattr("app.services.parsing.custom_pipeline_runner.merge", spy_merge)
+
+    config = {
+        "tools": {"fitz": {"tool": "fitz", "config": {}},
+                  "ocr": {"tool": "tesseract", "config": {"pages": "auto"}}},
+        "capabilities": {"text_extraction": "fitz", "text_ocr": "ocr"},
+        "precedence": {"text_ocr": "prefer"},
+    }
+    run, _ = await run_custom_pipeline(
+        source=_source(), file_path=str(FIXTURES / "simple_text.pdf"),
+        representation_kind="extract_rich", config=config, client=None)
+    assert run.status == ParseRunStatus.SUCCEEDED
+    assert captured["select_pages_called"] is True
+    assert captured["ocr_pages"] == [0]
+    assert captured["ocr_prefer"] is True
