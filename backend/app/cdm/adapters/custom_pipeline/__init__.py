@@ -9,6 +9,7 @@ from app.cdm.adapters.custom_pipeline.config import (
     CamelotConfig,
     FitzConfig,
     FitzTablesConfig,
+    TesseractConfig,
     ResolvedInstance,
     ResolvedPipeline,
     build_pipeline_config,
@@ -23,6 +24,7 @@ from app.cdm.adapters.custom_pipeline.tools.base import PipelineTool, PageMeta, 
 from app.cdm.adapters.custom_pipeline.tools.camelot_tool import CamelotTool
 from app.cdm.adapters.custom_pipeline.tools.fitz_tables_tool import FitzTablesTool
 from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool
+from app.cdm.adapters.custom_pipeline.tools.tesseract_tool import TesseractTool
 
 __all__ = [
     "CustomPipelineAdapter",
@@ -33,6 +35,7 @@ __all__ = [
     "CamelotConfig",
     "FitzConfig",
     "FitzTablesConfig",
+    "TesseractConfig",
     "ResolvedInstance",
     "ResolvedPipeline",
     "build_pipeline_config",
@@ -48,4 +51,5 @@ __all__ = [
     "CamelotTool",
     "FitzTablesTool",
     "FitzTool",
+    "TesseractTool",
 ]

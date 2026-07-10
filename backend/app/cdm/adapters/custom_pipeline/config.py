@@ -7,7 +7,7 @@ told which capabilities to `emit` (masking).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Literal, Optional, Set
+from typing import Any, Callable, Dict, List, Literal, Optional, Set, Union
 
 from pydantic import BaseModel
 
@@ -49,6 +49,14 @@ class FitzTablesConfig(BaseModel):
     text_y_tolerance: Optional[float] = None
 
 
+class TesseractConfig(BaseModel):
+    pages: Union[Literal["auto", "all"], List[int]] = "auto"
+    lang: str = "eng"
+    psm: int = 3                 # tesseract page-segmentation mode
+    dpi: int = 300               # render resolution
+    min_confidence: float = 0.0  # 0..1; default keeps everything
+
+
 @dataclass(frozen=True)
 class ToolSpec:
     config_cls: type[BaseModel]
@@ -60,6 +68,7 @@ def _tool_registry() -> Dict[str, ToolSpec]:
     from app.cdm.adapters.custom_pipeline.tools.camelot_tool import CamelotTool
     from app.cdm.adapters.custom_pipeline.tools.fitz_tables_tool import FitzTablesTool
     from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool
+    from app.cdm.adapters.custom_pipeline.tools.tesseract_tool import TesseractTool
 
     return {
         "fitz": ToolSpec(FitzConfig, FitzTool.provides,
@@ -68,6 +77,8 @@ def _tool_registry() -> Dict[str, ToolSpec]:
                             lambda c: CamelotTool(config=c)),
         "fitz_tables": ToolSpec(FitzTablesConfig, FitzTablesTool.provides,
                                 lambda c: FitzTablesTool(config=c)),
+        "tesseract": ToolSpec(TesseractConfig, TesseractTool.provides,
+                              lambda c: TesseractTool(config=c)),
     }
 
 
@@ -84,6 +95,7 @@ class ResolvedPipeline:
     page_flags: PageFlagsConfig
     eviction_overlap_threshold: float
     ocr_eviction_threshold: float
+    ocr_prefer: bool = False
 
     def for_capability(self, cap: Capability) -> Optional[ResolvedInstance]:
         return next((i for i in self.instances if cap in i.emit), None)
@@ -133,9 +145,11 @@ def build_pipeline_config(config: Dict[str, Any]) -> ResolvedPipeline:
             ResolvedInstance(key=key, tool=spec.factory(tool_cfg), emit=emit)
         )
 
+    precedence = config.get("precedence", {}) or {}
     return ResolvedPipeline(
         instances=instances,
         page_flags=PageFlagsConfig.model_validate(config.get("page_flags", {}) or {}),
         eviction_overlap_threshold=config.get("eviction_overlap_threshold", 0.5),
         ocr_eviction_threshold=config.get("ocr_eviction_threshold", 0.3),
+        ocr_prefer=precedence.get("text_ocr") == "prefer",
     )
