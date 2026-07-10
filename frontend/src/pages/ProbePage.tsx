@@ -10,6 +10,11 @@ import { SignalsPopover, DEFAULT_PROBE_CONFIG } from '@/components/probe/Signals
 import { regionsToBlocks, regionColors } from '@/lib/probeOverlay'
 import type { ProbeConfig } from '@/types/probeReport'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable'
 import { FileSearch } from 'lucide-react'
 
 export default function ProbePage(): JSX.Element {
@@ -75,8 +80,12 @@ export default function ProbePage(): JSX.Element {
             <h2 className="text-lg font-medium text-muted-foreground">Select a document to probe</h2>
           </div>
         ) : (
-          <div className="flex flex-1 min-h-0">
-            <div className="flex-1 min-w-0 border-r">
+          <ResizablePanelGroup
+            direction="horizontal"
+            autoSaveId="probe-panes"
+            className="flex-1 min-w-0 min-h-0"
+          >
+            <ResizablePanel defaultSize={62} minSize={30} className="min-w-0">
               <DocumentPdfViewer
                 documentId={selectedDocumentId}
                 blocks={blocks}
@@ -85,15 +94,16 @@ export default function ProbePage(): JSX.Element {
                 blockColors={colors}
                 selectedPageIndex={selectedPage}
               />
-            </div>
-            <div className="w-[420px] shrink-0 overflow-hidden">
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={38} minSize={22} className="min-w-0 overflow-hidden">
               {error && <div className="p-4 text-sm text-destructive">{error}</div>}
               {probing && <div className="p-4 text-sm text-muted-foreground">Probing…</div>}
               {report && (
                 <ProbeReportView report={report} selectedPage={selectedPage} onSelectPage={setSelectedPage} />
               )}
-            </div>
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         )}
       </div>
     </div>
