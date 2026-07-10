@@ -28,7 +28,8 @@ def _source() -> SourceDocument:
 @pytest.mark.asyncio
 async def test_run_custom_pipeline_fitz_only_succeeds():
     config = {
-        "tools": [{"tool_id": "fitz", "config": {}}],
+        "tools": {"fitz": {"tool": "fitz", "config": {}}},
+        "capabilities": {"text_extraction": "fitz"},
         "eviction_overlap_threshold": 0.5,
     }
     run, doc = await run_custom_pipeline(
@@ -42,8 +43,8 @@ async def test_run_custom_pipeline_fitz_only_succeeds():
     assert run.status == ParseRunStatus.SUCCEEDED
     assert run.source_document_id == "doc-xyz"
     assert run.raw_payload is not None
-    assert "tools" in run.raw_payload
-    assert "fitz" in run.raw_payload["tools"]
+    assert "instances" in run.raw_payload
+    assert "fitz" in run.raw_payload["instances"]
     assert doc.parse_run_id == run.id
     assert doc.page_count == 2
     assert any(b.role == BlockRole.TEXT for b in doc.blocks)
@@ -64,7 +65,8 @@ async def test_run_custom_pipeline_raw_payload_json_serializable_with_images(tmp
     doc_pdf.save(str(pdf))
     doc_pdf.close()
 
-    config = {"tools": [{"tool_id": "fitz", "config": {}}]}
+    config = {"tools": {"fitz": {"tool": "fitz", "config": {}}},
+              "capabilities": {"text_extraction": "fitz"}}
     run, _ = await run_custom_pipeline(
         source=_source(),
         file_path=str(pdf),
@@ -79,7 +81,8 @@ async def test_run_custom_pipeline_raw_payload_json_serializable_with_images(tmp
 
 @pytest.mark.asyncio
 async def test_run_custom_pipeline_wraps_failure(tmp_path):
-    config = {"tools": [{"tool_id": "fitz", "config": {}}]}
+    config = {"tools": {"fitz": {"tool": "fitz", "config": {}}},
+              "capabilities": {"text_extraction": "fitz"}}
     with pytest.raises(CustomPipelineRunError) as ei:
         await run_custom_pipeline(
             source=_source(),
@@ -118,10 +121,9 @@ async def test_run_custom_pipeline_fitz_tables_emits_table_blocks(tmp_path):
     doc.close()
 
     config = {
-        "tools": [
-            {"tool_id": "fitz", "config": {}},
-            {"tool_id": "fitz_tables", "config": {}},
-        ],
+        "tools": {"fitz": {"tool": "fitz", "config": {}},
+                  "fitz_tables": {"tool": "fitz_tables", "config": {}}},
+        "capabilities": {"text_extraction": "fitz", "table_detection": "fitz_tables"},
         "eviction_overlap_threshold": 0.5,
     }
     run, doc_result = await run_custom_pipeline(
@@ -132,20 +134,17 @@ async def test_run_custom_pipeline_fitz_tables_emits_table_blocks(tmp_path):
         client=None,
     )
     assert run.status == ParseRunStatus.SUCCEEDED
-    assert "fitz_tables" in run.raw_payload["tools"]
+    assert "fitz_tables" in run.raw_payload["instances"]
     assert any(b.role == BlockRole.TABLE for b in doc_result.blocks)
 
 
 @pytest.mark.asyncio
-async def test_run_custom_pipeline_rejects_dual_table_tools():
-    config = {
-        "tools": [
-            {"tool_id": "fitz", "config": {}},
-            {"tool_id": "fitz_tables", "config": {}},
-            {"tool_id": "camelot", "config": {}},
-        ],
-    }
-    with pytest.raises(CustomPipelineRunError) as ei:
+async def test_run_custom_pipeline_requires_a_text_extraction_slot():
+    """Two table tools are now structurally unrepresentable (the capabilities map
+    has a single table_detection key), so the old dual-table guard is gone. What
+    remains worth asserting is the required slot."""
+    config = {"tools": {}, "capabilities": {}}
+    with pytest.raises(CustomPipelineRunError, match="text_extraction"):
         await run_custom_pipeline(
             source=_source(),
             file_path=str(FIXTURES / "simple_text.pdf"),
@@ -153,4 +152,3 @@ async def test_run_custom_pipeline_rejects_dual_table_tools():
             config=config,
             client=None,
         )
-    assert ei.value.run.status == ParseRunStatus.FAILED

@@ -9,9 +9,10 @@ from typing import Any, Dict, Optional, Tuple
 
 from app.cdm.adapters.base import SourceMeta
 from app.cdm.adapters.custom_pipeline.adapter import CustomPipelineAdapter
-from app.cdm.adapters.custom_pipeline.config import TABLE_TOOL_IDS, build_pipeline_config
+from app.cdm.adapters.custom_pipeline.capabilities import Capability
+from app.cdm.adapters.custom_pipeline.config import build_pipeline_config
 from app.cdm.adapters.custom_pipeline.merger import merge
-from app.cdm.adapters.custom_pipeline.tools.base import ToolResult
+from app.cdm.adapters.custom_pipeline.page_flags import compute_page_flags
 from app.cdm.models import ParsedDocument, ParserKind
 from app.cdm.source import ParseRun, ParseRunStatus, SourceDocument
 from app.services.parsing.errors import CustomPipelineRunError
@@ -51,33 +52,33 @@ async def run_custom_pipeline(
         pdf_path = Path(file_path)
 
         pipeline = build_pipeline_config(config)
+        flags = compute_page_flags(pdf_path, pipeline.page_flags)
 
-        fitz_tool = next((t for t in pipeline.tools if t.tool_id == "fitz"), None)
-        if fitz_tool is None:
-            raise ValueError("custom pipeline requires a 'fitz' tool")
+        text_instance = pipeline.for_capability(Capability.TEXT_EXTRACTION)
+        # build_pipeline_config guarantees this, but fail loudly if it ever does not.
+        if text_instance is None:
+            raise ValueError("capability 'text_extraction' is required")
 
-        fitz_result: ToolResult = fitz_tool.run(pdf_path)
-        warnings = list(fitz_result.warnings)
+        text_result = text_instance.tool.run(pdf_path, emit=text_instance.emit)
+        results = [text_result]
+        warnings = list(text_result.warnings)
 
-        table_entry = next(
-            (e for e in config.get("tools", []) if e.get("tool_id") in TABLE_TOOL_IDS),
-            None,
-        )
-        if table_entry is not None:
-            table_pipeline = build_pipeline_config(
-                {"tools": [table_entry]}, page_meta=fitz_result.page_meta
-            )
-            table_tool = table_pipeline.tools[0]
-            table_result = table_tool.run(pdf_path)
-            warnings.extend(table_result.warnings)
-        else:
-            table_result = ToolResult(tool_id="none", blocks=[], page_meta={}, raw={})
+        # Remaining instances run once each, in the deterministic order
+        # build_pipeline_config established, and receive page geometry from the
+        # text_extraction tool.
+        for inst in pipeline.instances:
+            if inst is text_instance:
+                continue
+            r = inst.tool.run(pdf_path, page_meta=text_result.page_meta, emit=inst.emit)
+            results.append(r)
+            warnings.extend(r.warnings)
 
         merge_result = merge(
-            fitz_result,
-            table_result,
+            results,
             source_document_id=source.id,
+            page_flags=flags,
             eviction_overlap_threshold=pipeline.eviction_overlap_threshold,
+            ocr_eviction_threshold=pipeline.ocr_eviction_threshold,
         )
     except Exception as exc:  # noqa: BLE001
         raise _fail(exc) from exc
@@ -101,7 +102,7 @@ async def run_custom_pipeline(
 
     adapter = CustomPipelineAdapter()
     doc = adapter.adapt(
-        {"page_meta": fitz_result.page_meta, "blocks": merge_result.blocks},
+        {"page_meta": text_result.page_meta, "blocks": merge_result.blocks},
         SourceMeta(
             source_document_id=source.id,
             parse_run_id=run.id,

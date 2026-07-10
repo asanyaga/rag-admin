@@ -1,13 +1,17 @@
 """Merge tool outputs into a final ordered block list + an audit raw_output.
 
-Eviction rule: later-declared tools win. A fitz TEXT block that overlaps
-a table block beyond the threshold is evicted (logged, not deleted).
+Blocks are tagged with the capability that produced them. Precedence is
+per-page (see capabilities.resolve_precedence): structure beats loose text, and
+OCR sits below native text unless the page is CID-corrupt or the router set
+`ocr_prefer`. Losers are evicted (logged, not deleted).
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
+from app.cdm.adapters.custom_pipeline.capabilities import Capability, resolve_precedence
+from app.cdm.adapters.custom_pipeline.page_flags import PageFlags
 from app.cdm.adapters.custom_pipeline.tools.base import ToolResult
 from app.cdm.models import BBox, Block
 
@@ -16,17 +20,15 @@ def _area(b: BBox) -> float:
     return max(0.0, b.x1 - b.x0) * max(0.0, b.y1 - b.y0)
 
 
-def overlap_fraction(table_bbox: BBox, fitz_bbox: BBox) -> float:
-    """Intersection area / area(fitz_bbox), in normalized coords."""
-    fitz_area = _area(fitz_bbox)
-    if fitz_area == 0.0:
+def overlap_fraction(winner: BBox, loser: BBox) -> float:
+    """Intersection area / area(loser), in normalized coords."""
+    loser_area = _area(loser)
+    if loser_area == 0.0:
         return 0.0
-    ix0 = max(table_bbox.x0, fitz_bbox.x0)
-    iy0 = max(table_bbox.y0, fitz_bbox.y0)
-    ix1 = min(table_bbox.x1, fitz_bbox.x1)
-    iy1 = min(table_bbox.y1, fitz_bbox.y1)
+    ix0, iy0 = max(winner.x0, loser.x0), max(winner.y0, loser.y0)
+    ix1, iy1 = min(winner.x1, loser.x1), min(winner.y1, loser.y1)
     inter = max(0.0, ix1 - ix0) * max(0.0, iy1 - iy0)
-    return inter / fitz_area
+    return inter / loser_area
 
 
 @dataclass
@@ -42,80 +44,96 @@ def _sort_key(block: Block) -> Tuple[float, float]:
 
 
 def merge(
-    fitz_result: ToolResult,
-    table_result: ToolResult,
+    results: Sequence[ToolResult],
     *,
     source_document_id: str,
+    page_flags: Dict[int, PageFlags],
+    ocr_prefer: bool = False,
     eviction_overlap_threshold: float = 0.5,
+    ocr_eviction_threshold: float = 0.3,
 ) -> MergeResult:
-    table_blocks = list(table_result.blocks)
+    # Flatten to (block, capability, tool_id), preserving producer order.
+    tagged: List[Tuple[Block, Capability, str]] = [
+        (b, cap, r.tool_id)
+        for r in results
+        for cap, blocks in r.blocks_by_capability.items()
+        for b in blocks
+    ]
 
-    # 1. Eviction pass — fitz blocks overlapping any table beyond threshold.
-    evicted_ids = set()
-    eviction_winner: Dict[str, str] = {}
-    eviction_overlap: Dict[str, float] = {}
-    for fb in fitz_result.blocks:
-        if fb.bbox is None:
+    def _threshold(loser_cap: Capability) -> float:
+        return (ocr_eviction_threshold if loser_cap is Capability.TEXT_OCR
+                else eviction_overlap_threshold)
+
+    def _rank(page_index: int) -> Dict[Capability, int]:
+        flags = page_flags.get(page_index)
+        return resolve_precedence(
+            cid_corrupt=bool(flags and flags.cid_corrupt), ocr_prefer=ocr_prefer,
+        )
+
+    # 1. Eviction pass — a block loses to any higher-ranked block that covers it.
+    evicted: Dict[str, Dict[str, Any]] = {}
+    for loser, loser_cap, loser_tool in tagged:
+        if loser.bbox is None:
             continue
-        for tb in table_blocks:
-            if tb.page_index != fb.page_index or tb.bbox is None:
+        ranks = _rank(loser.page_index)
+        for winner, winner_cap, _ in tagged:
+            if winner.id == loser.id or winner.bbox is None:
                 continue
-            frac = overlap_fraction(tb.bbox, fb.bbox)
-            if frac > eviction_overlap_threshold:
-                evicted_ids.add(fb.id)
-                eviction_winner[fb.id] = tb.id
-                eviction_overlap[fb.id] = frac
+            if winner.page_index != loser.page_index:
+                continue
+            if ranks.get(winner_cap, 0) <= ranks.get(loser_cap, 0):
+                continue
+            frac = overlap_fraction(winner.bbox, loser.bbox)
+            if frac > _threshold(loser_cap):
+                evicted[loser.id] = {
+                    "block_id": loser.id,
+                    "capability": loser_cap.value,
+                    "winner_capability": winner_cap.value,
+                    "winner_prov_id": winner.id,
+                    "reason": "covered_by",
+                    "overlap_fraction": frac,
+                    "tool": loser_tool,
+                }
                 break
 
-    surviving_fitz = [b for b in fitz_result.blocks if b.id not in evicted_ids]
-    combined = surviving_fitz + table_blocks
+    survivors = [(b, c, t) for (b, c, t) in tagged if b.id not in evicted]
 
     # 2. Mint final ids + reading order, grouped per page.
     by_page: Dict[int, List[Block]] = {}
-    for b in combined:
+    for b, _, _ in survivors:
         by_page.setdefault(b.page_index, []).append(b)
 
     prov_to_final: Dict[str, str] = {}
     final_blocks: List[Block] = []
-    for page_index in sorted(by_page.keys()):
-        ordered = sorted(by_page[page_index], key=_sort_key)
-        for reading_order, block in enumerate(ordered):
+    for page_index in sorted(by_page):
+        for reading_order, block in enumerate(sorted(by_page[page_index], key=_sort_key)):
             final_id = f"{source_document_id}:{page_index}:{reading_order}"
             prov_to_final[block.id] = final_id
             final_blocks.append(
                 block.model_copy(update={"id": final_id, "reading_order": reading_order})
             )
 
-    # 3. Build raw_output (audit trail).
-    def _block_map(result: ToolResult) -> Dict[str, Any]:
-        out: Dict[str, Any] = {}
-        for prov_id, native in result.native_by_block.items():
-            final_id = prov_to_final.get(prov_id)
-            if final_id is not None:
-                out[final_id] = native
-        return out
-
-    evicted_records = [
-        {
-            "block_id": prov_id,
-            "tool": "fitz",
-            "reason": "spatial_overlap",
-            "won_by": prov_to_final[eviction_winner[prov_id]],
-            "overlap_fraction": eviction_overlap[prov_id],
-            "raw_block": fitz_result.native_by_block.get(prov_id),
+    # 3. Audit trail, keyed by instance and explained in capability terms.
+    instances: Dict[str, Any] = {}
+    for r in results:
+        block_map = {
+            prov_to_final[prov]: native
+            for prov, native in r.native_by_block.items()
+            if prov in prov_to_final
         }
-        for prov_id in evicted_ids
-    ]
+        instances[r.tool_id] = {
+            "tool": r.tool_id,
+            "capabilities": [c.value for c in r.blocks_by_capability],
+            "raw": r.raw,
+            "block_map": block_map,
+        }
 
-    raw_output = {
-        "tools": {
-            "fitz": {"raw": fitz_result.raw, "block_map": _block_map(fitz_result)},
-            table_result.tool_id: {
-                "raw": table_result.raw,
-                "block_map": _block_map(table_result),
-            },
-        },
-        "evicted": evicted_records,
-    }
+    evicted_records: List[Dict[str, Any]] = []
+    for record in evicted.values():
+        record["won_by"] = prov_to_final.get(record.pop("winner_prov_id"))
+        evicted_records.append(record)
 
-    return MergeResult(blocks=final_blocks, raw_output=raw_output)
+    return MergeResult(
+        blocks=final_blocks,
+        raw_output={"instances": instances, "evicted": evicted_records},
+    )
