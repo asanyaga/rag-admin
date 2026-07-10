@@ -1,8 +1,20 @@
 # WS2 — OCR Tooling: Parking-Lot Constraints
 
-**Status:** Parking lot (not a spec yet). Accumulates decisions/constraints surfaced
-while brainstorming WS1 (the standalone explainable Probe). WS2 gets its own full
-spec later; start it from here.
+**Status:** Largely superseded. WS2 slice 1 is specified in
+[2026-07-10-ocr-capability-pipeline-design.md](2026-07-10-ocr-capability-pipeline-design.md).
+This document remains the parking lot for questions deferred past that slice — see
+"Still parked" at the bottom.
+
+**Disposition of the original constraints:**
+
+| | Constraint | Outcome |
+|---|---|---|
+| C1 | Execution location configurable; not "always local" | **Parked** — see "Still parked" below. Slice 1 ships in-process tesseract with no `execution` field, so no local assumption is baked into the config contract. |
+| C2 | `LocalTool` name clashes with remote ambition | **Resolved** — renamed `PipelineTool` in slice 1. |
+| C3 | Engine is user-selectable | **Resolved structurally** — the `text_ocr` capability slot enforces one engine per run, so the engine *is* the tool id (`tesseract`, later `paddleocr`). No separate engine seam needed. |
+
+**Original context:** WS1 = make the Probe a standalone, explainable feature (robust, legible
+"needs OCR" evidence). WS2 = add actual OCR as composable custom-pipeline tool(s).
 
 **Context:** WS1 = make the Probe a standalone, explainable feature (robust, legible
 "needs OCR" evidence). WS2 = add actual OCR as composable custom-pipeline tool(s).
@@ -72,11 +84,35 @@ location split.)
 
 ---
 
-## Open questions for the WS2 spec (do not answer yet)
+## Resolved by the slice-1 spec
 
-- How does the probe's per-region evidence (WS1 output) get *handed* to the OCR tool
-  when the user routes manually? File + page list? Region bboxes? Just the page?
-- Reconciliation: how do OCR blocks merge with an existing native text layer on `mixed`
-  pages without duplicating (extends the existing `merger.py` eviction machinery)?
-- Structure recovery for tables-embedded-as-images (deferred; possibly a later slice).
-- Remote hand-off contract: sync vs. async, auth, payload shape, failure/timeouts.
+- **Probe → OCR hand-off:** dissolved. OCR engines already do text detection, so the probe
+  never hands over regions. It informs *which pages*; reconciliation handles the rest.
+  The pipeline takes no dependency on `app/probe/`.
+- **Reconciliation:** OCR runs wholesale on selected pages, then output is filtered
+  spatially — native text wins (exact beats lossy), except on CID-corrupt pages or when the
+  router sets `precedence.text_ocr: "prefer"`. Mixed pages fall out for free.
+- **Structure recovery for tables-embedded-as-images:** still deferred.
+
+---
+
+## Still parked — brainstorm alongside PaddleOCR / layout analysis
+
+### Execution location (the C1 question, reopened deliberately)
+Slice 1 ships tesseract in-process and omits the `execution` config field entirely. The
+broader question is richer than "local vs remote" and deserves its own session:
+
+- Remote/managed OCR service (neocloud GPU, dedicated GPU box)
+- **Local GPU acceleration** (same process, different device)
+- Sync vs async hand-off, auth, payload shape, timeouts, failure semantics
+- Whether execution generalizes beyond OCR to any heavy `PipelineTool` (e.g. a remote docling)
+
+**Rejected sketch, recorded so it is not re-proposed:** `RemoteEngine(endpoint, engine="paddleocr")`
+made engine identity a *class* locally and a *string* remotely. That asymmetry re-couples the
+two axes C1 exists to keep orthogonal. The right factoring separates the **recognizer**
+(engine, in-process) from the **transport** (executor, engine-agnostic) — but settle it with
+real GPU/hosting requirements in hand, not speculatively.
+
+### Heavy engines
+`paddleocr` (paddlepaddle, hundreds of MB) and `easyocr` (torch, GB+) should not go in the
+API image. Their natural home is behind whatever the execution axis becomes.
