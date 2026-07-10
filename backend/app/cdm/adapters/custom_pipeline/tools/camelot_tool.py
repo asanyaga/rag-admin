@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 import camelot
 
+from app.cdm.adapters.custom_pipeline.capabilities import Capability
 from app.cdm.adapters.custom_pipeline.config import CamelotConfig
 from app.cdm.adapters.custom_pipeline.tools.base import (
     PageMeta,
@@ -23,14 +24,11 @@ from app.cdm.models import BBox, Block, BlockRole, Cell, Table
 
 class CamelotTool:
     tool_id = "camelot"
+    provides = frozenset({Capability.TABLE_DETECTION})
 
-    def __init__(
-        self,
-        config: Optional[CamelotConfig] = None,
-        page_meta: Optional[Dict[int, PageMeta]] = None,
-    ) -> None:
+    def __init__(self, config: Optional[CamelotConfig] = None) -> None:
         self.config = config or CamelotConfig()
-        self.page_meta = page_meta or {}
+        self.page_meta: Dict[int, PageMeta] = {}
 
     @staticmethod
     def _pages_arg(pages: Optional[List[int]]) -> str:
@@ -108,7 +106,18 @@ class CamelotTool:
             },
         )
 
-    def run(self, pdf_path: Path, pages: Optional[List[int]] = None) -> ToolResult:
+    def run(
+        self,
+        pdf_path: Path,
+        *,
+        pages: Optional[List[int]] = None,
+        page_meta: Optional[Dict[int, PageMeta]] = None,
+        emit: frozenset[Capability] = frozenset({Capability.TABLE_DETECTION}),
+    ) -> ToolResult:
+        if not emit <= self.provides:
+            raise ValueError(f"{self.tool_id} cannot emit {set(emit - self.provides)}")
+        self.page_meta = page_meta or {}
+
         t0 = time.perf_counter()
         warnings: List[str] = []
         blocks: List[Block] = []
@@ -151,7 +160,7 @@ class CamelotTool:
 
         return ToolResult(
             tool_id=self.tool_id,
-            blocks=blocks,
+            blocks_by_capability={Capability.TABLE_DETECTION: blocks},
             page_meta=self.page_meta,
             raw={"tables": raw_tables},
             native_by_block=native_by_block,

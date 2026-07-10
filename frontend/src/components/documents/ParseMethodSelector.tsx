@@ -42,12 +42,13 @@ export const PARSER_REGISTRY: Record<string, ParserMeta> = {
     label: 'Custom pipeline',
     description: 'Composable tools',
     defaultConfig: {
-      tools: [
-        {
-          tool_id: 'fitz',
+      tools: {
+        fitz: {
+          tool: 'fitz',
           config: { min_chars_threshold: 10, include_images: true, span_detail: false },
         },
-      ],
+      },
+      capabilities: { text_extraction: 'fitz' },
       eviction_overlap_threshold: 0.5,
     },
   },

@@ -16,11 +16,20 @@ import {
 import { Slider } from '@/components/ui/slider'
 import type { ParseConfig } from '@/types/parsing'
 import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-interface ToolEntry {
-  tool_id: string
+interface ToolInstance {
+  tool: string
   config: Record<string, unknown>
+}
+
+/** Capability slots: each capability is filled by at most one named tool instance. */
+interface PipelineConfig {
+  tools: Record<string, ToolInstance>
+  capabilities: Record<string, string>
+  eviction_overlap_threshold?: number
+  ocr_eviction_threshold?: number
+  page_flags?: Record<string, number>
 }
 
 interface CustomPipelineConfigProps {
@@ -30,8 +39,6 @@ interface CustomPipelineConfigProps {
 }
 
 type TableTool = 'none' | 'fitz_tables' | 'camelot'
-
-const TABLE_TOOL_IDS: TableTool[] = ['fitz_tables', 'camelot']
 
 const CAMELOT_DEFAULTS = { flavor: 'lattice', edge_tol: 50, row_tol: 2 }
 
@@ -348,62 +355,172 @@ function FitzTablesConfigPanel({
   )
 }
 
+const CAPABILITY_BY_TOOL: Record<string, string> = {
+  fitz: 'text_extraction',
+  pdfplumber: 'text_extraction',
+  fitz_tables: 'table_detection',
+  camelot: 'table_detection',
+}
+
+/** Coerce any accepted config shape into the capability-slot shape, and
+ * guarantee the required `text_extraction` slot.
+ *
+ * Handles the pre-refactor array shape (`tools: [{tool_id, config}]`, no
+ * `capabilities`) so re-parsing an old run — or any stale seed — cannot emit a
+ * config the backend will reject with "text_extraction is required".
+ * Idempotent: normalizing an already-normal config returns an equal object.
+ */
+export function normalizeCustomPipelineConfig(raw: unknown): PipelineConfig {
+  const src = (raw ?? {}) as Record<string, unknown>
+  const tools: Record<string, ToolInstance> = {}
+  const capabilities: Record<string, string> = {
+    ...((src.capabilities as Record<string, string>) ?? {}),
+  }
+
+  const rawTools = src.tools
+  if (Array.isArray(rawTools)) {
+    // Old shape: [{ tool_id, config }] keyed by tool id, inferring slots.
+    for (const entry of rawTools as Array<Record<string, unknown>>) {
+      const toolId = (entry.tool ?? entry.tool_id) as string | undefined
+      if (!toolId) continue
+      tools[toolId] = { tool: toolId, config: (entry.config as Record<string, unknown>) ?? {} }
+      const cap = CAPABILITY_BY_TOOL[toolId]
+      if (cap && !capabilities[cap]) capabilities[cap] = toolId
+    }
+  } else if (rawTools && typeof rawTools === 'object') {
+    for (const [key, entry] of Object.entries(rawTools as Record<string, Record<string, unknown>>)) {
+      const toolId = (entry.tool ?? entry.tool_id) as string | undefined
+      if (!toolId) continue
+      tools[key] = { tool: toolId, config: (entry.config as Record<string, unknown>) ?? {} }
+    }
+  }
+
+  // Guarantee the required text_extraction slot.
+  if (!capabilities.text_extraction) {
+    if (!tools.fitz) tools.fitz = { tool: 'fitz', config: {} }
+    capabilities.text_extraction = 'fitz'
+  }
+
+  const out: PipelineConfig = { tools, capabilities }
+  if (typeof src.eviction_overlap_threshold === 'number') {
+    out.eviction_overlap_threshold = src.eviction_overlap_threshold
+  }
+  if (typeof src.ocr_eviction_threshold === 'number') {
+    out.ocr_eviction_threshold = src.ocr_eviction_threshold
+  }
+  return out
+}
+
+/** Assign (or clear) the tool filling a capability slot.
+ *
+ * Instance keys are the tool id — a 1:1 simplification of the named-instance
+ * model. A tool referenced from two slots therefore resolves to one instance.
+ */
+function setSlot(
+  cfg: PipelineConfig,
+  capability: string,
+  toolId: string | null,
+  defaults: Record<string, unknown> = {},
+): PipelineConfig {
+  const capabilities = { ...cfg.capabilities }
+  const tools = { ...cfg.tools }
+  const previous = capabilities[capability]
+  if (previous) {
+    delete capabilities[capability]
+    // Drop the instance only if no other slot still references it.
+    if (!Object.values(capabilities).includes(previous)) delete tools[previous]
+  }
+  if (toolId) {
+    capabilities[capability] = toolId
+    tools[toolId] = tools[toolId] ?? { tool: toolId, config: defaults }
+  }
+  return { ...cfg, tools, capabilities }
+}
+
+function setToolConfig(
+  cfg: PipelineConfig,
+  instanceKey: string,
+  patch: Record<string, unknown>,
+): PipelineConfig {
+  const existing = cfg.tools[instanceKey]
+  if (!existing) return cfg
+  return {
+    ...cfg,
+    tools: {
+      ...cfg.tools,
+      [instanceKey]: { ...existing, config: { ...existing.config, ...patch } },
+    },
+  }
+}
+
 export function CustomPipelineConfig({
   config,
   onChange,
   disabled = false,
 }: CustomPipelineConfigProps) {
-  const tools = (config.tools as ToolEntry[] | undefined) ?? []
-  const threshold = (config.eviction_overlap_threshold as number | undefined) ?? 0.5
+  const cfg = normalizeCustomPipelineConfig(config)
 
-  const fitz = tools.find((t) => t.tool_id === 'fitz')
-  const currentTableTool = tools.find((t) =>
-    TABLE_TOOL_IDS.includes(t.tool_id as TableTool)
-  )
-  const selectedTableTool: TableTool = (currentTableTool?.tool_id as TableTool) ?? 'none'
+  // If the incoming config was a stale/legacy shape, push the normalized shape
+  // up so the parent (and any parse it triggers) uses the corrected config even
+  // if the user never edits anything.
+  const normalizedKey = JSON.stringify(cfg)
+  useEffect(() => {
+    if (JSON.stringify(config) !== normalizedKey) {
+      onChange(cfg as unknown as ParseConfig)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalizedKey])
 
-  const setTools = (next: ToolEntry[]) => onChange({ ...config, tools: next })
+  const tools = cfg.tools
+  const capabilities = cfg.capabilities
+  const threshold = cfg.eviction_overlap_threshold ?? 0.5
 
-  const updateTool = (toolId: string, patch: Record<string, unknown>) => {
-    setTools(
-      tools.map((t) =>
-        t.tool_id === toolId ? { ...t, config: { ...t.config, ...patch } } : t
-      )
-    )
+  const textKey = capabilities.text_extraction ?? 'fitz'
+  const fitz = tools[textKey]
+
+  const tableKey = capabilities.table_detection
+  const currentTableTool = tableKey ? tools[tableKey] : undefined
+  const selectedTableTool: TableTool = (currentTableTool?.tool as TableTool) ?? 'none'
+
+  const updateTool = (instanceKey: string, patch: Record<string, unknown>) => {
+    onChange(setToolConfig(cfg, instanceKey, patch) as unknown as ParseConfig)
   }
 
   const handleTableToolChange = (value: TableTool) => {
-    const withoutAnyTableTool = tools.filter(
-      (t) => !TABLE_TOOL_IDS.includes(t.tool_id as TableTool)
+    const defaults =
+      value === 'camelot' ? { ...CAMELOT_DEFAULTS } : { ...FITZ_TABLES_DEFAULTS }
+    const next = setSlot(
+      cfg,
+      'table_detection',
+      value === 'none' ? null : value,
+      defaults,
     )
-    if (value === 'none') {
-      setTools(withoutAnyTableTool)
-    } else if (value === 'fitz_tables') {
-      setTools([
-        ...withoutAnyTableTool,
-        { tool_id: 'fitz_tables', config: { ...FITZ_TABLES_DEFAULTS } },
-      ])
-    } else if (value === 'camelot') {
-      setTools([
-        ...withoutAnyTableTool,
-        { tool_id: 'camelot', config: { ...CAMELOT_DEFAULTS } },
-      ])
-    }
+    onChange(next as unknown as ParseConfig)
   }
 
   return (
     <div className="space-y-4">
-      {/* Fitz — always on */}
+      {/* Text extraction — a capability slot (required) */}
       <div className="space-y-2 rounded-md border p-3">
-        <div className="flex items-center justify-between">
-          <Label>fitz (text + images)</Label>
-          <span className="text-xs text-muted-foreground">always on</span>
+        <div className="space-y-1">
+          <Label htmlFor="text-tool-select">Text extraction</Label>
+          <p className="text-xs text-muted-foreground">
+            The base text extractor. Required — every pipeline fills this slot.
+          </p>
+          <Select value={textKey} onValueChange={() => {}} disabled={disabled}>
+            <SelectTrigger id="text-tool-select" aria-label="Text extraction">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fitz">fitz (text + images)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <Checkbox
             id="fitz-include-images"
             checked={(fitz?.config.include_images as boolean) ?? true}
-            onCheckedChange={(c) => updateTool('fitz', { include_images: !!c })}
+            onCheckedChange={(c) => updateTool(textKey, { include_images: !!c })}
             disabled={disabled}
           />
           <Label htmlFor="fitz-include-images">Include images (FIGURE blocks)</Label>
@@ -412,7 +529,7 @@ export function CustomPipelineConfig({
           <Checkbox
             id="fitz-span-detail"
             checked={(fitz?.config.span_detail as boolean) ?? false}
-            onCheckedChange={(c) => updateTool('fitz', { span_detail: !!c })}
+            onCheckedChange={(c) => updateTool(textKey, { span_detail: !!c })}
             disabled={disabled}
           />
           <Label htmlFor="fitz-span-detail">Record span detail</Label>
@@ -447,7 +564,7 @@ export function CustomPipelineConfig({
         {selectedTableTool === 'fitz_tables' && currentTableTool && (
           <FitzTablesConfigPanel
             config={currentTableTool.config}
-            onChange={(patch) => updateTool('fitz_tables', patch)}
+            onChange={(patch) => updateTool(tableKey as string, patch)}
             disabled={disabled}
           />
         )}
@@ -458,7 +575,7 @@ export function CustomPipelineConfig({
               <Label htmlFor="camelot-flavor">Flavor</Label>
               <Select
                 value={(currentTableTool.config.flavor as string) ?? 'lattice'}
-                onValueChange={(v) => updateTool('camelot', { flavor: v })}
+                onValueChange={(v) => updateTool(tableKey as string, { flavor: v })}
                 disabled={disabled}
               >
                 <SelectTrigger id="camelot-flavor">
@@ -480,7 +597,7 @@ export function CustomPipelineConfig({
                     type="number"
                     value={(currentTableTool.config.edge_tol as number) ?? 50}
                     onChange={(e) =>
-                      updateTool('camelot', { edge_tol: Number(e.target.value) })
+                      updateTool(tableKey as string, { edge_tol: Number(e.target.value) })
                     }
                     disabled={disabled}
                   />
@@ -492,7 +609,7 @@ export function CustomPipelineConfig({
                     type="number"
                     value={(currentTableTool.config.row_tol as number) ?? 2}
                     onChange={(e) =>
-                      updateTool('camelot', { row_tol: Number(e.target.value) })
+                      updateTool(tableKey as string, { row_tol: Number(e.target.value) })
                     }
                     disabled={disabled}
                   />

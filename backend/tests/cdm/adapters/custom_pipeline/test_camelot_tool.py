@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
+from app.cdm.adapters.custom_pipeline.capabilities import Capability
 from app.cdm.adapters.custom_pipeline.config import CamelotConfig
 from app.cdm.adapters.custom_pipeline.tools.base import PageMeta
 from app.cdm.adapters.custom_pipeline.tools.camelot_tool import CamelotTool
@@ -31,7 +32,7 @@ def test_camelot_tool_id():
 
 def test_table_to_block_role_and_page_index():
     pm = PageMeta(index=1, width=612.0, height=792.0)
-    tool = CamelotTool(page_meta={1: pm})
+    tool = CamelotTool()
     block = tool._table_to_block(_fake_table(), page_index=1, page_meta=pm, table_seq=0)
     assert block.role == BlockRole.TABLE
     assert block.page_index == 1
@@ -89,13 +90,13 @@ def test_run_maps_pages_arg_and_invokes_camelot(monkeypatch):
     monkeypatch.setattr(mod.camelot, "read_pdf", fake_read_pdf)
 
     pm = {1: PageMeta(index=1, width=612.0, height=792.0)}
-    result = CamelotTool(page_meta=pm).run("/tmp/x.pdf", pages=[1])
+    result = CamelotTool().run("/tmp/x.pdf", pages=[1], page_meta=pm)
     # 0-based page 1 → camelot 1-indexed "2"
     assert calls["pages"] == "2"
     assert calls["flavor"] == "lattice"
-    assert len(result.blocks) == 1
-    assert result.blocks[0].id == "camelot:1:0"
-    assert result.blocks[0].id in result.native_by_block
+    assert len(result.blocks_by_capability[Capability.TABLE_DETECTION]) == 1
+    assert result.blocks_by_capability[Capability.TABLE_DETECTION][0].id == "camelot:1:0"
+    assert result.blocks_by_capability[Capability.TABLE_DETECTION][0].id in result.native_by_block
 
 
 def test_run_lattice_omits_stream_only_kwargs(monkeypatch):
@@ -128,3 +129,7 @@ def test_run_stream_includes_tol_kwargs(monkeypatch):
     CamelotTool(config=CamelotConfig(flavor="stream", edge_tol=40, row_tol=3)).run("/tmp/x.pdf")
     assert calls["edge_tol"] == 40
     assert calls["row_tol"] == 3
+
+
+def test_camelot_declares_table_detection():
+    assert CamelotTool().provides == frozenset({Capability.TABLE_DETECTION})

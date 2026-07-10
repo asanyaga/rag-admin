@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import fitz  # PyMuPDF
 
+from app.cdm.adapters.custom_pipeline.capabilities import Capability
 from app.cdm.adapters.custom_pipeline.config import FitzConfig
 from app.cdm.adapters.custom_pipeline.tools.base import (
     PageMeta,
@@ -57,14 +58,25 @@ def _spans(native_block: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 class FitzTool:
     tool_id = "fitz"
+    provides = frozenset({Capability.TEXT_EXTRACTION})
 
     def __init__(self, config: Optional[FitzConfig] = None) -> None:
         self.config = config or FitzConfig()
 
-    def run(self, pdf_path: Path, pages: Optional[List[int]] = None) -> ToolResult:
+    def run(
+        self,
+        pdf_path: Path,
+        *,
+        pages: Optional[List[int]] = None,
+        page_meta: Optional[Dict[int, PageMeta]] = None,  # unused; fitz is the source
+        emit: frozenset[Capability] = frozenset({Capability.TEXT_EXTRACTION}),
+    ) -> ToolResult:
+        if not emit <= self.provides:
+            raise ValueError(f"{self.tool_id} cannot emit {set(emit - self.provides)}")
+
         t0 = time.perf_counter()
         blocks: List[Block] = []
-        page_meta: Dict[int, PageMeta] = {}
+        page_meta_out: Dict[int, PageMeta] = {}
         native_raw: Dict[int, Any] = {}
         native_by_block: Dict[str, Any] = {}
         warnings: List[str] = []
@@ -78,7 +90,7 @@ class FitzTool:
                 pd = page.get_text("dict")
                 width = float(pd["width"])
                 height = float(pd["height"])
-                page_meta[i] = PageMeta(
+                page_meta_out[i] = PageMeta(
                     index=i, width=width, height=height, rotation=page.rotation
                 )
                 native_raw[i] = _json_safe(pd)
@@ -136,8 +148,8 @@ class FitzTool:
 
         return ToolResult(
             tool_id=self.tool_id,
-            blocks=blocks,
-            page_meta=page_meta,
+            blocks_by_capability={Capability.TEXT_EXTRACTION: blocks},
+            page_meta=page_meta_out,
             raw={"pages": native_raw},
             native_by_block=native_by_block,
             warnings=warnings,

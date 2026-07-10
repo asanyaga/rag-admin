@@ -1,12 +1,19 @@
-"""Configs for the custom pipeline tools and the pipeline itself."""
+"""Configs for the custom pipeline tools and the pipeline itself.
+
+The pipeline is a set of capability slots, each filled by at most one named
+tool instance. One instance runs once, however many slots reference it, and is
+told which capabilities to `emit` (masking).
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Callable, Dict, List, Literal, Optional, Set
 
 from pydantic import BaseModel
 
-from app.cdm.adapters.custom_pipeline.tools.base import LocalTool, PageMeta
+from app.cdm.adapters.custom_pipeline.capabilities import BLOCK_PRODUCING, Capability
+from app.cdm.adapters.custom_pipeline.page_flags import PageFlagsConfig
+from app.cdm.adapters.custom_pipeline.tools.base import PipelineTool
 
 
 class FitzConfig(BaseModel):
@@ -42,55 +49,93 @@ class FitzTablesConfig(BaseModel):
     text_y_tolerance: Optional[float] = None
 
 
-TABLE_TOOL_IDS: frozenset[str] = frozenset({"camelot", "fitz_tables"})
-
-TOOL_REGISTRY: Dict[str, type[BaseModel]] = {
-    "fitz": FitzConfig,
-    "camelot": CamelotConfig,
-    "fitz_tables": FitzTablesConfig,
-}
+@dataclass(frozen=True)
+class ToolSpec:
+    config_cls: type[BaseModel]
+    provides: frozenset[Capability]
+    factory: Callable[[Any], PipelineTool]
 
 
-@dataclass
-class CustomPipelineConfig:
-    """Runtime pipeline config — ordered tools (later = higher priority)."""
-    tools: List[LocalTool]
-    eviction_overlap_threshold: float = 0.5
-
-
-def build_pipeline_config(
-    config: Dict[str, Any],
-    page_meta: Optional[Dict[int, PageMeta]] = None,
-) -> CustomPipelineConfig:
+def _tool_registry() -> Dict[str, ToolSpec]:
     from app.cdm.adapters.custom_pipeline.tools.camelot_tool import CamelotTool
     from app.cdm.adapters.custom_pipeline.tools.fitz_tables_tool import FitzTablesTool
     from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool
 
-    tools_cfg = config.get("tools", [])
+    return {
+        "fitz": ToolSpec(FitzConfig, FitzTool.provides,
+                         lambda c: FitzTool(config=c)),
+        "camelot": ToolSpec(CamelotConfig, CamelotTool.provides,
+                            lambda c: CamelotTool(config=c)),
+        "fitz_tables": ToolSpec(FitzTablesConfig, FitzTablesTool.provides,
+                                lambda c: FitzTablesTool(config=c)),
+    }
 
-    table_ids_present = [
-        e.get("tool_id") for e in tools_cfg
-        if e.get("tool_id") in TABLE_TOOL_IDS
-    ]
-    if len(table_ids_present) > 1:
-        raise ValueError(
-            f"only one table tool allowed per pipeline, got: {table_ids_present}"
+
+@dataclass(frozen=True)
+class ResolvedInstance:
+    key: str
+    tool: PipelineTool
+    emit: frozenset[Capability]
+
+
+@dataclass(frozen=True)
+class ResolvedPipeline:
+    instances: List[ResolvedInstance]
+    page_flags: PageFlagsConfig
+    eviction_overlap_threshold: float
+    ocr_eviction_threshold: float
+
+    def for_capability(self, cap: Capability) -> Optional[ResolvedInstance]:
+        return next((i for i in self.instances if cap in i.emit), None)
+
+
+def build_pipeline_config(config: Dict[str, Any]) -> ResolvedPipeline:
+    registry = _tool_registry()
+    tools_cfg: Dict[str, Any] = config.get("tools", {}) or {}
+    caps_cfg: Dict[str, str] = config.get("capabilities", {}) or {}
+
+    # capability key -> Capability, validating the enum
+    slots: Dict[Capability, str] = {}
+    for raw_cap, instance_key in caps_cfg.items():
+        try:
+            cap = Capability(raw_cap)
+        except ValueError:
+            raise ValueError(f"unknown capability: {raw_cap!r}")
+        if cap not in BLOCK_PRODUCING:
+            raise ValueError(f"no tool provides staging capability {cap.value!r}")
+        slots[cap] = instance_key
+
+    if Capability.TEXT_EXTRACTION not in slots:
+        raise ValueError("capability 'text_extraction' is required")
+
+    # instance key -> assigned capabilities (this is the masking set)
+    assigned: Dict[str, Set[Capability]] = {}
+    for cap, key in slots.items():
+        if key not in tools_cfg:
+            raise ValueError(
+                f"capability {cap.value!r} references unknown instance {key!r}"
+            )
+        assigned.setdefault(key, set()).add(cap)
+
+    instances: List[ResolvedInstance] = []
+    for key in sorted(assigned):  # deterministic order
+        entry = tools_cfg[key]
+        tool_id = entry.get("tool")
+        spec = registry.get(tool_id)
+        if spec is None:
+            raise ValueError(f"unknown tool: {tool_id!r}")
+        emit = frozenset(assigned[key])
+        if not emit <= spec.provides:
+            missing = {c.value for c in emit - spec.provides}
+            raise ValueError(f"tool {tool_id!r} does not provide {missing}")
+        tool_cfg = spec.config_cls.model_validate(entry.get("config", {}) or {})
+        instances.append(
+            ResolvedInstance(key=key, tool=spec.factory(tool_cfg), emit=emit)
         )
 
-    tools: List[LocalTool] = []
-    for entry in tools_cfg:
-        tool_id = entry.get("tool_id")
-        raw_cfg = entry.get("config", {}) or {}
-        cfg_cls = TOOL_REGISTRY.get(tool_id)
-        if cfg_cls is None:
-            raise ValueError(f"unknown tool: {tool_id!r}")
-        tool_cfg = cfg_cls.model_validate(raw_cfg)
-        if tool_id == "fitz":
-            tools.append(FitzTool(config=tool_cfg))  # type: ignore[arg-type]
-        elif tool_id == "camelot":
-            tools.append(CamelotTool(config=tool_cfg, page_meta=page_meta or {}))  # type: ignore[arg-type]
-        elif tool_id == "fitz_tables":
-            tools.append(FitzTablesTool(config=tool_cfg, page_meta=page_meta or {}))  # type: ignore[arg-type]
-
-    threshold = config.get("eviction_overlap_threshold", 0.5)
-    return CustomPipelineConfig(tools=tools, eviction_overlap_threshold=threshold)
+    return ResolvedPipeline(
+        instances=instances,
+        page_flags=PageFlagsConfig.model_validate(config.get("page_flags", {}) or {}),
+        eviction_overlap_threshold=config.get("eviction_overlap_threshold", 0.5),
+        ocr_eviction_threshold=config.get("ocr_eviction_threshold", 0.3),
+    )
