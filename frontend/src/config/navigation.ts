@@ -11,6 +11,7 @@ import {
   ArrowUpFromLine,
   Tags,
   Library,
+  ScanSearch,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -28,6 +29,7 @@ export const navigationItems: readonly NavItem[] = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard, activeColor: 'border-l-primary' },
   { label: 'Projects', href: '/projects', icon: FolderKanban, activeColor: 'border-l-violet-500' },
   { label: 'Source Documents', href: '/source-documents', icon: Library, activeColor: 'border-l-indigo-500' },
+  { label: 'Probe', href: '/probe', icon: ScanSearch, activeColor: 'border-l-sky-500' },
   { label: 'Parse', href: '/parse', icon: FileText, activeColor: 'border-l-blue-500' },
   { label: 'Classify', href: '/classify', icon: Tags, activeColor: 'border-l-pink-500' },
   { label: 'Extract', href: '/extract', icon: FileSearch, activeColor: 'border-l-orange-500' },
