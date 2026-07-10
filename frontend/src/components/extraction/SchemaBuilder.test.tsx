@@ -52,7 +52,8 @@ describe('SchemaBuilder', () => {
     await user.click(screen.getByRole('tab', { name: /json/i }))
     const textarea = screen.getByRole('textbox')
     await user.clear(textarea)
-    await user.type(textarea, '{bad json')
+    // `{` opens a key descriptor in user-event; `{{` types a literal brace.
+    await user.type(textarea, '{{bad json')
     act(() => { vi.advanceTimersByTime(400) })
     expect(screen.getByText(/invalid json/i)).toBeInTheDocument()
     vi.useRealTimers()

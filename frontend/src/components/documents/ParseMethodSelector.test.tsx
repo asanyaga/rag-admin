@@ -84,7 +84,8 @@ describe('ParseMethodSelector', () => {
       />
     )
     expect(screen.getByText(/fitz \(text \+ images\)/i)).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: /camelot/i })).toBeInTheDocument()
+    // Table tools (fitz_tables / camelot) are chosen via a select, not checkboxes.
+    expect(screen.getByRole('combobox', { name: /table extraction/i })).toBeInTheDocument()
     expect(
       screen.getByText(/Composable tools/i)
     ).toBeInTheDocument()
