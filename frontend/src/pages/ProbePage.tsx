@@ -6,6 +6,7 @@ import { useProbe } from '@/hooks/useProbe'
 import { DocumentPickerPanel } from '@/components/shared/DocumentPickerPanel'
 import { DocumentPdfViewer } from '@/components/parse-runs/DocumentPdfViewer'
 import { ProbeReportView } from '@/components/probe/ProbeReportView'
+import { ProbeReportSkeleton } from '@/components/probe/ProbeReportSkeleton'
 import { SignalsPopover, DEFAULT_PROBE_CONFIG } from '@/components/probe/SignalsPopover'
 import { regionsToBlocks, regionColors } from '@/lib/probeOverlay'
 import type { ProbeConfig } from '@/types/probeReport'
@@ -98,7 +99,7 @@ export default function ProbePage(): JSX.Element {
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={38} minSize={22} className="min-w-0 overflow-hidden">
               {error && <div className="p-4 text-sm text-destructive">{error}</div>}
-              {probing && <div className="p-4 text-sm text-muted-foreground">Probing…</div>}
+              {probing && <ProbeReportSkeleton />}
               {report && (
                 <ProbeReportView report={report} selectedPage={selectedPage} onSelectPage={setSelectedPage} />
               )}
