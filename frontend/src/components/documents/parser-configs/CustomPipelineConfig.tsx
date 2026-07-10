@@ -18,9 +18,18 @@ import type { ParseConfig } from '@/types/parsing'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 
-interface ToolEntry {
-  tool_id: string
+interface ToolInstance {
+  tool: string
   config: Record<string, unknown>
+}
+
+/** Capability slots: each capability is filled by at most one named tool instance. */
+interface PipelineConfig {
+  tools: Record<string, ToolInstance>
+  capabilities: Record<string, string>
+  eviction_overlap_threshold?: number
+  ocr_eviction_threshold?: number
+  page_flags?: Record<string, number>
 }
 
 interface CustomPipelineConfigProps {
@@ -30,8 +39,6 @@ interface CustomPipelineConfigProps {
 }
 
 type TableTool = 'none' | 'fitz_tables' | 'camelot'
-
-const TABLE_TOOL_IDS: TableTool[] = ['fitz_tables', 'camelot']
 
 const CAMELOT_DEFAULTS = { flavor: 'lattice', edge_tol: 50, row_tol: 2 }
 
@@ -348,62 +355,104 @@ function FitzTablesConfigPanel({
   )
 }
 
+/** Assign (or clear) the tool filling a capability slot.
+ *
+ * Instance keys are the tool id — a 1:1 simplification of the named-instance
+ * model. A tool referenced from two slots therefore resolves to one instance.
+ */
+function setSlot(
+  cfg: PipelineConfig,
+  capability: string,
+  toolId: string | null,
+  defaults: Record<string, unknown> = {},
+): PipelineConfig {
+  const capabilities = { ...cfg.capabilities }
+  const tools = { ...cfg.tools }
+  const previous = capabilities[capability]
+  if (previous) {
+    delete capabilities[capability]
+    // Drop the instance only if no other slot still references it.
+    if (!Object.values(capabilities).includes(previous)) delete tools[previous]
+  }
+  if (toolId) {
+    capabilities[capability] = toolId
+    tools[toolId] = tools[toolId] ?? { tool: toolId, config: defaults }
+  }
+  return { ...cfg, tools, capabilities }
+}
+
+function setToolConfig(
+  cfg: PipelineConfig,
+  instanceKey: string,
+  patch: Record<string, unknown>,
+): PipelineConfig {
+  const existing = cfg.tools[instanceKey]
+  if (!existing) return cfg
+  return {
+    ...cfg,
+    tools: {
+      ...cfg.tools,
+      [instanceKey]: { ...existing, config: { ...existing.config, ...patch } },
+    },
+  }
+}
+
 export function CustomPipelineConfig({
   config,
   onChange,
   disabled = false,
 }: CustomPipelineConfigProps) {
-  const tools = (config.tools as ToolEntry[] | undefined) ?? []
+  const cfg = config as unknown as PipelineConfig
+  const tools = cfg.tools ?? {}
+  const capabilities = cfg.capabilities ?? {}
   const threshold = (config.eviction_overlap_threshold as number | undefined) ?? 0.5
 
-  const fitz = tools.find((t) => t.tool_id === 'fitz')
-  const currentTableTool = tools.find((t) =>
-    TABLE_TOOL_IDS.includes(t.tool_id as TableTool)
-  )
-  const selectedTableTool: TableTool = (currentTableTool?.tool_id as TableTool) ?? 'none'
+  const textKey = capabilities.text_extraction ?? 'fitz'
+  const fitz = tools[textKey]
 
-  const setTools = (next: ToolEntry[]) => onChange({ ...config, tools: next })
+  const tableKey = capabilities.table_detection
+  const currentTableTool = tableKey ? tools[tableKey] : undefined
+  const selectedTableTool: TableTool = (currentTableTool?.tool as TableTool) ?? 'none'
 
-  const updateTool = (toolId: string, patch: Record<string, unknown>) => {
-    setTools(
-      tools.map((t) =>
-        t.tool_id === toolId ? { ...t, config: { ...t.config, ...patch } } : t
-      )
-    )
+  const updateTool = (instanceKey: string, patch: Record<string, unknown>) => {
+    onChange(setToolConfig(cfg, instanceKey, patch) as unknown as ParseConfig)
   }
 
   const handleTableToolChange = (value: TableTool) => {
-    const withoutAnyTableTool = tools.filter(
-      (t) => !TABLE_TOOL_IDS.includes(t.tool_id as TableTool)
+    const defaults =
+      value === 'camelot' ? { ...CAMELOT_DEFAULTS } : { ...FITZ_TABLES_DEFAULTS }
+    const next = setSlot(
+      cfg,
+      'table_detection',
+      value === 'none' ? null : value,
+      defaults,
     )
-    if (value === 'none') {
-      setTools(withoutAnyTableTool)
-    } else if (value === 'fitz_tables') {
-      setTools([
-        ...withoutAnyTableTool,
-        { tool_id: 'fitz_tables', config: { ...FITZ_TABLES_DEFAULTS } },
-      ])
-    } else if (value === 'camelot') {
-      setTools([
-        ...withoutAnyTableTool,
-        { tool_id: 'camelot', config: { ...CAMELOT_DEFAULTS } },
-      ])
-    }
+    onChange(next as unknown as ParseConfig)
   }
 
   return (
     <div className="space-y-4">
-      {/* Fitz — always on */}
+      {/* Text extraction — a capability slot (required) */}
       <div className="space-y-2 rounded-md border p-3">
-        <div className="flex items-center justify-between">
-          <Label>fitz (text + images)</Label>
-          <span className="text-xs text-muted-foreground">always on</span>
+        <div className="space-y-1">
+          <Label htmlFor="text-tool-select">Text extraction</Label>
+          <p className="text-xs text-muted-foreground">
+            The base text extractor. Required — every pipeline fills this slot.
+          </p>
+          <Select value={textKey} onValueChange={() => {}} disabled={disabled}>
+            <SelectTrigger id="text-tool-select" aria-label="Text extraction">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fitz">fitz (text + images)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <Checkbox
             id="fitz-include-images"
             checked={(fitz?.config.include_images as boolean) ?? true}
-            onCheckedChange={(c) => updateTool('fitz', { include_images: !!c })}
+            onCheckedChange={(c) => updateTool(textKey, { include_images: !!c })}
             disabled={disabled}
           />
           <Label htmlFor="fitz-include-images">Include images (FIGURE blocks)</Label>
@@ -412,7 +461,7 @@ export function CustomPipelineConfig({
           <Checkbox
             id="fitz-span-detail"
             checked={(fitz?.config.span_detail as boolean) ?? false}
-            onCheckedChange={(c) => updateTool('fitz', { span_detail: !!c })}
+            onCheckedChange={(c) => updateTool(textKey, { span_detail: !!c })}
             disabled={disabled}
           />
           <Label htmlFor="fitz-span-detail">Record span detail</Label>
@@ -447,7 +496,7 @@ export function CustomPipelineConfig({
         {selectedTableTool === 'fitz_tables' && currentTableTool && (
           <FitzTablesConfigPanel
             config={currentTableTool.config}
-            onChange={(patch) => updateTool('fitz_tables', patch)}
+            onChange={(patch) => updateTool(tableKey as string, patch)}
             disabled={disabled}
           />
         )}
@@ -458,7 +507,7 @@ export function CustomPipelineConfig({
               <Label htmlFor="camelot-flavor">Flavor</Label>
               <Select
                 value={(currentTableTool.config.flavor as string) ?? 'lattice'}
-                onValueChange={(v) => updateTool('camelot', { flavor: v })}
+                onValueChange={(v) => updateTool(tableKey as string, { flavor: v })}
                 disabled={disabled}
               >
                 <SelectTrigger id="camelot-flavor">
@@ -480,7 +529,7 @@ export function CustomPipelineConfig({
                     type="number"
                     value={(currentTableTool.config.edge_tol as number) ?? 50}
                     onChange={(e) =>
-                      updateTool('camelot', { edge_tol: Number(e.target.value) })
+                      updateTool(tableKey as string, { edge_tol: Number(e.target.value) })
                     }
                     disabled={disabled}
                   />
@@ -492,7 +541,7 @@ export function CustomPipelineConfig({
                     type="number"
                     value={(currentTableTool.config.row_tol as number) ?? 2}
                     onChange={(e) =>
-                      updateTool('camelot', { row_tol: Number(e.target.value) })
+                      updateTool(tableKey as string, { row_tol: Number(e.target.value) })
                     }
                     disabled={disabled}
                   />
