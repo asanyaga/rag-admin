@@ -8,8 +8,9 @@ TE, TB, OC = Capability.TEXT_EXTRACTION, Capability.TABLE_DETECTION, Capability.
 
 
 def _b(bid, x0, y0, x1, y1, role=BlockRole.TEXT):
-    return Block(id=bid, role=role, native_type=role.value, page_index=0,
-                 bbox=BBox(x0=x0, y0=y0, x1=x1, y1=y1))
+    # Non-empty text by default: a text-bearing block. Figure tests null it out.
+    return Block(id=bid, role=role, native_type=role.value, text="content",
+                 page_index=0, bbox=BBox(x0=x0, y0=y0, x1=x1, y1=y1))
 
 
 def _res(tool_id, cap, blocks):
@@ -88,3 +89,16 @@ def test_audit_trail_is_keyed_by_instance():
     assert "instances" in out.raw_output and "tools" not in out.raw_output
     assert out.raw_output["instances"]["fitz"]["capabilities"] == ["text_extraction"]
     assert "d:0:0" in out.raw_output["instances"]["fitz"]["block_map"]
+
+
+def test_a_figure_block_does_not_evict_ocr_text_inside_it():
+    # fitz emits a FIGURE block (no text) for an image; OCR extracts that image's
+    # text. The image must NOT evict the OCR text it contains.
+    figure = _b("fig1", 0.0, 0.5, 0.6, 0.75, BlockRole.FIGURE)
+    figure = figure.model_copy(update={"text": None})
+    text = _res("fitz", TE, [figure])
+    ocr = _res("tesseract", OC, [_b("o1", 0.1, 0.56, 0.4, 0.68)])
+    out = merge([text, ocr], source_document_id="d", page_flags=_flags())
+    ids_texts = {(b.native_type) for b in out.blocks}
+    assert len(out.blocks) == 2                       # both survive
+    assert out.raw_output["evicted"] == []
