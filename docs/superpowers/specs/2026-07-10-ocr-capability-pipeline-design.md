@@ -270,6 +270,45 @@ A per-page OCR failure degrades to a **warning + `failed_pages`** on the `ParseR
 fields already exist); a single unreadable page must not discard a 200-page parse. A missing
 tesseract binary is a **config-time** error naming the tool, not a mid-parse crash.
 
+## 4b. Delivery — two PRs
+
+The slice ships as two sequential PRs. The seam is chosen so the first is a **pure
+structural refactor with no behaviour change**, which is far safer to review than a refactor
+tangled with a new capability.
+
+### PR A — capability refactor (no OCR)
+
+- `capabilities.py` — Capability enum, block-producing vs staging, precedence resolution
+- `config.py` — new contract (`tools` / `capabilities` / `precedence` / `page_flags` /
+  thresholds), instance→slot resolution, capability masking; **delete** `TABLE_TOOL_IDS` and
+  the `len(...) > 1` guard
+- `tools/base.py` — `LocalTool` → `PipelineTool`, `provides`, `emit`,
+  `ToolResult.blocks_by_capability`
+- `fitz_tool.py`, `camelot_tool.py`, `fitz_tables_tool.py` — ported to the new contract
+- `page_flags.py` — `char_count`, `pua_ratio`, `cid_corrupt` only
+  (`has_uncovered_image` lands in PR B, where its only consumer lives — no dead code)
+- `merger.py` — N-way, capability-aware eviction; capability-tagged audit trail
+- `custom_pipeline_runner.py` — slot-driven; the hardcoded `'fitz'` requirement dies
+- Frontend — `CustomPipelineConfig.tsx` emits the new config; text presented as a *slot*
+  (fitz the only option); table slot unchanged; no OCR controls yet
+- `ParseMethodSelector.test.tsx` updated
+
+**Acceptance property:** for any document and any pipeline expressible under the old config,
+the new pipeline produces an **identical `ParsedDocument`**. The refactor is verified by
+equivalence, not just by unit tests.
+
+### PR B — tesseract OCR
+
+- `tesseract_tool.py` — rasterization, `pages: auto|all|[…]`, paragraph aggregation
+- `page_flags.py` — add `has_uncovered_image`
+- Precedence wiring — `ocr_outranks_text()`, `ocr_eviction_threshold`
+- Frontend — OCR slot, `precedence` control, OCR thresholds
+- Tests — paragraph aggregation, `auto` selection, and the mixed-page acceptance test
+
+PR B's plan is written **after PR A merges**, from this same spec — no further brainstorming
+required. `precedence.text_ocr: "prefer"` (L6) lands in PR B and remains cheap to cut if it
+still feels speculative then.
+
 ## 5. Backend structure
 
 ```
