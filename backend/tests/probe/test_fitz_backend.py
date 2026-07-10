@@ -32,3 +32,12 @@ def test_render_gray_returns_2d_array(tmp_path):
     assert gray.ndim == 2
     assert gray.dtype == np.uint8
     assert max(gray.shape) <= 64
+
+
+def test_render_gray_degenerate_bbox_never_empty(tmp_path):
+    # A zero-width (or zero-height) region must not produce a zero-size axis,
+    # which would crash downstream edge detection.
+    path = _make_pdf(tmp_path)
+    gray = FitzBackend().render_gray(path, 0, BBox(x0=0.5, y0=0.3, x1=0.5, y1=0.7), target_px=64)
+    assert gray.ndim == 2
+    assert min(gray.shape) >= 1

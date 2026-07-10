@@ -24,3 +24,13 @@ def test_strength_crosses_threshold_for_text_like():
     sig = edge_density(_text_like(), ProbeConfig())
     assert sig.name == "edge_density"
     assert sig.strength >= 0.5
+
+
+def test_empty_raster_returns_neutral_signal_without_crashing():
+    # A degenerate / hairline image region can rasterize to a zero-size axis.
+    # edge_density must not crash on it (np.pad mode='edge' rejects empty axes).
+    for shape in [(0, 0), (5, 0), (0, 5)]:
+        sig = edge_density(np.zeros(shape, dtype=np.uint8), ProbeConfig())
+        assert sig.name == "edge_density"
+        assert sig.value == 0.0
+        assert sig.strength == 0.0

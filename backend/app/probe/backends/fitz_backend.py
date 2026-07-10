@@ -71,6 +71,9 @@ class FitzBackend:
             longest = max(clip.width, clip.height) or 1.0
             scale = min(target_px / longest, 4.0)
             pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), clip=clip, colorspace=fitz.csGRAY)
+            if pix.width == 0 or pix.height == 0:
+                # Thin/degenerate clip rounded to zero pixels — return a valid 1x1 raster.
+                return np.zeros((1, 1), dtype=np.uint8)
             arr = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width)
             return arr
         finally:

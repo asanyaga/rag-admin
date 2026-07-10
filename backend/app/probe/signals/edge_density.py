@@ -17,6 +17,10 @@ def _convolve2d(a: np.ndarray, k: np.ndarray) -> np.ndarray:
 
 
 def edge_density(gray: np.ndarray, cfg: ProbeConfig) -> Signal:
+    if gray.size == 0 or min(gray.shape) == 0:
+        # Degenerate/hairline region rasterized to a zero-size axis — nothing to assess.
+        return Signal(name="edge_density", value=0.0, unit="fraction", strength=0.0,
+                      detail="empty region")
     g = gray.astype(np.float32) / 255.0
     gx = _convolve2d(g, _KX)
     gy = _convolve2d(g, _KY)
