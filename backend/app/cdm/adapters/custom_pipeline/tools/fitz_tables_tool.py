@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import fitz
 
+from app.cdm.adapters.custom_pipeline.capabilities import Capability
 from app.cdm.adapters.custom_pipeline.config import FitzTablesConfig
 from app.cdm.adapters.custom_pipeline.tools.base import PageMeta, ToolResult, clamp01
 from app.cdm.models import BBox, Block, BlockRole, Cell, Table
@@ -40,14 +41,11 @@ def _plain_text(extracted: List[List[Optional[str]]]) -> str:
 
 class FitzTablesTool:
     tool_id = "fitz_tables"
+    provides = frozenset({Capability.TABLE_DETECTION})
 
-    def __init__(
-        self,
-        config: Optional[FitzTablesConfig] = None,
-        page_meta: Optional[Dict[int, PageMeta]] = None,
-    ) -> None:
+    def __init__(self, config: Optional[FitzTablesConfig] = None) -> None:
         self.config = config or FitzTablesConfig()
-        self.page_meta = page_meta or {}
+        self.page_meta: Dict[int, PageMeta] = {}
 
     def _config_kwargs(self) -> Dict[str, Any]:
         c = self.config
@@ -106,7 +104,18 @@ class FitzTablesTool:
                 cells.append(Cell(row=r, col=c, text=text.strip(), bbox=bbox))
         return cells
 
-    def run(self, pdf_path: Path, pages: Optional[List[int]] = None) -> ToolResult:
+    def run(
+        self,
+        pdf_path: Path,
+        *,
+        pages: Optional[List[int]] = None,
+        page_meta: Optional[Dict[int, PageMeta]] = None,
+        emit: frozenset[Capability] = frozenset({Capability.TABLE_DETECTION}),
+    ) -> ToolResult:
+        if not emit <= self.provides:
+            raise ValueError(f"{self.tool_id} cannot emit {set(emit - self.provides)}")
+        self.page_meta = page_meta or {}
+
         t0 = time.perf_counter()
         blocks: List[Block] = []
         native_by_block: Dict[str, Any] = {}
@@ -180,7 +189,7 @@ class FitzTablesTool:
 
         return ToolResult(
             tool_id=self.tool_id,
-            blocks=blocks,
+            blocks_by_capability={Capability.TABLE_DETECTION: blocks},
             page_meta=self.page_meta,
             raw={"tables": list(native_by_block.values())},
             native_by_block=native_by_block,
