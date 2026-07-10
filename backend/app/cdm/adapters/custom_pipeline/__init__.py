@@ -6,7 +6,7 @@ from app.cdm.adapters.custom_pipeline.config import (
     build_pipeline_config,
 )
 from app.cdm.adapters.custom_pipeline.merger import MergeResult, merge, overlap_fraction
-from app.cdm.adapters.custom_pipeline.tools.base import LocalTool, PageMeta, ToolResult
+from app.cdm.adapters.custom_pipeline.tools.base import PipelineTool, PageMeta, ToolResult
 from app.cdm.adapters.custom_pipeline.tools.camelot_tool import CamelotTool
 from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool
 
@@ -19,7 +19,7 @@ __all__ = [
     "MergeResult",
     "merge",
     "overlap_fraction",
-    "LocalTool",
+    "PipelineTool",
     "PageMeta",
     "ToolResult",
     "CamelotTool",

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel
 
-from app.cdm.adapters.custom_pipeline.tools.base import LocalTool, PageMeta
+from app.cdm.adapters.custom_pipeline.tools.base import PipelineTool, PageMeta
 
 
 class FitzConfig(BaseModel):
@@ -54,7 +54,7 @@ TOOL_REGISTRY: Dict[str, type[BaseModel]] = {
 @dataclass
 class CustomPipelineConfig:
     """Runtime pipeline config — ordered tools (later = higher priority)."""
-    tools: List[LocalTool]
+    tools: List[PipelineTool]
     eviction_overlap_threshold: float = 0.5
 
 
@@ -77,7 +77,7 @@ def build_pipeline_config(
             f"only one table tool allowed per pipeline, got: {table_ids_present}"
         )
 
-    tools: List[LocalTool] = []
+    tools: List[PipelineTool] = []
     for entry in tools_cfg:
         tool_id = entry.get("tool_id")
         raw_cfg = entry.get("config", {}) or {}
