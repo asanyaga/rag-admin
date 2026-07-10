@@ -2,12 +2,19 @@ import json
 from pathlib import Path
 
 import fitz
+import pytest
 
+from app.cdm.adapters.custom_pipeline.capabilities import Capability
 from app.cdm.adapters.custom_pipeline.config import FitzConfig
 from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool, _json_safe
 from app.cdm.models import BlockRole
 
 FIXTURES = Path(__file__).parent / "fixtures"
+TE = Capability.TEXT_EXTRACTION
+
+
+def _blocks(result):
+    return result.blocks_by_capability[TE]
 
 
 def _make_image_pdf(path: Path) -> None:
@@ -26,10 +33,24 @@ def test_fitz_tool_id():
     assert FitzTool().tool_id == "fitz"
 
 
+def test_fitz_declares_text_extraction_and_emits_under_it():
+    tool = FitzTool()
+    assert tool.provides == frozenset({TE})
+    result = tool.run(FIXTURES / "simple_text.pdf", emit=frozenset({TE}))
+    assert list(result.blocks_by_capability) == [TE]
+    assert len(_blocks(result)) >= 1
+
+
+def test_fitz_rejects_an_emit_it_does_not_provide():
+    with pytest.raises(ValueError, match="cannot emit"):
+        FitzTool().run(FIXTURES / "simple_text.pdf",
+                       emit=frozenset({Capability.TABLE_DETECTION}))
+
+
 def test_fitz_extracts_paragraph_blocks_with_normalized_bbox():
     result = FitzTool().run(FIXTURES / "simple_text.pdf")
     assert result.tool_id == "fitz"
-    paras = [b for b in result.blocks if b.role == BlockRole.TEXT]
+    paras = [b for b in _blocks(result) if b.role == BlockRole.TEXT]
     assert len(paras) > 0
     b = paras[0]
     assert b.text.strip() != ""
@@ -49,20 +70,20 @@ def test_fitz_provides_page_meta_for_every_page():
 
 def test_fitz_native_record_keyed_by_provisional_id():
     result = FitzTool().run(FIXTURES / "simple_text.pdf")
-    b = result.blocks[0]
+    b = _blocks(result)[0]
     assert b.id in result.native_by_block
     assert "bbox" in result.native_by_block[b.id]
 
 
 def test_fitz_span_detail_off_by_default():
     result = FitzTool().run(FIXTURES / "simple_text.pdf")
-    para = next(b for b in result.blocks if b.role == BlockRole.TEXT)
+    para = next(b for b in _blocks(result) if b.role == BlockRole.TEXT)
     assert "spans" not in para.parser_extras
 
 
 def test_fitz_span_detail_on_records_spans():
     result = FitzTool(config=FitzConfig(span_detail=True)).run(FIXTURES / "simple_text.pdf")
-    para = next(b for b in result.blocks if b.role == BlockRole.TEXT)
+    para = next(b for b in _blocks(result) if b.role == BlockRole.TEXT)
     assert "spans" in para.parser_extras
     assert isinstance(para.parser_extras["spans"], list)
 
@@ -80,7 +101,7 @@ def test_fitz_raw_is_json_serializable_with_images(tmp_path):
     _make_image_pdf(pdf)
     result = FitzTool().run(pdf)
     # Sanity: an image block was extracted as a FIGURE.
-    assert any(b.role == BlockRole.FIGURE for b in result.blocks)
+    assert any(b.role == BlockRole.FIGURE for b in _blocks(result))
     # The raw audit data must be JSON-serializable (no raw image bytes).
     json.dumps(result.raw)
     json.dumps(result.native_by_block)
