@@ -18,7 +18,8 @@ def _res(tool_id, cap, blocks):
 
 
 def _flags(cid=False):
-    return {0: PageFlags(index=0, char_count=100, pua_ratio=0.0, cid_corrupt=cid)}
+    return {0: PageFlags(index=0, char_count=100, pua_ratio=0.0, cid_corrupt=cid,
+                         has_text_layer=True, has_uncovered_image=False)}
 
 
 def test_overlap_fraction_is_share_of_the_loser():
