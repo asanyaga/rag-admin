@@ -7,15 +7,12 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import type { ParseRunListItem } from '@/types/cdm'
-import { ChevronDown, RefreshCw, ScanSearch, Trash2 } from 'lucide-react'
+import { ChevronDown, RefreshCw, Trash2 } from 'lucide-react'
 
 interface RunHeaderProps {
   run: ParseRunListItem
   onReparse: () => void
   onDelete: () => void
-  onProbe?: () => void
-  probeLoading?: boolean
-  probeContent?: React.ReactNode
 }
 
 function formatDuration(ms: number | null): string {
@@ -39,9 +36,8 @@ function statusVariant(
   }
 }
 
-export function RunHeader({ run, onReparse, onDelete, onProbe, probeLoading, probeContent }: RunHeaderProps) {
+export function RunHeader({ run, onReparse, onDelete }: RunHeaderProps) {
   const [configOpen, setConfigOpen] = useState(false)
-  const [probeOpen, setProbeOpen] = useState(false)
   return (
     <div className="border-b bg-background sticky top-0 z-10">
       <div className="flex flex-wrap items-center gap-3 px-4 py-3">
@@ -69,18 +65,6 @@ export function RunHeader({ run, onReparse, onDelete, onProbe, probeLoading, pro
           </span>
         )}
         <div className="ml-auto flex items-center gap-1">
-          {onProbe && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => { onProbe(); setProbeOpen(true) }}
-              disabled={probeLoading}
-              title="Probe document"
-            >
-              <ScanSearch className="h-3 w-3 mr-1" />
-              {probeLoading ? 'Probing…' : 'Probe'}
-            </Button>
-          )}
           <Button size="sm" variant="ghost" onClick={onReparse}>
             <RefreshCw className="h-3 w-3 mr-1" /> Re-parse
           </Button>
@@ -116,25 +100,6 @@ export function RunHeader({ run, onReparse, onDelete, onProbe, probeLoading, pro
           </pre>
         </CollapsibleContent>
       </Collapsible>
-      {probeContent && (
-        <Collapsible open={probeOpen} onOpenChange={setProbeOpen}>
-          <CollapsibleTrigger asChild>
-            <button className="w-full text-left px-4 py-1 text-xs text-muted-foreground hover:bg-muted/40 flex items-center gap-1 border-t">
-              <ChevronDown
-                className={`h-3 w-3 transition-transform ${
-                  probeOpen ? '' : '-rotate-90'
-                }`}
-              />
-              Probe results
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="px-4 pb-3 max-h-80 overflow-y-auto">
-              {probeContent}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
     </div>
   )
 }

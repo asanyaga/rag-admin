@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import type { ParseConfig } from '@/types/parsing'
-import type { DocumentProfile } from '@/types/probe'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 
@@ -28,7 +27,6 @@ interface CustomPipelineConfigProps {
   config: ParseConfig
   onChange: (config: ParseConfig) => void
   disabled?: boolean
-  profile?: DocumentProfile | null
 }
 
 type TableTool = 'none' | 'fitz_tables' | 'camelot'
@@ -354,7 +352,6 @@ export function CustomPipelineConfig({
   config,
   onChange,
   disabled = false,
-  profile,
 }: CustomPipelineConfigProps) {
   const tools = (config.tools as ToolEntry[] | undefined) ?? []
   const threshold = (config.eviction_overlap_threshold as number | undefined) ?? 0.5
@@ -396,13 +393,6 @@ export function CustomPipelineConfig({
 
   return (
     <div className="space-y-4">
-      {profile && (
-        <p className="text-sm text-muted-foreground">
-          Suggested tools:{' '}
-          <span className="font-medium">{profile.recommended_tools.join(', ')}</span>
-        </p>
-      )}
-
       {/* Fitz — always on */}
       <div className="space-y-2 rounded-md border p-3">
         <div className="flex items-center justify-between">
