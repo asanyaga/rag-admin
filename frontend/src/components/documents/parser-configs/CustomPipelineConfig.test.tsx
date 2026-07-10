@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { CustomPipelineConfig } from './CustomPipelineConfig'
+import { CustomPipelineConfig, normalizeCustomPipelineConfig } from './CustomPipelineConfig'
 
 const fitzOnly = {
   tools: {
@@ -119,4 +119,78 @@ describe('CustomPipelineConfig', () => {
     expect(screen.getByText('row_tol')).toBeInTheDocument()
   })
 
+})
+
+describe('normalizeCustomPipelineConfig', () => {
+  const OLD_ARRAY = {
+    tools: [
+      { tool_id: 'fitz', config: { min_chars_threshold: 10, include_images: true } },
+    ],
+    eviction_overlap_threshold: 0.5,
+  }
+
+  it('converts the old array shape to capability slots', () => {
+    const n = normalizeCustomPipelineConfig(OLD_ARRAY)
+    expect(Array.isArray(n.tools)).toBe(false)
+    expect(n.tools['0']).toBeUndefined()          // no array-index key
+    expect(n.tools.fitz.tool).toBe('fitz')
+    expect(n.tools.fitz.config.include_images).toBe(true)
+    expect(n.capabilities.text_extraction).toBe('fitz')
+  })
+
+  it('infers table_detection from an old array with a table tool', () => {
+    const n = normalizeCustomPipelineConfig({
+      tools: [
+        { tool_id: 'fitz', config: {} },
+        { tool_id: 'camelot', config: { flavor: 'stream' } },
+      ],
+    })
+    expect(n.capabilities.text_extraction).toBe('fitz')
+    expect(n.capabilities.table_detection).toBe('camelot')
+    expect(n.tools.camelot.config.flavor).toBe('stream')
+  })
+
+  it('guarantees a text_extraction slot even if the input lacks one', () => {
+    const n = normalizeCustomPipelineConfig({
+      tools: { fitz_tables: { tool: 'fitz_tables', config: {} } },
+      capabilities: { table_detection: 'fitz_tables' },
+    })
+    expect(n.capabilities.text_extraction).toBe('fitz')
+    expect(n.tools.fitz.tool).toBe('fitz')
+  })
+
+  it('is idempotent on an already-normalized config', () => {
+    const once = normalizeCustomPipelineConfig(OLD_ARRAY)
+    const twice = normalizeCustomPipelineConfig(once)
+    expect(twice).toEqual(once)
+  })
+})
+
+describe('CustomPipelineConfig with a legacy config', () => {
+  const OLD_ARRAY = {
+    tools: [{ tool_id: 'fitz', config: { include_images: true, span_detail: false } }],
+    eviction_overlap_threshold: 0.5,
+  }
+
+  it('emits a normalized capability-slot config on mount', () => {
+    const onChange = vi.fn()
+    render(<CustomPipelineConfig config={OLD_ARRAY} onChange={onChange} />)
+    expect(onChange).toHaveBeenCalled()
+    const next = onChange.mock.calls[0][0]
+    expect(next.capabilities.text_extraction).toBe('fitz')
+    expect(next.tools['0']).toBeUndefined()
+    expect(Array.isArray(next.tools)).toBe(false)
+  })
+
+  it('never produces a config missing text_extraction after editing the table slot', async () => {
+    const onChange = vi.fn()
+    render(<CustomPipelineConfig config={OLD_ARRAY} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('combobox', { name: /table extraction/i }))
+    await userEvent.click(screen.getByText(/fitz_tables/i))
+    const calls = onChange.mock.calls
+    const next = calls[calls.length - 1][0]
+    expect(next.capabilities.text_extraction).toBe('fitz')
+    expect(next.capabilities.table_detection).toBe('fitz_tables')
+    expect(next.tools['0']).toBeUndefined()
+  })
 })

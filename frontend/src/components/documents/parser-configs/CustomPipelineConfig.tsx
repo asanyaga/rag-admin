@@ -16,7 +16,7 @@ import {
 import { Slider } from '@/components/ui/slider'
 import type { ParseConfig } from '@/types/parsing'
 import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface ToolInstance {
   tool: string
@@ -355,6 +355,62 @@ function FitzTablesConfigPanel({
   )
 }
 
+const CAPABILITY_BY_TOOL: Record<string, string> = {
+  fitz: 'text_extraction',
+  pdfplumber: 'text_extraction',
+  fitz_tables: 'table_detection',
+  camelot: 'table_detection',
+}
+
+/** Coerce any accepted config shape into the capability-slot shape, and
+ * guarantee the required `text_extraction` slot.
+ *
+ * Handles the pre-refactor array shape (`tools: [{tool_id, config}]`, no
+ * `capabilities`) so re-parsing an old run — or any stale seed — cannot emit a
+ * config the backend will reject with "text_extraction is required".
+ * Idempotent: normalizing an already-normal config returns an equal object.
+ */
+export function normalizeCustomPipelineConfig(raw: unknown): PipelineConfig {
+  const src = (raw ?? {}) as Record<string, unknown>
+  const tools: Record<string, ToolInstance> = {}
+  const capabilities: Record<string, string> = {
+    ...((src.capabilities as Record<string, string>) ?? {}),
+  }
+
+  const rawTools = src.tools
+  if (Array.isArray(rawTools)) {
+    // Old shape: [{ tool_id, config }] keyed by tool id, inferring slots.
+    for (const entry of rawTools as Array<Record<string, unknown>>) {
+      const toolId = (entry.tool ?? entry.tool_id) as string | undefined
+      if (!toolId) continue
+      tools[toolId] = { tool: toolId, config: (entry.config as Record<string, unknown>) ?? {} }
+      const cap = CAPABILITY_BY_TOOL[toolId]
+      if (cap && !capabilities[cap]) capabilities[cap] = toolId
+    }
+  } else if (rawTools && typeof rawTools === 'object') {
+    for (const [key, entry] of Object.entries(rawTools as Record<string, Record<string, unknown>>)) {
+      const toolId = (entry.tool ?? entry.tool_id) as string | undefined
+      if (!toolId) continue
+      tools[key] = { tool: toolId, config: (entry.config as Record<string, unknown>) ?? {} }
+    }
+  }
+
+  // Guarantee the required text_extraction slot.
+  if (!capabilities.text_extraction) {
+    if (!tools.fitz) tools.fitz = { tool: 'fitz', config: {} }
+    capabilities.text_extraction = 'fitz'
+  }
+
+  const out: PipelineConfig = { tools, capabilities }
+  if (typeof src.eviction_overlap_threshold === 'number') {
+    out.eviction_overlap_threshold = src.eviction_overlap_threshold
+  }
+  if (typeof src.ocr_eviction_threshold === 'number') {
+    out.ocr_eviction_threshold = src.ocr_eviction_threshold
+  }
+  return out
+}
+
 /** Assign (or clear) the tool filling a capability slot.
  *
  * Instance keys are the tool id — a 1:1 simplification of the named-instance
@@ -402,10 +458,22 @@ export function CustomPipelineConfig({
   onChange,
   disabled = false,
 }: CustomPipelineConfigProps) {
-  const cfg = config as unknown as PipelineConfig
-  const tools = cfg.tools ?? {}
-  const capabilities = cfg.capabilities ?? {}
-  const threshold = (config.eviction_overlap_threshold as number | undefined) ?? 0.5
+  const cfg = normalizeCustomPipelineConfig(config)
+
+  // If the incoming config was a stale/legacy shape, push the normalized shape
+  // up so the parent (and any parse it triggers) uses the corrected config even
+  // if the user never edits anything.
+  const normalizedKey = JSON.stringify(cfg)
+  useEffect(() => {
+    if (JSON.stringify(config) !== normalizedKey) {
+      onChange(cfg as unknown as ParseConfig)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalizedKey])
+
+  const tools = cfg.tools
+  const capabilities = cfg.capabilities
+  const threshold = cfg.eviction_overlap_threshold ?? 0.5
 
   const textKey = capabilities.text_extraction ?? 'fitz'
   const fitz = tools[textKey]
