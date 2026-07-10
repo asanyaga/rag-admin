@@ -13,23 +13,33 @@ def _norm(x0, y0, x1, y1, w, h) -> BBox:
                 x1=min(1.0, x1 / w), y1=min(1.0, y1 / h))
 
 
-class FitzBackend:
-    name = "fitz"
-    version = fitz.VersionBind
+class FitzSession:
+    """Holds one opened PDF for the duration of a probe run.
 
-    def inspect(self, pdf_path: Path) -> DocumentPrimitives:
-        doc = fitz.open(str(pdf_path))
-        try:
-            copy_restricted = (doc.permissions & fitz.PDF_PERM_COPY) == 0
-            pages = [self._page(doc, i) for i in range(len(doc))]
-            return DocumentPrimitives(
-                page_count=len(pages), copy_restricted=copy_restricted, pages=pages,
-            )
-        finally:
-            doc.close()
+    Opening a (potentially large) PDF is expensive, so it is done exactly once
+    here and reused for inspection and every region raster — instead of
+    re-opening per image, which is O(images) full re-parses of the document.
+    """
 
-    def _page(self, doc, i) -> PagePrimitives:
-        page = doc[i]
+    def __init__(self, pdf_path: Path):
+        self._doc = fitz.open(str(pdf_path))
+
+    def __enter__(self) -> "FitzSession":
+        return self
+
+    def __exit__(self, *exc) -> bool:
+        self._doc.close()
+        return False
+
+    def inspect(self) -> DocumentPrimitives:
+        copy_restricted = (self._doc.permissions & fitz.PDF_PERM_COPY) == 0
+        pages = [self._page(i) for i in range(len(self._doc))]
+        return DocumentPrimitives(
+            page_count=len(pages), copy_restricted=copy_restricted, pages=pages,
+        )
+
+    def _page(self, i) -> PagePrimitives:
+        page = self._doc[i]
         w, h = page.rect.width, page.rect.height
         text = page.get_text("text")
         spans = []
@@ -62,19 +72,22 @@ class FitzBackend:
             text_spans=spans, images=images, drawings=drawings,
         )
 
-    def render_gray(self, pdf_path: Path, page_index: int, bbox: BBox, target_px: int = 256) -> np.ndarray:
-        doc = fitz.open(str(pdf_path))
-        try:
-            page = doc[page_index]
-            w, h = page.rect.width, page.rect.height
-            clip = fitz.Rect(bbox.x0 * w, bbox.y0 * h, bbox.x1 * w, bbox.y1 * h)
-            longest = max(clip.width, clip.height) or 1.0
-            scale = min(target_px / longest, 4.0)
-            pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), clip=clip, colorspace=fitz.csGRAY)
-            if pix.width == 0 or pix.height == 0:
-                # Thin/degenerate clip rounded to zero pixels — return a valid 1x1 raster.
-                return np.zeros((1, 1), dtype=np.uint8)
-            arr = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width)
-            return arr
-        finally:
-            doc.close()
+    def render_gray(self, page_index: int, bbox: BBox, target_px: int = 256) -> np.ndarray:
+        page = self._doc[page_index]
+        w, h = page.rect.width, page.rect.height
+        clip = fitz.Rect(bbox.x0 * w, bbox.y0 * h, bbox.x1 * w, bbox.y1 * h)
+        longest = max(clip.width, clip.height) or 1.0
+        scale = min(target_px / longest, 4.0)
+        pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), clip=clip, colorspace=fitz.csGRAY)
+        if pix.width == 0 or pix.height == 0:
+            # Thin/degenerate clip rounded to zero pixels — return a valid 1x1 raster.
+            return np.zeros((1, 1), dtype=np.uint8)
+        return np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width)
+
+
+class FitzBackend:
+    name = "fitz"
+    version = fitz.VersionBind
+
+    def open(self, pdf_path: Path) -> FitzSession:
+        return FitzSession(pdf_path)

@@ -18,9 +18,10 @@ class Prober:
 
     def run(self, pdf_path: Path, document_id: str, filename: str, config: ProbeConfig) -> ProbeReport:
         t0 = time.monotonic()
-        prims = self.backend.inspect(pdf_path)
         enabled = set(config.enabled_signals)
-        pages = [self._page(pdf_path, prims, page, enabled, config) for page in prims.pages]
+        with self.backend.open(pdf_path) as session:
+            prims = session.inspect()
+            pages = [self._page(session, prims, page, enabled, config) for page in prims.pages]
         report = ProbeReport(
             document_id=document_id, filename=filename, page_count=prims.page_count,
             inspection={"backend": self.backend.name, "backend_version": self.backend.version,
@@ -32,7 +33,7 @@ class Prober:
         report.suggestion = recommend(report)
         return report
 
-    def _page(self, pdf_path, doc: DocumentPrimitives, page: PagePrimitives, enabled, cfg) -> PageProfile:
+    def _page(self, session, doc: DocumentPrimitives, page: PagePrimitives, enabled, cfg) -> PageProfile:
         signals: List[Signal] = []
         if "text_layer" in enabled:
             signals += page_signals.text_layer(page, cfg)
@@ -51,7 +52,7 @@ class Prober:
             if "text_overlap" in enabled:
                 rsigs.append(region_signals.text_overlap(page, image, cfg))
             if "edge_density" in enabled:
-                gray = self.backend.render_gray(pdf_path, page.index, image.bbox)
+                gray = session.render_gray(page.index, image.bbox)
                 rsigs.append(edge_density(gray, cfg))
             regions.append(RegionFinding(
                 id=f"p{page.index}:img{idx}", page_index=page.index, kind="image",

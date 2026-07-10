@@ -1,8 +1,10 @@
 from __future__ import annotations
 import os
 import tempfile
+from functools import partial
 from pathlib import Path
 from uuid import UUID
+import anyio
 from app.probe.backends.fitz_backend import FitzBackend
 from app.probe.config import ProbeConfig
 from app.probe.prober import Prober
@@ -20,8 +22,15 @@ class ProbeService:
             tmp.write(content)
             tmp_path = tmp.name
         try:
-            return Prober(FitzBackend()).run(
-                pdf_path=Path(tmp_path), document_id=str(document_id),
-                filename=filename, config=config)
+            # Prober.run is synchronous, CPU-bound (fitz parsing + pixmap render +
+            # numpy). Run it on a worker thread so a large document cannot block the
+            # event loop and freeze the whole app.
+            return await anyio.to_thread.run_sync(
+                partial(
+                    Prober(FitzBackend()).run,
+                    pdf_path=Path(tmp_path), document_id=str(document_id),
+                    filename=filename, config=config,
+                )
+            )
         finally:
             os.unlink(tmp_path)

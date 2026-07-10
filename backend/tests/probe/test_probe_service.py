@@ -24,3 +24,28 @@ async def test_probe_service_returns_report():
     assert report.page_count == 1
     assert report.filename == "f.pdf"
     assert report.suggestion is not None
+
+
+@pytest.mark.asyncio
+async def test_probe_runs_off_the_event_loop(monkeypatch):
+    # The synchronous, CPU-bound prober must run on a worker thread, not the
+    # event-loop thread — otherwise a large document freezes the whole app.
+    import threading
+    from types import SimpleNamespace
+    import app.services.probe_service as svc_mod
+
+    main_tid = threading.get_ident()
+    seen = {}
+
+    class _RecordingProber:
+        def __init__(self, backend):
+            pass
+
+        def run(self, **kwargs):
+            seen["tid"] = threading.get_ident()
+            return SimpleNamespace(page_count=0)
+
+    monkeypatch.setattr(svc_mod, "Prober", _RecordingProber)
+    svc = ProbeService(_FakeDocService(_pdf_bytes()))
+    await svc.probe(uuid.uuid4(), uuid.uuid4(), ProbeConfig())
+    assert seen["tid"] != main_tid
