@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useProject } from '@/contexts/ProjectContext'
 import { useDocuments } from '@/hooks/useDocuments'
@@ -31,17 +31,14 @@ import { DocumentDeleteDialog } from '@/components/documents/DocumentDeleteDialo
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { ParsedDocumentViewer } from '@/components/documents/ParsedDocumentViewer'
 import { ReParseDialog } from '@/components/documents/ReParseDialog'
-import { DocumentProbePanel } from '@/components/documents/DocumentProbePanel'
 import { DocumentStatusBadge } from '@/components/documents/DocumentStatusBadge'
 import { FolderEditPopover } from '@/components/documents/FolderEditPopover'
 import { SourceDocumentBrowser } from '@/components/documents/SourceDocumentBrowser'
 import { RunTimeline } from '@/components/parse-runs/RunTimeline'
 import { useParseRuns } from '@/hooks/useParseRuns'
-import { useDocumentProbe } from '@/hooks/useDocumentProbe'
 import {
   Plus,
   RotateCw,
-  ScanSearch,
   Search,
   Library,
   FileText,
@@ -91,12 +88,6 @@ export default function DocumentsPage(): JSX.Element {
   const [reparseDialogOpen, setReparseDialogOpen] = useState(false)
 
   const { parseRuns, refresh: refreshParseRuns } = useParseRuns(viewDocumentId)
-
-  const { profile: probeProfile, isLoading: probeLoading, error: probeError, runProbe, reset: resetProbe } = useDocumentProbe(viewDocumentId)
-
-  useEffect(() => {
-    resetProbe()
-  }, [viewDocumentId, resetProbe])
 
   if (!currentProject) {
     return (
@@ -374,16 +365,6 @@ export default function DocumentsPage(): JSX.Element {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={runProbe}
-                  disabled={probeLoading}
-                  title="Probe document"
-                >
-                  <ScanSearch className="h-4 w-4 mr-1.5" />
-                  {probeLoading ? 'Probing…' : 'Probe'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
                   onClick={() => setReparseDialogOpen(true)}
                   title="Re-parse document"
                 >
@@ -422,8 +403,6 @@ export default function DocumentsPage(): JSX.Element {
                 </DropdownMenu>
               </div>
             </div>
-
-            <DocumentProbePanel profile={probeProfile} isLoading={probeLoading} error={probeError} onClear={resetProbe} />
 
             <section>
               <h3 className="text-sm font-medium mb-2">Parse runs</h3>

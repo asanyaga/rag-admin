@@ -110,26 +110,4 @@ describe('CustomPipelineConfig', () => {
     expect(screen.getByText('row_tol')).toBeInTheDocument()
   })
 
-  it('shows suggested-tools hint when a profile is provided', () => {
-    render(
-      <CustomPipelineConfig
-        config={fitzOnly}
-        onChange={vi.fn()}
-        profile={{
-          source_document_id: 'd',
-          filename: 'x.pdf',
-          page_count: 1,
-          pages: [],
-          has_text_layer: true,
-          has_scanned_pages: false,
-          has_cid_corruption: false,
-          table_signal: true,
-          recommended_tools: ['fitz', 'fitz_tables'],
-          duration_ms: 10,
-          probed_at: '2026-06-25T00:00:00Z',
-        }}
-      />
-    )
-    expect(screen.getByText(/fitz, fitz_tables/i)).toBeInTheDocument()
-  })
 })
