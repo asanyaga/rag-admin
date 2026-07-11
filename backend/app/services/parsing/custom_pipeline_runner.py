@@ -54,20 +54,20 @@ async def run_custom_pipeline(
         pipeline = build_pipeline_config(config)
         flags = compute_page_flags(pdf_path, pipeline.page_flags)
 
-        text_instance = pipeline.for_capability(Capability.TEXT_EXTRACTION)
+        structure_instance = pipeline.for_capability(Capability.LAYOUT_ANALYSIS)
         # build_pipeline_config guarantees this, but fail loudly if it ever does not.
-        if text_instance is None:
-            raise ValueError("capability 'text_extraction' is required")
+        if structure_instance is None:
+            raise ValueError("capability 'layout_analysis' is required")
 
-        text_result = text_instance.tool.run(pdf_path, emit=text_instance.emit)
-        results = [text_result]
-        warnings = list(text_result.warnings)
+        structure_result = structure_instance.tool.run(pdf_path, emit=structure_instance.emit)
+        results = [structure_result]
+        warnings = list(structure_result.warnings)
 
         # Remaining instances run once each, in the deterministic order
         # build_pipeline_config established, and receive page geometry from the
         # text_extraction tool.
         for inst in pipeline.instances:
-            if inst is text_instance:
+            if inst is structure_instance:
                 continue
             pages = None
             if Capability.TEXT_OCR in inst.emit:
@@ -75,7 +75,7 @@ async def run_custom_pipeline(
                 # per-page facts; every other tool runs over the whole document.
                 pages = inst.tool.select_pages(flags)
             r = inst.tool.run(
-                pdf_path, pages=pages, page_meta=text_result.page_meta, emit=inst.emit)
+                pdf_path, pages=pages, page_meta=structure_result.page_meta, emit=inst.emit)
             results.append(r)
             warnings.extend(r.warnings)
 
@@ -109,7 +109,7 @@ async def run_custom_pipeline(
 
     adapter = CustomPipelineAdapter()
     doc = adapter.adapt(
-        {"page_meta": text_result.page_meta, "blocks": merge_result.blocks},
+        {"page_meta": structure_result.page_meta, "blocks": merge_result.blocks},
         SourceMeta(
             source_document_id=source.id,
             parse_run_id=run.id,
