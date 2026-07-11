@@ -1,0 +1,100 @@
+{
+  "blocks": [
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          56.94999694824219,
+          224.5019989013672,
+          76.18599700927734
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.12100840336134454,
+        "x1": 0.377314283867844,
+        "y0": 0.0676365759480311,
+        "y1": 0.090482181721232
+      },
+      "children_ids": [],
+      "depth": null,
+      "html": null,
+      "id": "src-1:0:0",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": null,
+      "native_label": null,
+      "native_type": "text",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {
+        "fitz_block_type": 0
+      },
+      "quality": null,
+      "reading_order": 0,
+      "role": "text",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "Quarterly revenue report"
+    },
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          99.25,
+          175.91998291015625,
+          112.98999786376953
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.12100840336134454,
+        "x1": 0.295663836823792,
+        "y0": 0.11787410926365796,
+        "y1": 0.1341923965127904
+      },
+      "children_ids": [],
+      "depth": null,
+      "html": null,
+      "id": "src-1:0:1",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": null,
+      "native_label": null,
+      "native_type": "text",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {
+        "fitz_block_type": 0
+      },
+      "quality": null,
+      "reading_order": 1,
+      "role": "text",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "Figures are provisional."
+    }
+  ],
+  "full_markdown": null,
+  "full_text": "Quarterly revenue report\n\nFigures are provisional.",
+  "page_count": 1,
+  "pages": [
+    {
+      "block_ids": [
+        "src-1:0:0",
+        "src-1:0:1"
+      ],
+      "end_char": null,
+      "height": 842.0,
+      "index": 0,
+      "parser_extras": {},
+      "quality": null,
+      "rotation": 0,
+      "start_char": null,
+      "unit": "points",
+      "width": 595.0
+    }
+  ]
+}

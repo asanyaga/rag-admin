@@ -1,0 +1,202 @@
+{
+  "blocks": [
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          56.94999694824219,
+          224.5019989013672,
+          76.18599700927734
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.12100840336134454,
+        "x1": 0.377314283867844,
+        "y0": 0.0676365759480311,
+        "y1": 0.090482181721232
+      },
+      "children_ids": [],
+      "depth": null,
+      "html": null,
+      "id": "src-1:0:0",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": null,
+      "native_label": null,
+      "native_type": "text",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {
+        "fitz_block_type": 0
+      },
+      "quality": null,
+      "reading_order": 0,
+      "role": "text",
+      "spans": [],
+      "style": null,
+      "table": null,
+      "text": "Quarterly revenue report"
+    },
+    {
+      "bbox": {
+        "source_coords": [
+          72.0,
+          200.0,
+          400.0,
+          300.0
+        ],
+        "source_space": "pdf_points",
+        "space": "normalized",
+        "x0": 0.12100840336134454,
+        "x1": 0.6722689075630253,
+        "y0": 0.2375296912114014,
+        "y1": 0.35629453681710216
+      },
+      "children_ids": [],
+      "depth": null,
+      "html": "<table><tr><td>Name</td><td>Value</td></tr><tr><td>alpha</td><td>1</td></tr></table>",
+      "id": "src-1:0:1",
+      "image_ref": null,
+      "is_continuation": false,
+      "language": null,
+      "markdown": "| Name | Value |\n| --- | --- |\n| alpha | 1 |",
+      "native_label": null,
+      "native_type": "table",
+      "page_index": 0,
+      "parent_id": null,
+      "parser_extras": {
+        "fitz_tables_col_count": 2,
+        "fitz_tables_row_count": 2,
+        "fitz_tables_strategy": "lines_strict/lines_strict"
+      },
+      "quality": null,
+      "reading_order": 1,
+      "role": "table",
+      "spans": [],
+      "style": null,
+      "table": {
+        "caption": null,
+        "cells": [
+          {
+            "bbox": {
+              "source_coords": [
+                72.0,
+                200.0,
+                236.0,
+                250.0
+              ],
+              "source_space": "pdf_points",
+              "space": "normalized",
+              "x0": 0.12100840336134454,
+              "x1": 0.39663865546218485,
+              "y0": 0.2375296912114014,
+              "y1": 0.29691211401425177
+            },
+            "col": 0,
+            "colspan": 1,
+            "is_header": false,
+            "quality": null,
+            "row": 0,
+            "rowspan": 1,
+            "text": "Name"
+          },
+          {
+            "bbox": {
+              "source_coords": [
+                72.0,
+                250.0,
+                236.0,
+                300.0
+              ],
+              "source_space": "pdf_points",
+              "space": "normalized",
+              "x0": 0.12100840336134454,
+              "x1": 0.39663865546218485,
+              "y0": 0.29691211401425177,
+              "y1": 0.35629453681710216
+            },
+            "col": 1,
+            "colspan": 1,
+            "is_header": false,
+            "quality": null,
+            "row": 0,
+            "rowspan": 1,
+            "text": "Value"
+          },
+          {
+            "bbox": {
+              "source_coords": [
+                236.0,
+                200.0,
+                400.0,
+                250.0
+              ],
+              "source_space": "pdf_points",
+              "space": "normalized",
+              "x0": 0.39663865546218485,
+              "x1": 0.6722689075630253,
+              "y0": 0.2375296912114014,
+              "y1": 0.29691211401425177
+            },
+            "col": 0,
+            "colspan": 1,
+            "is_header": false,
+            "quality": null,
+            "row": 1,
+            "rowspan": 1,
+            "text": "alpha"
+          },
+          {
+            "bbox": {
+              "source_coords": [
+                236.0,
+                250.0,
+                400.0,
+                300.0
+              ],
+              "source_space": "pdf_points",
+              "space": "normalized",
+              "x0": 0.39663865546218485,
+              "x1": 0.6722689075630253,
+              "y0": 0.29691211401425177,
+              "y1": 0.35629453681710216
+            },
+            "col": 1,
+            "colspan": 1,
+            "is_header": false,
+            "quality": null,
+            "row": 1,
+            "rowspan": 1,
+            "text": "1"
+          }
+        ],
+        "cols": 2,
+        "html": "<table><tr><td>Name</td><td>Value</td></tr><tr><td>alpha</td><td>1</td></tr></table>",
+        "markdown": "| Name | Value |\n| --- | --- |\n| alpha | 1 |",
+        "rows": 2
+      },
+      "text": "Name | Value\nalpha | 1"
+    }
+  ],
+  "full_markdown": "| Name | Value |\n| --- | --- |\n| alpha | 1 |",
+  "full_text": "Quarterly revenue report\n\nName | Value\nalpha | 1",
+  "page_count": 1,
+  "pages": [
+    {
+      "block_ids": [
+        "src-1:0:0",
+        "src-1:0:1"
+      ],
+      "end_char": null,
+      "height": 842.0,
+      "index": 0,
+      "parser_extras": {},
+      "quality": null,
+      "rotation": 0,
+      "start_char": null,
+      "unit": "points",
+      "width": 595.0
+    }
+  ]
+}
