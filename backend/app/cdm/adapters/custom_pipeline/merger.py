@@ -83,6 +83,12 @@ def merge(
                 continue
             if ranks.get(winner_cap, 0) <= ranks.get(loser_cap, 0):
                 continue
+            # Eviction removes a *duplicate representation* of content. A block
+            # that carries no text (e.g. a FIGURE/image) is a container, not a
+            # representation — it must not evict text extracted from within it
+            # (this is exactly the OCR-of-an-image case).
+            if not (winner.text and winner.text.strip()):
+                continue
             frac = overlap_fraction(winner.bbox, loser.bbox)
             if frac > _threshold(loser_cap):
                 evicted[loser.id] = {

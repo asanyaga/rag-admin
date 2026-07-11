@@ -69,7 +69,13 @@ async def run_custom_pipeline(
         for inst in pipeline.instances:
             if inst is text_instance:
                 continue
-            r = inst.tool.run(pdf_path, page_meta=text_result.page_meta, emit=inst.emit)
+            pages = None
+            if Capability.TEXT_OCR in inst.emit:
+                # OCR is the one capability whose page selection depends on
+                # per-page facts; every other tool runs over the whole document.
+                pages = inst.tool.select_pages(flags)
+            r = inst.tool.run(
+                pdf_path, pages=pages, page_meta=text_result.page_meta, emit=inst.emit)
             results.append(r)
             warnings.extend(r.warnings)
 
@@ -77,6 +83,7 @@ async def run_custom_pipeline(
             results,
             source_document_id=source.id,
             page_flags=flags,
+            ocr_prefer=pipeline.ocr_prefer,
             eviction_overlap_threshold=pipeline.eviction_overlap_threshold,
             ocr_eviction_threshold=pipeline.ocr_eviction_threshold,
         )

@@ -27,6 +27,7 @@ interface ToolInstance {
 interface PipelineConfig {
   tools: Record<string, ToolInstance>
   capabilities: Record<string, string>
+  precedence?: Record<string, string>
   eviction_overlap_threshold?: number
   ocr_eviction_threshold?: number
   page_flags?: Record<string, number>
@@ -41,6 +42,10 @@ interface CustomPipelineConfigProps {
 type TableTool = 'none' | 'fitz_tables' | 'camelot'
 
 const CAMELOT_DEFAULTS = { flavor: 'lattice', edge_tol: 50, row_tol: 2 }
+
+const TESSERACT_DEFAULTS = {
+  pages: 'auto', lang: 'eng', psm: 3, dpi: 300, min_confidence: 0,
+}
 
 const FITZ_TABLES_DEFAULTS = {
   vertical_strategy: 'lines_strict',
@@ -498,6 +503,23 @@ export function CustomPipelineConfig({
     onChange(next as unknown as ParseConfig)
   }
 
+  const ocrKey = capabilities.text_ocr
+  const ocrTool = ocrKey ? tools[ocrKey] : undefined
+  const ocrOn = !!ocrTool
+  const precedencePrefer = cfg.precedence?.text_ocr === 'prefer'
+
+  const handleOcrToolChange = (value: 'none' | 'tesseract') => {
+    onChange(setSlot(cfg, 'text_ocr', value === 'none' ? null : value,
+      { ...TESSERACT_DEFAULTS }) as unknown as ParseConfig)
+  }
+
+  const setPrecedence = (prefer: boolean) => {
+    onChange({
+      ...cfg,
+      precedence: { ...cfg.precedence, text_ocr: prefer ? 'prefer' : 'fallback' },
+    } as unknown as ParseConfig)
+  }
+
   return (
     <div className="space-y-4">
       {/* Text extraction — a capability slot (required) */}
@@ -616,6 +638,83 @@ export function CustomPipelineConfig({
                 </div>
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Text OCR — a capability slot */}
+      <div className="space-y-2 rounded-md border p-3">
+        <div className="space-y-1">
+          <Label htmlFor="ocr-tool-select">Text OCR</Label>
+          <p className="text-xs text-muted-foreground">
+            Optional. Recovers text from scanned pages and text-in-images.
+          </p>
+          <Select
+            value={ocrOn ? 'tesseract' : 'none'}
+            onValueChange={(v) => handleOcrToolChange(v as 'none' | 'tesseract')}
+            disabled={disabled}
+          >
+            <SelectTrigger id="ocr-tool-select" aria-label="Text OCR">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">none</SelectItem>
+              <SelectItem value="tesseract">tesseract — local OCR</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {ocrOn && ocrKey && ocrTool && (
+          <div className="space-y-3 pl-6">
+            <div className="space-y-1">
+              <Label htmlFor="ocr-pages">Pages</Label>
+              <Select
+                value={String(ocrTool.config.pages ?? 'auto')}
+                onValueChange={(v) => updateTool(ocrKey, { pages: v })}
+                disabled={disabled}
+              >
+                <SelectTrigger id="ocr-pages">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">auto (scanned / CID / text-in-image)</SelectItem>
+                  <SelectItem value="all">all pages</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <NumField
+              id="ocr-dpi"
+              label="dpi"
+              value={(ocrTool.config.dpi as number) ?? 300}
+              onChange={(v) => updateTool(ocrKey, { dpi: Math.round(v) })}
+              disabled={disabled}
+            />
+            <NumField
+              id="ocr-min-conf"
+              label="min_confidence"
+              description="0..1; 0 keeps every result"
+              value={(ocrTool.config.min_confidence as number) ?? 0}
+              onChange={(v) => updateTool(ocrKey, { min_confidence: v })}
+              disabled={disabled}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="ocr-precedence">When OCR overlaps native text</Label>
+              <Select
+                value={precedencePrefer ? 'prefer' : 'fallback'}
+                onValueChange={(v) => setPrecedence(v === 'prefer')}
+                disabled={disabled}
+              >
+                <SelectTrigger id="ocr-precedence" aria-label="Precedence">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fallback">Native text wins (default)</SelectItem>
+                  <SelectItem value="prefer">
+                    OCR wins — for scans with a poor text layer
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
       </div>

@@ -94,3 +94,24 @@ def test_two_table_tools_are_structurally_unrepresentable():
     assert p.for_capability(Capability.TABLE_DETECTION).key == "b"
     # The unreferenced instance "a" is never built.
     assert {i.key for i in p.instances} == {"b", "f"}
+
+
+def test_tesseract_fills_the_text_ocr_slot():
+    cfg = {
+        "tools": {"fitz": {"tool": "fitz", "config": {}},
+                  "ocr": {"tool": "tesseract", "config": {"pages": "auto", "lang": "eng"}}},
+        "capabilities": {"text_extraction": "fitz", "text_ocr": "ocr"},
+    }
+    p = build_pipeline_config(cfg)
+    inst = p.for_capability(Capability.TEXT_OCR)
+    assert inst.key == "ocr"
+    assert inst.tool.tool_id == "tesseract"
+    assert inst.tool.config.pages == "auto"
+
+
+def test_ocr_prefer_defaults_false_and_reads_precedence():
+    base = {"tools": {"fitz": {"tool": "fitz", "config": {}}},
+            "capabilities": {"text_extraction": "fitz"}}
+    assert build_pipeline_config(base).ocr_prefer is False
+    prefer = {**base, "precedence": {"text_ocr": "prefer"}}
+    assert build_pipeline_config(prefer).ocr_prefer is True
