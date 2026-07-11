@@ -65,7 +65,7 @@ async def run_custom_pipeline(
 
         # Remaining instances run once each, in the deterministic order
         # build_pipeline_config established, and receive page geometry from the
-        # text_extraction tool.
+        # structure (layout_analysis) tool.
         for inst in pipeline.instances:
             if inst is structure_instance:
                 continue

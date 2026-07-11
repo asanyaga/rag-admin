@@ -22,13 +22,13 @@ def test_tool_result_holds_blocks_by_capability_and_native_records():
                   text="hi", page_index=0)
     result = ToolResult(
         tool_id="fitz",
-        blocks_by_capability={Capability.TEXT_EXTRACTION: [block]},
+        blocks_by_capability={Capability.LAYOUT_ANALYSIS: [block]},
         page_meta={0: PageMeta(index=0, width=612.0, height=792.0)},
         raw={"pages": {}},
         native_by_block={"fitz:0:0": {"type": 0}},
     )
     assert result.tool_id == "fitz"
-    assert result.blocks_by_capability[Capability.TEXT_EXTRACTION][0].text == "hi"
+    assert result.blocks_by_capability[Capability.LAYOUT_ANALYSIS][0].text == "hi"
     assert result.native_by_block["fitz:0:0"] == {"type": 0}
     assert result.warnings == []
     assert result.duration_ms == 0
@@ -37,7 +37,7 @@ def test_tool_result_holds_blocks_by_capability_and_native_records():
 def test_pipeline_tool_protocol_is_runtime_checkable():
     class Fake:
         tool_id = "fake"
-        provides = frozenset({Capability.TEXT_EXTRACTION})
+        provides = frozenset({Capability.LAYOUT_ANALYSIS})
 
         def run(self, pdf_path, *, pages=None, page_meta=None, emit=frozenset()):
             return ToolResult(tool_id="fake", blocks_by_capability={}, page_meta={})
