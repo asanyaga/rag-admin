@@ -58,7 +58,7 @@ def _spans(native_block: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 class FitzTool:
     tool_id = "fitz"
-    provides = frozenset({Capability.TEXT_EXTRACTION})
+    provides = frozenset({Capability.LAYOUT_ANALYSIS})
 
     def __init__(self, config: Optional[FitzConfig] = None) -> None:
         self.config = config or FitzConfig()
@@ -69,7 +69,7 @@ class FitzTool:
         *,
         pages: Optional[List[int]] = None,
         page_meta: Optional[Dict[int, PageMeta]] = None,  # unused; fitz is the source
-        emit: frozenset[Capability] = frozenset({Capability.TEXT_EXTRACTION}),
+        emit: frozenset[Capability] = frozenset({Capability.LAYOUT_ANALYSIS}),
     ) -> ToolResult:
         if not emit <= self.provides:
             raise ValueError(f"{self.tool_id} cannot emit {set(emit - self.provides)}")
@@ -148,7 +148,7 @@ class FitzTool:
 
         return ToolResult(
             tool_id=self.tool_id,
-            blocks_by_capability={Capability.TEXT_EXTRACTION: blocks},
+            blocks_by_capability={Capability.LAYOUT_ANALYSIS: blocks},
             page_meta=page_meta_out,
             raw={"pages": native_raw},
             native_by_block=native_by_block,

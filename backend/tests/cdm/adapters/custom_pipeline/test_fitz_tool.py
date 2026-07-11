@@ -10,11 +10,11 @@ from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool, _json_saf
 from app.cdm.models import BlockRole
 
 FIXTURES = Path(__file__).parent / "fixtures"
-TE = Capability.TEXT_EXTRACTION
+LA = Capability.LAYOUT_ANALYSIS
 
 
 def _blocks(result):
-    return result.blocks_by_capability[TE]
+    return result.blocks_by_capability[LA]
 
 
 def _make_image_pdf(path: Path) -> None:
@@ -33,11 +33,11 @@ def test_fitz_tool_id():
     assert FitzTool().tool_id == "fitz"
 
 
-def test_fitz_declares_text_extraction_and_emits_under_it():
+def test_fitz_declares_layout_analysis_and_emits_under_it():
     tool = FitzTool()
-    assert tool.provides == frozenset({TE})
-    result = tool.run(FIXTURES / "simple_text.pdf", emit=frozenset({TE}))
-    assert list(result.blocks_by_capability) == [TE]
+    assert tool.provides == frozenset({LA})
+    result = tool.run(FIXTURES / "simple_text.pdf", emit=frozenset({LA}))
+    assert list(result.blocks_by_capability) == [LA]
     assert len(_blocks(result)) >= 1
 
 

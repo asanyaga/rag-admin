@@ -117,8 +117,8 @@ def build_pipeline_config(config: Dict[str, Any]) -> ResolvedPipeline:
             raise ValueError(f"no tool provides staging capability {cap.value!r}")
         slots[cap] = instance_key
 
-    if Capability.TEXT_EXTRACTION not in slots:
-        raise ValueError("capability 'text_extraction' is required")
+    if Capability.LAYOUT_ANALYSIS not in slots:
+        raise ValueError("capability 'layout_analysis' is required")
 
     # instance key -> assigned capabilities (this is the masking set)
     assigned: Dict[str, Set[Capability]] = {}
