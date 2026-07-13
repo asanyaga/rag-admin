@@ -12,6 +12,7 @@ vi.mock('@/hooks/useSourceDocuments', () => ({
 }))
 
 import { NewRunDialog } from './NewRunDialog'
+import { PARSER_REGISTRY } from '@/components/documents/ParseMethodSelector'
 
 function setup(onCreate = vi.fn()) {
   render(<NewRunDialog open onOpenChange={vi.fn()} projectId="p1" onCreate={onCreate} />)
@@ -33,7 +34,7 @@ describe('NewRunDialog', () => {
     fireEvent.click(screen.getByLabelText('acme.pdf'))
     const addBtn = screen.getByRole('button', { name: /add variant/i })
     fireEvent.click(addBtn)
-    fireEvent.click(addBtn) // two identical docling/{} variants
+    fireEvent.click(addBtn) // two identical custom_pipeline variants
     expect(screen.getByText(/duplicate variant/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^run$/i })).toBeDisabled()
     fireEvent.click(screen.getAllByRole('button', { name: /remove variant/i })[0])
@@ -50,7 +51,7 @@ describe('NewRunDialog', () => {
       expect(onCreate).toHaveBeenCalledWith({
         name: undefined,
         evalCaseIds: ['c1'],
-        variants: [{ adapter: 'docling', config: {} }],
+        variants: [{ adapter: 'custom_pipeline', config: PARSER_REGISTRY.custom_pipeline.defaultConfig }],
       })
     )
   })

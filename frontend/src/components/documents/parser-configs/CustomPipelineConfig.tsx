@@ -43,6 +43,8 @@ type TableTool = 'none' | 'fitz_tables' | 'camelot'
 
 const CAMELOT_DEFAULTS = { flavor: 'lattice', edge_tol: 50, row_tol: 2 }
 
+const DOCLING_DEFAULTS = { page_batch_size: 20 }
+
 const TESSERACT_DEFAULTS = {
   pages: 'auto', lang: 'eng', psm: 3, dpi: 300, min_confidence: 0,
 }
@@ -530,33 +532,65 @@ export function CustomPipelineConfig({
             Turns each page into ordered, labelled regions. Required — every pipeline fills this
             slot. fitz is fast, local, and text-only (no real layout yet).
           </p>
-          <Select value={textKey} onValueChange={() => {}} disabled={disabled}>
+          <Select
+            value={textKey}
+            onValueChange={(v) =>
+              onChange(
+                setSlot(
+                  cfg,
+                  'layout_analysis',
+                  v,
+                  v === 'docling' ? { ...DOCLING_DEFAULTS } : {},
+                ) as unknown as ParseConfig,
+              )
+            }
+            disabled={disabled}
+          >
             <SelectTrigger id="layout-tool-select" aria-label="Layout analysis">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="fitz">fitz (text + images)</SelectItem>
+              <SelectItem value="fitz">fitz — fast, local, text-only</SelectItem>
+              <SelectItem value="docling">
+                docling — ML layout + reading order + tables
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="fitz-include-images"
-            checked={(fitz?.config.include_images as boolean) ?? true}
-            onCheckedChange={(c) => updateTool(textKey, { include_images: !!c })}
+
+        {fitz?.tool === 'fitz' && (
+          <>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="fitz-include-images"
+                checked={(fitz?.config.include_images as boolean) ?? true}
+                onCheckedChange={(c) => updateTool(textKey, { include_images: !!c })}
+                disabled={disabled}
+              />
+              <Label htmlFor="fitz-include-images">Include images (FIGURE blocks)</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="fitz-span-detail"
+                checked={(fitz?.config.span_detail as boolean) ?? false}
+                onCheckedChange={(c) => updateTool(textKey, { span_detail: !!c })}
+                disabled={disabled}
+              />
+              <Label htmlFor="fitz-span-detail">Record span detail</Label>
+            </div>
+          </>
+        )}
+
+        {fitz?.tool === 'docling' && (
+          <NumField
+            id="docling-batch"
+            label="Page batch size"
+            description="Pages per docling conversion batch"
+            value={(fitz?.config.page_batch_size as number) ?? 20}
+            onChange={(v) => updateTool(textKey, { page_batch_size: Math.round(v) })}
             disabled={disabled}
           />
-          <Label htmlFor="fitz-include-images">Include images (FIGURE blocks)</Label>
-        </div>
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="fitz-span-detail"
-            checked={(fitz?.config.span_detail as boolean) ?? false}
-            onCheckedChange={(c) => updateTool(textKey, { span_detail: !!c })}
-            disabled={disabled}
-          />
-          <Label htmlFor="fitz-span-detail">Record span detail</Label>
-        </div>
+        )}
       </div>
 
       {/* Table extraction — mutually exclusive tool selector */}
