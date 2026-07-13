@@ -102,3 +102,29 @@ def test_a_figure_block_does_not_evict_ocr_text_inside_it():
     ids_texts = {(b.native_type) for b in out.blocks}
     assert len(out.blocks) == 2                       # both survive
     assert out.raw_output["evicted"] == []
+
+
+# ── Reading order: intrinsic order honoured, geometry as fallback ────────────
+
+from app.cdm.adapters.custom_pipeline.merger import _sort_key
+
+
+def _blk(bid, y0, order=None):
+    return Block(id=bid, role=BlockRole.TEXT, native_type="text", text=bid,
+                 page_index=0, bbox=BBox(x0=0.0, y0=y0, x1=1.0, y1=y0 + 0.1),
+                 reading_order=order)
+
+
+def test_sort_key_honours_intrinsic_order_over_geometry():
+    # Higher on the page (smaller y0) but LATER intrinsic order -> sorts later.
+    top_late = _blk("a", y0=0.1, order=5)
+    bottom_early = _blk("b", y0=0.8, order=1)
+    ordered = sorted([top_late, bottom_early], key=_sort_key)
+    assert [b.id for b in ordered] == ["b", "a"]
+
+
+def test_sort_key_falls_back_to_geometry_without_order():
+    top = _blk("a", y0=0.1, order=None)
+    bottom = _blk("b", y0=0.8, order=None)
+    ordered = sorted([bottom, top], key=_sort_key)
+    assert [b.id for b in ordered] == ["a", "b"]
