@@ -10,7 +10,7 @@ const fitzOnly = {
       config: { include_images: true, span_detail: false, min_chars_threshold: 10 },
     },
   },
-  capabilities: { text_extraction: 'fitz' },
+  capabilities: { layout_analysis: 'fitz' },
   eviction_overlap_threshold: 0.5,
 }
 
@@ -23,7 +23,7 @@ const withFitzTables = {
       config: { vertical_strategy: 'lines_strict', horizontal_strategy: 'lines_strict' },
     },
   },
-  capabilities: { text_extraction: 'fitz', table_detection: 'fitz_tables' },
+  capabilities: { layout_analysis: 'fitz', table_detection: 'fitz_tables' },
 }
 
 const withCamelot = {
@@ -32,13 +32,13 @@ const withCamelot = {
     ...fitzOnly.tools,
     camelot: { tool: 'camelot', config: { flavor: 'lattice', edge_tol: 50, row_tol: 2 } },
   },
-  capabilities: { text_extraction: 'fitz', table_detection: 'camelot' },
+  capabilities: { layout_analysis: 'fitz', table_detection: 'camelot' },
 }
 
 describe('CustomPipelineConfig', () => {
-  it('renders text extraction as a slot, not an always-on label', () => {
+  it('renders layout analysis as a slot, not an always-on label', () => {
     render(<CustomPipelineConfig config={fitzOnly} onChange={vi.fn()} />)
-    expect(screen.getByRole('combobox', { name: /text extraction/i })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /layout analysis/i })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: /table extraction/i })).toBeInTheDocument()
     expect(screen.queryByText(/always on/i)).not.toBeInTheDocument()
   })
@@ -49,7 +49,7 @@ describe('CustomPipelineConfig', () => {
     await userEvent.click(screen.getByRole('combobox', { name: /table extraction/i }))
     await userEvent.click(screen.getByText(/fitz_tables/i))
     const next = onChange.mock.calls[0][0]
-    expect(next.capabilities.text_extraction).toBe('fitz')
+    expect(next.capabilities.layout_analysis).toBe('fitz')
     expect(next.capabilities.table_detection).toBe('fitz_tables')
     expect(next.tools.fitz_tables.tool).toBe('fitz_tables')
     expect(next.tools.camelot).toBeUndefined()
@@ -112,7 +112,7 @@ describe('CustomPipelineConfig', () => {
         ...fitzOnly.tools,
         camelot: { tool: 'camelot', config: { flavor: 'stream', edge_tol: 50, row_tol: 2 } },
       },
-      capabilities: { text_extraction: 'fitz', table_detection: 'camelot' },
+      capabilities: { layout_analysis: 'fitz', table_detection: 'camelot' },
     }
     render(<CustomPipelineConfig config={withStream} onChange={vi.fn()} />)
     expect(screen.getByText('edge_tol')).toBeInTheDocument()
@@ -135,7 +135,7 @@ describe('normalizeCustomPipelineConfig', () => {
     expect(n.tools['0']).toBeUndefined()          // no array-index key
     expect(n.tools.fitz.tool).toBe('fitz')
     expect(n.tools.fitz.config.include_images).toBe(true)
-    expect(n.capabilities.text_extraction).toBe('fitz')
+    expect(n.capabilities.layout_analysis).toBe('fitz')
   })
 
   it('infers table_detection from an old array with a table tool', () => {
@@ -145,17 +145,17 @@ describe('normalizeCustomPipelineConfig', () => {
         { tool_id: 'camelot', config: { flavor: 'stream' } },
       ],
     })
-    expect(n.capabilities.text_extraction).toBe('fitz')
+    expect(n.capabilities.layout_analysis).toBe('fitz')
     expect(n.capabilities.table_detection).toBe('camelot')
     expect(n.tools.camelot.config.flavor).toBe('stream')
   })
 
-  it('guarantees a text_extraction slot even if the input lacks one', () => {
+  it('guarantees a layout_analysis slot even if the input lacks one', () => {
     const n = normalizeCustomPipelineConfig({
       tools: { fitz_tables: { tool: 'fitz_tables', config: {} } },
       capabilities: { table_detection: 'fitz_tables' },
     })
-    expect(n.capabilities.text_extraction).toBe('fitz')
+    expect(n.capabilities.layout_analysis).toBe('fitz')
     expect(n.tools.fitz.tool).toBe('fitz')
   })
 
@@ -177,19 +177,19 @@ describe('CustomPipelineConfig with a legacy config', () => {
     render(<CustomPipelineConfig config={OLD_ARRAY} onChange={onChange} />)
     expect(onChange).toHaveBeenCalled()
     const next = onChange.mock.calls[0][0]
-    expect(next.capabilities.text_extraction).toBe('fitz')
+    expect(next.capabilities.layout_analysis).toBe('fitz')
     expect(next.tools['0']).toBeUndefined()
     expect(Array.isArray(next.tools)).toBe(false)
   })
 
-  it('never produces a config missing text_extraction after editing the table slot', async () => {
+  it('never produces a config missing layout_analysis after editing the table slot', async () => {
     const onChange = vi.fn()
     render(<CustomPipelineConfig config={OLD_ARRAY} onChange={onChange} />)
     await userEvent.click(screen.getByRole('combobox', { name: /table extraction/i }))
     await userEvent.click(screen.getByText(/fitz_tables/i))
     const calls = onChange.mock.calls
     const next = calls[calls.length - 1][0]
-    expect(next.capabilities.text_extraction).toBe('fitz')
+    expect(next.capabilities.layout_analysis).toBe('fitz')
     expect(next.capabilities.table_detection).toBe('fitz_tables')
     expect(next.tools['0']).toBeUndefined()
   })
@@ -200,7 +200,7 @@ const TESSERACT_DEFAULTS_KEYS = ['pages', 'lang', 'psm', 'dpi', 'min_confidence'
 describe('OCR slot', () => {
   const base = {
     tools: { fitz: { tool: 'fitz', config: {} } },
-    capabilities: { text_extraction: 'fitz' },
+    capabilities: { layout_analysis: 'fitz' },
   }
 
   it('selecting tesseract adds a text_ocr slot with defaults', async () => {
@@ -221,7 +221,7 @@ describe('OCR slot', () => {
     const withOcr = {
       tools: { fitz: { tool: 'fitz', config: {} },
                tesseract: { tool: 'tesseract', config: { pages: 'auto' } } },
-      capabilities: { text_extraction: 'fitz', text_ocr: 'tesseract' },
+      capabilities: { layout_analysis: 'fitz', text_ocr: 'tesseract' },
     }
     const { rerender } = render(<CustomPipelineConfig config={base} onChange={vi.fn()} />)
     expect(screen.queryByText(/native text wins/i)).not.toBeInTheDocument()

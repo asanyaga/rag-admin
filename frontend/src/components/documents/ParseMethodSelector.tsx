@@ -48,7 +48,7 @@ export const PARSER_REGISTRY: Record<string, ParserMeta> = {
           config: { min_chars_threshold: 10, include_images: true, span_detail: false },
         },
       },
-      capabilities: { text_extraction: 'fitz' },
+      capabilities: { layout_analysis: 'fitz' },
       eviction_overlap_threshold: 0.5,
     },
   },

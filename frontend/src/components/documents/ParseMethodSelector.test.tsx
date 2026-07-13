@@ -79,7 +79,7 @@ describe('ParseMethodSelector', () => {
         parserType="custom_pipeline"
         config={{
           tools: { fitz: { tool: 'fitz', config: {} } },
-          capabilities: { text_extraction: 'fitz' },
+          capabilities: { layout_analysis: 'fitz' },
           eviction_overlap_threshold: 0.5,
         }}
       />

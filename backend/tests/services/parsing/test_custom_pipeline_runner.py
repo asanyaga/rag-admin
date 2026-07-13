@@ -29,7 +29,7 @@ def _source() -> SourceDocument:
 async def test_run_custom_pipeline_fitz_only_succeeds():
     config = {
         "tools": {"fitz": {"tool": "fitz", "config": {}}},
-        "capabilities": {"text_extraction": "fitz"},
+        "capabilities": {"layout_analysis": "fitz"},
         "eviction_overlap_threshold": 0.5,
     }
     run, doc = await run_custom_pipeline(
@@ -66,7 +66,7 @@ async def test_run_custom_pipeline_raw_payload_json_serializable_with_images(tmp
     doc_pdf.close()
 
     config = {"tools": {"fitz": {"tool": "fitz", "config": {}}},
-              "capabilities": {"text_extraction": "fitz"}}
+              "capabilities": {"layout_analysis": "fitz"}}
     run, _ = await run_custom_pipeline(
         source=_source(),
         file_path=str(pdf),
@@ -82,7 +82,7 @@ async def test_run_custom_pipeline_raw_payload_json_serializable_with_images(tmp
 @pytest.mark.asyncio
 async def test_run_custom_pipeline_wraps_failure(tmp_path):
     config = {"tools": {"fitz": {"tool": "fitz", "config": {}}},
-              "capabilities": {"text_extraction": "fitz"}}
+              "capabilities": {"layout_analysis": "fitz"}}
     with pytest.raises(CustomPipelineRunError) as ei:
         await run_custom_pipeline(
             source=_source(),
@@ -123,7 +123,7 @@ async def test_run_custom_pipeline_fitz_tables_emits_table_blocks(tmp_path):
     config = {
         "tools": {"fitz": {"tool": "fitz", "config": {}},
                   "fitz_tables": {"tool": "fitz_tables", "config": {}}},
-        "capabilities": {"text_extraction": "fitz", "table_detection": "fitz_tables"},
+        "capabilities": {"layout_analysis": "fitz", "table_detection": "fitz_tables"},
         "eviction_overlap_threshold": 0.5,
     }
     run, doc_result = await run_custom_pipeline(
@@ -139,12 +139,12 @@ async def test_run_custom_pipeline_fitz_tables_emits_table_blocks(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_run_custom_pipeline_requires_a_text_extraction_slot():
+async def test_run_custom_pipeline_requires_a_layout_analysis_slot():
     """Two table tools are now structurally unrepresentable (the capabilities map
     has a single table_detection key), so the old dual-table guard is gone. What
     remains worth asserting is the required slot."""
     config = {"tools": {}, "capabilities": {}}
-    with pytest.raises(CustomPipelineRunError, match="text_extraction"):
+    with pytest.raises(CustomPipelineRunError, match="layout_analysis"):
         await run_custom_pipeline(
             source=_source(),
             file_path=str(FIXTURES / "simple_text.pdf"),
@@ -194,7 +194,7 @@ async def test_runner_passes_selected_pages_and_ocr_prefer(monkeypatch):
     config = {
         "tools": {"fitz": {"tool": "fitz", "config": {}},
                   "ocr": {"tool": "tesseract", "config": {"pages": "auto"}}},
-        "capabilities": {"text_extraction": "fitz", "text_ocr": "ocr"},
+        "capabilities": {"layout_analysis": "fitz", "text_ocr": "ocr"},
         "precedence": {"text_ocr": "prefer"},
     }
     run, _ = await run_custom_pipeline(

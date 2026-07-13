@@ -361,18 +361,18 @@ function FitzTablesConfigPanel({
 }
 
 const CAPABILITY_BY_TOOL: Record<string, string> = {
-  fitz: 'text_extraction',
-  pdfplumber: 'text_extraction',
+  fitz: 'layout_analysis',
+  pdfplumber: 'layout_analysis',
   fitz_tables: 'table_detection',
   camelot: 'table_detection',
 }
 
 /** Coerce any accepted config shape into the capability-slot shape, and
- * guarantee the required `text_extraction` slot.
+ * guarantee the required `layout_analysis` slot.
  *
  * Handles the pre-refactor array shape (`tools: [{tool_id, config}]`, no
  * `capabilities`) so re-parsing an old run — or any stale seed — cannot emit a
- * config the backend will reject with "text_extraction is required".
+ * config the backend will reject with "layout_analysis is required".
  * Idempotent: normalizing an already-normal config returns an equal object.
  */
 export function normalizeCustomPipelineConfig(raw: unknown): PipelineConfig {
@@ -400,10 +400,10 @@ export function normalizeCustomPipelineConfig(raw: unknown): PipelineConfig {
     }
   }
 
-  // Guarantee the required text_extraction slot.
-  if (!capabilities.text_extraction) {
+  // Guarantee the required layout_analysis slot.
+  if (!capabilities.layout_analysis) {
     if (!tools.fitz) tools.fitz = { tool: 'fitz', config: {} }
-    capabilities.text_extraction = 'fitz'
+    capabilities.layout_analysis = 'fitz'
   }
 
   const out: PipelineConfig = { tools, capabilities }
@@ -480,7 +480,7 @@ export function CustomPipelineConfig({
   const capabilities = cfg.capabilities
   const threshold = cfg.eviction_overlap_threshold ?? 0.5
 
-  const textKey = capabilities.text_extraction ?? 'fitz'
+  const textKey = capabilities.layout_analysis ?? 'fitz'
   const fitz = tools[textKey]
 
   const tableKey = capabilities.table_detection
@@ -522,15 +522,16 @@ export function CustomPipelineConfig({
 
   return (
     <div className="space-y-4">
-      {/* Text extraction — a capability slot (required) */}
+      {/* Layout analysis — the required structure slot */}
       <div className="space-y-2 rounded-md border p-3">
         <div className="space-y-1">
-          <Label htmlFor="text-tool-select">Text extraction</Label>
+          <Label htmlFor="layout-tool-select">Layout analysis</Label>
           <p className="text-xs text-muted-foreground">
-            The base text extractor. Required — every pipeline fills this slot.
+            Turns each page into ordered, labelled regions. Required — every pipeline fills this
+            slot. fitz is fast, local, and text-only (no real layout yet).
           </p>
           <Select value={textKey} onValueChange={() => {}} disabled={disabled}>
-            <SelectTrigger id="text-tool-select" aria-label="Text extraction">
+            <SelectTrigger id="layout-tool-select" aria-label="Layout analysis">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

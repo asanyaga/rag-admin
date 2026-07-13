@@ -28,7 +28,7 @@ def _source() -> SourceDocument:
 
 @pytest.fixture
 def ruled_table_pdf(tmp_path):
-    """Text plus a ruled grid, so both text_extraction and table_detection fire."""
+    """Text plus a ruled grid, so both layout_analysis and table_detection fire."""
     d = fitz.open()
     page = d.new_page(width=595, height=842)
     page.insert_text(fitz.Point(72, 72), "Quarterly revenue report", fontsize=14)
@@ -53,7 +53,7 @@ async def test_text_only_pipeline_output_is_stable(ruled_table_pdf):
         source=_source(), file_path=str(ruled_table_pdf),
         representation_kind="extract_rich",
         config={"tools": {"fitz": {"tool": "fitz", "config": {}}},
-                "capabilities": {"text_extraction": "fitz"}},
+                "capabilities": {"layout_analysis": "fitz"}},
         client=None,
     )
     assert run.status == ParseRunStatus.SUCCEEDED
@@ -74,7 +74,7 @@ async def test_table_tool_evicts_overlapping_text_exactly_as_before(ruled_table_
     config = {
         "tools": {"fitz": {"tool": "fitz", "config": {}},
                   "tbl": {"tool": "fitz_tables", "config": {}}},
-        "capabilities": {"text_extraction": "fitz", "table_detection": "tbl"},
+        "capabilities": {"layout_analysis": "fitz", "table_detection": "tbl"},
     }
     run, parsed = await run_custom_pipeline(
         source=_source(), file_path=str(ruled_table_pdf),
@@ -86,7 +86,7 @@ async def test_table_tool_evicts_overlapping_text_exactly_as_before(ruled_table_
     # The table won over the text it covers — same rule, same 0.5 threshold.
     assert run.raw_payload["evicted"], "expected the table to evict covered text"
     for rec in run.raw_payload["evicted"]:
-        assert rec["capability"] == "text_extraction"
+        assert rec["capability"] == "layout_analysis"
         assert rec["winner_capability"] == "table_detection"
         assert rec["reason"] == "covered_by"
         assert rec["overlap_fraction"] > 0.5
@@ -100,11 +100,11 @@ async def test_table_tool_does_not_change_the_surviving_text(ruled_table_pdf):
     """Adding table_detection must only remove text the table covers — never
     alter the text blocks that survive."""
     base = {"tools": {"fitz": {"tool": "fitz", "config": {}}},
-            "capabilities": {"text_extraction": "fitz"}}
+            "capabilities": {"layout_analysis": "fitz"}}
     with_table = {
         "tools": {"fitz": {"tool": "fitz", "config": {}},
                   "tbl": {"tool": "fitz_tables", "config": {}}},
-        "capabilities": {"text_extraction": "fitz", "table_detection": "tbl"},
+        "capabilities": {"layout_analysis": "fitz", "table_detection": "tbl"},
     }
     _, text_only = await run_custom_pipeline(
         source=_source(), file_path=str(ruled_table_pdf),
@@ -117,3 +117,35 @@ async def test_table_tool_does_not_change_the_surviving_text(ruled_table_pdf):
     original = {b.text for b in text_only.blocks if b.role == BlockRole.TEXT}
     assert surviving <= original
     assert "Quarterly revenue report" in " ".join(surviving)
+
+
+# ── Golden snapshot: content-identical to the pre-refactor pipeline ──────────
+
+import json
+from pathlib import Path
+
+from tests.cdm.adapters.custom_pipeline.fixtures.equivalence_fixtures import (
+    EQUIV_CONFIGS, build_for, content_projection,
+)
+
+_GOLDEN_DIR = Path(__file__).parent / "fixtures" / "equivalence"
+
+
+def _relabel(config: dict) -> dict:
+    """Rewrite the captured text_extraction key to layout_analysis."""
+    caps = dict(config["capabilities"])
+    caps["layout_analysis"] = caps.pop("text_extraction")
+    return {**config, "capabilities": caps}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name", list(EQUIV_CONFIGS))
+async def test_output_matches_pre_refactor_golden(name, tmp_path):
+    golden = json.loads((_GOLDEN_DIR / f"{name}.json").read_text())
+    pdf = tmp_path / f"{name}.pdf"
+    build_for(name, pdf)
+    _, parsed = await run_custom_pipeline(
+        source=_source(), file_path=str(pdf),
+        representation_kind="extract_rich",
+        config=_relabel(EQUIV_CONFIGS[name]), client=None)
+    assert content_projection(parsed) == golden

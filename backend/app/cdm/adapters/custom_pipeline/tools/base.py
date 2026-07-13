@@ -20,7 +20,7 @@ def clamp01(v: float) -> float:
 
 
 class PageMeta(BaseModel):
-    """Authoritative page geometry, sourced from the text_extraction tool."""
+    """Authoritative page geometry, sourced from the structure (layout_analysis) tool."""
     index: int
     width: float       # PDF points
     height: float      # PDF points

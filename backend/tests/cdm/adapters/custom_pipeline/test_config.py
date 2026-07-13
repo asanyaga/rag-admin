@@ -5,16 +5,16 @@ from app.cdm.adapters.custom_pipeline.config import build_pipeline_config
 
 BASE = {
     "tools": {"fitz": {"tool": "fitz", "config": {}}},
-    "capabilities": {"text_extraction": "fitz"},
+    "capabilities": {"layout_analysis": "fitz"},
 }
 
 
 def test_builds_a_single_slot_pipeline():
     p = build_pipeline_config(BASE)
-    inst = p.for_capability(Capability.TEXT_EXTRACTION)
+    inst = p.for_capability(Capability.LAYOUT_ANALYSIS)
     assert inst.key == "fitz"
     assert inst.tool.tool_id == "fitz"
-    assert inst.emit == frozenset({Capability.TEXT_EXTRACTION})
+    assert inst.emit == frozenset({Capability.LAYOUT_ANALYSIS})
     assert p.for_capability(Capability.TABLE_DETECTION) is None
 
 
@@ -22,7 +22,7 @@ def test_one_instance_serves_many_slots_and_is_built_once():
     cfg = {
         "tools": {"f": {"tool": "fitz", "config": {}},
                   "t": {"tool": "fitz_tables", "config": {}}},
-        "capabilities": {"text_extraction": "f", "table_detection": "t"},
+        "capabilities": {"layout_analysis": "f", "table_detection": "t"},
     }
     p = build_pipeline_config(cfg)
     assert len(p.instances) == 2
@@ -32,49 +32,50 @@ def test_one_instance_serves_many_slots_and_is_built_once():
 def test_tool_config_is_validated_and_applied():
     cfg = {
         "tools": {"fitz": {"tool": "fitz", "config": {"span_detail": True}}},
-        "capabilities": {"text_extraction": "fitz"},
+        "capabilities": {"layout_analysis": "fitz"},
     }
-    inst = build_pipeline_config(cfg).for_capability(Capability.TEXT_EXTRACTION)
+    inst = build_pipeline_config(cfg).for_capability(Capability.LAYOUT_ANALYSIS)
     assert inst.tool.config.span_detail is True
 
 
-def test_text_extraction_slot_is_required():
-    with pytest.raises(ValueError, match="text_extraction"):
+def test_layout_analysis_slot_is_required():
+    with pytest.raises(ValueError, match="layout_analysis"):
         build_pipeline_config({"tools": {}, "capabilities": {}})
 
 
 def test_unknown_tool_is_rejected():
     with pytest.raises(ValueError, match="unknown tool"):
         build_pipeline_config({"tools": {"x": {"tool": "nope"}},
-                               "capabilities": {"text_extraction": "x"}})
+                               "capabilities": {"layout_analysis": "x"}})
 
 
 def test_unknown_capability_is_rejected():
     with pytest.raises(ValueError, match="unknown capability"):
         build_pipeline_config({"tools": {"f": {"tool": "fitz"}},
-                               "capabilities": {"text_extraction": "f",
+                               "capabilities": {"layout_analysis": "f",
                                                 "teleportation": "f"}})
 
 
-def test_staging_capability_has_no_tools_yet():
-    with pytest.raises(ValueError, match="staging capability"):
-        build_pipeline_config({"tools": {"f": {"tool": "fitz"}},
-                               "capabilities": {"text_extraction": "f",
-                                                "layout_analysis": "f"}})
+def test_layout_analysis_is_fillable_now():
+    # Was test_staging_capability_has_no_tools_yet — layout is block-producing now.
+    cfg = {"tools": {"f": {"tool": "fitz"}},
+           "capabilities": {"layout_analysis": "f"}}
+    p = build_pipeline_config(cfg)
+    assert p.for_capability(Capability.LAYOUT_ANALYSIS).key == "f"
 
 
 def test_capability_not_provided_by_tool_is_rejected():
     with pytest.raises(ValueError, match="does not provide"):
         build_pipeline_config({
             "tools": {"f": {"tool": "fitz"}},
-            "capabilities": {"text_extraction": "f", "table_detection": "f"},
+            "capabilities": {"layout_analysis": "f", "table_detection": "f"},
         })
 
 
 def test_dangling_instance_reference_is_rejected():
     with pytest.raises(ValueError, match="unknown instance"):
         build_pipeline_config({"tools": {"f": {"tool": "fitz"}},
-                               "capabilities": {"text_extraction": "ghost"}})
+                               "capabilities": {"layout_analysis": "ghost"}})
 
 
 def test_thresholds_and_page_flags_defaults():
@@ -89,7 +90,7 @@ def test_two_table_tools_are_structurally_unrepresentable():
     # key, so the old "only one table tool" runtime guard has nothing to guard.
     cfg = {"tools": {"a": {"tool": "camelot"}, "b": {"tool": "fitz_tables"},
                      "f": {"tool": "fitz"}},
-           "capabilities": {"text_extraction": "f", "table_detection": "b"}}
+           "capabilities": {"layout_analysis": "f", "table_detection": "b"}}
     p = build_pipeline_config(cfg)
     assert p.for_capability(Capability.TABLE_DETECTION).key == "b"
     # The unreferenced instance "a" is never built.
@@ -100,7 +101,7 @@ def test_tesseract_fills_the_text_ocr_slot():
     cfg = {
         "tools": {"fitz": {"tool": "fitz", "config": {}},
                   "ocr": {"tool": "tesseract", "config": {"pages": "auto", "lang": "eng"}}},
-        "capabilities": {"text_extraction": "fitz", "text_ocr": "ocr"},
+        "capabilities": {"layout_analysis": "fitz", "text_ocr": "ocr"},
     }
     p = build_pipeline_config(cfg)
     inst = p.for_capability(Capability.TEXT_OCR)
@@ -111,7 +112,7 @@ def test_tesseract_fills_the_text_ocr_slot():
 
 def test_ocr_prefer_defaults_false_and_reads_precedence():
     base = {"tools": {"fitz": {"tool": "fitz", "config": {}}},
-            "capabilities": {"text_extraction": "fitz"}}
+            "capabilities": {"layout_analysis": "fitz"}}
     assert build_pipeline_config(base).ocr_prefer is False
     prefer = {**base, "precedence": {"text_ocr": "prefer"}}
     assert build_pipeline_config(prefer).ocr_prefer is True

@@ -45,7 +45,7 @@ async def test_ocr_keeps_image_text_and_drops_ocr_over_native(tmp_path):
     config = {
         "tools": {"fitz": {"tool": "fitz", "config": {}},
                   "ocr": {"tool": "tesseract", "config": {"pages": "all", "dpi": 200}}},
-        "capabilities": {"text_extraction": "fitz", "text_ocr": "ocr"},
+        "capabilities": {"layout_analysis": "fitz", "text_ocr": "ocr"},
     }
     run, parsed = await run_custom_pipeline(
         source=_source(), file_path=str(_mixed_pdf(tmp_path)),
