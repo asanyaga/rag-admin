@@ -36,9 +36,9 @@ def test_run_create_rejects_unknown_adapter():
 
 
 def test_run_create_accepts_known_adapter():
-    r = RunCreate(variants=[VariantInput(adapter="docling", config={"x": 1})],
+    r = RunCreate(variants=[VariantInput(adapter="custom_pipeline", config={"x": 1})],
                   eval_case_ids=[uuid4()])
-    assert r.variants[0].adapter == "docling"
+    assert r.variants[0].adapter == "custom_pipeline"
 
 
 def test_table_case_accepts_tables_html():

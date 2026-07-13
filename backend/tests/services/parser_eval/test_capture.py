@@ -35,7 +35,7 @@ async def test_capture_returns_cdm_and_metrics():
     cdm, cost, latency = await capture(
         _FakeParsing(), _FakeStorage(),
         source_document_id="src-1", storage_uri="u", filename="a.pdf",
-        mime_type="application/pdf", parser="docling", project_id="p1")
+        mime_type="application/pdf", parser="custom_pipeline", project_id="p1")
     assert cdm.full_text == "hi"
     assert latency == 42
     assert cost == {"usd": 0.0}
@@ -46,7 +46,7 @@ async def test_capture_returns_none_on_parse_failure():
     cdm, cost, latency = await capture(
         _FakeParsingFails(), _FakeStorage(),
         source_document_id="src-1", storage_uri="u", filename="a.pdf",
-        mime_type="application/pdf", parser="docling", project_id="p1")
+        mime_type="application/pdf", parser="custom_pipeline", project_id="p1")
     assert cdm is None
     assert cost == {}
     assert latency is None

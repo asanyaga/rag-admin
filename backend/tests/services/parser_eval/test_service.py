@@ -46,7 +46,7 @@ async def test_case_then_run_produces_metric_result(test_db, seed_project_user_s
     case = await service.create_case(project_id, user_id, CaseCreate(
         source_document_id=source_id, dimension="text", expected={"pages": ["hi"]}))
     run = await service.create_run(project_id, user_id, RunCreate(
-        name="r1", variants=[VariantInput(adapter="docling", config={})],
+        name="r1", variants=[VariantInput(adapter="custom_pipeline", config={})],
         eval_case_ids=[case.id]))
     await service.execute_run(run.id)
 
@@ -66,7 +66,7 @@ async def test_run_from_dataset_snapshots_cases(test_db, seed_project_user_sourc
     await service.add_case_to_dataset(ds.id, case.id)
 
     run = await service.create_run(project_id, user_id, RunCreate(
-        variants=[VariantInput(adapter="docling", config={})], dataset_id=ds.id))
+        variants=[VariantInput(adapter="custom_pipeline", config={})], dataset_id=ds.id))
     stored = await service.repo.get_run(run.id)
     # Snapshot resolved from dataset membership at creation time.
     assert [str(c) for c in stored.eval_case_ids] == [str(case.id)]
@@ -79,7 +79,7 @@ async def test_bootstrap_table_case_creates_draft(test_db, seed_project_user_sou
     _patch_capture(monkeypatch)
     service = _service(test_db)
     req = BootstrapTableRequest.model_validate(
-        {"sourceDocumentId": str(source_id), "adapter": "docling", "config": {}})
+        {"sourceDocumentId": str(source_id), "adapter": "custom_pipeline", "config": {}})
     detail = await service.bootstrap_table_case(project_id, user_id, req)
     assert detail.dimension == "table"
     assert detail.source_method == "bootstrapped"
@@ -94,7 +94,7 @@ async def test_bootstrap_duplicate_raises_conflict(test_db, seed_project_user_so
     _patch_capture(monkeypatch)
     service = _service(test_db)
     req = BootstrapTableRequest.model_validate(
-        {"sourceDocumentId": str(source_id), "adapter": "docling", "config": {}})
+        {"sourceDocumentId": str(source_id), "adapter": "custom_pipeline", "config": {}})
     await service.bootstrap_table_case(project_id, user_id, req)
     with pytest.raises(ConflictError):
         await service.bootstrap_table_case(project_id, user_id, req)
@@ -106,7 +106,7 @@ async def test_set_case_review_and_delete(test_db, seed_project_user_source, mon
     _patch_capture(monkeypatch)
     service = _service(test_db)
     req = BootstrapTableRequest.model_validate(
-        {"sourceDocumentId": str(source_id), "adapter": "docling", "config": {}})
+        {"sourceDocumentId": str(source_id), "adapter": "custom_pipeline", "config": {}})
     detail = await service.bootstrap_table_case(project_id, user_id, req)
     verified = await service.set_case_review(detail.id, "verified")
     assert verified.review_status == "verified"

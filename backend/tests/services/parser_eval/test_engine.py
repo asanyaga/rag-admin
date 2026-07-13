@@ -52,7 +52,7 @@ async def test_capture_failure_writes_zero_primary(monkeypatch):
 
     repo = _Repo()
     await run_evaluation(repo, object(), object(), run_id="run", cases=[_case()],
-                         variants=[{"adapter": "docling", "config": {}}], project_id="p",
+                         variants=[{"adapter": "custom_pipeline", "config": {}}], project_id="p",
                          _case_source=lambda c: ("s1", "uri", "f.pdf", "application/pdf"))
     assert repo.results[0][2] == {"similarity": 0.0}
     assert repo.results[0][3] == {"capture_failed": True}
