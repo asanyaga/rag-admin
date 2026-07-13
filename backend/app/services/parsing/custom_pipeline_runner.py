@@ -1,6 +1,7 @@
 """Drives the custom tool pipeline end-to-end: tools → merge → CDM + ParseRun."""
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from datetime import datetime, timezone
@@ -59,7 +60,8 @@ async def run_custom_pipeline(
         if structure_instance is None:
             raise ValueError("capability 'layout_analysis' is required")
 
-        structure_result = structure_instance.tool.run(pdf_path, emit=structure_instance.emit)
+        structure_result = await asyncio.to_thread(
+            structure_instance.tool.run, pdf_path, emit=structure_instance.emit)
         results = [structure_result]
         warnings = list(structure_result.warnings)
 
@@ -74,8 +76,9 @@ async def run_custom_pipeline(
                 # OCR is the one capability whose page selection depends on
                 # per-page facts; every other tool runs over the whole document.
                 pages = inst.tool.select_pages(flags)
-            r = inst.tool.run(
-                pdf_path, pages=pages, page_meta=structure_result.page_meta, emit=inst.emit)
+            r = await asyncio.to_thread(
+                inst.tool.run, pdf_path, pages=pages,
+                page_meta=structure_result.page_meta, emit=inst.emit)
             results.append(r)
             warnings.extend(r.warnings)
 
