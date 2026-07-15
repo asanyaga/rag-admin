@@ -57,7 +57,7 @@ async def test_dataset_run_snapshot_flow(client: AsyncClient, seed_project_user_
         # Run against the dataset → snapshot + 202.
         r = await client.post(
             f"/api/v1/projects/{project_id}/parser-eval/runs",
-            json={"variants": [{"adapter": "docling", "config": {}}], "dataset_id": dataset_id})
+            json={"variants": [{"adapter": "custom_pipeline", "config": {}}], "dataset_id": dataset_id})
         assert r.status_code == 202, r.text
         run_id = r.json()["id"]
 
@@ -68,7 +68,7 @@ async def test_dataset_run_snapshot_flow(client: AsyncClient, seed_project_user_
         assert len(results) == 1
         assert results[0]["metrics"]["similarity"] == 1.0
         assert results[0]["primaryMetric"] == "similarity"
-        assert results[0]["variantKey"].startswith("docling@")
+        assert results[0]["variantKey"].startswith("custom_pipeline@")
 
         # get-one-run route (used by the run-detail page)
         r = await client.get(f"/api/v1/projects/{project_id}/parser-eval/runs/{run_id}")
@@ -185,7 +185,7 @@ async def test_bootstrap_get_review_delete_flow(client: AsyncClient, seed_projec
     try:
         r = await client.post(
             f"/api/v1/projects/{project_id}/parser-eval/cases/bootstrap-table",
-            json={"sourceDocumentId": str(source_id), "adapter": "docling", "config": {}})
+            json={"sourceDocumentId": str(source_id), "adapter": "custom_pipeline", "config": {}})
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["dimension"] == "table"
@@ -225,11 +225,11 @@ async def test_bootstrap_duplicate_returns_409(client: AsyncClient, seed_project
     try:
         first = await client.post(
             f"/api/v1/projects/{project_id}/parser-eval/cases/bootstrap-table",
-            json={"sourceDocumentId": str(source_id), "adapter": "docling", "config": {}})
+            json={"sourceDocumentId": str(source_id), "adapter": "custom_pipeline", "config": {}})
         assert first.status_code == 200
         dup = await client.post(
             f"/api/v1/projects/{project_id}/parser-eval/cases/bootstrap-table",
-            json={"sourceDocumentId": str(source_id), "adapter": "docling", "config": {}})
+            json={"sourceDocumentId": str(source_id), "adapter": "custom_pipeline", "config": {}})
         assert dup.status_code == 409
     finally:
         app.dependency_overrides.pop(get_current_active_user, None)

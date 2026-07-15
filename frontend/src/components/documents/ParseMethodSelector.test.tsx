@@ -84,7 +84,7 @@ describe('ParseMethodSelector', () => {
         }}
       />
     )
-    expect(screen.getByText(/fitz \(text \+ images\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/fitz — fast, local/i)).toBeInTheDocument()
     // Table tools (fitz_tables / camelot) are chosen via a select, not checkboxes.
     expect(screen.getByRole('combobox', { name: /table extraction/i })).toBeInTheDocument()
     expect(
@@ -94,7 +94,7 @@ describe('ParseMethodSelector', () => {
 
   it('hides custom pipeline options when simple selected', () => {
     render(<ParseMethodSelector {...defaultProps} parserType="simple" />)
-    expect(screen.queryByText(/fitz \(text \+ images\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/fitz — fast, local/i)).not.toBeInTheDocument()
   })
 
   it('resets config to parser defaultConfig when parser type changes', () => {

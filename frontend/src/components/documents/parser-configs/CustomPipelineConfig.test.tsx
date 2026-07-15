@@ -43,6 +43,17 @@ describe('CustomPipelineConfig', () => {
     expect(screen.queryByText(/always on/i)).not.toBeInTheDocument()
   })
 
+  it('selecting docling fills the layout_analysis slot', async () => {
+    const onChange = vi.fn()
+    render(<CustomPipelineConfig config={fitzOnly} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('combobox', { name: /layout analysis/i }))
+    await userEvent.click(screen.getByText(/docling/i))
+    const next = onChange.mock.calls[onChange.mock.calls.length - 1][0]
+    expect(next.capabilities.layout_analysis).toBe('docling')
+    expect(next.tools.docling.tool).toBe('docling')
+    expect(next.tools.fitz).toBeUndefined()
+  })
+
   it('selecting fitz_tables adds it to tools list', async () => {
     const onChange = vi.fn()
     render(<CustomPipelineConfig config={fitzOnly} onChange={onChange} />)

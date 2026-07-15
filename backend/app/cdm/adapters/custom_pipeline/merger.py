@@ -37,10 +37,14 @@ class MergeResult:
     raw_output: Dict[str, Any]
 
 
-def _sort_key(block: Block) -> Tuple[float, float]:
+def _sort_key(block: Block) -> Tuple[float, float, float]:
+    # A producer that supplies its own reading order (e.g. a layout model that
+    # crosses columns correctly) is honoured; producers that don't (fitz) fall
+    # back to top-to-bottom, left-to-right geometry and sort after.
+    order = float(block.reading_order) if block.reading_order is not None else 1e9
     if block.bbox is None:
-        return (1e9, 1e9)
-    return (block.bbox.y0, block.bbox.x0)
+        return (order, 1e9, 1e9)
+    return (order, block.bbox.y0, block.bbox.x0)
 
 
 def merge(

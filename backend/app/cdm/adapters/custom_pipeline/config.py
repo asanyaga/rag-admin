@@ -66,6 +66,7 @@ class ToolSpec:
 
 def _tool_registry() -> Dict[str, ToolSpec]:
     from app.cdm.adapters.custom_pipeline.tools.camelot_tool import CamelotTool
+    from app.cdm.adapters.custom_pipeline.tools.docling_tool import DoclingConfig, DoclingTool
     from app.cdm.adapters.custom_pipeline.tools.fitz_tables_tool import FitzTablesTool
     from app.cdm.adapters.custom_pipeline.tools.fitz_tool import FitzTool
     from app.cdm.adapters.custom_pipeline.tools.tesseract_tool import TesseractTool
@@ -73,6 +74,8 @@ def _tool_registry() -> Dict[str, ToolSpec]:
     return {
         "fitz": ToolSpec(FitzConfig, FitzTool.provides,
                          lambda c: FitzTool(config=c)),
+        "docling": ToolSpec(DoclingConfig, DoclingTool.provides,
+                            lambda c: DoclingTool(config=c)),
         "camelot": ToolSpec(CamelotConfig, CamelotTool.provides,
                             lambda c: CamelotTool(config=c)),
         "fitz_tables": ToolSpec(FitzTablesConfig, FitzTablesTool.provides,

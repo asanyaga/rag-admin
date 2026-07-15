@@ -73,9 +73,9 @@ async def test_results_are_append_only(test_db, seed_project_user_source):
     case = await repo.create_case(project_id, source_id, ParserEvalDimension.text,
                                   {"pages": ["x"]}, user_id)
     run = await repo.create_run(project_id, "r",
-                                [{"adapter": "docling", "config": {}}], [str(case.id)], user_id)
+                                [{"adapter": "custom_pipeline", "config": {}}], [str(case.id)], user_id)
     # Two distinct variants -> two immutable rows.
-    await repo.insert_result(run.id, case.id, "docling", {}, "docling@aaa",
+    await repo.insert_result(run.id, case.id, "custom_pipeline", {}, "custom_pipeline@aaa",
                              {"similarity": 0.9}, "similarity", {}, {}, 100)
     await repo.insert_result(run.id, case.id, "custom_pipeline", {"tool": "fitz"},
                              "custom_pipeline@bbb", {"similarity": 0.8}, "similarity", {}, {}, 40)
@@ -89,6 +89,6 @@ async def test_results_are_append_only(test_db, seed_project_user_source):
     # single aiosqlite test connection unusable for further queries.
     from sqlalchemy.exc import IntegrityError
     with pytest.raises(IntegrityError):
-        await repo.insert_result(run.id, case.id, "docling", {}, "docling@aaa",
+        await repo.insert_result(run.id, case.id, "custom_pipeline", {}, "custom_pipeline@aaa",
                                  {"similarity": 0.95}, "similarity", {}, {}, 110)
     await test_db.rollback()

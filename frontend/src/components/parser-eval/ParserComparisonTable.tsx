@@ -34,8 +34,13 @@ const METRIC_COLUMNS: Record<string, MetricColumns> = {
   },
 }
 
+// Labels for adapters that are no longer selectable but may appear in historical
+// eval results (e.g. docling, retired as a standalone method in favour of the
+// custom pipeline's layout_analysis slot).
+const RETIRED_ADAPTER_LABELS: Record<string, string> = { docling: 'Docling' }
+
 function adapterLabel(adapter: string): string {
-  return PARSER_REGISTRY[adapter]?.label ?? adapter
+  return PARSER_REGISTRY[adapter]?.label ?? RETIRED_ADAPTER_LABELS[adapter] ?? adapter
 }
 function fmtCost(cost: Record<string, number> | null): string {
   const usd = cost?.usd ?? 0

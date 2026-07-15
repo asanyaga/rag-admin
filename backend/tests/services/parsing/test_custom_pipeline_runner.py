@@ -204,3 +204,32 @@ async def test_runner_passes_selected_pages_and_ocr_prefer(monkeypatch):
     assert captured["select_pages_called"] is True
     assert captured["ocr_pages"] == [0]
     assert captured["ocr_prefer"] is True
+
+
+@pytest.mark.asyncio
+async def test_tool_run_is_offloaded_to_a_thread(monkeypatch):
+    """A heavy parse must not run on the event-loop thread — the runner offloads
+    each tool.run via asyncio.to_thread."""
+    import threading
+
+    import app.services.parsing.custom_pipeline_runner as runner_mod
+
+    loop_thread_id = threading.get_ident()
+    seen: dict = {}
+    real_to_thread = runner_mod.asyncio.to_thread
+
+    async def _tracking_to_thread(fn, *a, **k):
+        def _wrapped(*aa, **kk):
+            # Record the thread where the tool actually executes (the worker).
+            seen["ran_off_loop"] = threading.get_ident() != loop_thread_id
+            return fn(*aa, **kk)
+        return await real_to_thread(_wrapped, *a, **k)
+
+    monkeypatch.setattr(runner_mod.asyncio, "to_thread", _tracking_to_thread)
+
+    await run_custom_pipeline(
+        source=_source(), file_path=str(FIXTURES / "simple_text.pdf"),
+        representation_kind="extract_rich",
+        config={"tools": {"fitz": {"tool": "fitz", "config": {}}},
+                "capabilities": {"layout_analysis": "fitz"}}, client=None)
+    assert seen.get("ran_off_loop") is True

@@ -13,7 +13,7 @@ import type { CreateRunRequest } from '@/types/parserEval'
 
 type Variant = { adapter: string; config: ParseConfig }
 
-const DEFAULT_ADAPTER = 'docling'
+const DEFAULT_ADAPTER = 'custom_pipeline'
 
 interface Props {
   open: boolean
