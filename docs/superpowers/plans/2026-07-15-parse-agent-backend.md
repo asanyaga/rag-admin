@@ -401,7 +401,7 @@ git commit -m "feat(parse-agent): ParseAgentRunRepository"
   - `async health_check_node(state: dict) -> dict` — returns `{"quality_signal": {...}}`
   - `make_parse_node(parsing_service, source) -> async callable(state) -> dict` — returns `{"parse_run_id", "page_count", "text_len", "failed_page_count", "block_count"}`
 
-Notes: nodes return **partial deltas** (only their own keys). The graph's plain-`dict` state accumulates them via last-value-wins channels (proven by the existing `AgentState = dict` POC). `parse_run_id` is the link the trace uses for the results-viewer handoff.
+Notes: nodes return **partial deltas** (only their own keys). The graph uses a `TypedDict` state schema (Task 4) so LangGraph gives each key its own channel and the deltas merge per-key. (A bare `StateGraph(dict)` in langgraph 1.1.6 is a single whole-state channel that would drop accumulated keys — the POC only avoids this by spreading `{**state}`.) `parse_run_id` is the link the trace uses for the results-viewer handoff.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -485,8 +485,9 @@ Create empty `backend/app/services/parse_agent/__init__.py`, then:
 # backend/app/services/parse_agent/nodes.py
 """Parse-agent graph nodes and their static contracts.
 
-Nodes return PARTIAL deltas (only the keys they own). The graph's plain-dict
-state accumulates them via last-value-wins channels.
+Nodes return PARTIAL deltas (only the keys they own). The graph uses a TypedDict
+state schema (see graph.py) so LangGraph gives each key its own channel and the
+deltas merge per-key across nodes.
 """
 from dataclasses import dataclass
 from uuid import UUID
@@ -572,7 +573,7 @@ git commit -m "feat(parse-agent): graph node contracts (parse, health_check)"
 
 **Interfaces:**
 - Consumes: `make_parse_node`, `health_check_node` (Task 3).
-- Produces: `build_parse_graph(parsing_service, source)` → a **compiled** LangGraph graph. Hand-wired with raw primitives (`add_node` / `add_edge`), state schema = plain `dict`, no checkpointer (v1 has no interrupt).
+- Produces: `build_parse_graph(parsing_service, source)` → a **compiled** LangGraph graph. Hand-wired with raw primitives (`add_node` / `add_edge`), state schema = a `TypedDict(total=False)` (`ParseAgentState`) so partial-delta node returns merge per-key (a bare `dict` schema would not), no checkpointer (v1 has no interrupt).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -639,14 +640,35 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'app.services.parse_ag
 
 Raw LangGraph primitives on purpose (pedagogy). No checkpointer in v1 — there is
 no interrupt/human-review yet; durability comes from the persisted step log.
+
+State schema is a TypedDict, NOT a bare dict: in langgraph 1.1.6 StateGraph(dict)
+is a single whole-state LastValue channel, so partial-delta node returns overwrite
+the whole state and accumulated keys are lost. A TypedDict gives per-key channels
+so partial deltas merge.
 """
+from typing import TypedDict
+
 from langgraph.graph import END, START, StateGraph
 
 from app.services.parse_agent.nodes import health_check_node, make_parse_node
 
 
+class ParseAgentState(TypedDict, total=False):
+    file_path: str
+    source_document_id: str
+    project_id: str
+    representation_kind: str
+    config: dict
+    parse_run_id: str
+    page_count: int
+    text_len: int
+    failed_page_count: int
+    block_count: int
+    quality_signal: dict
+
+
 def build_parse_graph(parsing_service, source):
-    graph = StateGraph(dict)
+    graph = StateGraph(ParseAgentState)
     graph.add_node("parse", make_parse_node(parsing_service, source))
     graph.add_node("health_check", health_check_node)
     graph.add_edge(START, "parse")

@@ -146,7 +146,7 @@ START ──▶ parse ──▶ health_check ──▶ END
   `quality_signal` into state. This is the stub where the future decision point
   will live.
 
-**State** is a plain `dict` (matching the POC's `AgentState = dict`) with keys:
+**State** is a `TypedDict(total=False)` schema (`ParseAgentState`) declaring all keys below. (A bare `dict` schema does NOT work here: in langgraph 1.1.6 `StateGraph(dict)` is a single whole-state `LastValue` channel, so partial-delta node returns overwrite the whole state — the POC only survives this by spreading `{**state}` on every node return. A TypedDict gives per-key channels so partial deltas merge.) Keys:
 `file_path`, `source_document_id`, `project_id`, `representation_kind`, parser
 `config`, and node outputs `parse_run_id`, `parsed_document_id`, `page_count`,
 `quality_signal`.

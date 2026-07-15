@@ -1,7 +1,8 @@
 """Parse-agent graph nodes and their static contracts.
 
-Nodes return PARTIAL deltas (only the keys they own). The graph's plain-dict
-state accumulates them via last-value-wins channels.
+Nodes return PARTIAL deltas (only the keys they own). The graph uses a TypedDict
+state schema (see graph.py) so LangGraph gives each key its own channel and the
+deltas merge per-key across nodes.
 """
 from dataclasses import dataclass
 from uuid import UUID
