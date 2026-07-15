@@ -75,46 +75,53 @@ async def run_parse_agent(
     from app.repositories.source_document_repository import SourceDocumentRepository
     from app.services.parsing.parsing_service import ParsingService
 
-    llamaparse_client = None
-    if llamaparse_api_key:
-        from llama_cloud import AsyncLlamaCloud
-        llamaparse_client = AsyncLlamaCloud(api_key=llamaparse_api_key)
-    landingai_client = None
-    if landingai_api_key:
-        from landingai_ade import LandingAIADE
-        landingai_client = LandingAIADE(apikey=landingai_api_key)
-
     async with AsyncSessionLocal() as session:
-        source_orm = await SourceDocumentRepository(session).get(source_document_id)
-        if source_orm is None:
+        try:
+            llamaparse_client = None
+            if llamaparse_api_key:
+                from llama_cloud import AsyncLlamaCloud
+                llamaparse_client = AsyncLlamaCloud(api_key=llamaparse_api_key)
+            landingai_client = None
+            if landingai_api_key:
+                from landingai_ade import LandingAIADE
+                landingai_client = LandingAIADE(apikey=landingai_api_key)
+
+            source_orm = await SourceDocumentRepository(session).get(source_document_id)
+            if source_orm is None:
+                await ParseAgentRunRepository(session).finish_run(
+                    run_id, status=ParseAgentRunStatus.failed.value,
+                    finished_at=datetime.now(timezone.utc), error="SourceDocument not found",
+                )
+                return
+
+            source_cdm = SourceDocumentCDM(
+                id=str(source_orm.id), sha256=source_orm.sha256, filename=source_orm.filename,
+                mime_type=source_orm.mime_type, byte_size=source_orm.byte_size,
+                storage_uri=source_orm.storage_uri, created_at=source_orm.created_at,
+            )
+            parsing_service = ParsingService(
+                source_doc_repo=SourceDocumentRepository(session),
+                parse_run_repo=ParseRunRepository(session),
+                parsed_doc_repo=ParsedDocumentRepository(session),
+                storage=storage_service,
+                clients={
+                    ParserKind.LLAMAPARSE: llamaparse_client,
+                    ParserKind.LANDING_AI: landingai_client,
+                    ParserKind.SIMPLE: get_document_extractor(),
+                },
+            )
+            await execute_parse_agent(
+                session, run_id=run_id,
+                initial_state={
+                    "file_path": file_path, "source_document_id": str(source_document_id),
+                    "project_id": str(project_id), "representation_kind": representation_kind,
+                    "config": config,
+                },
+                parsing_service=parsing_service, source=source_cdm,
+            )
+        except Exception as exc:  # noqa: BLE001 — background entry; ensure run reaches terminal state
+            logger.exception("parse-agent run %s failed during setup", run_id)
             await ParseAgentRunRepository(session).finish_run(
                 run_id, status=ParseAgentRunStatus.failed.value,
-                finished_at=datetime.now(timezone.utc), error="SourceDocument not found",
+                finished_at=datetime.now(timezone.utc), error=str(exc),
             )
-            return
-
-        source_cdm = SourceDocumentCDM(
-            id=str(source_orm.id), sha256=source_orm.sha256, filename=source_orm.filename,
-            mime_type=source_orm.mime_type, byte_size=source_orm.byte_size,
-            storage_uri=source_orm.storage_uri, created_at=source_orm.created_at,
-        )
-        parsing_service = ParsingService(
-            source_doc_repo=SourceDocumentRepository(session),
-            parse_run_repo=ParseRunRepository(session),
-            parsed_doc_repo=ParsedDocumentRepository(session),
-            storage=storage_service,
-            clients={
-                ParserKind.LLAMAPARSE: llamaparse_client,
-                ParserKind.LANDING_AI: landingai_client,
-                ParserKind.SIMPLE: get_document_extractor(),
-            },
-        )
-        await execute_parse_agent(
-            session, run_id=run_id,
-            initial_state={
-                "file_path": file_path, "source_document_id": str(source_document_id),
-                "project_id": str(project_id), "representation_kind": representation_kind,
-                "config": config,
-            },
-            parsing_service=parsing_service, source=source_cdm,
-        )

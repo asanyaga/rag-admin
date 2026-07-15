@@ -1,12 +1,13 @@
 # backend/tests/services/parse_agent/test_engine.py
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.parse_agent_run import ParseAgentRunStatus
 from app.repositories.parse_agent_run_repository import ParseAgentRunRepository
-from app.services.parse_agent.engine import execute_parse_agent
+from app.services.parse_agent.engine import execute_parse_agent, run_parse_agent
 
 
 class _FakeRun:
@@ -84,3 +85,47 @@ async def test_execute_marks_failed_on_error(seed_project_user_source, test_db: 
     got = await repo.get_run(run.id)
     assert got.status == ParseAgentRunStatus.failed.value
     assert "parser exploded" in (got.error or "")
+
+
+@pytest.mark.asyncio
+async def test_run_parse_agent_marks_failed_when_setup_raises(
+    seed_project_user_source, test_db: AsyncSession,
+):
+    """A setup failure before execute must still leave the run in a terminal state."""
+    project_id, _user_id, source_id = seed_project_user_source
+    repo = ParseAgentRunRepository(test_db)
+    run = await repo.create_run(
+        project_id=project_id, source_document_id=source_id,
+        started_at=datetime.now(timezone.utc),
+    )
+
+    # AsyncSessionLocal() -> async context manager yielding the test session.
+    cm = MagicMock()
+
+    async def _aenter(*_a, **_kw):
+        return test_db
+
+    async def _aexit(*_a, **_kw):
+        return False
+
+    cm.__aenter__ = _aenter
+    cm.__aexit__ = _aexit
+    fake_session_local = MagicMock(return_value=cm)
+
+    with patch("app.database.AsyncSessionLocal", fake_session_local), patch(
+        "app.services.parsing.parsing_service.ParsingService",
+        MagicMock(side_effect=RuntimeError("boom")),
+    ):
+        await run_parse_agent(
+            run_id=run.id,
+            source_document_id=source_id,
+            file_path="local://x.pdf",
+            project_id=project_id,
+            config={"parser": "simple"},
+            representation_kind="extract_rich",
+            storage_service=MagicMock(),
+        )
+
+    got = await repo.get_run(run.id)
+    assert got.status == ParseAgentRunStatus.failed.value
+    assert "boom" in (got.error or "")
