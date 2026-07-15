@@ -29,20 +29,6 @@ NODE_SPECS: dict[str, NodeSpec] = {PARSE_SPEC.slug: PARSE_SPEC, HEALTH_SPEC.slug
 GRAPH_NODES: list[str] = ["parse", "health_check"]
 
 
-def _coerce_project_id(value):
-    """Convert a UUID-formatted string to `UUID`; pass through anything else unchanged.
-
-    State values arrive as plain strings (e.g. from a request body), so real
-    project ids need coercion before reaching the DB layer. Non-UUID-shaped
-    values (e.g. test doubles) are passed through as-is rather than raising,
-    since this node has no business validating upstream state.
-    """
-    try:
-        return UUID(str(value))
-    except (ValueError, AttributeError, TypeError):
-        return value
-
-
 def make_parse_node(parsing_service, source):
     """Factory: returns a `parse` node closing over the parsing service + source CDM."""
     async def parse_node(state: dict) -> dict:
@@ -51,7 +37,7 @@ def make_parse_node(parsing_service, source):
             file_path=state["file_path"],
             representation_kind=state["representation_kind"],
             config=state["config"],
-            project_id=_coerce_project_id(state["project_id"]),
+            project_id=UUID(str(state["project_id"])),
         )
         full_text = doc.full_text or ""
         return {

@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import pytest
 
 from app.services.parse_agent.nodes import GRAPH_NODES, NODE_SPECS, health_check_node, make_parse_node
@@ -42,7 +44,7 @@ async def test_make_parse_node_calls_parsing_service_and_returns_delta():
     node = make_parse_node(svc, source)
 
     state = {
-        "file_path": "local://x.pdf", "project_id": "proj-1",
+        "file_path": "local://x.pdf", "project_id": "12345678-1234-5678-1234-567812345678",
         "representation_kind": "extract_rich", "config": {"parser": "simple"},
     }
     out = await node(state)
@@ -54,6 +56,7 @@ async def test_make_parse_node_calls_parsing_service_and_returns_delta():
     assert out["block_count"] == 3
     assert svc.called_with["file_path"] == "local://x.pdf"
     assert svc.called_with["source"] is source
+    assert svc.called_with["project_id"] == UUID("12345678-1234-5678-1234-567812345678")
 
 
 def test_graph_nodes_order_and_specs():
