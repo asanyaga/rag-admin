@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.parse_agent_run import ParseAgentRunStatus
 from app.repositories.parse_agent_run_repository import ParseAgentRunRepository
 from app.services.parse_agent.engine import execute_parse_agent, run_parse_agent
+from app.services.parsing.errors import ParseFailedError
 
 
 class _FakeRun:
@@ -85,6 +86,68 @@ async def test_execute_marks_failed_on_error(seed_project_user_source, test_db: 
     got = await repo.get_run(run.id)
     assert got.status == ParseAgentRunStatus.failed.value
     assert "parser exploded" in (got.error or "")
+
+
+@pytest.mark.asyncio
+async def test_execute_marks_failed_when_doc_is_none(seed_project_user_source, test_db: AsyncSession):
+    project_id, _user_id, source_id = seed_project_user_source
+    repo = ParseAgentRunRepository(test_db)
+    run = await repo.create_run(
+        project_id=project_id, source_document_id=source_id,
+        started_at=datetime.now(timezone.utc),
+    )
+
+    class _NoDocParsingService:
+        async def parse_and_persist(self, **kwargs):
+            return _FakeRun(), None
+
+    await execute_parse_agent(
+        test_db, run_id=run.id,
+        initial_state={
+            "file_path": "local://x.pdf", "source_document_id": str(source_id),
+            "project_id": str(project_id), "representation_kind": "extract_rich",
+            "config": {"parser": "simple"},
+        },
+        parsing_service=_NoDocParsingService(), source=object(),
+    )
+
+    got = await repo.get_run(run.id)
+    assert got.status == ParseAgentRunStatus.failed.value
+    assert _FakeRun.id in (got.error or "")
+
+    steps = await repo.list_steps(run.id)
+    assert steps == []
+
+
+@pytest.mark.asyncio
+async def test_execute_marks_failed_on_parse_failed_error(seed_project_user_source, test_db: AsyncSession):
+    project_id, _user_id, source_id = seed_project_user_source
+    repo = ParseAgentRunRepository(test_db)
+    run = await repo.create_run(
+        project_id=project_id, source_document_id=source_id,
+        started_at=datetime.now(timezone.utc),
+    )
+
+    class _ParseFails:
+        async def parse_and_persist(self, **kwargs):
+            raise ParseFailedError("bad parse")
+
+    await execute_parse_agent(
+        test_db, run_id=run.id,
+        initial_state={
+            "file_path": "local://x.pdf", "source_document_id": str(source_id),
+            "project_id": str(project_id), "representation_kind": "extract_rich",
+            "config": {"parser": "simple"},
+        },
+        parsing_service=_ParseFails(), source=object(),
+    )
+
+    got = await repo.get_run(run.id)
+    assert got.status == ParseAgentRunStatus.failed.value
+    assert "bad parse" in (got.error or "")
+
+    steps = await repo.list_steps(run.id)
+    assert steps == []
 
 
 @pytest.mark.asyncio

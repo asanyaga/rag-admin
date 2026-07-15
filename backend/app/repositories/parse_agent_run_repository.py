@@ -1,6 +1,6 @@
 # backend/app/repositories/parse_agent_run_repository.py
 """Repository for parse-agent runs and their append-only trace steps."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 

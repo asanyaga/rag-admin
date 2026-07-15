@@ -63,7 +63,7 @@ dependencies = [
     # -------------------------------------------------------------------------
     # Agent - LangGraph workflow orchestration
     # -------------------------------------------------------------------------
-    "langgraph>=0.4.0", # StateGraph, nodes, edges, interrupt
+    "langgraph>=0.4.0,<2.0", # StateGraph, nodes, edges, interrupt
     "langgraph-checkpoint-postgres>=2.0.0", # AsyncPostgresSaver for graph state
     "psycopg[binary]>=3.1.0", # PostgreSQL driver for langgraph checkpointer
     "docling>=2.105.0",

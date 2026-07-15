@@ -121,7 +121,10 @@ async def run_parse_agent(
             )
         except Exception as exc:  # noqa: BLE001 — background entry; ensure run reaches terminal state
             logger.exception("parse-agent run %s failed during setup", run_id)
-            await ParseAgentRunRepository(session).finish_run(
-                run_id, status=ParseAgentRunStatus.failed.value,
-                finished_at=datetime.now(timezone.utc), error=str(exc),
-            )
+            try:
+                await ParseAgentRunRepository(session).finish_run(
+                    run_id, status=ParseAgentRunStatus.failed.value,
+                    finished_at=datetime.now(timezone.utc), error=str(exc),
+                )
+            except Exception:  # noqa: BLE001 — finish_run itself failed; log, don't propagate
+                logger.exception("parse-agent run %s: failed to record setup failure", run_id)

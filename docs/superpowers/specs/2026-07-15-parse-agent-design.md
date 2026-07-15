@@ -281,6 +281,12 @@ less lock-in**, and v1 has none.
 
 - Orphaned runs on server restart (see §3).
 - No new authorization model; reuse existing project scoping.
+- A terminal parse failure (`ParseFailedError` from `ParsingService.parse_and_persist`) marks the
+  `parse_agent_run` **failed** at the run level but produces **no per-step trace**, and
+  `parse_run_id` is not captured on failure. Per-step failure/quality representation is deferred
+  to the v2 escalation/decision loop, where failure signaling is designed.
+- The `doc is None` reuse edge (a succeeded/partial run whose parsed-document row is missing) is
+  guarded to fail the run with a legible message rather than crash.
 
 ## Open question deferred to the plan
 

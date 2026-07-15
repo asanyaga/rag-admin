@@ -61,7 +61,7 @@ async def test_upload_creates_run_and_trace(client: AsyncClient, test_db: AsyncS
         resp = await client.post(
             "/api/v1/parse-agent-runs",
             headers={"Authorization": f"Bearer {token}"},
-            data={"project_id": project_id, "parser_type": "simple", "title": "PA Doc"},
+            data={"project_id": project_id, "parser_type": "simple"},
             files=[("file", ("test.pdf", MINIMAL_PDF, "application/pdf"))],
         )
         assert resp.status_code == 202, resp.text
@@ -121,7 +121,7 @@ async def test_get_run_404_for_other_users_run(client: AsyncClient, test_db: Asy
         resp = await client.post(
             "/api/v1/parse-agent-runs",
             headers={"Authorization": f"Bearer {token_a}"},
-            data={"project_id": project_id, "parser_type": "simple", "title": "PA Doc"},
+            data={"project_id": project_id, "parser_type": "simple"},
             files=[("file", ("test.pdf", MINIMAL_PDF, "application/pdf"))],
         )
         assert resp.status_code == 202, resp.text

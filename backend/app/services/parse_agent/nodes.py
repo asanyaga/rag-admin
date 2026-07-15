@@ -40,6 +40,8 @@ def make_parse_node(parsing_service, source):
             config=state["config"],
             project_id=UUID(str(state["project_id"])),
         )
+        if doc is None:
+            raise RuntimeError(f"parse produced no document for parse_run {run.id}")
         full_text = doc.full_text or ""
         return {
             "parse_run_id": str(run.id),
