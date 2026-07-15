@@ -26,6 +26,7 @@ from app.models.parser_eval import (
 )
 from app.models.agent_definition import AgentDefinition
 from app.models.agent_run import AgentRun, AgentRunStatus
+from app.models.parse_agent_run import ParseAgentRun, ParseAgentRunStep, ParseAgentRunStatus
 from app.models.project_data_store import ProjectDataStore
 from app.models.source_document import SourceDocument
 from app.models.parse_run import ParseRun
@@ -82,6 +83,9 @@ __all__ = [
     "AgentDefinition",
     "AgentRun",
     "AgentRunStatus",
+    "ParseAgentRun",
+    "ParseAgentRunStep",
+    "ParseAgentRunStatus",
     "ProjectDataStore",
     "SourceDocument",
     "ParseRun",
