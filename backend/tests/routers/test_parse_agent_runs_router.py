@@ -11,13 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 MINIMAL_PDF = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF"
 
 
-async def _signup_and_login(client: AsyncClient) -> str:
+async def _signup_and_login(client: AsyncClient, email: str = "pa@example.com") -> str:
     await client.post("/api/v1/auth/signup", json={
-        "email": "pa@example.com", "password": "ValidPass123!",
+        "email": email, "password": "ValidPass123!",
         "password_confirm": "ValidPass123!", "full_name": "PA User",
     })
     resp = await client.post("/api/v1/auth/signin",
-                             json={"email": "pa@example.com", "password": "ValidPass123!"})
+                             json={"email": email, "password": "ValidPass123!"})
     return resp.json()["access_token"]
 
 
@@ -83,3 +83,52 @@ async def test_get_run_requires_ownership(client: AsyncClient, test_db: AsyncSes
     resp = await client.get(f"/api/v1/parse-agent-runs/{uuid4()}",
                             headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_malformed_parse_config(client: AsyncClient, test_db: AsyncSession):
+    token = await _signup_and_login(client)
+    project_id = await _create_project(client, token)
+
+    # Malformed JSON must be rejected with 400 before any background dispatch.
+    resp = await client.post(
+        "/api/v1/parse-agent-runs",
+        headers={"Authorization": f"Bearer {token}"},
+        data={"project_id": project_id, "parser_type": "simple", "parse_config": "{not valid json"},
+        files=[("file", ("test.pdf", MINIMAL_PDF, "application/pdf"))],
+    )
+    assert resp.status_code == 400, resp.text
+
+
+@pytest.mark.asyncio
+async def test_get_run_404_for_other_users_run(client: AsyncClient, test_db: AsyncSession):
+    # User A creates a run via the patched happy path.
+    token_a = await _signup_and_login(client)
+    project_id = await _create_project(client, token_a)
+
+    mock_session_factory = MagicMock()
+    mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=test_db)
+    mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+    async def fake_parse_and_persist(**kwargs):
+        return _fake_parse_result(str(kwargs["source"].id))
+
+    with (
+        patch("app.database.AsyncSessionLocal", mock_session_factory),
+        patch("app.services.parsing.parsing_service.ParsingService.parse_and_persist",
+              new=AsyncMock(side_effect=fake_parse_and_persist)),
+    ):
+        resp = await client.post(
+            "/api/v1/parse-agent-runs",
+            headers={"Authorization": f"Bearer {token_a}"},
+            data={"project_id": project_id, "parser_type": "simple", "title": "PA Doc"},
+            files=[("file", ("test.pdf", MINIMAL_PDF, "application/pdf"))],
+        )
+        assert resp.status_code == 202, resp.text
+        run_id = resp.json()["runId"]
+
+    # User B owns no project pointing at this run -> the "run exists but not owned" branch 404s.
+    token_b = await _signup_and_login(client, email="pb@example.com")
+    got = await client.get(f"/api/v1/parse-agent-runs/{run_id}",
+                           headers={"Authorization": f"Bearer {token_b}"})
+    assert got.status_code == 404, got.text
