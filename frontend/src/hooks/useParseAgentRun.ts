@@ -42,9 +42,14 @@ export function useParseAgentRun(runId: string | null): UseParseAgentRunReturn {
     }
   }, [runId])
 
-  // Poll only while the run is active
+  const isActive = detail?.run.status === 'running'
+
+  // Poll only while the run is active.
+  // Keyed off the `isActive` primitive, not the `detail` object: every poll replaces
+  // `detail` with a new object reference, which would otherwise tear down and recreate
+  // the interval on each tick and reset `pollingStartRef`, so the timeout below could
+  // never accumulate toward its limit.
   useEffect(() => {
-    const isActive = detail?.run.status === 'running'
     if (isActive && !pollingRef.current) {
       pollingStartRef.current = Date.now()
       pollingRef.current = setInterval(async () => {
@@ -58,7 +63,7 @@ export function useParseAgentRun(runId: string | null): UseParseAgentRunReturn {
       stopPolling()
     }
     return () => stopPolling()
-  }, [detail, refetch, stopPolling])
+  }, [isActive, refetch, stopPolling])
 
   useEffect(() => {
     if (runId) {

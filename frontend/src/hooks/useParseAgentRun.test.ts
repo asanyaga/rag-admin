@@ -62,6 +62,22 @@ describe('useParseAgentRun', () => {
     expect(vi.mocked(api.getParseAgentRun).mock.calls.length).toBe(callsAfterTerminal)
   })
 
+  it('stops polling once the timeout elapses even if the run never finishes', async () => {
+    // mockImplementation (not mockResolvedValue) so every poll resolves to a NEW object,
+    // as the real axios-backed api does. With a single shared reference React bails out of
+    // the re-render, the polling effect never re-runs, and this test cannot detect a
+    // timeout guard that resets its start time on each tick.
+    vi.mocked(api.getParseAgentRun).mockImplementation(async () => detail('running'))
+    const { result } = renderHook(() => useParseAgentRun('run-1'))
+    await waitFor(() => expect(result.current.detail?.run.status).toBe('running'))
+
+    await vi.advanceTimersByTimeAsync(10 * 60 * 1000 + 4000)
+    const callsAfterTimeout = vi.mocked(api.getParseAgentRun).mock.calls.length
+
+    await vi.advanceTimersByTimeAsync(6000)
+    expect(vi.mocked(api.getParseAgentRun).mock.calls.length).toBe(callsAfterTimeout)
+  })
+
   it('does not fetch when runId is null', () => {
     renderHook(() => useParseAgentRun(null))
     expect(api.getParseAgentRun).not.toHaveBeenCalled()
