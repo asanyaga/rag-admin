@@ -8,10 +8,13 @@ vi.mock('@/api/parseAgent', () => ({
   getParseAgentRun: vi.fn(),
 }))
 
-function detail(status: 'running' | 'completed'): ParseAgentRunDetail {
+function detail(
+  status: 'running' | 'completed',
+  id = 'run-1'
+): ParseAgentRunDetail {
   return {
     run: {
-      id: 'run-1',
+      id,
       projectId: 'proj-1',
       sourceDocumentId: 'src-1',
       status,
@@ -87,5 +90,44 @@ describe('useParseAgentRun', () => {
     vi.mocked(api.getParseAgentRun).mockRejectedValue(new Error('boom'))
     const { result } = renderHook(() => useParseAgentRun('run-1'))
     await waitFor(() => expect(result.current.error).toBe('boom'))
+  })
+
+  it('reports loading immediately on mount', () => {
+    // Asserts on the FIRST render, not `result.current` — renderHook flushes effects
+    // inside act(), so by the time `result.current` is readable `refetch` has already
+    // set isLoading=true. The bug is the frame before that: the detail page's guard
+    // runs on the first render, sees isLoading=false + detail=null, and flashes
+    // "Run not found." on a perfectly valid run. Capture per-render to see it.
+    vi.mocked(api.getParseAgentRun).mockImplementation(
+      () => new Promise<ParseAgentRunDetail>(() => {})
+    )
+    const loadingByRender: boolean[] = []
+    renderHook(() => {
+      const hook = useParseAgentRun('run-1')
+      loadingByRender.push(hook.isLoading)
+      return hook
+    })
+    expect(loadingByRender[0]).toBe(true)
+  })
+
+  it('clears the previous run detail when runId changes', async () => {
+    // React Router does not remount on a param-only change, so without an explicit
+    // reset the previous run's detail stays on screen while the new one is in flight.
+    // mockImplementation (not mockResolvedValue) so each call yields a fresh object.
+    vi.mocked(api.getParseAgentRun).mockImplementation((id: string) =>
+      id === 'run-1'
+        ? Promise.resolve(detail('completed', 'run-1'))
+        : new Promise<ParseAgentRunDetail>(() => {})
+    )
+
+    const { result, rerender } = renderHook(
+      ({ runId }) => useParseAgentRun(runId),
+      { initialProps: { runId: 'run-1' } }
+    )
+    await waitFor(() => expect(result.current.detail?.run.id).toBe('run-1'))
+
+    rerender({ runId: 'run-2' })
+
+    expect(result.current.detail).toBeNull()
   })
 })

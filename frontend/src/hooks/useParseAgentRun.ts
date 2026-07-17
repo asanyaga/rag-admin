@@ -14,7 +14,9 @@ interface UseParseAgentRunReturn {
 
 export function useParseAgentRun(runId: string | null): UseParseAgentRunReturn {
   const [detail, setDetail] = useState<ParseAgentRunDetail | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  // Seed from whether a fetch is pending, so the first render already reports loading
+  // instead of briefly looking like a resolved-but-empty run.
+  const [isLoading, setIsLoading] = useState(!!runId)
   const [error, setError] = useState<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingStartRef = useRef<number>(0)
@@ -65,11 +67,14 @@ export function useParseAgentRun(runId: string | null): UseParseAgentRunReturn {
     return () => stopPolling()
   }, [isActive, refetch, stopPolling])
 
+  // Reset on every runId change: React Router reuses this component on a param-only
+  // change, so without clearing, the previous run's detail stays on screen while the
+  // new one is in flight. `refetch` is useCallback([runId]), so this runs once per runId.
   useEffect(() => {
+    setDetail(null)
+    setError(null)
     if (runId) {
       refetch()
-    } else {
-      setDetail(null)
     }
   }, [runId, refetch])
 

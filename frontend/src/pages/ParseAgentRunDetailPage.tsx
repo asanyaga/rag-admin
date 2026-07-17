@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useParseAgentRun } from '@/hooks/useParseAgentRun'
 import { GraphStrip } from '@/components/parse-agent/GraphStrip'
@@ -12,10 +12,18 @@ import type { ParseAgentRunStep } from '@/types/parseAgent'
 
 export function ParseAgentRunDetailPage(): JSX.Element {
   const { runId } = useParams<{ runId: string }>()
-  const { detail, isLoading, error } = useParseAgentRun(runId ?? null)
+  const { detail, error } = useParseAgentRun(runId ?? null)
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null)
 
-  if (isLoading && !detail) return <Skeleton className="h-64 w-full" />
+  // The selection is keyed to a specific run's steps; carry-over would point at a
+  // step that does not exist in the newly loaded run.
+  useEffect(() => {
+    setSelectedStepId(null)
+  }, [runId])
+
+  // Independent of isLoading timing: anything that is neither loaded nor errored is
+  // still in flight. A missing run surfaces via `error`, not via a null detail.
+  if (!detail && !error) return <Skeleton className="h-64 w-full" />
   if (error) {
     return (
       <Alert variant="destructive">
