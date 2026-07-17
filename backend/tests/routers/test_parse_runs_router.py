@@ -295,6 +295,113 @@ async def test_get_run_401_when_unauthenticated(
     assert resp.status_code == 401
 
 
+# ── helper: seed a parse-agent-style run (project_id set, NO Document) ───────
+async def _seed_run_with_project_no_document(
+    test_db: AsyncSession,
+    user: User,
+    *,
+    with_parsed_doc: bool = True,
+) -> ParseRunORM:
+    """Seed a ParseRun the way the parse-agent creates it: project_id is set
+    directly on the run, and NO Document anywhere points at its
+    source_document_id. This reproduces the whole-branch-review bug where
+    _user_owns_source (Document-only) always returns False for these runs.
+    """
+    project = Project(user_id=user.id, name="PA Project")
+    test_db.add(project)
+    await test_db.commit()
+    await test_db.refresh(project)
+
+    sd = SourceDocument(id=uuid4(), sha256="f" * 64, storage_uri="local://f.pdf")
+    test_db.add(sd)
+    await test_db.commit()
+    await test_db.refresh(sd)
+
+    run = ParseRunORM(
+        source_document_id=sd.id,
+        project_id=project.id,
+        parser="llamaparse",
+        representation_kind="vector_light",
+        config={},
+        config_hash="f" * 64,
+        status="succeeded",
+        started_at=datetime.now(timezone.utc),
+    )
+    test_db.add(run)
+    await test_db.commit()
+    await test_db.refresh(run)
+
+    if with_parsed_doc:
+        parsed = ParsedDocumentORM(
+            parse_run_id=run.id,
+            source_document_id=sd.id,
+            full_text="hello",
+            full_markdown="# hello",
+            page_count=1,
+            block_count=2,
+            content={"schema_version": "1", "pages": [], "blocks": []},
+        )
+        test_db.add(parsed)
+        await test_db.commit()
+
+    return run
+
+
+@pytest.mark.asyncio
+async def test_get_run_200_when_owned_via_project_no_document(
+    client: AsyncClient, test_db: AsyncSession
+):
+    """Bug case: a parse-agent run has no Document anywhere for its source,
+    but its project_id belongs to the caller. Ownership must resolve via
+    ParseRun.project_id, not only via a Document. This must return 200, not
+    403.
+    """
+    token = await _signup_and_login(client, "pa1@example.com")
+    user = await _user_by_email(test_db, "pa1@example.com")
+    run = await _seed_run_with_project_no_document(test_db, user)
+
+    resp = await client.get(
+        f"/api/v1/parse-runs/{run.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+
+
+@pytest.mark.asyncio
+async def test_parsed_document_200_when_owned_via_project_no_document(
+    client: AsyncClient, test_db: AsyncSession
+):
+    """Same bug case, exercised through /parsed-document (shares the gate)."""
+    token = await _signup_and_login(client, "pa2@example.com")
+    user = await _user_by_email(test_db, "pa2@example.com")
+    run = await _seed_run_with_project_no_document(test_db, user)
+
+    resp = await client.get(
+        f"/api/v1/parse-runs/{run.id}/parsed-document",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+
+
+@pytest.mark.asyncio
+async def test_get_run_403_when_project_belongs_to_different_user(
+    client: AsyncClient, test_db: AsyncSession
+):
+    """Authorization must not be weakened: a caller who owns neither the
+    run's project nor a Document for its source must still get 403.
+    """
+    await _signup_and_login(client, "pa3a@example.com")
+    user_a = await _user_by_email(test_db, "pa3a@example.com")
+    run = await _seed_run_with_project_no_document(test_db, user_a)
+
+    token_b = await _signup_and_login(client, "pa3b@example.com")
+    resp = await client.get(
+        f"/api/v1/parse-runs/{run.id}",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert resp.status_code == 403
+
+
 # ── helper: seed a run that has a ClassificationRun dependency ───────────────
 async def _seed_with_classification_run(
     test_db: AsyncSession,

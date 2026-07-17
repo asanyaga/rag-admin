@@ -39,6 +39,21 @@ async def _user_owns_source(
     return result.scalar_one_or_none() is not None
 
 
+async def _user_owns_run(db: AsyncSession, *, run, user_id: UUID) -> bool:
+    """True iff the caller owns the run's project, or owns a Document pointing at its source."""
+    if run.project_id is not None:
+        result = await db.execute(
+            select(Project.id)
+            .where(and_(Project.id == run.project_id, Project.user_id == user_id))
+            .limit(1)
+        )
+        if result.scalar_one_or_none() is not None:
+            return True
+    return await _user_owns_source(
+        db, source_document_id=run.source_document_id, user_id=user_id
+    )
+
+
 @router.get(
     "/{parse_run_id}",
     response_model=ParseRunResponse,
@@ -59,9 +74,7 @@ async def get_parse_run(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"ParseRun {parse_run_id} not found",
         )
-    owns = await _user_owns_source(
-        db, source_document_id=run.source_document_id, user_id=current_user.id
-    )
+    owns = await _user_owns_run(db, run=run, user_id=current_user.id)
     if not owns:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -91,9 +104,7 @@ async def get_parsed_document_for_run(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"ParseRun {parse_run_id} not found",
         )
-    owns = await _user_owns_source(
-        db, source_document_id=run.source_document_id, user_id=current_user.id
-    )
+    owns = await _user_owns_run(db, run=run, user_id=current_user.id)
     if not owns:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -129,9 +140,7 @@ async def get_raw_payload_for_run(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"ParseRun {parse_run_id} not found",
         )
-    owns = await _user_owns_source(
-        db, source_document_id=run.source_document_id, user_id=current_user.id
-    )
+    owns = await _user_owns_run(db, run=run, user_id=current_user.id)
     if not owns:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -162,9 +171,7 @@ async def delete_parse_run(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"ParseRun {parse_run_id} not found",
         )
-    owns = await _user_owns_source(
-        db, source_document_id=run.source_document_id, user_id=current_user.id
-    )
+    owns = await _user_owns_run(db, run=run, user_id=current_user.id)
     if not owns:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
