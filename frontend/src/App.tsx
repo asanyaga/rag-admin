@@ -95,6 +95,11 @@ const router = createBrowserRouter([
             handle: { breadcrumb: 'Parse Run' },
           },
           {
+            path: 'parse-runs/:runId',
+            element: <ParseRunDetailPage />,
+            handle: { breadcrumb: 'Parse Run' },
+          },
+          {
             path: 'parse-agent',
             element: <ParseAgentRunsPage />,
             handle: { breadcrumb: 'Parse Agent' },
