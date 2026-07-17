@@ -223,17 +223,19 @@ export function ParseRunDetailPage() {
         </div>
       </div>
 
-      <ReParseDialog
-        open={reparseOpen}
-        onOpenChange={setReparseOpen}
-        onReparse={handleReparse}
-      />
+      {documentId ? (
+        <ReParseDialog
+          open={reparseOpen}
+          onOpenChange={setReparseOpen}
+          onReparse={handleReparse}
+        />
+      ) : null}
       {runId && (
         <ParseRunDeleteDialog
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
           runId={runId}
-          onDeleted={() => navigate('/parse')}
+          onDeleted={() => navigate(documentId ? '/parse' : '/parse-agent')}
         />
       )}
     </div>

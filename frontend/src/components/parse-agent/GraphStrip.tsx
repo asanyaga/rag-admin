@@ -10,7 +10,7 @@ interface GraphStripProps {
   onSelectNode: (node: string) => void
 }
 
-type NodeState = 'done' | 'running' | 'pending'
+type NodeState = 'done' | 'running' | 'failed' | 'pending'
 
 export function nodeState(
   node: string,
@@ -20,13 +20,17 @@ export function nodeState(
 ): NodeState {
   if (steps.some((s) => s.node === node)) return 'done'
   const firstPending = graphNodes.find((n) => !steps.some((s) => s.node === n))
-  if (runStatus === 'running' && firstPending === node) return 'running'
+  if (firstPending === node) {
+    if (runStatus === 'running') return 'running'
+    if (runStatus === 'failed') return 'failed'
+  }
   return 'pending'
 }
 
 const stateClass: Record<NodeState, string> = {
   done: 'border-emerald-500 text-emerald-600',
   running: 'border-amber-500 text-amber-600 animate-pulse',
+  failed: 'border-destructive text-destructive',
   pending: 'border-dashed text-muted-foreground',
 }
 

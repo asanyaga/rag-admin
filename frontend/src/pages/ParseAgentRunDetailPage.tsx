@@ -24,14 +24,13 @@ export function ParseAgentRunDetailPage(): JSX.Element {
   // Independent of isLoading timing: anything that is neither loaded nor errored is
   // still in flight. A missing run surfaces via `error`, not via a null detail.
   if (!detail && !error) return <Skeleton className="h-64 w-full" />
-  if (error) {
+  if (!detail) {
     return (
       <Alert variant="destructive">
         <AlertDescription>{error}</AlertDescription>
       </Alert>
     )
   }
-  if (!detail) return <p className="text-sm text-muted-foreground">Run not found.</p>
 
   const { run, steps, graphNodes } = detail
   const selectedStep: ParseAgentRunStep | null =
@@ -68,6 +67,12 @@ export function ParseAgentRunDetailPage(): JSX.Element {
           <Badge variant="outline">{run.status}</Badge>
         </div>
       </div>
+
+      {error ? (
+        <Alert>
+          <AlertDescription>Live updates interrupted: {error}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {run.error ? (
         <Alert variant="destructive">
