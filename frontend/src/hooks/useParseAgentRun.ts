@@ -1,0 +1,72 @@
+import { useState, useCallback, useEffect, useRef } from 'react'
+import * as parseAgentApi from '@/api/parseAgent'
+import type { ParseAgentRunDetail } from '@/types/parseAgent'
+
+const POLLING_INTERVAL = 2000
+const POLLING_TIMEOUT = 10 * 60 * 1000
+
+interface UseParseAgentRunReturn {
+  detail: ParseAgentRunDetail | null
+  isLoading: boolean
+  error: string | null
+  refetch: () => Promise<void>
+}
+
+export function useParseAgentRun(runId: string | null): UseParseAgentRunReturn {
+  const [detail, setDetail] = useState<ParseAgentRunDetail | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollingStartRef = useRef<number>(0)
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+  }, [])
+
+  const refetch = useCallback(async () => {
+    if (!runId) {
+      setDetail(null)
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    try {
+      setDetail(await parseAgentApi.getParseAgentRun(runId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch run')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [runId])
+
+  // Poll only while the run is active
+  useEffect(() => {
+    const isActive = detail?.run.status === 'running'
+    if (isActive && !pollingRef.current) {
+      pollingStartRef.current = Date.now()
+      pollingRef.current = setInterval(async () => {
+        if (Date.now() - pollingStartRef.current > POLLING_TIMEOUT) {
+          stopPolling()
+          return
+        }
+        await refetch()
+      }, POLLING_INTERVAL)
+    } else if (!isActive) {
+      stopPolling()
+    }
+    return () => stopPolling()
+  }, [detail, refetch, stopPolling])
+
+  useEffect(() => {
+    if (runId) {
+      refetch()
+    } else {
+      setDetail(null)
+    }
+  }, [runId, refetch])
+
+  return { detail, isLoading, error, refetch }
+}
