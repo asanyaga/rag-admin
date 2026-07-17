@@ -42,21 +42,29 @@ export function GraphStrip({
       <Badge variant="outline" className="border-dashed text-muted-foreground">
         start
       </Badge>
-      {graphNodes.map((node) => (
-        <div key={node} className="flex items-center gap-2">
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <button type="button" onClick={() => onSelectNode(node)}>
-            <Badge
-              variant="outline"
-              className={`${stateClass[nodeState(node, graphNodes, steps, runStatus)]} ${
-                selectedNode === node ? 'ring-2 ring-primary' : ''
-              }`}
+      {graphNodes.map((node) => {
+        const state = nodeState(node, graphNodes, steps, runStatus)
+        return (
+          <div key={node} className="flex items-center gap-2">
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <button
+              type="button"
+              onClick={() => onSelectNode(node)}
+              aria-pressed={selectedNode === node}
             >
-              {node}
-            </Badge>
-          </button>
-        </div>
-      ))}
+              <Badge
+                variant="outline"
+                className={`${stateClass[state]} ${
+                  selectedNode === node ? 'ring-2 ring-primary' : ''
+                }`}
+              >
+                {node}
+                <span className="sr-only"> — {state}</span>
+              </Badge>
+            </button>
+          </div>
+        )
+      })}
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
       <Badge variant="outline" className="border-dashed text-muted-foreground">
         end

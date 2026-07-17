@@ -47,7 +47,7 @@ export function StepDetailPanel({ step }: StepDetailPanelProps): JSX.Element {
       ) : null}
       {typeof parseRunId === 'string' ? (
         <Link
-          to={`/parse-runs/${parseRunId}`}
+          to={`/parse-runs/${encodeURIComponent(parseRunId)}`}
           className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
         >
           Open parsed document in results viewer
