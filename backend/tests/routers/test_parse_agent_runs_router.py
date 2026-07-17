@@ -132,3 +132,54 @@ async def test_get_run_404_for_other_users_run(client: AsyncClient, test_db: Asy
     got = await client.get(f"/api/v1/parse-agent-runs/{run_id}",
                            headers={"Authorization": f"Bearer {token_b}"})
     assert got.status_code == 404, got.text
+
+
+@pytest.mark.asyncio
+async def test_list_runs_returns_project_runs_newest_first(client: AsyncClient, test_db: AsyncSession):
+    token = await _signup_and_login(client)
+    project_id = await _create_project(client, token)
+
+    mock_session_factory = MagicMock()
+    mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=test_db)
+    mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+    async def fake_parse_and_persist(**kwargs):
+        return _fake_parse_result(str(kwargs["source"].id))
+
+    with (
+        patch("app.database.AsyncSessionLocal", mock_session_factory),
+        patch("app.services.parsing.parsing_service.ParsingService.parse_and_persist",
+              new=AsyncMock(side_effect=fake_parse_and_persist)),
+    ):
+        for name in ("a.pdf", "b.pdf"):
+            resp = await client.post(
+                "/api/v1/parse-agent-runs",
+                headers={"Authorization": f"Bearer {token}"},
+                data={"project_id": project_id, "parser_type": "simple"},
+                files=[("file", (name, MINIMAL_PDF + name.encode(), "application/pdf"))],
+            )
+            assert resp.status_code == 202, resp.text
+
+    listed = await client.get(
+        f"/api/v1/parse-agent-runs?project_id={project_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert listed.status_code == 200, listed.text
+    body = listed.json()
+    assert len(body) == 2
+    assert {"id", "status", "startedAt", "sourceDocumentId"} <= set(body[0])
+    # newest first
+    assert body[0]["startedAt"] >= body[1]["startedAt"]
+
+
+@pytest.mark.asyncio
+async def test_list_runs_404_for_unowned_project(client: AsyncClient, test_db: AsyncSession):
+    token_a = await _signup_and_login(client)
+    project_id = await _create_project(client, token_a)
+
+    token_b = await _signup_and_login(client, email="pc@example.com")
+    resp = await client.get(
+        f"/api/v1/parse-agent-runs?project_id={project_id}",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert resp.status_code == 404
