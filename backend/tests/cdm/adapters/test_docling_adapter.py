@@ -84,3 +84,61 @@ def test_map_role_unknown_falls_back_to_other():
     from app.cdm.models import BlockRole
     label = SimpleNamespace(value="some_future_label")
     assert _map_role(label) == BlockRole.OTHER
+
+
+# ── Table mapping ─────────────────────────────────────────────────────────────
+
+def _fake_cell(row, col, text, rowspan=1, colspan=1, header=False):
+    return SimpleNamespace(
+        start_row_offset=row, start_col_offset=col,
+        row_span=rowspan, col_span=colspan,
+        text=text, column_header=header,
+    )
+
+
+def _fake_table(grid):
+    def _raise(*_a, **_k):
+        raise RuntimeError("export unavailable in fake")
+    return SimpleNamespace(
+        data=SimpleNamespace(grid=grid),
+        export_to_html=_raise,
+        export_to_markdown=_raise,
+    )
+
+
+def test_map_table_maps_cells_and_dimensions():
+    from app.cdm.adapters.docling import _map_table
+    table = _map_table(_fake_table([
+        [_fake_cell(0, 0, "Item", header=True), _fake_cell(0, 1, "Qty", header=True)],
+        [_fake_cell(1, 0, "Bolt"), _fake_cell(1, 1, "12")],
+    ]))
+    assert table.rows == 2
+    assert table.cols == 2
+    assert {c.text for c in table.cells} == {"Item", "Qty", "Bolt", "12"}
+    assert [c.is_header for c in table.cells if c.text == "Item"] == [True]
+
+
+def test_map_table_deduplicates_spanned_cells():
+    """docling repeats a spanning cell across every grid position it covers."""
+    from app.cdm.adapters.docling import _map_table
+    spanning = _fake_cell(0, 0, "Merged", colspan=2)
+    table = _map_table(_fake_table([[spanning, spanning]]))
+    assert len(table.cells) == 1
+    assert table.cells[0].colspan == 2
+    assert table.cols == 2
+
+
+def test_map_table_survives_failed_exports():
+    from app.cdm.adapters.docling import _map_table
+    table = _map_table(_fake_table([[_fake_cell(0, 0, "x")]]))
+    assert table.cells
+    assert table.html is None
+    assert table.markdown is None
+
+
+def test_map_table_on_empty_grid():
+    from app.cdm.adapters.docling import _map_table
+    table = _map_table(_fake_table([]))
+    assert table.rows == 0
+    assert table.cols == 0
+    assert table.cells == []
