@@ -4,7 +4,16 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -80,6 +89,19 @@ async def start_run(
         llamaparse_api_key=llamaparse_api_key, landingai_api_key=landingai_api_key,
     )
     return ParseAgentRunCreatedResponse(run_id=run.id)
+
+
+@router.get("", response_model=list[ParseAgentRunSummary])
+async def list_runs(
+    project_id: UUID = Query(...),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await ProjectRepository(db).get_by_id(project_id, current_user.id)
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    runs = await ParseAgentRunRepository(db).list_by_project(project_id)
+    return [ParseAgentRunSummary.model_validate(r) for r in runs]
 
 
 @router.get("/{run_id}", response_model=ParseAgentRunDetailResponse)

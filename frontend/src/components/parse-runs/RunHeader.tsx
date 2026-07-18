@@ -11,6 +11,7 @@ import { ChevronDown, RefreshCw, Trash2 } from 'lucide-react'
 
 interface RunHeaderProps {
   run: ParseRunListItem
+  canReparse: boolean
   onReparse: () => void
   onDelete: () => void
 }
@@ -36,7 +37,12 @@ function statusVariant(
   }
 }
 
-export function RunHeader({ run, onReparse, onDelete }: RunHeaderProps) {
+export function RunHeader({
+  run,
+  canReparse,
+  onReparse,
+  onDelete,
+}: RunHeaderProps) {
   const [configOpen, setConfigOpen] = useState(false)
   return (
     <div className="border-b bg-background sticky top-0 z-10">
@@ -65,9 +71,11 @@ export function RunHeader({ run, onReparse, onDelete }: RunHeaderProps) {
           </span>
         )}
         <div className="ml-auto flex items-center gap-1">
-          <Button size="sm" variant="ghost" onClick={onReparse}>
-            <RefreshCw className="h-3 w-3 mr-1" /> Re-parse
-          </Button>
+          {canReparse && (
+            <Button size="sm" variant="ghost" onClick={onReparse}>
+              <RefreshCw className="h-3 w-3 mr-1" /> Re-parse
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"

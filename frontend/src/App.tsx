@@ -42,6 +42,8 @@ import { ParseRunDetailPage } from './pages/ParseRunDetailPage'
 import ClassificationPage from './pages/ClassificationPage'
 import { NewClassificationRunPage } from './pages/NewClassificationRunPage'
 import { ClassificationRunDetailPage } from './pages/ClassificationRunDetailPage'
+import { ParseAgentRunsPage } from './pages/ParseAgentRunsPage'
+import { ParseAgentRunDetailPage } from './pages/ParseAgentRunDetailPage'
 
 const router = createBrowserRouter([
   {
@@ -91,6 +93,21 @@ const router = createBrowserRouter([
             path: 'parse/:documentId/runs/:runId',
             element: <ParseRunDetailPage />,
             handle: { breadcrumb: 'Parse Run' },
+          },
+          {
+            path: 'parse-runs/:runId',
+            element: <ParseRunDetailPage />,
+            handle: { breadcrumb: 'Parse Run' },
+          },
+          {
+            path: 'parse-agent',
+            element: <ParseAgentRunsPage />,
+            handle: { breadcrumb: 'Parse Agent' },
+          },
+          {
+            path: 'parse-agent/runs/:runId',
+            element: <ParseAgentRunDetailPage />,
+            handle: { breadcrumb: 'Parse Agent Run' },
           },
           {
             path: 'index',

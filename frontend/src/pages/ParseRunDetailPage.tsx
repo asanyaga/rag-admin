@@ -21,7 +21,7 @@ import type { ParseConfig } from '@/types/parsing'
 
 export function ParseRunDetailPage() {
   const { documentId, runId } = useParams<{
-    documentId: string
+    documentId?: string
     runId: string
   }>()
   const navigate = useNavigate()
@@ -108,14 +108,21 @@ export function ParseRunDetailPage() {
     <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
       <div className="px-4 py-2 border-b shrink-0">
         <Button variant="ghost" size="sm" asChild>
-          <Link to={`/parse?documentId=${documentId}`}>
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back to documents
-          </Link>
+          {documentId ? (
+            <Link to={`/parse?documentId=${documentId}`}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Back to documents
+            </Link>
+          ) : (
+            <Link to="/parse-agent">
+              <ChevronLeft className="h-4 w-4 mr-1" /> Back to parse agent
+            </Link>
+          )}
         </Button>
       </div>
 
       <RunHeader
         run={run}
+        canReparse={Boolean(documentId)}
         onReparse={() => setReparseOpen(true)}
         onDelete={() => setDeleteOpen(true)}
       />
@@ -216,17 +223,19 @@ export function ParseRunDetailPage() {
         </div>
       </div>
 
-      <ReParseDialog
-        open={reparseOpen}
-        onOpenChange={setReparseOpen}
-        onReparse={handleReparse}
-      />
+      {documentId ? (
+        <ReParseDialog
+          open={reparseOpen}
+          onOpenChange={setReparseOpen}
+          onReparse={handleReparse}
+        />
+      ) : null}
       {runId && (
         <ParseRunDeleteDialog
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
           runId={runId}
-          onDeleted={() => navigate('/parse')}
+          onDeleted={() => navigate(documentId ? '/parse' : '/parse-agent')}
         />
       )}
     </div>

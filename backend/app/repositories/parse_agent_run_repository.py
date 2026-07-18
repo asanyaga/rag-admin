@@ -78,3 +78,12 @@ class ParseAgentRunRepository:
             .order_by(ParseAgentRunStep.seq)
         )
         return list(result.scalars().all())
+
+    async def list_by_project(self, project_id: UUID) -> list[ParseAgentRun]:
+        """All runs for a project, newest first."""
+        result = await self.session.execute(
+            select(ParseAgentRun)
+            .where(ParseAgentRun.project_id == project_id)
+            .order_by(ParseAgentRun.started_at.desc())
+        )
+        return list(result.scalars().all())
