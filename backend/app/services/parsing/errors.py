@@ -22,6 +22,10 @@ class SimpleRunError(ParseRunError):
     """Raised by simple_runner when local extraction fails."""
 
 
+class DoclingRunError(ParseRunError):
+    """Raised by docling_runner when conversion or configuration fails."""
+
+
 class CustomPipelineRunError(ParseRunError):
     """Raised by custom_pipeline_runner when a tool invocation fails."""
 
