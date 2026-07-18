@@ -1,6 +1,8 @@
 # Layout Analysis — the Structure Capability Slot (WS3, slice 1)
 
-**Status:** Design — approved in brainstorming, pending spec review
+**Status:** ⚠️ **Partially superseded** — implemented, but §2 D1, §4 "Retire standalone docling",
+and §6 are reversed by
+[Docling as a first-class parser kind](2026-07-18-docling-parser-kind-design.md) (2026-07-18).
 **Date:** 2026-07-11
 **Related:** [OCR + capability-slot pipeline](2026-07-10-ocr-capability-pipeline-design.md) ·
 [Custom pipeline overview](2026-06-30-custom-pipeline-design.md) ·
@@ -34,6 +36,14 @@ upside-down: `fitz.get_text("blocks")` + a `(y0,x0)` sort **is already a crude l
 analysis** — it was simply never named one. The OCR slice's own limitations L1 (peers, not
 a DAG) and L2 (`(y0,x0)` breaks on multi-column pages) are symptoms of having no layout
 root.
+
+> **⚠️ Reversed 2026-07-18.** The collapse argued for below holds *inside docling* — where
+> `StandardPdfPipeline` emits regions and their text in one pass — but not in IDP generally.
+> Region detection and text acquisition fail independently (a layout model can find a perfect
+> table region while OCR returns garbage inside it), so a capability model that cannot express
+> both is describing docling rather than the domain. Retained here as the reasoning that
+> motivated the current code; the successor model separates them again. See
+> [2026-07-18-docling-parser-kind-design.md](2026-07-18-docling-parser-kind-design.md) §1.
 
 **Consequence — `text_extraction` is not a real capability.** It was presented as mandatory
 and load-bearing, but text extraction is a **non-differentiator** (every tool pulls clean
@@ -73,7 +83,14 @@ the first tier-1 tool.
   OCR slice used.
 - **Composition deferred.** docling-alone is the tested path this slice; wiring docling
   alongside external camelot/tesseract is the composition/routing problem, deferred.
-- **Standalone `ParserKind.DOCLING` is retired (D1).** Docling is reachable only via
+- **~~Standalone `ParserKind.DOCLING` is retired (D1).~~** — **REVERSED 2026-07-18.** Both
+  premises were wrong: comparability lives in the CDM contract, not a shared config surface
+  (LlamaParse and Landing AI are already separate kinds that compare fine); and `DoclingTool`
+  declares one capability slot while occupying three. Docling returns as its own parser kind —
+  see [2026-07-18-docling-parser-kind-design.md](2026-07-18-docling-parser-kind-design.md).
+  The original decision text follows for history:
+
+  Docling is reachable only via
   `custom_pipeline` with `layout_analysis: docling`. The parser-eval engine is
   adapter-agnostic (forwards the adapter string), so eval *logic* is unaffected; the
   follow-throughs are UI-level (§6) plus the accepted consequence that stored `docling` eval
