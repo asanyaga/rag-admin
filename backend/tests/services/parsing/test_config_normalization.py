@@ -90,3 +90,85 @@ def test_normalization_does_not_mutate_its_input():
     snapshot = dict(original)
     normalize_parse_config(original)
     assert original == snapshot
+
+
+# ── Normalized configs must still build docling options ──────────────────────
+
+def test_a_normalized_config_can_still_be_turned_into_docling_options():
+    """Normalization writes every field explicitly, including the Optionals we
+    leave as None to defer to docling. to_pipeline_options() relied on
+    exclude_unset to skip those — once they are explicitly set, `lang: None`
+    reached docling's `lang: List[str]` and blew up mid-parse.
+    """
+    from app.services.parsing.docling_config import DoclingConfig
+
+    resolved = normalize_parse_config({"parser": "docling"})
+    cfg = DoclingConfig.from_parse_config(resolved)
+    opts = cfg.to_pipeline_options()
+
+    # `auto` defers language detection to docling, so [] is its real default;
+    # the point is that this no longer raises on `lang: None`.
+    assert opts.ocr_options.lang == []
+    assert opts.ocr_options.kind == "auto"
+
+
+@pytest.mark.parametrize("user_config", [
+    {},
+    {"do_ocr": False},
+    {"ocr_options": {"kind": "easyocr"}},
+    {"ocr_options": {"kind": "tesseract", "lang": ["eng"]}},
+    {"table_structure_options": {"mode": "fast"}},
+    {"layout_options": {"model": "docling_layout_egret_large"}},
+    {"do_ocr": False, "do_table_structure": False},
+    {"pipeline": "vlm"},
+])
+def test_every_config_survives_the_full_round_trip(user_config):
+    """normalize -> persist -> runner -> docling options. The runner receives
+    the normalized config, not the user's, so that is the path that matters."""
+    from app.services.parsing.docling_config import DoclingConfig
+
+    dispatched = {**user_config, "parser": "docling"}
+    resolved = normalize_parse_config(dispatched)
+    DoclingConfig.from_parse_config(resolved).to_pipeline_options()
+
+
+def test_an_explicit_null_is_treated_as_unspecified():
+    """A caller can POST `lang: null` directly; it must mean 'docling decides'
+    rather than crashing the parse."""
+    from app.services.parsing.docling_config import DoclingConfig
+
+    cfg = DoclingConfig.from_parse_config({
+        "parser": "docling", "ocr_options": {"kind": "easyocr", "lang": None}})
+    assert cfg.to_pipeline_options().ocr_options.lang
+
+
+def test_a_disabled_stage_records_no_options_for_it():
+    resolved = normalize_parse_config({"parser": "docling", "do_ocr": False})
+    assert resolved["do_ocr"] is False
+    assert "ocr_options" not in resolved
+    assert "table_structure_options" in resolved  # tables still on
+
+
+def test_a_vlm_run_records_no_standard_pipeline_fields():
+    resolved = normalize_parse_config({"parser": "docling", "pipeline": "vlm"})
+    assert resolved["pipeline"] == "vlm"
+    assert resolved["vlm_model"] == "smoldocling"
+    for key in ("do_ocr", "ocr_options", "layout_options", "table_structure_options"):
+        assert key not in resolved
+
+
+def test_normalization_output_always_revalidates():
+    """The invariant behind both bugs above: the runner re-parses the stored
+    config, so anything normalization emits must be accepted by the model."""
+    from app.services.parsing.docling_config import DoclingConfig
+
+    for user_config in [
+        {}, {"do_ocr": False}, {"do_table_structure": False},
+        {"do_ocr": False, "do_table_structure": False},
+        {"pipeline": "vlm"},
+        {"ocr_options": {"kind": "rapidocr"}},
+    ]:
+        resolved = normalize_parse_config({**user_config, "parser": "docling"})
+        DoclingConfig.from_parse_config(resolved).to_pipeline_options()
+        # and again — normalization must be idempotent
+        assert normalize_parse_config(resolved) == resolved

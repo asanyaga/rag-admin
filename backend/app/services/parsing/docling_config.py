@@ -155,6 +155,27 @@ class DoclingConfig(_Strict):
         options = {k: v for k, v in (config or {}).items() if k not in ROUTING_KEYS}
         return cls.model_validate(options)
 
+    def to_stored_config(self) -> Dict[str, Any]:
+        """Dump for persistence: every field explicit, so the run records what
+        ran — except options belonging to a stage that is switched off.
+
+        Recording OCR options for a run with OCR disabled would be misleading,
+        and this model rejects that combination on the way back in. Normalizing
+        into a config the model then refuses is how disabling a stage broke.
+        """
+        data = self.model_dump(mode="json", exclude_none=True)
+        if self.pipeline == "vlm":
+            for key in _STANDARD_ONLY:
+                data.pop(key, None)
+            return data
+
+        data.pop("vlm_model", None)
+        if not self.do_ocr:
+            data.pop("ocr_options", None)
+        if not self.do_table_structure:
+            data.pop("table_structure_options", None)
+        return data
+
     @model_validator(mode="after")
     def _check_stage_options_have_their_stage(self) -> "DoclingConfig":
         set_fields = self.model_fields_set
@@ -226,10 +247,16 @@ class DoclingConfig(_Strict):
             "tesserocr": TesseractOcrOptions,
             "rapidocr": RapidOcrOptions,
         }
-        # exclude_unset is load-bearing: it is what lets docling's own per-engine
-        # defaults (e.g. easyocr's lang) survive instead of being overwritten.
+        # Omitting a field is what lets docling's own per-engine defaults (e.g.
+        # easyocr's lang) survive instead of being overwritten by ours.
+        #
+        # exclude_none as well as exclude_unset: a normalized config states
+        # every field explicitly, so the Optionals we leave as None to defer to
+        # docling arrive *set*. Passing `lang=None` into docling's
+        # `lang: List[str]` fails validation mid-parse, so an explicit null has
+        # to mean the same thing as an absent key — "docling decides".
         fields: Dict[str, Any] = self.ocr_options.model_dump(
-            exclude_unset=True, exclude={"kind"}
+            exclude_none=True, exclude={"kind"}
         )
         return by_kind[self.ocr_options.kind](**fields)
 

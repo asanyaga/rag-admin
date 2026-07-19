@@ -47,7 +47,16 @@ def normalize_parse_config(config: Optional[Dict[str, Any]]) -> Dict[str, Any]:
 
     options = {k: v for k, v in config.items() if k not in ROUTING_KEYS}
     try:
-        resolved = model.model_validate(options).model_dump(mode="json")
+        validated = model.model_validate(options)
+        # A model may need a say in what its record looks like — dropping nulls
+        # that mean "defer to the parser", and options for stages that are
+        # switched off. The invariant is that the result must validate again:
+        # the runner re-parses this, not the caller's original.
+        resolved = (
+            validated.to_stored_config()
+            if hasattr(validated, "to_stored_config")
+            else validated.model_dump(mode="json", exclude_none=True)
+        )
     except Exception:  # noqa: BLE001 — invalid configs fail with a real message
         return config                                   # at the boundary/runner
 
