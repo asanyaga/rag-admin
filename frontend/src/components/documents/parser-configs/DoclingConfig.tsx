@@ -16,6 +16,9 @@ interface DoclingConfigProps {
   config: ParseConfig
   onChange: (config: ParseConfig) => void
   disabled?: boolean
+  /** Drops the explanatory prose, matching how the selector hides its own
+   *  description in tight layouts like the extraction run page. */
+  compact?: boolean
 }
 
 /**
@@ -70,7 +73,12 @@ function omit(config: ParseConfig, keys: string[]): ParseConfig {
   return next
 }
 
-export function DoclingConfig({ config, onChange, disabled = false }: DoclingConfigProps) {
+export function DoclingConfig({
+  config,
+  onChange,
+  disabled = false,
+  compact = false,
+}: DoclingConfigProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
   const pipeline = (config.pipeline as string) ?? 'standard'
@@ -108,11 +116,12 @@ export function DoclingConfig({ config, onChange, disabled = false }: DoclingCon
 
   return (
     <div className="space-y-3 rounded-md border p-3">
-      <p className="text-xs text-muted-foreground">
-        Docling is an end-to-end pipeline — layout, OCR, and tables come out of one pass. Stages
-        can be switched off or their models swapped, but not replaced with other tools; for that,
-        use the custom pipeline.
-      </p>
+      {!compact && (
+        <p className="text-xs text-muted-foreground">
+          Stages can be switched off or their models swapped, but not replaced with other tools —
+          for that, use the custom pipeline.
+        </p>
+      )}
 
       <div className="space-y-1">
         <Label htmlFor="docling-pipeline">Pipeline</Label>

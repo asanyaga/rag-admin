@@ -106,3 +106,29 @@ describe('DoclingConfig', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 })
+
+describe('DoclingConfig compact mode', () => {
+  it('drops the prose in compact layouts', () => {
+    // The selector already hides its own description when compact; a two-line
+    // paragraph here would defeat that.
+    const { rerender } = render(<DoclingConfig config={{}} onChange={vi.fn()} />)
+    expect(screen.getByText(/custom pipeline/i)).toBeInTheDocument()
+    rerender(<DoclingConfig config={{}} onChange={vi.fn()} compact />)
+    expect(screen.queryByText(/custom pipeline/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps every control in compact mode', async () => {
+    render(<DoclingConfig config={{}} onChange={vi.fn()} compact />)
+    expect(screen.getByRole('combobox', { name: /pipeline/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/OCR/i)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /advanced/i }))
+    expect(screen.getByRole('combobox', { name: /OCR engine/i })).toBeInTheDocument()
+  })
+
+  it('does not restate the parser description', () => {
+    // PARSER_REGISTRY.docling.description already says what docling is; this
+    // panel should only add what that line does not cover.
+    render(<DoclingConfig config={{}} onChange={vi.fn()} />)
+    expect(screen.queryByText(/end-to-end pipeline/i)).not.toBeInTheDocument()
+  })
+})

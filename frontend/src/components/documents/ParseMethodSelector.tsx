@@ -110,7 +110,12 @@ export function ParseMethodSelector({
         <LandingAIConfig config={config} onChange={onConfigChange} disabled={disabled} />
       )}
       {parserType === 'docling' && (
-        <DoclingConfig config={config} onChange={onConfigChange} disabled={disabled} />
+        <DoclingConfig
+          config={config}
+          onChange={onConfigChange}
+          disabled={disabled}
+          compact={compact}
+        />
       )}
       {parserType === 'custom_pipeline' && (
         <CustomPipelineConfig config={config} onChange={onConfigChange} disabled={disabled} />
