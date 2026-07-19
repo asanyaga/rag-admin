@@ -362,7 +362,7 @@ async def add_document_from_source(
     storage_service: StorageService = Depends(get_storage_service),
 ):
     """Link source document to project and initiate parsing."""
-    _validate_parse_request(body.parser_type, body.config)
+    _validate_parse_request(body.parser_type, body.parse_config)
     llamaparse_api_key, landingai_api_key = await _resolve_parser_key(
         db, current_user.id, body.parser_type
     )
