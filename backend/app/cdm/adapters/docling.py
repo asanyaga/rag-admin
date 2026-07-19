@@ -7,6 +7,8 @@ the runner's job — it hands the adapter `(document, page_offset)` pairs.
 """
 from __future__ import annotations
 
+import logging
+
 from typing import Any, ClassVar, Dict, Iterable, List, Optional, Sequence, Tuple
 from uuid import uuid4
 
@@ -21,6 +23,8 @@ from app.cdm.models import (
     ParserKind,
     Table,
 )
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_PAGE_WIDTH = 595.0
 _DEFAULT_PAGE_HEIGHT = 842.0
@@ -82,42 +86,57 @@ def _to_cdm_bbox(raw: Any, page_width: float, page_height: float) -> BBox:
     )
 
 
-def _map_table(item: Any) -> Table:
-    """Map a docling TableItem to a CDM Table."""
-    seen: set[tuple[int, int]] = set()
+def _map_table(item: Any, doc: Any = None) -> Table:
+    """Map a docling TableItem to a CDM Table.
+
+    Field names come from docling_core's TableCell and are pinned by a test —
+    they were previously spelled without the `_idx` suffix, which raised
+    AttributeError on every cell and left tables empty.
+
+    `doc` is required by the exporters: export_to_html returns an empty string
+    without it.
+    """
     cells: List[Cell] = []
+    seen: set[tuple[int, int]] = set()
 
-    for row in item.data.grid:
-        for cell in row:
-            key = (cell.start_row_offset, cell.start_col_offset)
-            if key in seen:
-                continue
-            seen.add(key)
-            cells.append(Cell(
-                row=cell.start_row_offset,
-                col=cell.start_col_offset,
-                rowspan=cell.row_span,
-                colspan=cell.col_span,
-                text=cell.text,
-                is_header=getattr(cell, "column_header", False),
-            ))
+    for cell in getattr(item.data, "table_cells", None) or []:
+        row = cell.start_row_offset_idx
+        col = cell.start_col_offset_idx
+        if (row, col) in seen:      # docling repeats a spanning cell per covered position
+            continue
+        seen.add((row, col))
+        cells.append(Cell(
+            row=row,
+            col=col,
+            rowspan=max(cell.end_row_offset_idx - row, 1),
+            colspan=max(cell.end_col_offset_idx - col, 1),
+            text=cell.text,
+            is_header=bool(getattr(cell, "column_header", False)),
+        ))
 
-    rows = max((c.row + c.rowspan for c in cells), default=0)
-    cols = max((c.col + c.colspan for c in cells), default=0)
+    # Prefer docling's own counts; fall back to the cell extents.
+    rows = getattr(item.data, "num_rows", None)
+    cols = getattr(item.data, "num_cols", None)
+    if not rows:
+        rows = max((c.row + c.rowspan for c in cells), default=0)
+    if not cols:
+        cols = max((c.col + c.colspan for c in cells), default=0)
 
-    html: Optional[str] = None
+    return Table(
+        rows=rows, cols=cols, cells=cells,
+        html=_export(item, "export_to_html", doc),
+        markdown=_export(item, "export_to_markdown", doc),
+    )
+
+
+def _export(item: Any, method: str, doc: Any) -> Optional[str]:
+    """Call a docling exporter, passing `doc` when we have one."""
     try:
-        html = item.export_to_html()
-    except Exception:
-        pass
-
-    md: Optional[str] = None
-    try:
-        md = item.export_to_markdown()
-    except Exception:
-        pass
-
-    return Table(rows=rows, cols=cols, cells=cells, html=html, markdown=md)
+        out = getattr(item, method)(doc) if doc is not None else getattr(item, method)()
+    except Exception as exc:  # noqa: BLE001 — a failed export must not lose the table
+        logger.warning("docling: %s failed: %s", method, exc)
+        return None
+    return out or None
 
 
 def _mint_block_id(source_document_id: str, page_index: int, reading_order: int) -> str:
@@ -178,6 +197,7 @@ class DoclingAdapter:
 
                 blocks.append(self._to_block(
                     item, depth,
+                    doc=doc,
                     prov=prov,
                     page_index=page_index,
                     page_width=width,
@@ -202,7 +222,7 @@ class DoclingAdapter:
         return [(raw, 0)]
 
     @staticmethod
-    def _to_block(item, depth, *, prov, page_index, page_width, page_height,
+    def _to_block(item, depth, *, doc, prov, page_index, page_width, page_height,
                   block_id, reading_order) -> Block:
         bbox: Optional[BBox] = None
         raw_bbox = getattr(prov, "bbox", None)
@@ -217,16 +237,22 @@ class DoclingAdapter:
         table: Optional[Table] = None
         if role is BlockRole.TABLE:
             try:
-                table = _map_table(item)
-            except Exception:  # noqa: BLE001
-                pass
+                table = _map_table(item, doc)
+            except Exception as exc:  # noqa: BLE001 — keep the block, but say so.
+                # This used to `pass`, which is how an AttributeError on every
+                # cell went unnoticed and left every table block empty.
+                logger.warning("docling: table mapping failed for %s: %s",
+                               block_id, exc)
 
         # Per-block markdown only where it differs from plain text. docling's
         # TextItem has no export_to_markdown at all (the doc-level serializer
         # owns that), so full_markdown comes from `doc.export_to_markdown()`.
         markdown: Optional[str] = None
-        if table is not None:
-            markdown = table.markdown or None
+        if role is BlockRole.TABLE:
+            # A TableItem has no `.text`, so without this the block is empty to
+            # everything downstream — chunking, search, eval.
+            markdown = (table.markdown if table else None) or _export(
+                item, "export_to_markdown", doc)
         elif role is BlockRole.HEADING:
             text = getattr(item, "text", "") or ""
             markdown = f"{'#' * min(max(depth, 1), 6)} {text}" if text else None
@@ -236,7 +262,9 @@ class DoclingAdapter:
             role=role,
             native_type=item.label.value,
             native_label=item.label.value,
-            text=getattr(item, "text", "") or "",
+            # Tables fall back to their rendering: an empty string here means
+            # the table is invisible to text search and chunking.
+            text=(getattr(item, "text", "") or "") or (markdown or ""),
             markdown=markdown,
             page_index=page_index,
             bbox=bbox,
