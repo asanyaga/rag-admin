@@ -24,6 +24,7 @@ from app.services.parsing.errors import ParseFailedError, ParseRunError
 from app.services.parsing.landingai_runner import run_landingai
 from app.services.parsing.llamaparse_runner import run_llamaparse
 from app.services.parsing.custom_pipeline_runner import run_custom_pipeline
+from app.services.parsing.docling_runner import run_docling
 from app.services.parsing.simple_runner import run_simple
 
 
@@ -33,6 +34,7 @@ _RUNNERS: Dict[ParserKind, Callable] = {
     ParserKind.LLAMAPARSE: run_llamaparse,
     ParserKind.LANDING_AI: run_landingai,
     ParserKind.SIMPLE:     run_simple,
+    ParserKind.DOCLING:    run_docling,
     ParserKind.CUSTOM_PIPELINE: run_custom_pipeline,
 }
 

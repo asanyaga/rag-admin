@@ -311,3 +311,19 @@ async def test_failed_pages_records_the_pages_actually_covered(
     assert run.status is ParseRunStatus.SUCCEEDED
     assert run.failed_pages == [0]
     assert "pages 0-0" in run.warnings[0]
+
+
+def test_docling_is_registered_as_a_runner():
+    from app.services.parsing.parsing_service import _RUNNERS
+    from app.services.parsing.docling_runner import run_docling
+
+    assert _RUNNERS[ParserKind.DOCLING] is run_docling
+
+
+def test_every_parser_kind_has_a_runner():
+    """A ParserKind with no runner fails only at parse time, deep in a task."""
+    from app.services.parsing.parsing_service import _RUNNERS
+
+    unregistered = {k.value for k in ParserKind} - {k.value for k in _RUNNERS}
+    assert unregistered <= {"liteparse", "unstructured"}, (
+        f"unexpected parser kinds without a runner: {unregistered}")
