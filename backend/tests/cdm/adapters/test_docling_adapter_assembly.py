@@ -98,13 +98,62 @@ def test_pages_reference_their_blocks(parsed):
     assert sum(len(v) for v in by_page.values()) == len(parsed.blocks)
 
 
-def test_table_region_becomes_a_table_block(parsed):
-    """docling detected a table region in this fixture but recovered no cells,
-    so the block must still survive with an (empty) Table attached rather than
-    being dropped. Cell mapping itself is covered in test_docling_adapter.py."""
+def test_a_structureless_table_region_still_yields_a_block(parsed):
+    """docling detected a table region in this fixture but recovered no cells.
+    The block must survive with an empty Table rather than being dropped — and
+    crucially without raising, which is what used to empty every table block."""
     tables = [b for b in parsed.blocks if b.role is BlockRole.TABLE]
     assert tables
     assert tables[0].table is not None
+    assert tables[0].table.cells == []
+
+
+# ── A document with a real table ─────────────────────────────────────────────
+
+TABLE_FIXTURE = Path(__file__).parent / "fixtures" / "docling_table_doc.json"
+
+
+@pytest.fixture
+def parsed_table_doc(source_meta):
+    from docling_core.types.doc import DoclingDocument
+    from app.cdm.adapters.docling import DoclingAdapter
+
+    doc = DoclingDocument.model_validate(
+        json.loads(TABLE_FIXTURE.read_text(encoding="utf-8")))
+    return DoclingAdapter().adapt(doc, source_meta)
+
+
+def _the_table(parsed):
+    tables = [b for b in parsed.blocks if b.role is BlockRole.TABLE]
+    assert tables, "fixture should contain a table"
+    return tables[0]
+
+
+def test_a_table_block_carries_its_structure(parsed_table_doc):
+    table = _the_table(parsed_table_doc).table
+    assert table is not None
+    assert table.rows == 4
+    assert table.cols == 3
+    assert len(table.cells) == 12
+
+
+def test_a_table_block_is_not_empty_to_text_consumers(parsed_table_doc):
+    """The reported symptom: table blocks had text="" and markdown=None while
+    the document markdown rendered the table fine. Chunking, search and eval
+    all read the block, so an empty block loses the table entirely."""
+    block = _the_table(parsed_table_doc)
+    assert block.text, "a table block with no text is invisible downstream"
+    assert "Bolt" in block.text
+    assert block.markdown and "Bolt" in block.markdown
+
+
+def test_a_table_block_keeps_its_html(parsed_table_doc):
+    table = _the_table(parsed_table_doc).table
+    assert table.html and "<table" in table.html
+
+
+def test_the_table_survives_into_the_document_markdown(parsed_table_doc):
+    assert "Bolt" in (parsed_table_doc.full_markdown or "")
 
 
 def test_full_text_follows_reading_order(parsed):

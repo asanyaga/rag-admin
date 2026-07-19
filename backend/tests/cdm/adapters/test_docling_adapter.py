@@ -87,58 +87,88 @@ def test_map_role_unknown_falls_back_to_other():
 
 
 # ── Table mapping ─────────────────────────────────────────────────────────────
+#
+# Driven by a captured DoclingDocument, not hand-rolled fakes. The previous
+# fakes here invented `start_row_offset`, matching the code under test rather
+# than docling_core's actual TableCell — so they validated the very bug that
+# left every table block empty.
 
-def _fake_cell(row, col, text, rowspan=1, colspan=1, header=False):
-    return SimpleNamespace(
-        start_row_offset=row, start_col_offset=col,
-        row_span=rowspan, col_span=colspan,
-        text=text, column_header=header,
+import json
+from pathlib import Path
+
+_TABLE_FIXTURE = Path(__file__).parent / "fixtures" / "docling_table_doc.json"
+
+
+@pytest.fixture
+def table_item():
+    from docling_core.types.doc import DoclingDocument
+    doc = DoclingDocument.model_validate(
+        json.loads(_TABLE_FIXTURE.read_text(encoding="utf-8")))
+    for item, _ in doc.iterate_items():
+        if item.label.value == "table":
+            return item, doc
+    pytest.fail("fixture should contain a table")
+
+
+def test_table_cell_field_names_are_what_we_map(table_item):
+    """Pin the upstream shape. If docling_core renames these, fail here loudly
+    rather than silently producing empty tables."""
+    item, _ = table_item
+    cell = item.data.table_cells[0]
+    for field in ("start_row_offset_idx", "start_col_offset_idx",
+                  "end_row_offset_idx", "end_col_offset_idx",
+                  "row_span", "col_span", "column_header", "text"):
+        assert hasattr(cell, field), f"TableCell lost {field!r}"
+
+
+def test_map_table_recovers_the_real_grid(table_item):
+    from app.cdm.adapters.docling import _map_table
+    item, doc = table_item
+    table = _map_table(item, doc)
+
+    assert table.rows == 4
+    assert table.cols == 3
+    assert len(table.cells) == 12
+    assert {c.text for c in table.cells} >= {"Item", "Qty", "Price", "Bolt"}
+
+
+def test_map_table_marks_the_header_row(table_item):
+    from app.cdm.adapters.docling import _map_table
+    item, doc = table_item
+    header_texts = {c.text for c in _map_table(item, doc).cells if c.is_header}
+    assert "Item" in header_texts
+
+
+def test_map_table_places_cells_at_their_real_coordinates(table_item):
+    from app.cdm.adapters.docling import _map_table
+    item, doc = table_item
+    by_pos = {(c.row, c.col): c.text for c in _map_table(item, doc).cells}
+    assert by_pos[(0, 0)] == "Item"
+    assert by_pos[(1, 0)] == "Bolt"
+    assert by_pos[(1, 1)] == "12"
+
+
+def test_map_table_renders_html_and_markdown(table_item):
+    """export_to_html returns nothing without the doc argument, so a table that
+    mapped fine still lost its HTML."""
+    from app.cdm.adapters.docling import _map_table
+    item, doc = table_item
+    table = _map_table(item, doc)
+    assert table.html and "<table" in table.html
+    assert table.markdown and "Bolt" in table.markdown
+
+
+def test_map_table_on_a_structureless_table_is_empty_not_broken():
+    """docling sometimes marks a region as a table but recovers no cells. That
+    must yield an empty Table, not an exception."""
+    from app.cdm.adapters.docling import _map_table
+    from types import SimpleNamespace
+
+    empty = SimpleNamespace(
+        data=SimpleNamespace(table_cells=[], grid=[], num_rows=0, num_cols=0),
+        export_to_html=lambda *a, **k: "",
+        export_to_markdown=lambda *a, **k: "",
     )
-
-
-def _fake_table(grid):
-    def _raise(*_a, **_k):
-        raise RuntimeError("export unavailable in fake")
-    return SimpleNamespace(
-        data=SimpleNamespace(grid=grid),
-        export_to_html=_raise,
-        export_to_markdown=_raise,
-    )
-
-
-def test_map_table_maps_cells_and_dimensions():
-    from app.cdm.adapters.docling import _map_table
-    table = _map_table(_fake_table([
-        [_fake_cell(0, 0, "Item", header=True), _fake_cell(0, 1, "Qty", header=True)],
-        [_fake_cell(1, 0, "Bolt"), _fake_cell(1, 1, "12")],
-    ]))
-    assert table.rows == 2
-    assert table.cols == 2
-    assert {c.text for c in table.cells} == {"Item", "Qty", "Bolt", "12"}
-    assert [c.is_header for c in table.cells if c.text == "Item"] == [True]
-
-
-def test_map_table_deduplicates_spanned_cells():
-    """docling repeats a spanning cell across every grid position it covers."""
-    from app.cdm.adapters.docling import _map_table
-    spanning = _fake_cell(0, 0, "Merged", colspan=2)
-    table = _map_table(_fake_table([[spanning, spanning]]))
-    assert len(table.cells) == 1
-    assert table.cells[0].colspan == 2
-    assert table.cols == 2
-
-
-def test_map_table_survives_failed_exports():
-    from app.cdm.adapters.docling import _map_table
-    table = _map_table(_fake_table([[_fake_cell(0, 0, "x")]]))
-    assert table.cells
-    assert table.html is None
-    assert table.markdown is None
-
-
-def test_map_table_on_empty_grid():
-    from app.cdm.adapters.docling import _map_table
-    table = _map_table(_fake_table([]))
+    table = _map_table(empty, None)
     assert table.rows == 0
-    assert table.cols == 0
     assert table.cells == []
