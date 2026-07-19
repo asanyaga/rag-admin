@@ -10,6 +10,7 @@ import type { ParseConfig } from '@/types/parsing'
 import { LandingAIConfig } from './parser-configs/LandingAIConfig'
 import { LlamaParseConfig } from './parser-configs/LlamaParseConfig'
 import { CustomPipelineConfig } from './parser-configs/CustomPipelineConfig'
+import { DOCLING_DEFAULT_CONFIG, DoclingConfig } from './parser-configs/DoclingConfig'
 
 interface ParserMeta {
   label: string
@@ -32,6 +33,12 @@ export const PARSER_REGISTRY: Record<string, ParserMeta> = {
     label: 'Landing AI',
     description: 'Vision-based parsing. Best for images, shelf photos, and complex visual layouts.',
     defaultConfig: { model: 'dpt-2-latest' },
+  },
+  docling: {
+    label: 'Docling',
+    description:
+      "Local ML pipeline — layout, reading order, and table structure in one pass. Configured on docling's own terms.",
+    defaultConfig: DOCLING_DEFAULT_CONFIG,
   },
   custom_pipeline: {
     label: 'Custom pipeline',
@@ -101,6 +108,9 @@ export function ParseMethodSelector({
       )}
       {parserType === 'landing_ai' && (
         <LandingAIConfig config={config} onChange={onConfigChange} disabled={disabled} />
+      )}
+      {parserType === 'docling' && (
+        <DoclingConfig config={config} onChange={onConfigChange} disabled={disabled} />
       )}
       {parserType === 'custom_pipeline' && (
         <CustomPipelineConfig config={config} onChange={onConfigChange} disabled={disabled} />

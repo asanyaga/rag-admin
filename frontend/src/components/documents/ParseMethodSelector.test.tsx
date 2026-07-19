@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { ParseMethodSelector } from './ParseMethodSelector'
+import { PARSER_REGISTRY, ParseMethodSelector } from './ParseMethodSelector'
 
 describe('ParseMethodSelector', () => {
   const defaultProps = {
@@ -116,5 +116,40 @@ describe('ParseMethodSelector', () => {
     )
     // Verify the landing_ai config section is shown (confirming render updated)
     expect(screen.getByText('Model')).toBeInTheDocument()
+  })
+})
+
+describe('docling as a parse method', () => {
+  it('is offered as a top-level parse method', () => {
+    expect(PARSER_REGISTRY.docling).toBeDefined()
+    expect(PARSER_REGISTRY.docling.label).toBe('Docling')
+  })
+
+  it('renders DoclingConfig when docling is selected', () => {
+    render(
+      <ParseMethodSelector
+        parserType="docling"
+        config={{}}
+        onParserTypeChange={vi.fn()}
+        onConfigChange={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('combobox', { name: /pipeline/i })).toBeInTheDocument()
+  })
+
+  it('hides docling options when another parser is selected', () => {
+    render(
+      <ParseMethodSelector
+        parserType="simple"
+        config={{}}
+        onParserTypeChange={vi.fn()}
+        onConfigChange={vi.fn()}
+      />,
+    )
+    expect(screen.queryByRole('combobox', { name: /pipeline/i })).not.toBeInTheDocument()
+  })
+
+  it('sends an empty default config so docling applies its own defaults', () => {
+    expect(PARSER_REGISTRY.docling.defaultConfig).toEqual({})
   })
 })
