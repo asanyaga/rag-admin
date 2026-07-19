@@ -98,3 +98,44 @@ async def test_from_source_requires_auth(client: AsyncClient):
         },
     )
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_from_source_rejects_invalid_parser_config(client: AsyncClient):
+    """This endpoint names its config field `parse_config`, not `config` — a
+    validator reading the wrong attribute 500s instead of 422ing."""
+    token = await _signup_and_login(client, "fromsource4@example.com")
+    project_a = await _create_project(client, token, "Project A")
+    project_b = await _create_project(client, token, "Project B")
+    doc_a = await _upload_doc(client, token, project_a)
+
+    resp = await client.post(
+        "/api/v1/documents/from-source",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "project_id": project_b,
+            "source_document_id": doc_a["sourceDocumentId"],
+            "parser_type": "docling",
+            "parse_config": {"ocr_options": {"kind": "not-an-engine"}},
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_from_source_rejects_unknown_parser(client: AsyncClient):
+    token = await _signup_and_login(client, "fromsource5@example.com")
+    project_a = await _create_project(client, token, "Project A")
+    project_b = await _create_project(client, token, "Project B")
+    doc_a = await _upload_doc(client, token, project_a)
+
+    resp = await client.post(
+        "/api/v1/documents/from-source",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "project_id": project_b,
+            "source_document_id": doc_a["sourceDocumentId"],
+            "parser_type": "magic_parser",
+        },
+    )
+    assert resp.status_code == 422

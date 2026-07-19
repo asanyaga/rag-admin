@@ -43,15 +43,13 @@ describe('CustomPipelineConfig', () => {
     expect(screen.queryByText(/always on/i)).not.toBeInTheDocument()
   })
 
-  it('selecting docling fills the layout_analysis slot', async () => {
-    const onChange = vi.fn()
-    render(<CustomPipelineConfig config={fitzOnly} onChange={onChange} />)
+  it('does not offer docling as a layout tool', async () => {
+    // docling is a parse method of its own now, configured on docling's terms
+    // rather than as a slot occupant. Offering it here would resurrect the
+    // configs where it silently duplicated the table and OCR slots.
+    render(<CustomPipelineConfig config={fitzOnly} onChange={vi.fn()} />)
     await userEvent.click(screen.getByRole('combobox', { name: /layout analysis/i }))
-    await userEvent.click(screen.getByText(/docling/i))
-    const next = onChange.mock.calls[onChange.mock.calls.length - 1][0]
-    expect(next.capabilities.layout_analysis).toBe('docling')
-    expect(next.tools.docling.tool).toBe('docling')
-    expect(next.tools.fitz).toBeUndefined()
+    expect(screen.queryByRole('option', { name: /docling/i })).not.toBeInTheDocument()
   })
 
   it('selecting fitz_tables adds it to tools list', async () => {

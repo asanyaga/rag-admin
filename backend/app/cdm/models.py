@@ -17,7 +17,8 @@ class ParserKind(str, Enum):
     UNSTRUCTURED = "unstructured"
     LLAMAPARSE   = "llamaparse"
     LANDING_AI   = "landing_ai"
-    CUSTOM_PIPELINE = "custom_pipeline"  # composable local tool pipeline (docling is a tool here)
+    DOCLING      = "docling"     # docling's own pipelines, configured on their terms
+    CUSTOM_PIPELINE = "custom_pipeline"  # composable local tool pipeline
 
 
 class BlockRole(str, Enum):

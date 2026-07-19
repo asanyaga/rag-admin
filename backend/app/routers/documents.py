@@ -37,6 +37,7 @@ from app.schemas.document import (
     DocumentFromSourceRequest,
 )
 from app.repositories.source_document_repository import SourceDocumentRepository
+from app.cdm.models import ParserKind
 from app.schemas.parse_run import ParseRunResponse
 from app.services.document_service import DocumentService, process_cdm_parsing, BulkUploadItemResult
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
@@ -46,6 +47,45 @@ from pydantic import BaseModel as PydanticBaseModel
 class _ParseRunCreateRequest(PydanticBaseModel):
     parser_type: str = "simple"
     config: dict | None = None
+
+
+#: Parsers with a validated config model. Others pass through unvalidated for
+#: now — see review §1.4; llamaparse's tier/expand/version still get no
+#: treatment.
+def _parser_config_models() -> dict[str, type[PydanticBaseModel]]:
+    from app.services.parsing.config_models import parser_config_models
+
+    return parser_config_models()
+
+
+def _validate_parse_request(parser_type: str, config: dict | None) -> None:
+    """Reject an unknown parser or a malformed parser config on the request.
+
+    Without this the failure surfaces from inside the background task, long
+    after the caller has been told the parse was accepted.
+    """
+    from pydantic import ValidationError as PydanticValidationError
+
+    try:
+        ParserKind(parser_type)
+    except ValueError:
+        valid = ", ".join(sorted(k.value for k in ParserKind))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unknown parser_type {parser_type!r}. Valid parsers: {valid}.",
+        )
+
+    model = _parser_config_models().get(parser_type)
+    if model is None:
+        return
+
+    try:
+        model.from_parse_config(config)
+    except PydanticValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid {parser_type} config: {exc}",
+        )
 
 
 _PARSER_PROVIDER: dict[str, str] = {
@@ -140,6 +180,7 @@ async def upload_document(
                 config_dict = json.loads(parse_config)
             except json.JSONDecodeError:
                 raise ValidationError("Invalid JSON in parse_config")
+        _validate_parse_request(parser_type, config_dict)
 
         file_content = await file.read()
         filename = file.filename or "upload.pdf"
@@ -224,6 +265,8 @@ async def bulk_upload_documents(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid JSON in parse_config",
             )
+
+    _validate_parse_request(parser_type, config_dict)
 
     # Read all file contents
     file_data: list[tuple[bytes, str]] = []
@@ -314,6 +357,7 @@ async def add_document_from_source(
     storage_service: StorageService = Depends(get_storage_service),
 ):
     """Link source document to project and initiate parsing."""
+    _validate_parse_request(body.parser_type, body.parse_config)
     llamaparse_api_key, landingai_api_key = await _resolve_parser_key(
         db, current_user.id, body.parser_type
     )
@@ -511,6 +555,7 @@ async def create_document_parse_run(
             detail="Document has no source_document_id; upload must be re-done via CDM path",
         )
 
+    _validate_parse_request(body.parser_type, body.config)
     llamaparse_api_key, landingai_api_key = await _resolve_parser_key(
         db, current_user.id, body.parser_type
     )

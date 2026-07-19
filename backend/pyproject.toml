@@ -96,6 +96,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "slow: invokes real models or external services; tens of seconds per test",
+]
 addopts = [
     "-v",
     "--strict-markers",
