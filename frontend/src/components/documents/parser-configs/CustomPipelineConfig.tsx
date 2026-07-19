@@ -43,8 +43,6 @@ type TableTool = 'none' | 'fitz_tables' | 'camelot'
 
 const CAMELOT_DEFAULTS = { flavor: 'lattice', edge_tol: 50, row_tol: 2 }
 
-const DOCLING_DEFAULTS = { page_batch_size: 20 }
-
 const TESSERACT_DEFAULTS = {
   pages: 'auto', lang: 'eng', psm: 3, dpi: 300, min_confidence: 0,
 }
@@ -530,18 +528,14 @@ export function CustomPipelineConfig({
           <Label htmlFor="layout-tool-select">Layout analysis</Label>
           <p className="text-xs text-muted-foreground">
             Turns each page into ordered, labelled regions. Required — every pipeline fills this
-            slot. fitz is fast, local, and text-only (no real layout yet).
+            slot. fitz is fast, local, and text-only (no real layout yet). For ML layout, use the
+            Docling parse method, which exposes docling's own options.
           </p>
           <Select
             value={textKey}
             onValueChange={(v) =>
               onChange(
-                setSlot(
-                  cfg,
-                  'layout_analysis',
-                  v,
-                  v === 'docling' ? { ...DOCLING_DEFAULTS } : {},
-                ) as unknown as ParseConfig,
+                setSlot(cfg, 'layout_analysis', v, {}) as unknown as ParseConfig,
               )
             }
             disabled={disabled}
@@ -551,9 +545,6 @@ export function CustomPipelineConfig({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="fitz">fitz — fast, local, text-only</SelectItem>
-              <SelectItem value="docling">
-                docling — ML layout + reading order + tables
-              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -579,17 +570,6 @@ export function CustomPipelineConfig({
               <Label htmlFor="fitz-span-detail">Record span detail</Label>
             </div>
           </>
-        )}
-
-        {fitz?.tool === 'docling' && (
-          <NumField
-            id="docling-batch"
-            label="Page batch size"
-            description="Pages per docling conversion batch"
-            value={(fitz?.config.page_batch_size as number) ?? 20}
-            onChange={(v) => updateTool(textKey, { page_batch_size: Math.round(v) })}
-            disabled={disabled}
-          />
         )}
       </div>
 

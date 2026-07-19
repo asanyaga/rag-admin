@@ -10,7 +10,10 @@ from typing import Dict
 
 
 class Capability(str, Enum):
-    LAYOUT_ANALYSIS = "layout_analysis"   # required structure slot (fitz tier-0, docling tier-1)
+    # Required structure slot. fitz is the only occupant until the region-rooted
+    # rework; docling moved out to ParserKind.DOCLING, where its options are
+    # configurable on docling's own terms rather than squeezed into a slot.
+    LAYOUT_ANALYSIS = "layout_analysis"
     TABLE_DETECTION = "table_detection"
     TEXT_OCR = "text_ocr"
 
