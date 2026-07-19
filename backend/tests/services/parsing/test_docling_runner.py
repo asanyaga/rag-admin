@@ -327,3 +327,41 @@ def test_every_parser_kind_has_a_runner():
     unregistered = {k.value for k in ParserKind} - {k.value for k in _RUNNERS}
     assert unregistered <= {"liteparse", "unstructured"}, (
         f"unexpected parser kinds without a runner: {unregistered}")
+
+
+@pytest.mark.asyncio
+async def test_runner_accepts_the_config_shape_the_router_actually_sends(
+    monkeypatch, source, pdf_path, docling_doc):
+    """The router injects `parser` into parse_cfg before dispatch, so the runner
+    receives it whether it wants it or not. Validating the raw dict against a
+    model with extra="forbid" rejected every real parse run.
+    """
+    from app.services.parsing import docling_runner
+    monkeypatch.setattr(docling_runner, "_convert_batch",
+                        lambda converter, path: docling_doc)
+
+    router_config = {"parser": "docling", "do_ocr": False}
+    run, doc = await _run(source, pdf_path, config=router_config)
+
+    assert run.status is ParseRunStatus.SUCCEEDED
+    # the routing key stays on the persisted run — config_hash depends on it
+    assert run.config == router_config
+
+
+@pytest.mark.asyncio
+async def test_representation_kind_in_config_is_also_tolerated(
+    monkeypatch, source, pdf_path, docling_doc):
+    from app.services.parsing import docling_runner
+    monkeypatch.setattr(docling_runner, "_convert_batch",
+                        lambda converter, path: docling_doc)
+
+    run, _ = await _run(source, pdf_path,
+                        config={"parser": "docling", "representation_kind": "extract_rich"})
+    assert run.status is ParseRunStatus.SUCCEEDED
+
+
+@pytest.mark.asyncio
+async def test_a_genuine_typo_is_still_rejected(monkeypatch, source, pdf_path):
+    """Tolerating routing keys must not turn into tolerating everything."""
+    with pytest.raises(DoclingRunError, match="Invalid docling config"):
+        await _run(source, pdf_path, config={"parser": "docling", "do_ocrr": True})

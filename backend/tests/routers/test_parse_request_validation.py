@@ -84,3 +84,44 @@ def test_parsers_without_a_config_model_are_not_validated():
 def test_empty_config_is_valid_for_docling():
     _validate_parse_request("docling", {})
     _validate_parse_request("docling", None)
+
+
+# ── The two layers must accept the same thing ────────────────────────────────
+
+def _as_the_router_sends(parser_type: str, user_config: dict) -> dict:
+    """Mirror what the dispatch endpoints build (documents.py:570-571):
+    representation_kind stripped, parser injected."""
+    cfg = {k: v for k, v in user_config.items() if k != "representation_kind"}
+    cfg["parser"] = parser_type
+    return cfg
+
+
+@pytest.mark.parametrize("user_config", [
+    {},
+    {"do_ocr": False},
+    {"representation_kind": "extract_rich", "do_table_structure": False},
+    {"ocr_options": {"kind": "tesseract", "lang": ["eng"]}},
+    {"table_structure_options": {"mode": "fast"}, "backend": "pypdfium2"},
+    {"pipeline": "vlm"},
+])
+def test_boundary_and_runner_agree_on_router_shaped_configs(user_config):
+    """The boundary validated a stripped config while the runner validated the
+    raw one, so every real parse run failed with `parser: extra_forbidden` even
+    though both layers' own tests passed. They must validate the same shape.
+    """
+    from app.services.parsing.docling_config import DoclingConfig
+
+    dispatched = _as_the_router_sends("docling", user_config)
+
+    _validate_parse_request("docling", dispatched)   # boundary
+    DoclingConfig.from_parse_config(dispatched)      # runner
+
+
+def test_the_parser_key_is_load_bearing_and_must_survive():
+    """parsing_service reads config['parser'] to pick the runner, so it cannot
+    simply be dropped at the router to appease validation."""
+    from app.services.parsing.docling_config import ROUTING_KEYS
+
+    assert "parser" in ROUTING_KEYS
+    dispatched = _as_the_router_sends("docling", {"do_ocr": False})
+    assert dispatched["parser"] == "docling"

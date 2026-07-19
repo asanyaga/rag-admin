@@ -58,10 +58,6 @@ def _parser_config_models() -> dict[str, type[PydanticBaseModel]]:
     return {ParserKind.DOCLING.value: DoclingConfig}
 
 
-#: Keys the router threads through the same dict as parser options.
-_ROUTING_KEYS = frozenset({"parser", "representation_kind"})
-
-
 def _validate_parse_request(parser_type: str, config: dict | None) -> None:
     """Reject an unknown parser or a malformed parser config on the request.
 
@@ -83,9 +79,8 @@ def _validate_parse_request(parser_type: str, config: dict | None) -> None:
     if model is None:
         return
 
-    options = {k: v for k, v in (config or {}).items() if k not in _ROUTING_KEYS}
     try:
-        model.model_validate(options)
+        model.from_parse_config(config)
     except PydanticValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

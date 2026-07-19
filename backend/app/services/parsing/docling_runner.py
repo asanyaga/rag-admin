@@ -172,7 +172,7 @@ async def run_docling(
         return DoclingRunError(message or f"Docling parse failed: {exc}", run=failed)
 
     try:
-        cfg = DoclingConfig.model_validate(config or {})
+        cfg = DoclingConfig.from_parse_config(config)
     except Exception as exc:  # noqa: BLE001
         raise _fail(exc, f"Invalid docling config: {exc}") from exc
 

@@ -119,6 +119,13 @@ _STANDARD_ONLY = frozenset({
 })
 
 
+#: Keys the router threads through the same dict as parser options. They are
+#: part of the persisted ParseRun.config (config_hash depends on them) but are
+#: not docling options, so they are stripped before validation. Defined here so
+#: the router and the runner cannot drift on what counts as routing.
+ROUTING_KEYS = frozenset({"parser", "representation_kind"})
+
+
 class DoclingConfig(_Strict):
     pipeline: Literal["standard", "vlm"] = "standard"
     backend: DoclingBackend = DoclingBackend.PARSE_V4
@@ -141,6 +148,12 @@ class DoclingConfig(_Strict):
 
     # -- ours, not docling's: how many pages per conversion call
     page_batch_size: int = Field(default=20, ge=1, le=1000)
+
+    @classmethod
+    def from_parse_config(cls, config: Optional[Dict[str, Any]]) -> "DoclingConfig":
+        """Validate a config as the router sends it — routing keys included."""
+        options = {k: v for k, v in (config or {}).items() if k not in ROUTING_KEYS}
+        return cls.model_validate(options)
 
     @model_validator(mode="after")
     def _check_stage_options_have_their_stage(self) -> "DoclingConfig":
