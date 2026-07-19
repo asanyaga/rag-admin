@@ -53,9 +53,9 @@ class _ParseRunCreateRequest(PydanticBaseModel):
 #: now — see review §1.4; llamaparse's tier/expand/version still get no
 #: treatment.
 def _parser_config_models() -> dict[str, type[PydanticBaseModel]]:
-    from app.services.parsing.docling_config import DoclingConfig
+    from app.services.parsing.config_models import parser_config_models
 
-    return {ParserKind.DOCLING.value: DoclingConfig}
+    return parser_config_models()
 
 
 def _validate_parse_request(parser_type: str, config: dict | None) -> None:
