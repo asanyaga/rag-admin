@@ -8,7 +8,9 @@ services:
       - .env.prod
     environment:
       POSTGRES_USER: ragadmin
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # POSTGRES_PASSWORD is injected from .env.prod via env_file above.
+      # (Do NOT set it here via ${POSTGRES_PASSWORD} — that interpolation reads
+      # the shell env / a literal .env file, not env_file, and would blank it.)
       POSTGRES_DB: ragadmin
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
