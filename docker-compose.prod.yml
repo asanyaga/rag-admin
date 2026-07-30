@@ -42,7 +42,6 @@ services:
         condition: service_healthy
     networks:
       - app-network
-      - signoz-net  # Connect to SigNoz network for observability
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -50,27 +49,23 @@ services:
       retries: 3
       start_period: 15s
 
-  # Caddy Reverse Proxy (automatic HTTPS) + Static File Server
-  caddy:
+  # Internal web server: serves the React SPA and proxies /api to the backend.
+  # TLS and public ports are owned by the standalone edge Caddy (see /opt/edge);
+  # this container is reached only over the shared `edge` network by container name.
+  web:
     image: caddy:2-alpine
-    container_name: rag-admin-caddy
+    container_name: rag-admin-web
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"  # HTTP/3
     volumes:
-      # Caddy configuration
+      # Caddy configuration (HTTP-only :80, no TLS)
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       # Frontend static files (built locally, copied to VPS)
       - ./frontend/dist:/srv:ro
-      # Persistent storage for certificates
-      - caddy_data:/data
-      - caddy_config:/config
       # Logs
       - caddy_logs:/var/log/caddy
     networks:
-      - app-network
+      - app-network   # reach the backend
+      - edge          # receive traffic from the edge Caddy
     depends_on:
       - backend
 
@@ -78,10 +73,11 @@ networks:
   app-network:
     driver: bridge
 
-  # External network managed by official SigNoz deployment
-  signoz-net:
+  # Shared reverse-proxy network created by the standalone edge stack (/opt/edge).
+  # Bring the edge stack up first so this network exists.
+  edge:
     external: true
-    name: signoz-net
+    name: edge
 
 volumes:
   # PostgreSQL data persistence
@@ -92,14 +88,6 @@ volumes:
   document_storage:
     driver: local
 
-  # Caddy data (SSL certificates, etc.)
-  caddy_data:
-    driver: local
-
-  # Caddy configuration
-  caddy_config:
-    driver: local
-
-  # Caddy logs
+  # Web server logs (cert/config volumes moved to the edge stack)
   caddy_logs:
     driver: local
