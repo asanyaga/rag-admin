@@ -28,7 +28,7 @@ jobs:
           script: |
             set -e
 
-            cd ~/rag-admin
+            cd /opt/rag-admin
 
             echo "==> Starting database backup..."
 

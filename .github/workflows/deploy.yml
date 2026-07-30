@@ -86,7 +86,7 @@ jobs:
           script: |
             set -e
 
-            cd ~/rag-admin
+            cd /opt/rag-admin
 
             echo "==> Checking deployment prerequisites..."
             if [ ! -f ".env.prod" ]; then
@@ -102,41 +102,20 @@ jobs:
               fi
             fi
 
-            echo "==> Backing up server-specific files..."
-            cp caddy/Caddyfile caddy/Caddyfile.bak 2>/dev/null || echo "No existing Caddyfile to backup (first deploy)"
-
             echo "==> Pulling latest changes..."
             git fetch origin main
             git reset --hard origin/main
-
-            echo "==> Restoring server-specific files..."
-            if [ -f caddy/Caddyfile.bak ]; then
-              mv caddy/Caddyfile.bak caddy/Caddyfile
-            fi
 
             echo "==> Copying frontend build..."
             rm -rf frontend/dist
             mv ~/rag-admin-frontend-build frontend/dist
 
-            echo "==> Loading environment variables..."
-            set -a && source .env.prod && set +a
-
-            echo "==> Checking SigNoz availability..."
-            # Check if SigNoz is reachable (don't fail if not)
-            if docker network inspect signoz-net > /dev/null 2>&1; then
-              echo "✓ signoz-net network exists"
-            else
-              echo "⚠ Warning: signoz-net network not found"
-              echo "  Observability will be degraded"
-              echo "  Deploy SigNoz first: Run 'Deploy SigNoz' workflow"
+            echo "==> Verifying edge network exists..."
+            if ! docker network inspect edge > /dev/null 2>&1; then
+              echo "ERROR: 'edge' network not found — bring up the edge stack first (/opt/edge)."
+              exit 1
             fi
-
-            if docker ps | grep -q signoz-otel-collector; then
-              echo "✓ SigNoz OTel Collector is running"
-            else
-              echo "⚠ Warning: SigNoz collector not running"
-              echo "  Deploy SigNoz with: cd ~/signoz/deploy/docker && docker compose up -d"
-            fi
+            echo "✓ edge network exists"
 
             echo "==> Rebuilding and restarting containers..."
             if [ "${{ inputs.skip_build }}" = "true" ]; then
@@ -145,6 +124,9 @@ jobs:
               docker compose -f docker-compose.prod.yml build --no-cache backend
               docker compose -f docker-compose.prod.yml up -d
             fi
+
+            echo "==> Reloading web server (Caddyfile + frontend)..."
+            docker compose -f docker-compose.prod.yml restart web
 
             echo "==> Waiting for services to start..."
             sleep 10
