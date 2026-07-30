@@ -42,7 +42,6 @@ services:
         condition: service_healthy
     networks:
       - app-network
-      - signoz-net  # Connect to SigNoz network for observability
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -73,11 +72,6 @@ services:
 networks:
   app-network:
     driver: bridge
-
-  # External network managed by official SigNoz deployment
-  signoz-net:
-    external: true
-    name: signoz-net
 
   # Shared reverse-proxy network created by the standalone edge stack (/opt/edge).
   # Bring the edge stack up first so this network exists.
