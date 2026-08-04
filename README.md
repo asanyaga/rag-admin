@@ -1,394 +1,124 @@
 # RAG Admin
 
-Web application for creating and managing RAG pipelines. Learning/portfolio project—prioritize clean architecture and readability.
+**An open workbench for building, running, and evaluating RAG and document-AI pipelines.**
 
-## Stack
+RAG Admin is a self-hostable platform for turning documents into reliable AI. Ingest your documents, parse them into a canonical model, build searchable indexes, compose agents that reason over them, and — most importantly — measure quality with golden sets, experiments, and end-to-end evaluations. Everything runs on your own infrastructure with Docker.
 
-- **Backend:** Python 3.12, FastAPI (async), SQLAlchemy 2.0, PostgreSQL, Alembic
-- **Frontend:** React 18, TypeScript, Vite
+<!-- TODO: add product screenshot at docs/assets/overview.png and reference it here -->
+
+![License: MIT](https://img.shields.io/badge/license-MIT-blue) ![Backend: FastAPI](https://img.shields.io/badge/backend-FastAPI-009688) ![Frontend: React](https://img.shields.io/badge/frontend-React-61dafb)
+
+---
+
+## What it does
+
+RAG Admin covers the full lifecycle of a document-AI pipeline, from raw files to measured quality.
+
+- **Ingest & parse** — Organize work into projects and data stores, upload documents, and parse them into a **canonical document model (CDM)** for consistent downstream processing.
+- **Index & retrieve** — Build indexes and run hybrid search over **ParadeDB** (`pgvector` for semantic + `pg_search` for full-text), with a playground and probe for exploring retrieval.
+- **Agents** — Compose agents in the UI, run them against your data, and inspect each run's trace step by step.
+- **Extract & classify** — Run structured extraction and classification over your documents, and drill into per-run results.
+- **Evaluate** — Define golden sets, run experiments, and score **retrieval, extraction, parser, and answer** quality. Compare runs side by side to see what actually improved.
+- **Observe** — Full OpenTelemetry traces, logs, and metrics, viewable in **SigNoz**.
+
+## Tech stack
+
+- **Backend:** Python 3.12, FastAPI (async), SQLAlchemy 2.0, ParadeDB (PostgreSQL + `pgvector` + `pg_search`), Alembic, OpenTelemetry
+- **Frontend:** React 18, TypeScript, Vite, shadcn/ui, Tailwind CSS
 - **Auth:** JWT + HTTP-only refresh tokens, Google OAuth
+- **Observability:** OpenTelemetry → SigNoz
+- **Delivery:** Docker, Caddy reverse proxy with automatic HTTPS
 
-## Project Structure
+## Quickstart (self-host)
+
+You'll need **Python 3.12**, **[uv](https://docs.astral.sh/uv/)**, **Node.js 18+**, and **Docker**. See the [development setup guide](docs/development/setup.md) for detailed, per-OS install steps and troubleshooting.
+
+```bash
+# 1. Install dependencies and create your .env
+./scripts/setup.sh
+
+# 2. Configure secrets in backend/.env (JWT_SECRET_KEY, optional Google OAuth)
+
+# 3. Start PostgreSQL and apply migrations
+docker compose up -d
+cd backend && uv run alembic upgrade head && cd ..
+
+# 4. Start the dev servers
+./scripts/dev.sh
+```
+
+Then open:
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:8000
+- **API docs:** http://localhost:8000/docs
+
+For the full command reference (tests, migrations, dependency management) and troubleshooting, see the [development setup guide](docs/development/setup.md).
+
+## Architecture
+
+RAG Admin ships as a small set of Docker containers:
+
+- **ParadeDB** — PostgreSQL with `pgvector` and `pg_search` extensions
+- **FastAPI backend** — the API and pipeline services
+- **Caddy** — reverse proxy serving the built frontend with automatic HTTPS (Let's Encrypt)
+
+Production deployments sit behind a standalone edge proxy and include automated daily backups with 7-day retention.
+
+- 📖 [docs/architecture/](docs/architecture/) — system and deployment architecture
+- 🚀 [docs/deployment/](docs/deployment/) — production deployment guide, checklist, Docker, and CI/CD
+- 📊 [docs/observability/](docs/observability/) — tracing, logs, and metrics
+
+## Development
+
+RAG Admin follows a clean, layered architecture.
+
+**Backend** — `router → service → repository → database`
+- Services raise exceptions; routers catch them and return HTTP responses
+- All database operations are async, with type hints throughout
+- Read the relevant spec in `docs/planning/` or `docs/specs/` before implementing a feature
+
+**Frontend** — `page → component → hook → api`
+- One hook per feature, one page per route, feature-scoped components
+- API calls go through a centralized client; TypeScript strict mode is enabled
+- shadcn/ui + Tailwind for all UI; use the `@/` path alias for imports from `src/`
+
+### Project structure
 
 ```
 rag-admin/
 ├── backend/
-│   ├── app/
-│   │   ├── models/         # SQLAlchemy models
-│   │   ├── schemas/        # Pydantic schemas
-│   │   ├── routers/        # API routes
-│   │   ├── services/       # Business logic
-│   │   ├── repositories/   # Database operations
-│   │   ├── dependencies/   # FastAPI dependencies
-│   │   └── utils/          # Utility functions
-│   ├── tests/              # Backend tests
-│   └── alembic/            # Database migrations
+│   └── app/
+│       ├── routers/        # API routes
+│       ├── services/       # Business logic
+│       ├── repositories/   # Database operations
+│       ├── models/         # SQLAlchemy models
+│       ├── schemas/        # Pydantic schemas
+│       ├── cdm/            # Canonical document model
+│       ├── adapters/       # External integrations
+│       ├── observability/  # OpenTelemetry setup
+│       └── ...             # dependencies, middleware, ports, probe, utils
 ├── frontend/
 │   └── src/
+│       ├── pages/          # Page components (one per route)
+│       ├── components/     # Reusable, feature-scoped components
+│       ├── hooks/          # Custom hooks (one per feature)
 │       ├── api/            # API client
 │       ├── contexts/       # React contexts
-│       ├── hooks/          # Custom hooks
-│       ├── pages/          # Page components
-│       ├── components/     # Reusable components
-│       └── types/          # TypeScript types
-└── scripts/                # Development scripts
+│       └── ...             # config, constants, lib, types, utils
+├── docs/                   # Architecture, deployment, planning, specs
+└── scripts/                # setup.sh, dev.sh, and dev tooling
 ```
 
-## Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-### 1. Python 3.12
-
-**Ubuntu/Debian:**
-```bash
-sudo apt update
-sudo apt install python3.12 python3.12-venv python3-pip
-```
-
-**macOS:**
-```bash
-brew install python@3.12
-```
-
-**Windows:**
-- Download from [python.org](https://www.python.org/downloads/)
-- Or install via Microsoft Store
-- Make sure to check "Add Python to PATH" during installation
-
-**Verify installation:**
-```bash
-python3 --version  # Should show Python 3.12.x
-```
-
-### 2. uv (Python Package Manager)
-
-**Linux/macOS/WSL:**
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-**Windows:**
-```powershell
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-After installation, restart your terminal.
-
-**Verify installation:**
-```bash
-uv --version  # Should show uv version
-```
-
-For more installation options, visit: https://docs.astral.sh/uv/getting-started/installation/
-
-### 3. Node.js 18+
-
-You have Node.js 22+ installed.
-
-**Verify installation:**
-```bash
-node --version  # Should show v18.x or higher
-```
-
-### 4. Docker & Docker Compose
-
-**Ubuntu/Debian:**
-```bash
-sudo apt install docker.io docker-compose
-sudo systemctl start docker
-sudo usermod -aG docker $USER  # Log out and back in after this
-```
-
-**macOS:**
-- Download and install [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop/)
-
-**Windows:**
-- Download and install [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)
-
-**Verify installation:**
-```bash
-docker --version
-docker compose version
-```
-
-## Quick Start
-
-### 1. Clone and Setup
-
-```bash
-# Navigate to the project directory
-cd rag-admin
-
-# Run the setup script
-./scripts/setup.sh
-```
-
-The setup script will:
-- Check for Python, uv, and Node.js
-- Install Python dependencies using uv (creates `.venv` automatically)
-- Install Node.js dependencies
-- Create `.env` file from template
-
-### 2. (Optional) Install SigNoz for Observability
-
-For local development with full observability (traces, logs, metrics):
-
-```bash
-# Clone SigNoz repository
-git clone https://github.com/SigNoz/signoz.git ~/signoz
-cd ~/signoz/deploy/docker
-
-# Deploy SigNoz
-docker compose up -d
-
-# Verify it's running
-docker compose ps
-```
-
-SigNoz UI: http://localhost:8080
-
-**Note:** This is optional. The application works fine without observability.
-
-### 3. Configure Environment
-
-Edit `backend/.env` with your settings:
-
-```bash
-# Database (default works with docker-compose.yml)
-DATABASE_URL=postgresql+asyncpg://ragadmin:ragadmin_dev@localhost:5432/ragadmin
-
-# JWT - IMPORTANT: Change in production!
-JWT_SECRET_KEY=your-secure-random-key-here
-
-# Google OAuth (optional, for Google sign-in)
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Observability (optional)
-OTEL_ENABLED=True
-OTEL_EXPORTER_ENDPOINT=http://localhost:4317
-```
-
-### 4. Start PostgreSQL
-
-```bash
-docker compose up -d
-```
-
-Verify it's running:
-```bash
-docker compose ps
-```
-
-### 4. Run Database Migrations
-
-```bash
-cd backend
-uv run alembic upgrade head
-cd ..
-```
-
-### 5. Start Development Servers
-
-```bash
-./scripts/dev.sh
-```
-
-This will start:
-- **Backend:** http://localhost:8000
-- **Frontend:** http://localhost:5173
-- **API Docs:** http://localhost:8000/docs
-- **SigNoz UI:** http://localhost:8080 (if installed)
-
-## Development Commands
-
-### Backend
-
-```bash
-cd backend
-
-# Start server
-uv run uvicorn app.main:app --reload
-
-# Run tests
-uv run pytest
-
-# Run tests with coverage
-uv run pytest --cov=app --cov-report=html
-
-# Create migration
-uv run alembic revision --autogenerate -m "description"
-
-# Run migrations
-uv run alembic upgrade head
-
-# Rollback migration
-uv run alembic downgrade -1
-
-# Add a new dependency
-uv add <package-name>
-
-# Add a development dependency
-uv add --dev <package-name>
-
-# Update dependencies
-uv sync
-
-# Update a specific package
-uv add --upgrade <package-name>
-```
-
-### Frontend
-
-```bash
-cd frontend
-
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
-
-# Lint code
-npm run lint
-
-# Format code
-npm run format
-```
-
-### Database
-
-```bash
-# Start PostgreSQL
-docker compose up -d
-
-# Stop PostgreSQL
-docker compose down
-
-# View logs
-docker compose logs -f postgres
-
-# Reset database (WARNING: deletes all data)
-docker compose down -v
-docker compose up -d
-```
-
-## Development Patterns
-
-### Backend
-
-- **Data flow:** router → service → repository → database
-- Services raise exceptions; routers catch and return HTTP responses
-- All database operations are async
-- Type hints on all functions
-- Read the relevant spec in `docs/planning/` before implementing features
-
-### Frontend
-
-- Component-based architecture
-- Use custom hooks for shared logic
-- API calls through centralized `apiClient`
-- TypeScript strict mode enabled
-- Use path alias `@/` for imports from `src/`
-
-## Current Phase
-
-✅ **Project Scaffold** (Complete)
-✅ **Authentication Implementation** (Complete)
-✅ **Docker Deployment** (Complete)
-🔄 **CI/CD Pipeline** (Next)
-
-## Deployment
-
-### Production Deployment
-
-For deploying to a VPS with Docker:
-
-- 📖 **[docs/deployment/](docs/deployment/)** - Complete deployment guide
-- 📋 **[docs/deployment/checklist.md](docs/deployment/checklist.md)** - Deployment checklist
-- 🐳 **[docs/deployment/docker.md](docs/deployment/docker.md)** - Docker architecture and configuration
-- 🔄 **[docs/deployment/ci-cd.md](docs/deployment/ci-cd.md)** - GitHub Actions CI/CD setup
-
-Quick start:
-```bash
-# 1. Build frontend
-cd frontend && npm run build
-
-# 2. Transfer to VPS
-scp -r dist user@vps:~/rag-admin/frontend/
-
-# 3. Deploy
-ssh user@vps
-cd ~/rag-admin
-docker compose -f docker-compose.prod.yml up -d
-```
-
-### Automated Deployment (CI/CD)
-
-Set up GitHub Actions for automated testing and deployment:
-
-- See **[docs/deployment/ci-cd.md](docs/deployment/ci-cd.md)** for complete CI/CD setup
-- Automated testing on every push
-- Automated deployment to production on merge to main
-- Daily health checks and backups
-
-### Architecture
-
-- **3 containers**: PostgreSQL (ParadeDB), FastAPI Backend, Caddy (reverse proxy + static files)
-- **Automatic HTTPS**: Let's Encrypt via Caddy
-- **Database**: PostgreSQL with pgvector and pg_search extensions
-- **Backups**: Automated daily backups with 7-day retention
-
-See [docs/architecture/](docs/architecture/) for deployment architecture details.
-
-## Troubleshooting
-
-### Port Already in Use
-
-If ports 8000 or 5173 are in use:
-
-```bash
-# Find process using port
-lsof -i :8000  # or :5173
-
-# Kill process
-kill -9 <PID>
-```
-
-### Database Connection Error
-
-1. Ensure PostgreSQL is running: `docker compose ps`
-2. Check DATABASE_URL in `backend/.env`
-3. Verify credentials match `docker-compose.yml`
-
-### Python Dependency Issues
-
-```bash
-# Remove and reinstall dependencies
-cd backend
-rm -rf .venv uv.lock
-uv sync --all-extras
-```
-
-### Frontend Dependencies Issues
-
-```bash
-# Clear and reinstall
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
-```
+See the [development setup guide](docs/development/setup.md) for the full command reference.
 
 ## Contributing
 
-This is a learning/portfolio project. Focus on:
-- Clean, readable code
-- Proper layering and separation of concerns
-- Comprehensive type hints and types
-- Clear commit messages
-- Tests for new features
+Contributions are welcome. When working in the codebase:
+- Keep the layering and separation of concerns intact
+- Use type hints and TypeScript types throughout
+- Add tests for new features
+- Write clear commit messages
 
 ## License
 
-MIT
+Released under the [MIT License](LICENSE).
