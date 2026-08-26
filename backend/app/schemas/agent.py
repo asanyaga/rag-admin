@@ -104,6 +104,17 @@ class StartExtractRunRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class StartParseRunRequest(BaseModel):
+    """Request to start a parse agent run."""
+    agent_definition_id: UUID = Field(..., alias="agentDefinitionId")
+    source_document_id: UUID = Field(..., alias="sourceDocumentId")
+    parser: str = Field("simple")
+    representation_kind: str = Field("extract_rich", alias="representationKind")
+    parse_config: dict[str, Any] = Field(default_factory=dict, alias="parseConfig")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class StartAgentRunRequest(BaseModel):
     """Request to start an agent run."""
     agent_definition_id: UUID = Field(..., alias="agentDefinitionId")
