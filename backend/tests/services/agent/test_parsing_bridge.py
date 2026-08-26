@@ -50,7 +50,7 @@ async def test_run_parse_shapes_outcome_from_service(monkeypatch):
     outcome = await pb.run_parse(
         session=object(), service=FakeService(), source=object(),
         file_path="/tmp/x.pdf", representation_kind="extract_rich",
-        config={"parser": "simple"}, project_id="proj-1",
+        config={"parser": "simple"}, project_id="33333333-3333-3333-3333-333333333333",
     )
     assert outcome.parse_run_id == "run-123"
     assert outcome.parsed_document_id == "pdoc-9"

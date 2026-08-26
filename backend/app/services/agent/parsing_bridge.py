@@ -108,7 +108,7 @@ async def run_parse(
     run, doc = await service.parse_and_persist(
         source=source, file_path=file_path,
         representation_kind=representation_kind, config=config,
-        project_id=project_id,
+        project_id=UUID(str(project_id)),
     )
     if doc is None:
         raise RuntimeError(f"parse produced no document for parse_run {run.id}")
