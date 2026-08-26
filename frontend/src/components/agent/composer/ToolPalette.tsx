@@ -2,6 +2,7 @@ import type { AgentTool } from '@/types/agent'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   FileSearch,
+  FileText,
   UserCheck,
   Upload,
   Database,
@@ -11,6 +12,7 @@ import {
 
 const categoryIcons: Record<string, LucideIcon> = {
   extraction: FileSearch,
+  parsing: FileText,
   control: UserCheck,
   export: Upload,
   indexing: Database,
@@ -19,6 +21,7 @@ const categoryIcons: Record<string, LucideIcon> = {
 
 const categoryColors: Record<string, string> = {
   extraction: 'border-blue-300 bg-blue-50 text-blue-700',
+  parsing: 'border-cyan-300 bg-cyan-50 text-cyan-700',
   control: 'border-amber-300 bg-amber-50 text-amber-700',
   export: 'border-emerald-300 bg-emerald-50 text-emerald-700',
   indexing: 'border-purple-300 bg-purple-50 text-purple-700',
