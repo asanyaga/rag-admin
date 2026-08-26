@@ -3,6 +3,7 @@ import type {
   AgentRunListItem,
   StartAgentRunRequest,
   StartExtractRunRequest,
+  StartParseRunRequest,
 } from '@/types/agent'
 import * as agentApi from '@/api/agent'
 
@@ -17,6 +18,7 @@ interface UseAgentRunsReturn {
   fetchRuns: () => Promise<void>
   startRun: (request: StartAgentRunRequest) => Promise<void>
   startExtractRun: (request: StartExtractRunRequest) => Promise<void>
+  startParseRun: (request: StartParseRunRequest) => Promise<void>
   deleteRun: (runId: string) => Promise<void>
 }
 
@@ -96,6 +98,26 @@ export function useAgentRuns(
     [projectId, fetchRuns]
   )
 
+  const startParseRun = useCallback(
+    async (request: StartParseRunRequest) => {
+      if (!projectId) throw new Error('No project selected')
+      setIsStarting(true)
+      setError(null)
+      try {
+        await agentApi.startParseRun(projectId, request)
+        await fetchRuns()
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to start parse run'
+        )
+        throw err
+      } finally {
+        setIsStarting(false)
+      }
+    },
+    [projectId, fetchRuns]
+  )
+
   const deleteRun = useCallback(
     async (runId: string) => {
       await agentApi.deleteAgentRun(runId)
@@ -137,6 +159,6 @@ export function useAgentRuns(
 
   return {
     runs, isLoading, isStarting, error,
-    fetchRuns, startRun, startExtractRun, deleteRun,
+    fetchRuns, startRun, startExtractRun, startParseRun, deleteRun,
   }
 }
