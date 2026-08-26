@@ -134,3 +134,38 @@ async def export_node(state: dict) -> dict:
         "rows_exported": count,
         "current_step": "done",
     }
+
+
+async def parse_node(state: dict) -> dict:
+    """Parse a source document into a ParsedDocument, then merge results into state.
+
+    Opens its own session (like export_node) because the agents engine runs the
+    graph inline within the request. Resolves BYOK keys from state["user_id"];
+    keys are never read from or written to state.
+    """
+    from uuid import UUID
+
+    from app.database import AsyncSessionLocal
+    from app.services.agent import parsing_bridge as pb
+
+    logger.info("parse_node: parsing source_document %s", state.get("source_document_id"))
+
+    parse_config = dict(state.get("parse_config") or {})
+    parser_type = parse_config.get("parser", "simple")
+
+    async with AsyncSessionLocal() as session:
+        source, file_path = await pb.resolve_source_cdm(
+            session, UUID(str(state["source_document_id"]))
+        )
+        service = await pb.build_parsing_service(
+            session, UUID(str(state["user_id"])), parser_type
+        )
+        outcome = await pb.run_parse(
+            session, service, source,
+            file_path=file_path,
+            representation_kind=state["representation_kind"],
+            config=parse_config,
+            project_id=state["project_id"],
+        )
+
+    return {**state, **outcome.as_state(), "current_step": "parsed"}
