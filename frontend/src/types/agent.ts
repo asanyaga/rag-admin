@@ -103,6 +103,14 @@ export interface StartExtractRunRequest {
   extractionSchemaId: string
 }
 
+export interface StartParseRunRequest {
+  agentDefinitionId: string
+  sourceDocumentId: string
+  parser?: string
+  representationKind?: string
+  parseConfig?: Record<string, unknown>
+}
+
 export interface SubmitReviewRequest {
   action: 'approve' | 'edit' | 'reject'
   data?: Record<string, unknown>
