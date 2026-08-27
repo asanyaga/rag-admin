@@ -138,12 +138,17 @@ async def export_node(state: dict, *, node_config: dict | None = None) -> dict:
     }
 
 
-async def parse_node(state: dict, *, node_config: dict | None = None) -> dict:
+async def parse_node(
+    state: dict, *, node_config: dict | None = None, parser_type: str | None = None
+) -> dict:
     """Parse a source document into a ParsedDocument, then merge into state.
 
     Reads parser settings from the node's bound design-time config. Falls back to
     top-level state keys so the bespoke /agent/parse entrypoint (which seeds
-    parse_config/representation_kind in initial_state) keeps working.
+    parse_config/representation_kind in initial_state) keeps working. Below that,
+    falls back to `parser_type` — the parser identity bound at the tool boundary
+    (see tools/parse.py) — so a node built without a frontend-seeded config still
+    resolves to the correct parser instead of silently defaulting to "simple".
 
     Opens its own session (like export_node) because the agents engine runs the
     graph inline within the request. Resolves BYOK keys from state["user_id"];
@@ -155,19 +160,19 @@ async def parse_node(state: dict, *, node_config: dict | None = None) -> dict:
 
     cfg = node_config or {}
     parse_config = dict(cfg.get("parse_config") or state.get("parse_config") or {})
-    parser_type = cfg.get("parser") or parse_config.get("parser") or "simple"
+    resolved_parser = cfg.get("parser") or parse_config.get("parser") or parser_type or "simple"
     representation_kind = (cfg.get("representation_kind")
                            or state.get("representation_kind") or "extract_rich")
 
     logger.info("parse_node: parsing source_document %s with %s",
-                state.get("source_document_id"), parser_type)
+                state.get("source_document_id"), resolved_parser)
 
     async with AsyncSessionLocal() as session:
         source, file_path = await pb.resolve_source_cdm(
             session, UUID(str(state["source_document_id"]))
         )
         service = await pb.build_parsing_service(
-            session, UUID(str(state["user_id"])), parser_type
+            session, UUID(str(state["user_id"])), resolved_parser
         )
         outcome = await pb.run_parse(
             session, service, source,

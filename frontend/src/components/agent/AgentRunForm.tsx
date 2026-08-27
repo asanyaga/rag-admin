@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Play } from 'lucide-react'
+import { toast } from 'sonner'
 import { useSourceDocuments } from '@/hooks/useSourceDocuments'
 import { startAgentRun } from '@/api/agent'
 import type { AgentTool, AgentDefinitionData } from '@/types/agent'
@@ -42,6 +43,10 @@ export function AgentRunForm({ projectId, definitionId, definition, tools, onSta
         agentDefinitionId: definitionId, initialState: { ...values },
       })
       onStarted(run.id)
+    } catch (err) {
+      toast.error('Failed to start run', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
     } finally { setStarting(false) }
   }
 

@@ -1,4 +1,6 @@
 """Parse tools — one node per parser. Slice A registers LlamaParse only."""
+import functools
+
 from app.services.agent.nodes import parse_node
 from app.services.agent.tools import FieldSpec, ToolDefinition, register_tool
 
@@ -23,5 +25,5 @@ register_tool(ToolDefinition(
         },
     },
     config_panel="llamaparse",
-    node_fn=parse_node,
+    node_fn=functools.partial(parse_node, parser_type="llamaparse"),
 ))

@@ -15,6 +15,10 @@ const startAgentRun = vi.fn<(projectId: string, data: unknown) => Promise<{ id: 
 vi.mock('@/api/agent', () => ({
   startAgentRun: (projectId: string, data: unknown) => startAgentRun(projectId, data),
 }))
+const toastError = vi.fn()
+vi.mock('sonner', () => ({
+  toast: { error: (...args: unknown[]) => toastError(...args), success: vi.fn() },
+}))
 
 const tools: AgentTool[] = [{
   slug: 'parse.llamaparse', name: 'LlamaParse', category: 'parsing',
@@ -24,7 +28,10 @@ const tools: AgentTool[] = [{
 }]
 const definition = { nodes: [{ id: 'n1', tool: 'parse.llamaparse', config: {} }], edges: [] }
 
-beforeEach(() => startAgentRun.mockClear())
+beforeEach(() => {
+  startAgentRun.mockClear()
+  toastError.mockClear()
+})
 
 it('derives a source-document field and starts a generic run', async () => {
   render(<AgentRunForm projectId="p1" definitionId="def-1"
@@ -34,4 +41,20 @@ it('derives a source-document field and starts a generic run', async () => {
   await waitFor(() => expect(startAgentRun).toHaveBeenCalledWith('p1', {
     agentDefinitionId: 'def-1', initialState: { source_document_id: 'sd-1' },
   }))
+})
+
+it('shows a toast and re-enables the button when starting a run fails', async () => {
+  startAgentRun.mockRejectedValueOnce(new Error('boom'))
+  const onStarted = vi.fn()
+  render(<AgentRunForm projectId="p1" definitionId="def-1"
+                       definition={definition} tools={tools} onStarted={onStarted} />)
+  await userEvent.selectOptions(await screen.findByLabelText(/source document/i), 'sd-1')
+  const runButton = screen.getByRole('button', { name: /run/i })
+  await userEvent.click(runButton)
+
+  await waitFor(() => expect(toastError).toHaveBeenCalledWith('Failed to start run', {
+    description: 'boom',
+  }))
+  expect(onStarted).not.toHaveBeenCalled()
+  await waitFor(() => expect(runButton).not.toBeDisabled())
 })
