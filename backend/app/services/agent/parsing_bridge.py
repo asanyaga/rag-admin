@@ -117,7 +117,9 @@ async def run_parse(
     full_text = getattr(doc, "full_text", "") or ""
     return ParseOutcome(
         parse_run_id=str(run.id),
-        parsed_document_id=str(parsed_row.id) if parsed_row else None,
+        # ParsedDocument's primary key is parse_run_id (1:1 with the run); it has
+        # no `id` column, so parse_run_id IS the parsed-document handle.
+        parsed_document_id=str(parsed_row.parse_run_id) if parsed_row else None,
         page_count=doc.page_count,
         text_len=len(full_text),
         failed_page_count=len(run.failed_pages),
