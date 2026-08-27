@@ -1,11 +1,26 @@
 import { useMemo } from 'react'
+import type { ComponentType } from 'react'
 import type { Node } from '@xyflow/react'
 import type { AgentTool } from '@/types/agent'
+import type { ParseConfig } from '@/types/parsing'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { X, Settings2 } from 'lucide-react'
+import { LlamaParseConfig } from '@/components/documents/parser-configs/LlamaParseConfig'
+
+const PARSER_PANELS: Record<
+  string,
+  ComponentType<{
+    config: ParseConfig
+    onChange: (c: ParseConfig) => void
+    compact?: boolean
+  }>
+> = {
+  llamaparse: LlamaParseConfig,
+  // landing_ai / docling / custom_pipeline added in Slice B
+}
 
 interface NodeConfigPanelProps {
   node: Node
@@ -32,6 +47,9 @@ export function NodeConfigPanel({
 
   const properties = schema?.properties ?? {}
   const hasConfig = Object.keys(properties).length > 0
+
+  const Panel = tool?.configPanel ? PARSER_PANELS[tool.configPanel] : undefined
+  const parseConfig = (config.parse_config ?? {}) as ParseConfig
 
   const handleChange = (key: string, value: string) => {
     onUpdateConfig(node.id, { ...config, [key]: value })
@@ -60,16 +78,29 @@ export function NodeConfigPanel({
         <div className="space-y-1 text-xs">
           <div>
             <span className="font-medium text-muted-foreground">Inputs: </span>
-            <span className="font-mono">{tool.inputKeys.join(', ') || 'none'}</span>
+            <span className="font-mono">
+              {tool.runtimeInputs.map((f) => f.key).join(', ') || 'none'}
+            </span>
           </div>
           <div>
             <span className="font-medium text-muted-foreground">Outputs: </span>
-            <span className="font-mono">{tool.outputKeys.join(', ') || 'none'}</span>
+            <span className="font-mono">{tool.outputs.join(', ') || 'none'}</span>
           </div>
         </div>
       )}
 
-      {hasConfig && (
+      {Panel && (
+        <>
+          <Separator />
+          <Panel
+            config={parseConfig}
+            onChange={(pc) => onUpdateConfig(node.id, { ...config, parse_config: pc })}
+            compact
+          />
+        </>
+      )}
+
+      {!Panel && hasConfig && (
         <>
           <Separator />
           <div className="space-y-3">
@@ -110,7 +141,7 @@ export function NodeConfigPanel({
         </>
       )}
 
-      {!hasConfig && (
+      {!Panel && !hasConfig && (
         <>
           <Separator />
           <p className="text-xs text-muted-foreground">
