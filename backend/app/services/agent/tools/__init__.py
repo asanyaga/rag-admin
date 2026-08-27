@@ -4,21 +4,31 @@ from typing import Any, Callable
 
 
 @dataclass
+class FieldSpec:
+    """A runtime input a tool needs, and how the run form should render it."""
+    key: str
+    label: str
+    widget: str  # e.g. "source_document_picker", "parsed_document_picker"
+
+
+@dataclass
 class ToolDefinition:
-    """A reusable tool that can be wired into an agent graph.
+    """A reusable tool wired into an agent graph.
 
-    Each tool declares what state keys it reads (input_keys) and writes
-    (output_keys), plus an optional JSON Schema for per-instance configuration.
+    Three channels, kept distinct:
+      - config_schema: design-time knobs, bound per-node into the graph.
+      - runtime_inputs: data supplied at run-time OR by an upstream node's output.
+      - outputs: keys this node writes into state.
     """
-
     slug: str
     name: str
-    category: str  # "extraction", "control", "export", "indexing", "trigger"
+    category: str
     description: str
-    input_keys: list[str]
-    output_keys: list[str]
     node_fn: Callable
+    runtime_inputs: list[FieldSpec] = field(default_factory=list)
+    outputs: list[str] = field(default_factory=list)
     config_schema: dict[str, Any] = field(default_factory=dict)
+    config_panel: str | None = None
 
 
 _registry: dict[str, ToolDefinition] = {}

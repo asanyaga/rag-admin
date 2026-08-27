@@ -7,8 +7,8 @@ register_tool(ToolDefinition(
     name="LlamaExtract",
     category="extraction",
     description="Extract structured data from a document using LlamaExtract",
-    input_keys=["file_path", "schema_definition", "extraction_config"],
-    output_keys=["extracted_data"],
+    runtime_inputs=[],  # bespoke entrypoint seeds document_id/file_path/schema_definition
+    outputs=["extracted_data"],
     config_schema={
         "type": "object",
         "properties": {

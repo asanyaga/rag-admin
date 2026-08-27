@@ -10,15 +10,22 @@ from app.models.agent_run import AgentRunStatus
 
 # --- Agent Tool schemas ---
 
+class AgentToolRuntimeInput(BaseModel):
+    key: str
+    label: str
+    widget: str
+
+
 class AgentToolResponse(BaseModel):
     """A reusable tool from the tool registry."""
     slug: str
     name: str
     category: str
     description: str
-    input_keys: list[str] = Field(..., alias="inputKeys")
-    output_keys: list[str] = Field(..., alias="outputKeys")
+    runtime_inputs: list[AgentToolRuntimeInput] = Field(default_factory=list, alias="runtimeInputs")
+    outputs: list[str] = Field(default_factory=list)
     config_schema: dict[str, Any] = Field(default_factory=dict, alias="configSchema")
+    config_panel: str | None = Field(None, alias="configPanel")
 
     model_config = ConfigDict(populate_by_name=True)
 

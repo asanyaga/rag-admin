@@ -7,7 +7,7 @@ register_tool(ToolDefinition(
     name="Human Review",
     category="control",
     description="Pause execution and wait for human approval, edit, or rejection",
-    input_keys=["extracted_data"],
-    output_keys=["review_action", "reviewed_data"],
+    runtime_inputs=[],  # consumes upstream extracted_data
+    outputs=["review_action", "reviewed_data"],
     node_fn=review_node,
 ))
