@@ -138,3 +138,56 @@ def _dummy_session_ctx():
         async def __aexit__(self, *a): return False
     def _factory(): return _Ctx()
     return _factory
+
+
+@pytest.mark.asyncio
+async def test_parse_simple_node_runs_through_graph_with_bound_identity(monkeypatch):
+    import functools
+    from app.services.agent import nodes
+    from app.services.agent import parsing_bridge as pb
+    from app.services.agent.graph import build_agent_graph
+    from app.services.agent.state import AgentState
+
+    captured = {}
+
+    async def fake_resolve(session, sid):
+        return ("SRC", "/tmp/f.pdf")
+
+    async def fake_build(session, user_id, parser_type):
+        captured["parser"] = parser_type
+        return "SERVICE"
+
+    class FakeOutcome:
+        def as_state(self):
+            return {"parse_run_id": "r1", "parsed_document_id": "p1",
+                    "page_count": 1, "text_len": 10,
+                    "failed_page_count": 0, "block_count": 2}
+
+    async def fake_run(session, service, source, *, file_path,
+                       representation_kind, config, project_id):
+        return FakeOutcome()
+
+    class _Ctx:
+        async def __aenter__(self): return "SESSION"
+        async def __aexit__(self, *a): return False
+
+    monkeypatch.setattr(nodes, "AsyncSessionLocal", lambda: _Ctx())
+    monkeypatch.setattr(pb, "resolve_source_cdm", fake_resolve)
+    monkeypatch.setattr(pb, "build_parsing_service", fake_build)
+    monkeypatch.setattr(pb, "run_parse", fake_run)
+
+    flow = {
+        "nodes": [{"id": "n1", "tool": "parse.simple", "config": {}}],
+        "edges": [{"source": "__start__", "target": "n1"},
+                  {"source": "n1", "target": "__end__"}],
+    }
+    compiled = build_agent_graph(flow=flow, state_type=AgentState)
+    result = await compiled.ainvoke({
+        "source_document_id": "00000000-0000-0000-0000-000000000001",
+        "user_id": "00000000-0000-0000-0000-000000000002",
+        "project_id": "00000000-0000-0000-0000-000000000003",
+    })
+
+    assert captured["parser"] == "simple"          # bound identity reached the bridge
+    assert result["parsed_document_id"] == "p1"
+    assert result["current_step"] == "parsed"
