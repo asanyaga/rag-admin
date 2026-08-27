@@ -3,6 +3,8 @@ import logging
 
 from langgraph.types import interrupt
 
+from app.database import AsyncSessionLocal
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,7 +66,7 @@ async def export_node(state: dict, *, node_config: dict | None = None) -> dict:
 
     logger.info("export_node: exporting data")
 
-    config = state.get("node_config", {})
+    config = node_config or {}
     data_store_id = config.get("data_store_id")
 
     if not data_store_id:
@@ -137,7 +139,11 @@ async def export_node(state: dict, *, node_config: dict | None = None) -> dict:
 
 
 async def parse_node(state: dict, *, node_config: dict | None = None) -> dict:
-    """Parse a source document into a ParsedDocument, then merge results into state.
+    """Parse a source document into a ParsedDocument, then merge into state.
+
+    Reads parser settings from the node's bound design-time config. Falls back to
+    top-level state keys so the bespoke /agent/parse entrypoint (which seeds
+    parse_config/representation_kind in initial_state) keeps working.
 
     Opens its own session (like export_node) because the agents engine runs the
     graph inline within the request. Resolves BYOK keys from state["user_id"];
@@ -145,13 +151,16 @@ async def parse_node(state: dict, *, node_config: dict | None = None) -> dict:
     """
     from uuid import UUID
 
-    from app.database import AsyncSessionLocal
     from app.services.agent import parsing_bridge as pb
 
-    logger.info("parse_node: parsing source_document %s", state.get("source_document_id"))
+    cfg = node_config or {}
+    parse_config = dict(cfg.get("parse_config") or state.get("parse_config") or {})
+    parser_type = cfg.get("parser") or parse_config.get("parser") or "simple"
+    representation_kind = (cfg.get("representation_kind")
+                           or state.get("representation_kind") or "extract_rich")
 
-    parse_config = dict(state.get("parse_config") or {})
-    parser_type = parse_config.get("parser", "simple")
+    logger.info("parse_node: parsing source_document %s with %s",
+                state.get("source_document_id"), parser_type)
 
     async with AsyncSessionLocal() as session:
         source, file_path = await pb.resolve_source_cdm(
@@ -163,7 +172,7 @@ async def parse_node(state: dict, *, node_config: dict | None = None) -> dict:
         outcome = await pb.run_parse(
             session, service, source,
             file_path=file_path,
-            representation_kind=state["representation_kind"],
+            representation_kind=representation_kind,
             config=parse_config,
             project_id=state["project_id"],
         )
