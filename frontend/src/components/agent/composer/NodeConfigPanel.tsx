@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { X, Settings2 } from 'lucide-react'
 import { LlamaParseConfig } from '@/components/documents/parser-configs/LlamaParseConfig'
+import { LandingAIConfig } from '@/components/documents/parser-configs/LandingAIConfig'
+import { DoclingConfig } from '@/components/documents/parser-configs/DoclingConfig'
+import { CustomPipelineConfig } from '@/components/documents/parser-configs/CustomPipelineConfig'
 
 const PARSER_PANELS: Record<
   string,
@@ -19,7 +22,9 @@ const PARSER_PANELS: Record<
   }>
 > = {
   llamaparse: LlamaParseConfig,
-  // landing_ai / docling / custom_pipeline added in Slice B
+  landing_ai: LandingAIConfig,
+  docling: DoclingConfig,
+  custom_pipeline: CustomPipelineConfig,
 }
 
 interface NodeConfigPanelProps {
@@ -49,6 +54,7 @@ export function NodeConfigPanel({
   const hasConfig = Object.keys(properties).length > 0
 
   const Panel = tool?.configPanel ? PARSER_PANELS[tool.configPanel] : undefined
+  const isParsing = tool?.category === 'parsing'
   const parseConfig = (config.parse_config ?? {}) as ParseConfig
 
   const handleChange = (key: string, value: string) => {
@@ -100,7 +106,14 @@ export function NodeConfigPanel({
         </>
       )}
 
-      {!Panel && hasConfig && (
+      {!Panel && isParsing && (
+        <>
+          <Separator />
+          <p className="text-xs text-muted-foreground">This parser has no options.</p>
+        </>
+      )}
+
+      {!Panel && !isParsing && hasConfig && (
         <>
           <Separator />
           <div className="space-y-3">
@@ -141,7 +154,7 @@ export function NodeConfigPanel({
         </>
       )}
 
-      {!Panel && !hasConfig && (
+      {!Panel && !isParsing && !hasConfig && (
         <>
           <Separator />
           <p className="text-xs text-muted-foreground">
