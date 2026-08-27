@@ -80,9 +80,14 @@ class AgentRunService:
             state_type=AgentState,
         )
         config = {"configurable": {"thread_id": thread_id}}
+        invoke_state = {
+            **initial_state,
+            "project_id": str(project_id),
+            "user_id": str(user_id),
+        }
 
         try:
-            result = await compiled.ainvoke(initial_state, config=config)
+            result = await compiled.ainvoke(invoke_state, config=config)
 
             if result.get("error"):
                 await self.agent_run_repo.update_state(
