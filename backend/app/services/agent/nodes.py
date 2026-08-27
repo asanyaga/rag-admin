@@ -6,7 +6,7 @@ from langgraph.types import interrupt
 logger = logging.getLogger(__name__)
 
 
-async def extract_node(state: dict) -> dict:
+async def extract_node(state: dict, *, node_config: dict | None = None) -> dict:
     """Extract structured data from a document using DataExtractor."""
     from app.adapters.extraction.registry import get_extractor
     from app.config import settings
@@ -35,7 +35,7 @@ async def extract_node(state: dict) -> dict:
     }
 
 
-async def review_node(state: dict) -> dict:
+async def review_node(state: dict, *, node_config: dict | None = None) -> dict:
     """Interrupt graph execution for human review."""
     logger.info("review_node: awaiting review")
 
@@ -52,7 +52,7 @@ async def review_node(state: dict) -> dict:
     }
 
 
-async def export_node(state: dict) -> dict:
+async def export_node(state: dict, *, node_config: dict | None = None) -> dict:
     """Export data to a project data store.
 
     Supports explicit field_mapping with dot-path notation and array fan-out.
@@ -136,7 +136,7 @@ async def export_node(state: dict) -> dict:
     }
 
 
-async def parse_node(state: dict) -> dict:
+async def parse_node(state: dict, *, node_config: dict | None = None) -> dict:
     """Parse a source document into a ParsedDocument, then merge results into state.
 
     Opens its own session (like export_node) because the agents engine runs the
