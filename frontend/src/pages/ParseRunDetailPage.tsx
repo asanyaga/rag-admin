@@ -113,8 +113,8 @@ export function ParseRunDetailPage() {
               <ChevronLeft className="h-4 w-4 mr-1" /> Back to documents
             </Link>
           ) : (
-            <Link to="/parse-agent">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Back to parse agent
+            <Link to="/source-documents">
+              <ChevronLeft className="h-4 w-4 mr-1" /> Back to source documents
             </Link>
           )}
         </Button>
@@ -235,7 +235,7 @@ export function ParseRunDetailPage() {
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
           runId={runId}
-          onDeleted={() => navigate(documentId ? '/parse' : '/parse-agent')}
+          onDeleted={() => navigate(documentId ? '/parse' : '/source-documents')}
         />
       )}
     </div>

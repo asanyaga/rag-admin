@@ -18,6 +18,7 @@ from app.schemas.agent import (
     AgentDefinitionResponse,
     StartAgentRunRequest,
     StartExtractRunRequest,
+    StartParseRunRequest,
     ResumeAgentRunRequest,
     AgentRunResponse,
     AgentRunListItem,
@@ -324,6 +325,56 @@ async def start_extract_run(
             agent_definition_id=body.agent_definition_id,
             document_id=body.document_id,
             extraction_schema_id=body.extraction_schema_id,
+            user_id=current_user.id,
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# --- Parse Runs ---
+
+def get_parse_run_service(
+    db: AsyncSession = Depends(get_db),
+) -> "ParseRunService":
+    from app.main import app
+    from app.repositories.provider_key_repository import ProviderKeyRepository
+    from app.repositories.source_document_repository import SourceDocumentRepository
+    from app.services.agent.parse_run_service import ParseRunService
+
+    checkpointer = app.state.agent_checkpointer
+    return ParseRunService(
+        agent_run_service=AgentRunService(
+            agent_run_repo=AgentRunRepository(db),
+            agent_def_repo=AgentDefinitionRepository(db),
+            checkpointer=checkpointer,
+        ),
+        source_doc_repo=SourceDocumentRepository(db),
+        provider_key_repo=ProviderKeyRepository(db),
+    )
+
+
+@router.post(
+    "/agent/parse/projects/{project_id}/runs",
+    response_model=AgentRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Start a parse agent run",
+)
+async def start_parse_run(
+    project_id: UUID,
+    body: StartParseRunRequest,
+    current_user: User = Depends(get_current_active_user),
+    service: "ParseRunService" = Depends(get_parse_run_service),
+):
+    try:
+        return await service.start_parse_run(
+            project_id=project_id,
+            agent_definition_id=body.agent_definition_id,
+            source_document_id=body.source_document_id,
+            parser=body.parser,
+            representation_kind=body.representation_kind,
+            parse_config=body.parse_config,
             user_id=current_user.id,
         )
     except NotFoundError as e:

@@ -4,7 +4,9 @@ import { useAgentRuns } from '@/hooks/useAgentRuns'
 import { useAgentComposer } from '@/hooks/useAgentComposer'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useExtractionSchemas } from '@/hooks/useExtractionSchemas'
+import { useSourceDocuments } from '@/hooks/useSourceDocuments'
 import { AgentRunInputForm } from '@/components/agent/AgentRunInputForm'
+import { ParseRunInputForm } from '@/components/agent/ParseRunInputForm'
 import { AgentRunList } from '@/components/agent/AgentRunList'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -12,7 +14,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Workflow } from 'lucide-react'
 import { toast } from 'sonner'
-import type { StartExtractRunRequest } from '@/types/agent'
+import type { StartExtractRunRequest, StartParseRunRequest } from '@/types/agent'
 
 export default function AgentRunsPage(): JSX.Element {
   const { agentId } = useParams<{ agentId: string }>()
@@ -29,11 +31,18 @@ export default function AgentRunsPage(): JSX.Element {
     isStarting,
     error: runsError,
     startExtractRun,
+    startParseRun,
     deleteRun,
   } = useAgentRuns(projectId)
 
   const { documents } = useDocuments(projectId)
   const { schemas } = useExtractionSchemas(projectId)
+  const { sourceDocuments } = useSourceDocuments()
+
+  // A "parse-first" agent has a node using the parse tool.
+  const isParseAgent = composer.nodes.some(
+    (n) => n.data?.toolSlug === 'parse'
+  )
 
   // Filter runs to this agent
   const agentRuns = agentId
@@ -43,6 +52,19 @@ export default function AgentRunsPage(): JSX.Element {
   const handleStartRun = async (request: StartExtractRunRequest) => {
     try {
       await startExtractRun(request)
+      toast.success('Run started', {
+        description: 'Agent is running...',
+      })
+    } catch (err) {
+      toast.error('Failed to start run', {
+        description: err instanceof Error ? err.message : 'An error occurred',
+      })
+    }
+  }
+
+  const handleStartParseRun = async (request: StartParseRunRequest) => {
+    try {
+      await startParseRun(request)
       toast.success('Run started', {
         description: 'Agent is running...',
       })
@@ -109,6 +131,13 @@ export default function AgentRunsPage(): JSX.Element {
           <h2 className="text-sm font-medium mb-3">Start New Run</h2>
           {composer.isLoading ? (
             <Skeleton className="h-20 w-full" />
+          ) : isParseAgent ? (
+            <ParseRunInputForm
+              agentDefinitionId={agentId}
+              sourceDocuments={sourceDocuments}
+              isStarting={isStarting}
+              onStart={handleStartParseRun}
+            />
           ) : (
             <AgentRunInputForm
               agentDefinitionId={agentId}

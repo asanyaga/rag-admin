@@ -12,7 +12,6 @@ import {
   Tags,
   Library,
   ScanSearch,
-  Workflow,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -32,7 +31,6 @@ export const navigationItems: readonly NavItem[] = [
   { label: 'Source Documents', href: '/source-documents', icon: Library, activeColor: 'border-l-indigo-500' },
   { label: 'Probe', href: '/probe', icon: ScanSearch, activeColor: 'border-l-sky-500' },
   { label: 'Parse', href: '/parse', icon: FileText, activeColor: 'border-l-blue-500' },
-  { label: 'Parse Agent', href: '/parse-agent', icon: Workflow, activeColor: 'border-l-rose-500' },
   { label: 'Classify', href: '/classify', icon: Tags, activeColor: 'border-l-pink-500' },
   { label: 'Extract', href: '/extract', icon: FileSearch, activeColor: 'border-l-orange-500' },
   { label: 'Index', href: '/index', icon: Database, activeColor: 'border-l-teal-500' },

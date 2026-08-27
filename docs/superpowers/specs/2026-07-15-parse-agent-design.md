@@ -1,5 +1,10 @@
 # Parse Agent — v1 Design (the Observability Spine)
 
+> **⚠️ Superseded (2026-08-26):** The parse-agent stack has been retired. Parsing
+> is now a tool in the agents feature — see
+> `docs/superpowers/specs/2026-08-26-parse-tool-design.md`. This document is kept
+> for historical context only.
+
 - **Date:** 2026-07-15
 - **Status:** Design — pending review
 - **Author:** Brainstormed with Claude
