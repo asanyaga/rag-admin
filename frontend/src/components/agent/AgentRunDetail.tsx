@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { AgentRun, AgentDefinition, SubmitReviewRequest, ResumeAgentRunRequest } from '@/types/agent'
+import type { AgentRun, AgentDefinition, AgentTool, SubmitReviewRequest, ResumeAgentRunRequest } from '@/types/agent'
 import { AgentFlowGraph } from '@/components/agent/AgentFlowGraph'
 import { ReviewForm } from '@/components/agent/ReviewForm'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -16,6 +16,7 @@ import { Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 interface AgentRunDetailProps {
   run: AgentRun | null
   agentDefinition: AgentDefinition | null
+  tools?: AgentTool[]
   isLoading: boolean
   isResuming: boolean
   error: string | null
@@ -25,6 +26,7 @@ interface AgentRunDetailProps {
 export function AgentRunDetail({
   run,
   agentDefinition,
+  tools = [],
   isLoading,
   isResuming,
   error,
@@ -53,6 +55,22 @@ export function AgentRunDetail({
   const reviewedData =
     (run.currentState?.reviewed_data as Record<string, unknown>) ?? null
   const finalData = reviewedData ?? extractedData
+
+  // Generic results: project current_state onto the output keys the definition's
+  // tools declare (the three-way contract's `outputs`). Covers parse and any
+  // future tool without extraction-specific special-casing.
+  const outputData: Record<string, unknown> = {}
+  if (run.currentState && agentDefinition) {
+    const bySlug = new Map(tools.map((t) => [t.slug, t]))
+    const outputKeys = new Set<string>()
+    for (const node of agentDefinition.definition.nodes) {
+      bySlug.get(node.tool)?.outputs.forEach((k) => outputKeys.add(k))
+    }
+    for (const key of outputKeys) {
+      if (key in run.currentState) outputData[key] = run.currentState[key]
+    }
+  }
+  const hasOutputData = Object.keys(outputData).length > 0
 
   const handleReview = async (request: SubmitReviewRequest) => {
     await onResume({ resumeValue: { action: request.action, data: request.data } })
@@ -119,16 +137,16 @@ export function AgentRunDetail({
         </Alert>
       )}
 
-      {run.status === 'completed' && finalData && (
+      {run.status === 'completed' && (finalData || hasOutputData) && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium">Results</h3>
           <pre className="rounded-lg border bg-gray-50 p-4 text-xs overflow-auto max-h-96">
-            {JSON.stringify(finalData, null, 2)}
+            {JSON.stringify(finalData ?? outputData, null, 2)}
           </pre>
         </div>
       )}
 
-      {run.status === 'completed' && !finalData && (
+      {run.status === 'completed' && !finalData && !hasOutputData && (
         <Alert>
           <AlertDescription>Run completed with no output data.</AlertDescription>
         </Alert>
