@@ -1,13 +1,20 @@
 // --- Agent Tools ---
 
+export interface AgentToolRuntimeInput {
+  key: string
+  label: string
+  widget: string
+}
+
 export interface AgentTool {
   slug: string
   name: string
   category: string
   description: string
-  inputKeys: string[]
-  outputKeys: string[]
+  runtimeInputs: AgentToolRuntimeInput[]
+  outputs: string[]
   configSchema: Record<string, unknown>
+  configPanel: string | null
 }
 
 // --- Agent Definitions ---

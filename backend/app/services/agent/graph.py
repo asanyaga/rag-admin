@@ -1,4 +1,5 @@
 """Dynamic LangGraph builder — constructs StateGraph from agent definitions."""
+import functools
 from typing import Any, Callable
 
 from langgraph.graph import StateGraph, START, END
@@ -36,7 +37,8 @@ def build_agent_graph(
         tool = get_tool(node["tool"])
         if tool is None:
             raise ValueError(f"Unknown tool: {node['tool']}")
-        graph.add_node(node["id"], tool.node_fn)
+        bound = functools.partial(tool.node_fn, node_config=node.get("config", {}))
+        graph.add_node(node["id"], bound)
 
     # Add edges
     has_start = False

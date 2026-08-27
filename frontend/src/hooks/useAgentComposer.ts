@@ -16,6 +16,7 @@ import type {
   AgentDefinitionData,
 } from '@/types/agent'
 import * as agentApi from '@/api/agent'
+import { PARSER_REGISTRY } from '@/components/documents/ParseMethodSelector'
 
 /** Unique ID counter for new nodes */
 let idCounter = 0
@@ -237,6 +238,15 @@ export function useAgentComposer(
   const addNode = useCallback(
     (tool: AgentTool, position: { x: number; y: number }) => {
       const id = nextNodeId()
+      const parser = tool.configPanel ?? undefined
+      const initialConfig =
+        tool.category === 'parsing' && parser
+          ? {
+              parser,
+              representation_kind: 'extract_rich',
+              parse_config: PARSER_REGISTRY[parser]?.defaultConfig ?? {},
+            }
+          : {}
       const newNode: Node = {
         id,
         type: 'composerNode',
@@ -245,7 +255,7 @@ export function useAgentComposer(
           toolSlug: tool.slug,
           label: tool.name,
           category: tool.category,
-          config: {},
+          config: initialConfig,
         },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,

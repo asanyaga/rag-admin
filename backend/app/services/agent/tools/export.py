@@ -7,8 +7,8 @@ register_tool(ToolDefinition(
     name="Export",
     category="export",
     description="Export data to a project data store",
-    input_keys=["reviewed_data", "extracted_data"],
-    output_keys=["exported", "rows_exported"],
+    runtime_inputs=[],  # consumes upstream reviewed_data/extracted_data
+    outputs=["exported", "rows_exported"],
     config_schema={
         "type": "object",
         "properties": {

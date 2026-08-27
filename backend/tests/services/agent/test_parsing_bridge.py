@@ -23,6 +23,15 @@ def test_parse_outcome_as_state_exposes_output_keys():
 
 @pytest.mark.asyncio
 async def test_run_parse_shapes_outcome_from_service(monkeypatch):
+    from uuid import UUID
+
+    # The real ORM ParsedDocument keys on parse_run_id (its primary key); it has
+    # NO `id` column. Use the real model so the fake can't drift back into
+    # claiming an `id` attribute the row does not have.
+    from app.models.parsed_document import ParsedDocument as ParsedDocumentORM
+
+    PDOC_PK = UUID("99999999-9999-9999-9999-999999999999")
+
     class FakeRun:
         id = "run-123"
         failed_pages = ["p2"]
@@ -36,11 +45,14 @@ async def test_run_parse_shapes_outcome_from_service(monkeypatch):
         async def parse_and_persist(self, **kwargs):
             return FakeRun(), FakeDoc()
 
-    class FakeParsedDocRow:
-        id = "pdoc-9"
+    parsed_row = ParsedDocumentORM(
+        parse_run_id=PDOC_PK,
+        source_document_id=UUID("88888888-8888-8888-8888-888888888888"),
+        page_count=4, block_count=3, content={},
+    )
 
     async def fake_get_by_run(self, run_id):
-        return FakeParsedDocRow()
+        return parsed_row
 
     monkeypatch.setattr(
         "app.repositories.parsed_document_repository.ParsedDocumentRepository.get_by_run",
@@ -53,7 +65,8 @@ async def test_run_parse_shapes_outcome_from_service(monkeypatch):
         config={"parser": "simple"}, project_id="33333333-3333-3333-3333-333333333333",
     )
     assert outcome.parse_run_id == "run-123"
-    assert outcome.parsed_document_id == "pdoc-9"
+    # The parsed-document handle is its parse_run_id under the current 1:1 schema.
+    assert outcome.parsed_document_id == str(PDOC_PK)
     assert outcome.page_count == 4
     assert outcome.text_len == len("hello world")
     assert outcome.failed_page_count == 1

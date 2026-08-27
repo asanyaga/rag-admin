@@ -17,6 +17,19 @@ from app.services.exceptions import NotFoundError
 logger = logging.getLogger(__name__)
 
 
+def _with_ambient(initial_state: dict, project_id, user_id) -> dict:
+    """Merge ambient identity into a copy of the initial state for invocation.
+
+    Returns a new dict; the caller's `initial_state` (the persisted run
+    record) is left unmutated.
+    """
+    return {
+        **initial_state,
+        "project_id": str(project_id),
+        "user_id": str(user_id),
+    }
+
+
 def _make_json_safe(obj: dict) -> dict:
     """Strip non-JSON-serializable values from a state dict.
 
@@ -80,9 +93,10 @@ class AgentRunService:
             state_type=AgentState,
         )
         config = {"configurable": {"thread_id": thread_id}}
+        invoke_state = _with_ambient(initial_state, project_id, user_id)
 
         try:
-            result = await compiled.ainvoke(initial_state, config=config)
+            result = await compiled.ainvoke(invoke_state, config=config)
 
             if result.get("error"):
                 await self.agent_run_repo.update_state(

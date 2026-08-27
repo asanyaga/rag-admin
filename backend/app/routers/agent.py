@@ -42,18 +42,16 @@ router = APIRouter(tags=["agent"])
 async def list_agent_tools(
     current_user: User = Depends(get_current_active_user),
 ):
-    tools = list_tools()
     return [
         AgentToolResponse(
-            slug=t.slug,
-            name=t.name,
-            category=t.category,
-            description=t.description,
-            inputKeys=t.input_keys,
-            outputKeys=t.output_keys,
+            slug=t.slug, name=t.name, category=t.category, description=t.description,
+            runtimeInputs=[{"key": f.key, "label": f.label, "widget": f.widget}
+                           for f in t.runtime_inputs],
+            outputs=t.outputs,
             configSchema=t.config_schema,
+            configPanel=t.config_panel,
         )
-        for t in tools
+        for t in list_tools()
     ]
 
 

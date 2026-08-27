@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
-import type { AgentDefinition, ResumeAgentRunRequest } from '@/types/agent'
+import type { AgentDefinition, AgentTool, ResumeAgentRunRequest } from '@/types/agent'
 import * as agentApi from '@/api/agent'
 
 export default function AgentRunDetailPage(): JSX.Element {
@@ -27,6 +27,12 @@ export default function AgentRunDetailPage(): JSX.Element {
         .catch(() => {})
     }
   }, [run?.agentDefinitionId])
+
+  // Load the tool catalog so results can be projected onto each node's outputs.
+  const [tools, setTools] = useState<AgentTool[]>([])
+  useEffect(() => {
+    agentApi.listAgentTools().then(setTools).catch(() => {})
+  }, [])
 
   const handleResume = async (request: ResumeAgentRunRequest) => {
     try {
@@ -64,6 +70,7 @@ export default function AgentRunDetailPage(): JSX.Element {
       <AgentRunDetail
         run={run}
         agentDefinition={agentDef}
+        tools={tools}
         isLoading={isLoading}
         isResuming={isResuming}
         error={error}

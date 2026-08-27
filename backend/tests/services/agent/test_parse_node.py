@@ -7,7 +7,7 @@ from app.services.agent.tools import get_tool
 @pytest.mark.asyncio
 async def test_parse_node_merges_full_state_through_graph(monkeypatch):
     # Ensure the parse tool is registered (Task 3 registers it; import guard here).
-    assert get_tool("parse") is not None, "register the parse tool (Task 3) first"
+    assert get_tool("parse.llamaparse") is not None, "register the parse tool (Task 3) first"
 
     async def fake_resolve_source_cdm(session, sid):
         return object(), "/tmp/doc.pdf"
@@ -25,7 +25,7 @@ async def test_parse_node_merges_full_state_through_graph(monkeypatch):
     monkeypatch.setattr(pb, "build_parsing_service", fake_build_parsing_service)
     monkeypatch.setattr(pb, "run_parse", fake_run_parse)
 
-    flow = {"nodes": [{"id": "p", "tool": "parse"}], "edges": [], "conditional_edges": []}
+    flow = {"nodes": [{"id": "p", "tool": "parse.llamaparse"}], "edges": [], "conditional_edges": []}
     compiled = build_agent_graph(flow)
 
     initial = {
