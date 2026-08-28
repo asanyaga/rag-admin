@@ -5,10 +5,13 @@ from typing import Any, Callable
 
 @dataclass
 class FieldSpec:
-    """A runtime input a tool needs, and how the run form should render it."""
+    """A runtime input a tool needs, how the run form renders it, and where it
+    comes from: 'form' (run form or upstream), 'upstream' (only an upstream
+    node's output), or 'either'."""
     key: str
     label: str
     widget: str  # e.g. "source_document_picker", "parsed_document_picker"
+    source: str = "form"
 
 
 @dataclass

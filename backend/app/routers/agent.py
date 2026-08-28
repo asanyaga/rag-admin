@@ -45,8 +45,8 @@ async def list_agent_tools(
     return [
         AgentToolResponse(
             slug=t.slug, name=t.name, category=t.category, description=t.description,
-            runtimeInputs=[{"key": f.key, "label": f.label, "widget": f.widget}
-                           for f in t.runtime_inputs],
+            runtimeInputs=[{"key": f.key, "label": f.label, "widget": f.widget,
+                            "source": f.source} for f in t.runtime_inputs],
             outputs=t.outputs,
             configSchema=t.config_schema,
             configPanel=t.config_panel,

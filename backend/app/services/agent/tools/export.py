@@ -1,13 +1,14 @@
 """Export tool — write pipeline data to a project data store."""
 from app.services.agent.nodes import export_node
-from app.services.agent.tools import ToolDefinition, register_tool
+from app.services.agent.tools import FieldSpec, ToolDefinition, register_tool
 
 register_tool(ToolDefinition(
     slug="export",
     name="Export",
     category="export",
     description="Export data to a project data store",
-    runtime_inputs=[],  # consumes upstream reviewed_data/extracted_data
+    runtime_inputs=[FieldSpec(key="extracted_data", label="Extracted data",
+                              widget="pipeline", source="upstream")],
     outputs=["exported", "rows_exported"],
     config_schema={
         "type": "object",
