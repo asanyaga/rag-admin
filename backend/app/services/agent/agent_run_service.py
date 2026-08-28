@@ -74,6 +74,18 @@ class AgentRunService:
         if not agent_def:
             raise NotFoundError(f"Agent definition {agent_definition_id} not found")
 
+        from app.services.agent.tools import get_tool
+        from app.services.agent.validation import validate_graph
+
+        unmet = validate_graph(agent_def.definition, get_tool)
+        if unmet:
+            first = unmet[0]
+            raise ValueError(
+                f"Agent graph is not runnable: node '{first.node_id}' needs "
+                f"'{first.key}' from an upstream node "
+                f"({len(unmet)} unmet input(s) total)."
+            )
+
         # Create run record
         run = await self.agent_run_repo.create(
             project_id=project_id,
