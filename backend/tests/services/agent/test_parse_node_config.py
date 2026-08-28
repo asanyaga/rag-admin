@@ -42,7 +42,9 @@ async def test_parse_node_reads_parser_from_bound_config(monkeypatch):
 
     assert captured["parser"] == "llamaparse"
     assert captured["representation_kind"] == "extract_rich"
-    assert captured["config"] == {"tier": "agentic"}
+    # config carries the resolved parser so parse_and_persist's runner selection
+    # matches the client build_parsing_service constructed.
+    assert captured["config"] == {"tier": "agentic", "parser": "llamaparse"}
     assert result["parsed_document_id"] == "p1"
     assert result["current_step"] == "parsed"
 
@@ -138,3 +140,106 @@ def _dummy_session_ctx():
         async def __aexit__(self, *a): return False
     def _factory(): return _Ctx()
     return _factory
+
+
+@pytest.mark.asyncio
+async def test_parse_simple_node_runs_through_graph_with_bound_identity(monkeypatch):
+    import functools
+    from app.services.agent import nodes
+    from app.services.agent import parsing_bridge as pb
+    from app.services.agent.graph import build_agent_graph
+    from app.services.agent.state import AgentState
+
+    captured = {}
+
+    async def fake_resolve(session, sid):
+        return ("SRC", "/tmp/f.pdf")
+
+    async def fake_build(session, user_id, parser_type):
+        captured["parser"] = parser_type
+        return "SERVICE"
+
+    class FakeOutcome:
+        def as_state(self):
+            return {"parse_run_id": "r1", "parsed_document_id": "p1",
+                    "page_count": 1, "text_len": 10,
+                    "failed_page_count": 0, "block_count": 2}
+
+    async def fake_run(session, service, source, *, file_path,
+                       representation_kind, config, project_id):
+        return FakeOutcome()
+
+    class _Ctx:
+        async def __aenter__(self): return "SESSION"
+        async def __aexit__(self, *a): return False
+
+    monkeypatch.setattr(nodes, "AsyncSessionLocal", lambda: _Ctx())
+    monkeypatch.setattr(pb, "resolve_source_cdm", fake_resolve)
+    monkeypatch.setattr(pb, "build_parsing_service", fake_build)
+    monkeypatch.setattr(pb, "run_parse", fake_run)
+
+    flow = {
+        "nodes": [{"id": "n1", "tool": "parse.simple", "config": {}}],
+        "edges": [{"source": "__start__", "target": "n1"},
+                  {"source": "n1", "target": "__end__"}],
+    }
+    compiled = build_agent_graph(flow=flow, state_type=AgentState)
+    result = await compiled.ainvoke({
+        "source_document_id": "00000000-0000-0000-0000-000000000001",
+        "user_id": "00000000-0000-0000-0000-000000000002",
+        "project_id": "00000000-0000-0000-0000-000000000003",
+    })
+
+    assert captured["parser"] == "simple"          # bound identity reached the bridge
+    assert result["parsed_document_id"] == "p1"
+    assert result["current_step"] == "parsed"
+
+
+@pytest.mark.asyncio
+async def test_parse_node_runner_parser_matches_client_parser(monkeypatch):
+    """Regression: the parser used for RUNNER selection (config["parser"], read by
+    parse_and_persist) must match the parser used to build the CLIENT
+    (build_parsing_service). A Landing AI node seeds parse_config without a
+    "parser" key, so parse_and_persist would default to the LlamaParse runner
+    while the client was built for landing_ai — the None llamaparse client then
+    raises 'NoneType' object has no attribute 'parsing'."""
+    captured = {}
+
+    async def fake_resolve(session, sid):
+        return ("SRC", "/tmp/f.pdf")
+
+    async def fake_build(session, user_id, parser_type):
+        captured["client_parser"] = parser_type
+        return "SERVICE"
+
+    class FakeOutcome:
+        def as_state(self):
+            return {"parse_run_id": "r1", "parsed_document_id": "p1",
+                    "page_count": 1, "text_len": 10,
+                    "failed_page_count": 0, "block_count": 2}
+
+    async def fake_run(session, service, source, *, file_path,
+                       representation_kind, config, project_id):
+        # parse_and_persist selects the runner from config["parser"].
+        captured["runner_parser"] = config.get("parser")
+        return FakeOutcome()
+
+    monkeypatch.setattr(nodes, "AsyncSessionLocal", _dummy_session_ctx())
+    from app.services.agent import parsing_bridge as pb
+    monkeypatch.setattr(pb, "resolve_source_cdm", fake_resolve)
+    monkeypatch.setattr(pb, "build_parsing_service", fake_build)
+    monkeypatch.setattr(pb, "run_parse", fake_run)
+
+    state = {"source_document_id": "00000000-0000-0000-0000-000000000001",
+             "user_id": "00000000-0000-0000-0000-000000000002",
+             "project_id": "00000000-0000-0000-0000-000000000003"}
+    # A landing_ai node: parser identity bound at the tool boundary, parse_config
+    # carries only parser-specific options (no "parser" key), like the real seed.
+    await nodes.parse_node(
+        state,
+        node_config={"parse_config": {"model": "dpt-2-latest"}},
+        parser_type="landing_ai",
+    )
+
+    assert captured["client_parser"] == "landing_ai"
+    assert captured["runner_parser"] == "landing_ai"  # must match the client
