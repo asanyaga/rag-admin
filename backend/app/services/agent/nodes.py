@@ -161,6 +161,12 @@ async def parse_node(
     cfg = node_config or {}
     parse_config = dict(cfg.get("parse_config") or state.get("parse_config") or {})
     resolved_parser = cfg.get("parser") or parse_config.get("parser") or parser_type or "simple"
+    # parse_and_persist selects the RUNNER from config["parser"] (defaulting to
+    # llamaparse), while build_parsing_service builds the CLIENT for
+    # resolved_parser. Pin them together, or a non-llamaparse node (e.g. a
+    # parse_config without a "parser" key) picks the llamaparse runner against a
+    # None client → 'NoneType' object has no attribute 'parsing'.
+    parse_config["parser"] = resolved_parser
     representation_kind = (cfg.get("representation_kind")
                            or state.get("representation_kind") or "extract_rich")
 
