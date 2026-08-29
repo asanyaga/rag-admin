@@ -9,9 +9,29 @@ logger = logging.getLogger(__name__)
 
 
 async def extract_node(state: dict, *, node_config: dict | None = None) -> dict:
-    """Extract structured data from a document using DataExtractor."""
+    """Extract structured data from a document using DataExtractor.
+
+    Resolves document_id/extraction_schema_id from state into file_path +
+    schema_definition (opening its own session via the module-level
+    AsyncSessionLocal imported above — parse_node relies on that same name
+    being patchable, so extract_node uses it rather than a local re-import),
+    falling back to pre-seeded file_path/schema_definition so the bespoke
+    /agent/extract entrypoint keeps working.
+    """
     from app.adapters.extraction.registry import get_extractor
     from app.config import settings
+    from app.services.agent import extraction_bridge as eb
+
+    file_path = state.get("file_path")
+    schema_definition = state.get("schema_definition")
+    if not file_path or schema_definition is None:
+        async with AsyncSessionLocal() as session:
+            if not file_path:
+                file_path = await eb.resolve_document_file_path(session, state["document_id"])
+            if schema_definition is None:
+                schema_definition = await eb.resolve_schema_definition(
+                    session, state["extraction_schema_id"]
+                )
 
     logger.info("extract_node: processing document %s", state.get("document_id", "unknown"))
 
@@ -25,8 +45,8 @@ async def extract_node(state: dict, *, node_config: dict | None = None) -> dict:
     config["extraction_target"] = "PER_DOC"
 
     output = await extractor.extract(
-        file_path=state["file_path"],
-        schema=state["schema_definition"],
+        file_path=file_path,
+        schema=schema_definition,
         config=config,
     )
 

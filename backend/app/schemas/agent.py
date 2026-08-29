@@ -14,6 +14,7 @@ class AgentToolRuntimeInput(BaseModel):
     key: str
     label: str
     widget: str
+    source: str = "form"
 
 
 class AgentToolResponse(BaseModel):

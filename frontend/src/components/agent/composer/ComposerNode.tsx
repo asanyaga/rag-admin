@@ -7,6 +7,7 @@ import {
   Database,
   Zap,
   X,
+  TriangleAlert,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -33,6 +34,7 @@ interface ComposerNodeData {
   toolSlug: string
   category: string
   config: Record<string, unknown>
+  unmetInputs?: string[]
   onRemove?: (nodeId: string) => void
   onSelect?: (nodeId: string) => void
 }
@@ -78,6 +80,12 @@ function ComposerNodeComponent({
         <div className={`text-[10px] mt-1 ${style.accent} opacity-75`}>
           {data.toolSlug}
         </div>
+        {data.unmetInputs && data.unmetInputs.length > 0 && (
+          <div className="mt-1 flex items-start gap-1 text-[10px] text-amber-700">
+            <TriangleAlert className="h-3 w-3 shrink-0 mt-px" />
+            <span>Needs: {data.unmetInputs.join(', ')}</span>
+          </div>
+        )}
       </div>
       <Handle type="source" position={Position.Right} className="!w-2.5 !h-2.5 !bg-slate-400 !border-white !border-2" />
     </>

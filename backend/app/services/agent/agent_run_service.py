@@ -74,6 +74,31 @@ class AgentRunService:
         if not agent_def:
             raise NotFoundError(f"Agent definition {agent_definition_id} not found")
 
+        from app.services.agent.tools import get_tool
+        from app.services.agent.validation import validate_graph
+
+        unmet = validate_graph(agent_def.definition, get_tool)
+        if unmet:
+            first = unmet[0]
+            raise ValueError(
+                f"Agent graph is not runnable: node '{first.node_id}' needs "
+                f"'{first.key}' from an upstream node "
+                f"({len(unmet)} unmet input(s) total)."
+            )
+
+        # Build the graph before creating the run record. build_agent_graph is a
+        # pure function of the definition (e.g. it raises ValueError on an
+        # unknown tool slug — a case validate_graph above does not catch, since
+        # it simply skips nodes whose tool isn't registered). Building first
+        # ensures such errors surface before any run row exists, so we never
+        # orphan a run stuck in `running` because the graph couldn't compile.
+        thread_id = str(uuid4())
+        compiled = build_agent_graph(
+            flow=agent_def.definition,
+            checkpointer=self.checkpointer,
+            state_type=AgentState,
+        )
+
         # Create run record
         run = await self.agent_run_repo.create(
             project_id=project_id,
@@ -85,13 +110,6 @@ class AgentRunService:
         # Update status to running
         await self.agent_run_repo.update_status(run.id, AgentRunStatus.running)
 
-        # Build and invoke graph
-        thread_id = str(uuid4())
-        compiled = build_agent_graph(
-            flow=agent_def.definition,
-            checkpointer=self.checkpointer,
-            state_type=AgentState,
-        )
         config = {"configurable": {"thread_id": thread_id}}
         invoke_state = _with_ambient(initial_state, project_id, user_id)
 
