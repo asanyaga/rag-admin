@@ -4,6 +4,7 @@ export interface AgentToolRuntimeInput {
   key: string
   label: string
   widget: string
+  source: string
 }
 
 export interface AgentTool {

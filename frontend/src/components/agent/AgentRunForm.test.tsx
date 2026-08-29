@@ -23,7 +23,7 @@ vi.mock('sonner', () => ({
 const tools: AgentTool[] = [{
   slug: 'parse.llamaparse', name: 'LlamaParse', category: 'parsing',
   description: '', runtimeInputs: [{ key: 'source_document_id',
-    label: 'Source document', widget: 'source_document_picker' }],
+    label: 'Source document', widget: 'source_document_picker', source: 'form' }],
   outputs: ['parsed_document_id'], configSchema: {}, configPanel: 'llamaparse',
 }]
 const definition = { nodes: [{ id: 'n1', tool: 'parse.llamaparse', config: {} }], edges: [] }
