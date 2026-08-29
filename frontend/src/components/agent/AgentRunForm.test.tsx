@@ -9,6 +9,12 @@ vi.mock('@/hooks/useSourceDocuments', () => ({
     sourceDocuments: [{ id: 'sd-1', filename: 'invoice.pdf' }], isLoading: false,
   }),
 }))
+vi.mock('@/hooks/useDocuments', () => ({
+  useDocuments: () => ({ documents: [{ id: 'doc-1', title: 'Invoice', status: 'ready' }], isLoading: false }),
+}))
+vi.mock('@/hooks/useExtractionSchemas', () => ({
+  useExtractionSchemas: () => ({ schemas: [{ id: 'sch-1', name: 'Invoice schema' }], isLoading: false }),
+}))
 const startAgentRun = vi.fn<(projectId: string, data: unknown) => Promise<{ id: string }>>(
   async () => ({ id: 'run-1' })
 )
@@ -57,4 +63,38 @@ it('shows a toast and re-enables the button when starting a run fails', async ()
   }))
   expect(onStarted).not.toHaveBeenCalled()
   await waitFor(() => expect(runButton).not.toBeDisabled())
+})
+
+const extractTools: AgentTool[] = [
+  { slug: 'llamaextract', name: 'LlamaExtract', category: 'extraction', description: '',
+    runtimeInputs: [
+      { key: 'document_id', label: 'Document', widget: 'document_picker', source: 'form' },
+      { key: 'extraction_schema_id', label: 'Schema', widget: 'extraction_schema_picker', source: 'form' }],
+    outputs: ['extracted_data'], configSchema: {}, configPanel: null },
+  { slug: 'export', name: 'Export', category: 'export', description: '',
+    runtimeInputs: [{ key: 'extracted_data', label: 'Extracted data', widget: 'pipeline', source: 'upstream' }],
+    outputs: ['exported'], configSchema: {}, configPanel: null },
+]
+const extractDef = { nodes: [
+  { id: 'e', tool: 'llamaextract' }, { id: 'x', tool: 'export' }],
+  edges: [{ source: 'e', target: 'x' }] }
+
+it('prompts document + schema for an extract chain and starts a generic run', async () => {
+  render(<AgentRunForm projectId="p1" definitionId="def-1" definition={extractDef}
+                       tools={extractTools} onStarted={vi.fn()} />)
+  await userEvent.selectOptions(await screen.findByLabelText(/document/i), 'doc-1')
+  await userEvent.selectOptions(screen.getByLabelText(/schema/i), 'sch-1')
+  await userEvent.click(screen.getByRole('button', { name: /run/i }))
+  await waitFor(() => expect(startAgentRun).toHaveBeenCalledWith('p1', {
+    agentDefinitionId: 'def-1',
+    initialState: { document_id: 'doc-1', extraction_schema_id: 'sch-1' },
+  }))
+})
+
+it('disables Run when the graph has an unmet upstream input', () => {
+  const loneExport = { nodes: [{ id: 'x', tool: 'export' }], edges: [] }
+  render(<AgentRunForm projectId="p1" definitionId="def-1" definition={loneExport}
+                       tools={extractTools} onStarted={vi.fn()} />)
+  expect(screen.getByRole('button', { name: /run/i })).toBeDisabled()
+  expect(screen.getByText(/needs .*extracted data/i)).toBeInTheDocument()
 })
