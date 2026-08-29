@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator'
 import { ToolPalette } from './ToolPalette'
 import { ComposerNode } from './ComposerNode'
 import { NodeConfigPanel } from './NodeConfigPanel'
+import { validateGraph } from '@/lib/agentGraph'
 import type { AgentTool } from '@/types/agent'
 import type { UseAgentComposerReturn } from '@/hooks/useAgentComposer'
 
@@ -58,6 +59,20 @@ export function AgentComposer({ composer }: AgentComposerProps) {
     [nodes, selectedNodeId]
   )
 
+  // Per-node unmet upstream inputs (human labels), computed from the current canvas
+  const unmetByNode = useMemo(() => {
+    const gnodes = nodes.map((n) => ({ id: n.id, tool: n.data.toolSlug as string }))
+    const gedges = edges.map((e) => ({ source: e.source, target: e.target }))
+    const bySlug = new Map(tools.map((t) => [t.slug, t]))
+    const map: Record<string, string[]> = {}
+    for (const u of validateGraph(gnodes, gedges, tools)) {
+      const tool = bySlug.get(nodes.find((n) => n.id === u.nodeId)?.data.toolSlug as string)
+      const label = tool?.runtimeInputs.find((f) => f.key === u.key)?.label ?? u.key
+      ;(map[u.nodeId] ??= []).push(label)
+    }
+    return map
+  }, [nodes, edges, tools])
+
   // Inject callbacks into node data so ComposerNode can call them
   const nodesWithCallbacks: Node[] = useMemo(
     () =>
@@ -68,9 +83,10 @@ export function AgentComposer({ composer }: AgentComposerProps) {
           ...n.data,
           onRemove: removeNode,
           onSelect: setSelectedNodeId,
+          unmetInputs: unmetByNode[n.id] ?? [],
         },
       })),
-    [nodes, selectedNodeId, removeNode]
+    [nodes, selectedNodeId, removeNode, unmetByNode]
   )
 
   // Handle drop from tool palette
